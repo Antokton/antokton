@@ -4,6 +4,7 @@
 *.log
 .npm-cache/
 antokton-export/.npm-cache/
+.migration-artifacts/
 
 # Local/reference downloads and previous import archive.
 antokton.html
