@@ -1,0 +1,23 @@
+{
+  "name": "CommentLike",
+  "type": "object",
+  "properties": {
+    "comment_id": {
+      "type": "string",
+      "description": "ID e komentit"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email i p\u00ebrdoruesit"
+    },
+    "reaction": {
+      "type": "string",
+      "description": "Emoji i reagimit p.sh. \ud83d\udc4d \u2764\ufe0f \ud83d\ude02 \ud83d\ude2e \ud83d\ude22 \ud83d\ude21 \ud83d\udc4e",
+      "default": "\ud83d\udc4d"
+    }
+  },
+  "required": [
+    "comment_id",
+    "user_email"
+  ]
+}

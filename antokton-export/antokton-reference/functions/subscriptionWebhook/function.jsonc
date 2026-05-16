@@ -1,0 +1,4 @@
+{
+  "name": "subscriptionWebhook",
+  "entry": "entry.ts"
+}

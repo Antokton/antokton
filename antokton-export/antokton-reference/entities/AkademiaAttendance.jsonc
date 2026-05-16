@@ -1,0 +1,42 @@
+{
+  "name": "AkademiaAttendance",
+  "type": "object",
+  "properties": {
+    "course_id": {
+      "type": "string",
+      "description": "Course id"
+    },
+    "application_id": {
+      "type": "string",
+      "description": "Application id"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Candidate user id"
+    },
+    "mentor_id": {
+      "type": "string",
+      "description": "Mentor user id"
+    },
+    "day_number": {
+      "type": "number",
+      "description": "Training day number"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["present", "absent", "excused"],
+      "default": "present",
+      "description": "Attendance status"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Mentor notes"
+    },
+    "marked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Attendance timestamp"
+    }
+  },
+  "required": ["course_id", "application_id", "day_number", "status"]
+}

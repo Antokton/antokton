@@ -1,0 +1,91 @@
+{
+  "name": "EducationPartner",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Emri i institucionit"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "universitet",
+        "kurs_online",
+        "akademi",
+        "shkolla",
+        "trajnim",
+        "tjeter"
+      ],
+      "description": "Lloji i institucionit"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "Logo e institucionit"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Imazh kryesor"
+    },
+    "description": {
+      "type": "string",
+      "description": "P\u00ebrshkrimi i institucionit"
+    },
+    "website_url": {
+      "type": "string",
+      "description": "Faqja zyrtare"
+    },
+    "contact_email": {
+      "type": "string",
+      "description": "Email kontakti"
+    },
+    "country": {
+      "type": "string",
+      "description": "Vendi"
+    },
+    "city": {
+      "type": "string",
+      "description": "Qyteti"
+    },
+    "antokton_discount": {
+      "type": "string",
+      "description": "Zbritja/trajtimi special p\u00ebr an\u00ebtar\u00ebt e Antokton"
+    },
+    "antokton_benefit_description": {
+      "type": "string",
+      "description": "P\u00ebrshkrimi i detajuar i p\u00ebrfitimeve p\u00ebr an\u00ebtar\u00ebt e Antokton"
+    },
+    "antokton_commission_pct": {
+      "type": "number",
+      "description": "Komisioni % q\u00eb merr Antokton nga regjistrime"
+    },
+    "registration_link": {
+      "type": "string",
+      "description": "Link i regjistrimit (me tracking paramet\u00ebr)"
+    },
+    "fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Fushat e studimit / kurset e ofruara"
+    },
+    "is_featured": {
+      "type": "boolean",
+      "default": false,
+      "description": "A \u00ebsht\u00eb i ve\u00e7uar"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "A \u00ebsht\u00eb aktiv"
+    },
+    "order": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "name",
+    "type"
+  ]
+}

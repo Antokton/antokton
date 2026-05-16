@@ -1,0 +1,60 @@
+{
+  "name": "AdminAction",
+  "type": "object",
+  "properties": {
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "approve",
+        "reject",
+        "delete",
+        "restore",
+        "feature",
+        "unfeatured",
+        "permanent_delete"
+      ],
+      "description": "Lloji i veprimit"
+    },
+    "entity_type": {
+      "type": "string",
+      "enum": [
+        "job",
+        "event",
+        "member",
+        "company",
+        "review"
+      ],
+      "description": "Lloji i entitetit"
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "ID e entitetit"
+    },
+    "entity_title": {
+      "type": "string",
+      "description": "Titulli/emri i entitetit"
+    },
+    "performed_by": {
+      "type": "string",
+      "description": "Email i administratorit/moderatorit"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Arsyeja e veprimit"
+    },
+    "previous_status": {
+      "type": "string",
+      "description": "Statusi i mëparshëm"
+    },
+    "new_status": {
+      "type": "string",
+      "description": "Statusi i ri"
+    }
+  },
+  "required": [
+    "action_type",
+    "entity_type",
+    "entity_id",
+    "performed_by"
+  ]
+}

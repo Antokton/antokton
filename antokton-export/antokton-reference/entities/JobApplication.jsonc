@@ -1,0 +1,51 @@
+{
+  "name": "JobApplication",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "ID e njoftimit"
+    },
+    "applicant_email": {
+      "type": "string",
+      "description": "Email i aplikuesit"
+    },
+    "applicant_name": {
+      "type": "string",
+      "description": "Emri i aplikuesit"
+    },
+    "applicant_phone": {
+      "type": "string",
+      "description": "Telefoni i aplikuesit"
+    },
+    "cover_letter": {
+      "type": "string",
+      "description": "Letra motivuese"
+    },
+    "cv_url": {
+      "type": "string",
+      "description": "URL e CV-së"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "applied",
+        "shortlisted",
+        "interviewing",
+        "rejected",
+        "hired"
+      ],
+      "default": "applied",
+      "description": "Statusi i aplikimit"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Shënime nga punëdhënësi"
+    }
+  },
+  "required": [
+    "job_id",
+    "applicant_email",
+    "applicant_name"
+  ]
+}

@@ -1,0 +1,4 @@
+{
+  "name": "analyzeUserBehavior",
+  "entry": "entry.ts"
+}

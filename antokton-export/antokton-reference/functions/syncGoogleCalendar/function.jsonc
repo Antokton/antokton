@@ -1,0 +1,4 @@
+{
+  "name": "syncGoogleCalendar",
+  "entry": "entry.ts"
+}

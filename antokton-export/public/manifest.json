@@ -1,0 +1,48 @@
+{
+  "name": "Antokton",
+  "short_name": "Antokton",
+  "description": "Antokton community platform",
+  "id": "/",
+  "start_url": "/Home",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "portrait-primary",
+  "background_color": "#0b1020",
+  "theme_color": "#0b1020",
+  "categories": ["social", "business", "news", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/antokton-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/antokton-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Statuset",
+      "short_name": "Statuset",
+      "url": "/Statuset",
+      "icons": [{ "src": "/icons/antokton-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Pazari",
+      "short_name": "Pazari",
+      "url": "/Pazar",
+      "icons": [{ "src": "/icons/antokton-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Profili",
+      "short_name": "Profili",
+      "url": "/Profile",
+      "icons": [{ "src": "/icons/antokton-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

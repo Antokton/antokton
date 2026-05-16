@@ -1,0 +1,61 @@
+{
+  "name": "JobTemplate",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Emri i shabllonit"
+    },
+    "title": {
+      "type": "string",
+      "description": "Titulli i punës"
+    },
+    "description": {
+      "type": "string",
+      "description": "Përshkrimi"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "pune",
+        "shtepi",
+        "juridike",
+        "edukim",
+        "bamiresi",
+        "media",
+        "sherbime"
+      ]
+    },
+    "profession": {
+      "type": "string"
+    },
+    "required_skills": {
+      "type": "string"
+    },
+    "experience_level": {
+      "type": "string",
+      "enum": [
+        "entry",
+        "mid",
+        "senior",
+        "executive"
+      ]
+    },
+    "contract_type": {
+      "type": "string",
+      "enum": [
+        "full-time",
+        "part-time",
+        "contract",
+        "freelance",
+        "internship"
+      ]
+    }
+  },
+  "required": [
+    "name",
+    "title",
+    "description",
+    "category"
+  ]
+}

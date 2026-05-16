@@ -1,0 +1,110 @@
+{
+  "name": "CharityProject",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Titulli i projektit"
+    },
+    "description": {
+      "type": "string",
+      "description": "P\u00ebrshkrimi i detajuar i projektit"
+    },
+    "short_description": {
+      "type": "string",
+      "description": "P\u00ebrshkrim i shkurt\u00ebr (p\u00ebr kartel\u00eb)"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "arsim",
+        "shendetesi",
+        "infrastrukture",
+        "emergjence",
+        "kulture",
+        "tjeter"
+      ],
+      "default": "tjeter",
+      "description": "Kategoria e projektit"
+    },
+    "is_charity_call": {
+      "type": "boolean",
+      "default": false,
+      "description": "A \u00ebsht\u00eb thirrje bamir\u00ebsie (shfaqet n\u00eb Njoftime si kategori bamir\u00ebsi)"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "URL e fotos kryesore"
+    },
+    "goal_amount": {
+      "type": "number",
+      "description": "Shuma e synuar (\u20ac)"
+    },
+    "raised_amount": {
+      "type": "number",
+      "default": 0,
+      "description": "Shuma e mbledhur deri tani (\u20ac)"
+    },
+    "donation_link": {
+      "type": "string",
+      "description": "Link i jasht\u00ebm p\u00ebr donacion (GoFundMe, PayPal, etj.)"
+    },
+    "contact_email": {
+      "type": "string",
+      "description": "Email kontakti"
+    },
+    "country": {
+      "type": "string",
+      "description": "Vendi ku realizohet projekti"
+    },
+    "organizer": {
+      "type": "string",
+      "description": "Organizatori / Fondacioni"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "A \u00ebsht\u00eb aktiv projekti"
+    },
+    "is_featured": {
+      "type": "boolean",
+      "default": false,
+      "description": "A \u00ebsht\u00eb i ve\u00e7uar (featured)"
+    },
+    "featured_day": {
+      "type": "boolean",
+      "default": false,
+      "description": "Shfaqet si Ngjarje e Dit\u00ebs n\u00eb kryefaqe"
+    },
+    "featured_week": {
+      "type": "boolean",
+      "default": false,
+      "description": "Shfaqet si Ngjarje e Jav\u00ebs n\u00eb kryefaqe"
+    },
+    "featured_day_expires": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Kur skadon featured day"
+    },
+    "featured_week_expires": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Kur skadon featured week"
+    },
+    "deadline": {
+      "type": "string",
+      "format": "date",
+      "description": "Afati i fundit (n\u00ebse ka)"
+    },
+    "order": {
+      "type": "number",
+      "default": 0,
+      "description": "Renditja e shfaqjes"
+    }
+  },
+  "required": [
+    "title",
+    "description",
+    "category"
+  ]
+}

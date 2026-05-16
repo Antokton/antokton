@@ -1,0 +1,111 @@
+{
+  "name": "NotificationPreference",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email i përdoruesit"
+    },
+    "job_matches": {
+      "type": "boolean",
+      "default": true,
+      "description": "Punë të reja që përputhen"
+    },
+    "application_status": {
+      "type": "boolean",
+      "default": true,
+      "description": "Ndryshime në statusin e aplikimit"
+    },
+    "interview_schedules": {
+      "type": "boolean",
+      "default": true,
+      "description": "Programimi i intervistave"
+    },
+    "new_messages": {
+      "type": "boolean",
+      "default": true,
+      "description": "Mesazhe të reja"
+    },
+    "new_applications": {
+      "type": "boolean",
+      "default": true,
+      "description": "Aplikime të reja për punët e tua"
+    },
+    "job_comments": {
+      "type": "boolean",
+      "default": true,
+      "description": "Komente në njoftimet e tua"
+    },
+    "saved_search_matches": {
+      "type": "boolean",
+      "default": true,
+      "description": "Rezultate për kërkimet e ruajtura"
+    },
+    "system_announcements": {
+      "type": "boolean",
+      "default": true,
+      "description": "Lajmerime sistemi"
+    },
+    "rating_alerts": {
+      "type": "boolean",
+      "default": true,
+      "description": "Vlerësime dhe rishikime të reja"
+    },
+    "company_reviews": {
+      "type": "boolean",
+      "default": true,
+      "description": "Rishikime për kompaninë tënde"
+    },
+    "email_digest": {
+      "type": "boolean",
+      "default": false,
+      "description": "Përmbledhje ditore me email"
+    },
+    "email_frequency": {
+      "type": "string",
+      "enum": [
+        "daily",
+        "weekly",
+        "never"
+      ],
+      "default": "never",
+      "description": "Frekuenca e email-eve"
+    },
+    "notification_priority": {
+      "type": "object",
+      "description": "Prioriteti i njoftimeve (high, medium, low)",
+      "properties": {
+        "job_matches": {
+          "type": "string",
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "default": "high"
+        },
+        "new_messages": {
+          "type": "string",
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "default": "high"
+        },
+        "application_status": {
+          "type": "string",
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "default": "medium"
+        }
+      }
+    }
+  },
+  "required": [
+    "user_email"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "name": "ProfessionSuggestion",
+  "type": "object",
+  "properties": {
+    "suggested_name": {
+      "type": "string",
+      "description": "Emri i profesionit i sugjeruar nga përdoruesi"
+    },
+    "modified_name": {
+      "type": "string",
+      "description": "Emri i modifikuar nga administratori"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Statusi i sugjerimit"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email i përdoruesit që sugjeroi"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "ID e njoftimit të lidhur"
+    },
+    "admin_email": {
+      "type": "string",
+      "description": "Email i adminit që vendosi"
+    }
+  },
+  "required": [
+    "suggested_name",
+    "user_email"
+  ]
+}

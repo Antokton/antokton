@@ -1,0 +1,4 @@
+{
+  "name": "publishToFacebook",
+  "entry": "entry.ts"
+}

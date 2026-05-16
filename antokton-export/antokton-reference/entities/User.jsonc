@@ -1,0 +1,287 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "profile_photo_url": {
+      "type": "string",
+      "description": "URL e fotos s\u00eb profilit"
+    },
+    "first_name": {
+      "type": "string",
+      "description": "Emri"
+    },
+    "surname": {
+      "type": "string",
+      "description": "Mbiemri"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Numri i telefonit"
+    },
+    "location": {
+      "type": "string",
+      "description": "Vendndodhja"
+    },
+    "gender": {
+      "type": "string",
+      "enum": [
+        "Mashkull",
+        "Fem\u00ebr"
+      ],
+      "description": "Gjinia"
+    },
+    "education_level": {
+      "type": "string",
+      "enum": [
+        "Baz\u00eb",
+        "E mesme",
+        "Bachelor",
+        "Master",
+        "Doktoratur\u00eb"
+      ],
+      "description": "Niveli i arsimit"
+    },
+    "religious_belief": {
+      "type": "string",
+      "description": "Besimi fetar"
+    },
+    "religious_belief_other": {
+      "type": "string",
+      "description": "Specifiko besimin (n\u00ebse Tjet\u00ebr)"
+    },
+    "job_title": {
+      "type": "string",
+      "description": "Titulli i pun\u00ebs"
+    },
+    "experience_years": {
+      "type": "number",
+      "description": "Vite p\u00ebrvoje"
+    },
+    "skills": {
+      "type": "string",
+      "description": "Aft\u00ebsit\u00eb"
+    },
+    "bio": {
+      "type": "string",
+      "description": "Bio"
+    },
+    "user_type": {
+      "type": "string",
+      "enum": [
+        "job_seeker",
+        "employer",
+        "recruiter"
+      ],
+      "default": "job_seeker",
+      "description": "Lloji i p\u00ebrdoruesit"
+    },
+    "linkedin": {
+      "type": "string",
+      "description": "LinkedIn URL"
+    },
+    "facebook": {
+      "type": "string",
+      "description": "Facebook URL"
+    },
+    "website": {
+      "type": "string",
+      "description": "Website"
+    },
+    "portfolio_links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Linket e portfolio-s"
+    },
+    "certifications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Certifikatat"
+    },
+    "languages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Gjuh\u00ebt"
+    },
+    "work_experience": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "company": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "current": {
+            "type": "boolean"
+          },
+          "responsibilities": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "P\u00ebrvoja e pun\u00ebs"
+    },
+    "education": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "institution": {
+            "type": "string"
+          },
+          "degree": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "current": {
+            "type": "boolean"
+          }
+        }
+      },
+      "description": "Arsimi"
+    },
+    "company_name": {
+      "type": "string",
+      "description": "Emri i kompanis\u00eb"
+    },
+    "company_size": {
+      "type": "string",
+      "description": "Madh\u00ebsia e kompanis\u00eb"
+    },
+    "industry_specialization": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Specializimi n\u00eb industri"
+    },
+    "recruitment_team_size": {
+      "type": "number",
+      "description": "Madh\u00ebsia e ekipit t\u00eb rekrutimit"
+    },
+    "video_pitch_url": {
+      "type": "string",
+      "description": "URL e videos s\u00eb prezantimit"
+    },
+    "online_courses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "course_name": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "completion_date": {
+            "type": "string"
+          },
+          "certificate_url": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Kurse online"
+    },
+    "professional_title": {
+      "type": "string",
+      "enum": [
+        "none",
+        "prof",
+        "dr",
+        "ing",
+        "mag",
+        "msc",
+        "phd",
+        "imam",
+        "hoxhe",
+        "prift",
+        "myezin",
+        "pastor",
+        "rabi",
+        "infermier",
+        "mjek",
+        "avokat",
+        "ekonomist",
+        "arkitekt",
+        "tjeter"
+      ],
+      "default": "none",
+      "description": "Titulli profesional"
+    },
+    "custom_title": {
+      "type": "string",
+      "description": "Titull i personalizuar"
+    },
+    "islam_relation": {
+      "type": "string",
+      "description": "Lidhja me Islamin"
+    },
+    "islam_knowledge_level": {
+      "type": "string",
+      "description": "Niveli i njohurive islame"
+    },
+    "islam_content_preference": {
+      "type": "string",
+      "description": "Preferenca p\u00ebr p\u00ebrmbajtje islame"
+    },
+    "islam_learning_interest": {
+      "type": "string",
+      "description": "Interesi p\u00ebr t\u00eb m\u00ebsuar rreth Islamit"
+    },
+    "member_faith_category": {
+      "type": "string",
+      "description": "Kategoria e besimit t\u00eb an\u00ebtarit"
+    }
+  }
+}

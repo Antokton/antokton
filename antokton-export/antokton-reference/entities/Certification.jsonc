@@ -1,0 +1,89 @@
+{
+  "name": "Certification",
+  "type": "object",
+  "properties": {
+    "certified_entity_email": {
+      "type": "string",
+      "description": "Email i anëtarit ose kompanisë"
+    },
+    "entity_type": {
+      "type": "string",
+      "enum": [
+        "individual",
+        "company"
+      ],
+      "description": "Lloji i entitetit"
+    },
+    "certification_type": {
+      "type": "string",
+      "enum": [
+        "professional",
+        "moral",
+        "halal",
+        "trustworthiness"
+      ],
+      "description": "Lloji i certifikimit"
+    },
+    "level": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Niveli i certifikimit (1-5)"
+    },
+    "score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Pikët (0-100)"
+    },
+    "badge_type": {
+      "type": "string",
+      "enum": [
+        "bronze",
+        "silver",
+        "gold",
+        "platinum",
+        "diamond"
+      ],
+      "description": "Lloji i badge-it"
+    },
+    "inspector_email": {
+      "type": "string",
+      "description": "Email i inspektorit që lëshoi certifikimin"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Shënime të brendshme"
+    },
+    "report_url": {
+      "type": "string",
+      "description": "URL e raportit mbështetës"
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e skadencës"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "A është aktiv"
+    },
+    "revoked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e revokimit"
+    },
+    "revoked_by": {
+      "type": "string",
+      "description": "Kush e revokoi"
+    }
+  },
+  "required": [
+    "certified_entity_email",
+    "entity_type",
+    "certification_type",
+    "level",
+    "inspector_email"
+  ]
+}

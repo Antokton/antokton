@@ -1,0 +1,111 @@
+{
+  "name": "ImportedPost",
+  "type": "object",
+  "properties": {
+    "original_text": {
+      "type": "string",
+      "description": "Teksti origjinal i importuar (nuk ndryshohet kurr\u00eb)"
+    },
+    "edited_text": {
+      "type": "string",
+      "description": "Teksti i edituar p\u00ebr publikim"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Emri i autorit"
+    },
+    "author_profile_url": {
+      "type": "string",
+      "description": "URL e profilit t\u00eb autorit"
+    },
+    "original_post_url": {
+      "type": "string",
+      "description": "URL e postimit origjinal"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "pune",
+        "prona",
+        "edukim",
+        "bamiresi",
+        "media",
+        "sherbime"
+      ],
+      "description": "Kategoria"
+    },
+    "listing_type": {
+      "type": "string",
+      "enum": [
+        "pune",
+        "shtepi",
+        "sherbim",
+        "reklame",
+        "tjeter"
+      ],
+      "description": "Lloji i njoftimit"
+    },
+    "country": {
+      "type": "string",
+      "description": "Shteti"
+    },
+    "region": {
+      "type": "string",
+      "description": "Rajoni"
+    },
+    "city": {
+      "type": "string",
+      "description": "Qyteti"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "facebook_group",
+        "facebook_page",
+        "manual",
+        "whatsapp",
+        "telegram",
+        "tjeter"
+      ],
+      "default": "facebook_group",
+      "description": "Burimi"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "ne_pritje",
+        "miratuar",
+        "publikuar",
+        "refuzuar",
+        "arkivuar"
+      ],
+      "default": "draft",
+      "description": "Statusi"
+    },
+    "show_author_publicly": {
+      "type": "boolean",
+      "default": false,
+      "description": "Shfaq autorin publikisht"
+    },
+    "show_original_post_url_publicly": {
+      "type": "boolean",
+      "default": false,
+      "description": "Shfaq linkun origjinal publikisht"
+    },
+    "imported_by": {
+      "type": "string",
+      "description": "Email i moderatorit/adminit"
+    },
+    "published_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e publikimit"
+    }
+  },
+  "required": [
+    "original_text",
+    "edited_text",
+    "listing_type"
+  ]
+}

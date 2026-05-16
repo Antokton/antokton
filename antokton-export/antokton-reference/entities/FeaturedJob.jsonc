@@ -1,0 +1,59 @@
+{
+  "name": "FeaturedJob",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "ID e njoftimit"
+    },
+    "featured_type": {
+      "type": "string",
+      "enum": [
+        "homepage",
+        "urgent",
+        "priority"
+      ],
+      "description": "Lloji i featured"
+    },
+    "price_paid": {
+      "type": "number",
+      "description": "Çmimi i paguar në euro"
+    },
+    "stripe_payment_id": {
+      "type": "string",
+      "description": "ID e pagesës nga Stripe"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e fillimit"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e skadimit"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "A është aktiv"
+    },
+    "impression_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Numri i shfaqjeve"
+    },
+    "click_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Numri i klikimeve"
+    }
+  },
+  "required": [
+    "job_id",
+    "featured_type",
+    "price_paid",
+    "start_date",
+    "end_date"
+  ]
+}

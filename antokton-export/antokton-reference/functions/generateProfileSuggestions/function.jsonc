@@ -1,0 +1,4 @@
+{
+  "name": "generateProfileSuggestions",
+  "entry": "entry.ts"
+}

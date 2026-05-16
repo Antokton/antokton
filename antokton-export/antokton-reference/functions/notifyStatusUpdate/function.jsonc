@@ -1,0 +1,16 @@
+{
+  "name": "notifyStatusUpdate",
+  "entry": "entry.ts",
+  "automations": [
+    {
+      "type": "entity",
+      "description": "Dërgon notifikim kur ndryshohet statusi i aplikimit",
+      "entity_name": "JobApplication",
+      "event_types": [
+        "update"
+      ],
+      "is_active": true,
+      "name": "Notifikim për ndryshim statusi"
+    }
+  ]
+}

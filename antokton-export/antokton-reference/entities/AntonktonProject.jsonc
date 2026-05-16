@@ -1,0 +1,125 @@
+{
+  "name": "AntonktonProject",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Titulli i projektit"
+    },
+    "description": {
+      "type": "string",
+      "description": "Përshkrimi i projektit"
+    },
+    "icon_name": {
+      "type": "string",
+      "enum": [
+        "Briefcase",
+        "Radio",
+        "Heart",
+        "Users",
+        "Shield",
+        "Globe",
+        "GraduationCap",
+        "Wrench",
+        "Home",
+        "Scale"
+      ],
+      "default": "Briefcase",
+      "description": "Emri i ikonës"
+    },
+    "color_class": {
+      "type": "string",
+      "description": "Klasa e ngjyrës (p.sh. bg-blue-50 text-blue-500)"
+    },
+    "background_image": {
+      "type": "string",
+      "description": "URL e fotos së sfondit"
+    },
+    "link_type": {
+      "type": "string",
+      "enum": [
+        "category",
+        "external",
+        "project_page"
+      ],
+      "default": "category",
+      "description": "Lloji i linkut"
+    },
+    "category_name": {
+      "type": "string",
+      "enum": [
+        "pune",
+        "shtepi",
+        "juridike",
+        "edukim",
+        "bamiresi",
+        "media",
+        "sherbime"
+      ],
+      "description": "Kategoria e njoftimeve (për link_type=category)"
+    },
+    "external_url": {
+      "type": "string",
+      "description": "URL e jashtme (për link_type=external)"
+    },
+    "project_content": {
+      "type": "string",
+      "description": "Përmbajtja e plotë e projektit (për link_type=project_page)"
+    },
+    "gallery_images": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URL të fotove për galerinë"
+    },
+    "documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Dokumenta për projektin"
+    },
+    "social_links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "platform": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Linqe sociale"
+    },
+    "order": {
+      "type": "number",
+      "default": 0,
+      "description": "Renditja e projektit"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "A është aktiv projekti"
+    }
+  },
+  "required": [
+    "title",
+    "description",
+    "link_type"
+  ]
+}

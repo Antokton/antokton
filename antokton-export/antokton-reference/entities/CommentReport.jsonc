@@ -1,0 +1,31 @@
+{
+  "name": "CommentReport",
+  "type": "object",
+  "properties": {
+    "comment_id": {
+      "type": "string",
+      "description": "ID e komentit"
+    },
+    "reported_by": {
+      "type": "string",
+      "description": "Email i raportuesit"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Arsyeja e raportimit"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "resolved"
+      ],
+      "default": "pending",
+      "description": "Statusi i raportimit"
+    }
+  },
+  "required": [
+    "comment_id",
+    "reason"
+  ]
+}

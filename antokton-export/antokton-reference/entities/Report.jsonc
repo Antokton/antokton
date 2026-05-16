@@ -1,0 +1,54 @@
+{
+  "name": "Report",
+  "type": "object",
+  "properties": {
+    "post_id": {
+      "type": "string",
+      "description": "ID e postimit t\u00eb raportuar"
+    },
+    "post_title": {
+      "type": "string",
+      "description": "Titulli i postimit (p\u00ebr referenc\u00eb)"
+    },
+    "post_category": {
+      "type": "string",
+      "description": "Kategoria e postimit (pune, prona, sherbime, pazar, etj.)"
+    },
+    "reporter_email": {
+      "type": "string",
+      "description": "Email i raportuesit"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "i_shitur",
+        "vend_i_plotesuar",
+        "nuk_jepet_me",
+        "cmim_i_ndryshuar",
+        "spam",
+        "fake",
+        "offensive",
+        "other"
+      ],
+      "description": "Arsyeja e raportimit"
+    },
+    "details": {
+      "type": "string",
+      "description": "Detaje shtes\u00eb"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "reviewed",
+        "resolved"
+      ],
+      "default": "pending",
+      "description": "Statusi i raportimit"
+    }
+  },
+  "required": [
+    "post_id",
+    "reason"
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "name": "DetailedRating",
+  "type": "object",
+  "properties": {
+    "rater_email": {
+      "type": "string",
+      "description": "Email i vlerësuesit"
+    },
+    "rated_email": {
+      "type": "string",
+      "description": "Email i vlerësuar"
+    },
+    "rating_type": {
+      "type": "string",
+      "enum": [
+        "employer_to_candidate",
+        "candidate_to_employer"
+      ],
+      "description": "Lloji i vlerësimit"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "ID e njoftimit të lidhur"
+    },
+    "overall_rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Vlerësimi i përgjithshëm (1-5 yje)"
+    },
+    "professionalism": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Profesionalizmi"
+    },
+    "communication": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Komunikimi"
+    },
+    "reliability": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Besueshmëria"
+    },
+    "work_quality": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Cilësia e punës"
+    },
+    "work_environment": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Ambienti i punës (për employer)"
+    },
+    "comments": {
+      "type": "object",
+      "description": "Komente specifike për çdo kategori",
+      "properties": {
+        "professionalism_comment": {
+          "type": "string"
+        },
+        "communication_comment": {
+          "type": "string"
+        },
+        "reliability_comment": {
+          "type": "string"
+        },
+        "work_quality_comment": {
+          "type": "string"
+        },
+        "work_environment_comment": {
+          "type": "string"
+        }
+      }
+    },
+    "general_comment": {
+      "type": "string",
+      "description": "Koment i përgjithshëm"
+    },
+    "would_recommend": {
+      "type": "boolean",
+      "description": "A do ta rekomandonte"
+    }
+  },
+  "required": [
+    "rater_email",
+    "rated_email",
+    "rating_type",
+    "overall_rating"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "name": "EventParticipant",
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "ID e ngjarjes"
+    },
+    "participant_email": {
+      "type": "string",
+      "description": "Email i pjesëmarrësit (opsionale për vizitorë)"
+    },
+    "participant_name": {
+      "type": "string",
+      "description": "Emri i pjesëmarrësit"
+    },
+    "participant_surname_initials": {
+      "type": "string",
+      "description": "3 shkronjat e para të mbiemrit"
+    },
+    "participant_phone": {
+      "type": "string",
+      "description": "Telefoni (i fshehur për publikun)"
+    },
+    "is_member": {
+      "type": "boolean",
+      "default": false,
+      "description": "A është anëtar i regjistruar"
+    },
+    "registered_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e regjistrimit"
+    }
+  },
+  "required": [
+    "event_id",
+    "participant_name"
+  ]
+}

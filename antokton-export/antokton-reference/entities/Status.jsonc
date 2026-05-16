@@ -1,0 +1,142 @@
+{
+  "name": "Status",
+  "type": "object",
+  "properties": {
+    "author_email": {
+      "type": "string",
+      "description": "Email i autorit"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Emri i autorit"
+    },
+    "text": {
+      "type": "string",
+      "description": "Teksti i statusit"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "URL e fotos (n\u00ebse ka)"
+    },
+    "link_url": {
+      "type": "string",
+      "description": "Link i bashkangjitur"
+    },
+    "link_title": {
+      "type": "string",
+      "description": "Titulli i linkut"
+    },
+    "imported_community_request": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when this status is an imported community request/repost"
+    },
+    "import_type": {
+      "type": "string",
+      "description": "Import type, e.g. community_request"
+    },
+    "import_source_url": {
+      "type": "string",
+      "description": "Private original source URL for admin/moderator verification"
+    },
+    "import_original_author_name": {
+      "type": "string",
+      "description": "Private original author name for admin/moderator verification"
+    },
+    "import_original_text": {
+      "type": "string",
+      "description": "Private original imported text before edits"
+    },
+    "import_public_author_label": {
+      "type": "string",
+      "description": "Public-safe original author label after privacy choice"
+    },
+    "import_author_display": {
+      "type": "string",
+      "description": "full, first, initials, or hidden"
+    },
+    "import_hide_profile_photo": {
+      "type": "boolean",
+      "default": true
+    },
+    "import_show_images": {
+      "type": "boolean",
+      "default": true
+    },
+    "import_show_source_link": {
+      "type": "boolean",
+      "default": false
+    },
+    "import_private_image_url": {
+      "type": "string",
+      "description": "Imported image kept private from public feed"
+    },
+    "importer_email": {
+      "type": "string",
+      "description": "Importer email for audit"
+    },
+    "importer_name": {
+      "type": "string",
+      "description": "Importer display name for audit"
+    },
+    "imported_at": {
+      "type": "string",
+      "description": "Import timestamp"
+    },
+    "import_privacy_choices": {
+      "type": "object",
+      "default": {},
+      "description": "Privacy choices selected before publish"
+    },
+    "feeling": {
+      "type": "string",
+      "description": "Ndjesia (emoji + label)"
+    },
+    "checkin_location": {
+      "type": "string",
+      "description": "Vendndodhja e check-in"
+    },
+    "tagged_users": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Email-at e etiketuar"
+    },
+    "tagged_names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Emrat e etiketuar"
+    },
+    "likes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Email-at q\u00eb e kan\u00eb p\u00eblqyer (legacy)"
+    },
+    "dislikes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Email-at q\u00eb s'e kan\u00eb p\u00eblqyer"
+    },
+    "reactions": {
+      "type": "object",
+      "default": {},
+      "description": "Map email\u2192emoji p\u00ebr reaksionet"
+    },
+    "comments_count": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "author_email"
+  ]
+}

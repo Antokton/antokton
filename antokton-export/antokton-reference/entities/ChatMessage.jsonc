@@ -1,0 +1,63 @@
+{
+  "name": "ChatMessage",
+  "type": "object",
+  "properties": {
+    "sender_email": {
+      "type": "string",
+      "description": "Email i dërguesit"
+    },
+    "receiver_email": {
+      "type": "string",
+      "description": "Email i marrësit"
+    },
+    "message": {
+      "type": "string",
+      "description": "Përmbajtja e mesazhit"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "URL e file të bashkangjitur"
+    },
+    "file_name": {
+      "type": "string",
+      "description": "Emri i file"
+    },
+    "file_type": {
+      "type": "string",
+      "description": "Tipi i file (MIME type)"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false,
+      "description": "A është lexuar mesazhi"
+    },
+    "read_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e leximit"
+    },
+    "is_edited": {
+      "type": "boolean",
+      "default": false,
+      "description": "A është edituar mesazhi"
+    },
+    "edited_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e editimit"
+    },
+    "deleted_for": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Lista e email-ave që e kanë fshirë mesazhin"
+    }
+  },
+  "required": [
+    "sender_email",
+    "receiver_email",
+    "message"
+  ]
+}

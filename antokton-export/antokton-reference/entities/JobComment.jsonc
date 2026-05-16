@@ -1,0 +1,26 @@
+{
+  "name": "JobComment",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "ID e njoftimit"
+    },
+    "parent_id": {
+      "type": "string",
+      "description": "ID e komentit prind (p\u00ebr replies)"
+    },
+    "text": {
+      "type": "string",
+      "description": "Teksti i komentit"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Emri i autorit"
+    }
+  },
+  "required": [
+    "job_id",
+    "text"
+  ]
+}

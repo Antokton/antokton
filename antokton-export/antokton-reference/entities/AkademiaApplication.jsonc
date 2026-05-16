@@ -1,0 +1,67 @@
+{
+  "name": "AkademiaApplication",
+  "type": "object",
+  "properties": {
+    "course_id": {
+      "type": "string",
+      "description": "Course id"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Candidate user id"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Candidate email"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Candidate display name"
+    },
+    "motivation": {
+      "type": "string",
+      "description": "Candidate motivation"
+    },
+    "current_profession": {
+      "type": "string",
+      "description": "Current profession"
+    },
+    "desired_profession": {
+      "type": "string",
+      "description": "Desired profession"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Phone number"
+    },
+    "city": {
+      "type": "string",
+      "description": "Candidate city"
+    },
+    "document_urls": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Optional uploaded documents"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "approved", "rejected", "completed"],
+      "default": "pending",
+      "description": "Application status"
+    },
+    "admin_note": {
+      "type": "string",
+      "description": "Admin note"
+    },
+    "reviewed_by": {
+      "type": "string",
+      "description": "Reviewer email"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Review timestamp"
+    }
+  },
+  "required": ["course_id", "user_email", "motivation", "phone", "city", "status"]
+}

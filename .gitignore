@@ -1,0 +1,19 @@
+/.env
+/.env.*
+!.env.example
+*.log
+.npm-cache/
+antokton-export/.npm-cache/
+
+# Local/reference downloads and previous import archive.
+antokton.html
+antokton-index.css
+antokton-index.js
+antokton-design-import-archive-*/
+
+backend/data/
+backend/uploads/
+backend/*.log
+backend/sp-test.txt
+antokton-export/node_modules/
+antokton-export/dist/

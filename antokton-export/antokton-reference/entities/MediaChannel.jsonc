@@ -1,0 +1,122 @@
+{
+  "name": "MediaChannel",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Emri i kanalit"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "tv",
+        "radio",
+        "gazeta",
+        "revista",
+        "podcast"
+      ],
+      "description": "Lloji i medias"
+    },
+    "flag": {
+      "type": "string",
+      "description": "Emoji flamuri (p.sh. \ud83c\udde6\ud83c\uddf1)"
+    },
+    "country": {
+      "type": "string",
+      "description": "Vendi"
+    },
+    "color": {
+      "type": "string",
+      "description": "Ngjyra hex e kanalit"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "URL e logos"
+    },
+    "stream_url": {
+      "type": "string",
+      "description": "URL e transmetimit live / embed"
+    },
+    "website_url": {
+      "type": "string",
+      "description": "Faqja zyrtare"
+    },
+    "description": {
+      "type": "string",
+      "description": "P\u00ebrshkrimi"
+    },
+    "credibility": {
+      "type": "string",
+      "enum": [
+        "e larte",
+        "mesatare",
+        "e ulet",
+        "e panjohur"
+      ],
+      "default": "e panjohur",
+      "description": "Niveli i besueshm\u00ebris\u00eb"
+    },
+    "programming_type": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "lajme",
+          "arg\u00ebtim",
+          "sport",
+          "kulture",
+          "feja",
+          "ekonomi",
+          "teknologji",
+          "politike",
+          "muzike",
+          "film",
+          "dokumentar",
+          "edukativ"
+        ]
+      },
+      "description": "Llojet e programacionit"
+    },
+    "target_age": {
+      "type": "string",
+      "enum": [
+        "femije",
+        "te_rinj",
+        "te_rritur",
+        "te_moshuarit",
+        "te_gjitha"
+      ],
+      "default": "te_gjitha",
+      "description": "Grupmoshat e synuara"
+    },
+    "religious_orientation": {
+      "type": "string",
+      "enum": [
+        "laik",
+        "islamik",
+        "krishtere",
+        "bektashiane",
+        "neutral",
+        "te_gjitha"
+      ],
+      "default": "laik",
+      "description": "Orientimi fetar"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "is_featured": {
+      "type": "boolean",
+      "default": false
+    },
+    "order": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "name",
+    "type"
+  ]
+}

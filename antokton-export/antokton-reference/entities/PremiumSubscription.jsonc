@@ -1,0 +1,57 @@
+{
+  "name": "PremiumSubscription",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email i përdoruesit"
+    },
+    "plan_type": {
+      "type": "string",
+      "enum": [
+        "monthly",
+        "yearly"
+      ],
+      "description": "Lloji i abonimit"
+    },
+    "stripe_subscription_id": {
+      "type": "string",
+      "description": "ID e subscription nga Stripe"
+    },
+    "stripe_payment_id": {
+      "type": "string",
+      "description": "ID e pagesës nga Stripe"
+    },
+    "amount_paid": {
+      "type": "number",
+      "description": "Shuma e paguar në euro"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e fillimit"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e skadimit"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "A është aktiv"
+    },
+    "auto_renew": {
+      "type": "boolean",
+      "default": false,
+      "description": "A rinovohet automatikisht"
+    }
+  },
+  "required": [
+    "user_email",
+    "plan_type",
+    "amount_paid",
+    "start_date",
+    "end_date"
+  ]
+}

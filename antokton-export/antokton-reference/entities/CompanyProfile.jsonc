@@ -1,0 +1,150 @@
+{
+  "name": "CompanyProfile",
+  "type": "object",
+  "properties": {
+    "owner_email": {
+      "type": "string",
+      "description": "Email i pronarit të kompanisë"
+    },
+    "company_name": {
+      "type": "string",
+      "description": "Emri i kompanisë"
+    },
+    "slug": {
+      "type": "string",
+      "description": "URL slug për profilin"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "Logo e kompanisë"
+    },
+    "cover_image_url": {
+      "type": "string",
+      "description": "Imazh mbulues"
+    },
+    "description": {
+      "type": "string",
+      "description": "Përshkrimi i kompanisë"
+    },
+    "values": {
+      "type": "string",
+      "description": "Vlerat e kompanisë"
+    },
+    "culture": {
+      "type": "string",
+      "description": "Kultura e punës"
+    },
+    "industry": {
+      "type": "string",
+      "description": "Industria"
+    },
+    "service_categories": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "pune",
+          "shtepi",
+          "juridike",
+          "edukim",
+          "bamiresi",
+          "media",
+          "sherbime",
+          "teknologji",
+          "shendetsore",
+          "ushqimore",
+          "ndertim",
+          "transport",
+          "financiare"
+        ]
+      },
+      "description": "Kategoritë e shërbimeve që ofron kompania"
+    },
+    "company_size": {
+      "type": "string",
+      "enum": [
+        "1-10",
+        "11-50",
+        "51-200",
+        "201-500",
+        "500+"
+      ],
+      "description": "Madhësia e kompanisë"
+    },
+    "founded_year": {
+      "type": "number",
+      "description": "Viti i themelimit"
+    },
+    "headquarters": {
+      "type": "string",
+      "description": "Selia kryesore"
+    },
+    "website": {
+      "type": "string",
+      "description": "Website"
+    },
+    "social_links": {
+      "type": "object",
+      "properties": {
+        "linkedin": {
+          "type": "string"
+        },
+        "facebook": {
+          "type": "string"
+        },
+        "twitter": {
+          "type": "string"
+        },
+        "instagram": {
+          "type": "string"
+        }
+      },
+      "description": "Rrjetet sociale"
+    },
+    "photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Foto të kompanisë"
+    },
+    "videos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Video të kompanisë"
+    },
+    "primary_color": {
+      "type": "string",
+      "default": "#8ab4ff",
+      "description": "Ngjyra kryesore e branding"
+    },
+    "is_verified": {
+      "type": "boolean",
+      "default": false,
+      "description": "A është verifikuar kompania"
+    },
+    "halal_certified": {
+      "type": "boolean",
+      "default": false,
+      "description": "A është certifikuar halal"
+    },
+    "safety_rating": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5,
+      "description": "Vlerësimi i sigurisë (0-5)"
+    },
+    "professional_rating": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5,
+      "description": "Vlerësimi profesional (0-5)"
+    }
+  },
+  "required": [
+    "owner_email",
+    "company_name"
+  ]
+}

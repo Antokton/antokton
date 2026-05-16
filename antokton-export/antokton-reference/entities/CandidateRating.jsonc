@@ -1,0 +1,60 @@
+{
+  "name": "CandidateRating",
+  "type": "object",
+  "properties": {
+    "candidate_email": {
+      "type": "string",
+      "description": "Email i kandidatit që vlerësohet"
+    },
+    "rater_email": {
+      "type": "string",
+      "description": "Email i vlerësuesit (kompania/rekruteri)"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "ID e punës"
+    },
+    "professionalism_rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Vlerësim profesionalizmi"
+    },
+    "skills_rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Vlerësim aftësish"
+    },
+    "communication_rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Vlerësim komunikimi"
+    },
+    "reliability_rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Vlerësim serioziteti"
+    },
+    "overall_rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Vlerësimi i përgjithshëm"
+    },
+    "comment": {
+      "type": "string",
+      "description": "Koment"
+    },
+    "would_rehire": {
+      "type": "boolean",
+      "description": "A do ta punësonte sërish"
+    }
+  },
+  "required": [
+    "candidate_email",
+    "overall_rating"
+  ]
+}

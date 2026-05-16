@@ -1,0 +1,31 @@
+{
+  "name": "EventComment",
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "ID e ngjarjes"
+    },
+    "author_email": {
+      "type": "string",
+      "description": "Email i autorit"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Emri i autorit"
+    },
+    "text": {
+      "type": "string",
+      "description": "Teksti i komentit"
+    },
+    "is_approved": {
+      "type": "boolean",
+      "default": true,
+      "description": "A është i aprovuar"
+    }
+  },
+  "required": [
+    "event_id",
+    "text"
+  ]
+}

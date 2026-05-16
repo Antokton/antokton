@@ -1,0 +1,4 @@
+{
+  "name": "generateCompanyProfile",
+  "entry": "entry.ts"
+}

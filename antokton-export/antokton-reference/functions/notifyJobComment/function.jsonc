@@ -1,0 +1,16 @@
+{
+  "name": "notifyJobComment",
+  "entry": "entry.ts",
+  "automations": [
+    {
+      "type": "entity",
+      "description": "Dërgon notifikim kur ka koment të ri në një njoftim",
+      "entity_name": "JobComment",
+      "event_types": [
+        "create"
+      ],
+      "is_active": true,
+      "name": "Notifikim për koment të ri"
+    }
+  ]
+}

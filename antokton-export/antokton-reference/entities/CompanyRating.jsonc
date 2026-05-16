@@ -1,0 +1,96 @@
+{
+  "name": "CompanyRating",
+  "type": "object",
+  "properties": {
+    "company_id": {
+      "type": "string",
+      "description": "ID e kompanisë"
+    },
+    "reviewer_email": {
+      "type": "string",
+      "description": "Email i vlerësuesit"
+    },
+    "overall_rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Vlerësimi i përgjithshëm (1-5 yje)"
+    },
+    "position": {
+      "type": "string",
+      "description": "Pozicioni që kishte/ka"
+    },
+    "start_year": {
+      "type": "number",
+      "description": "Viti i fillimit të punës"
+    },
+    "end_year": {
+      "type": "number",
+      "description": "Viti i mbarimit të punës (null nëse aktualisht punon)"
+    },
+    "is_current": {
+      "type": "boolean",
+      "default": false,
+      "description": "A punon aktualisht këtu"
+    },
+    "work_environment": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Ambienti i punës"
+    },
+    "salary_benefits": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Paga & Benefitime"
+    },
+    "management": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Menaxhimi"
+    },
+    "career_opportunities": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Mundësi Karriere"
+    },
+    "work_life_balance": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Balance Punë-Jetë"
+    },
+    "comment": {
+      "type": "string",
+      "description": "Komenti"
+    },
+    "is_anonymous": {
+      "type": "boolean",
+      "default": false,
+      "description": "A është anonim"
+    },
+    "is_approved": {
+      "type": "boolean",
+      "default": false,
+      "description": "A është aprovuar nga admini"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Email i adminit që aprovoi"
+    }
+  },
+  "required": [
+    "company_id",
+    "reviewer_email",
+    "overall_rating",
+    "position",
+    "work_environment",
+    "salary_benefits",
+    "management",
+    "career_opportunities",
+    "work_life_balance"
+  ]
+}

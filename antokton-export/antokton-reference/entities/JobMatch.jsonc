@@ -1,0 +1,40 @@
+{
+  "name": "JobMatch",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "ID e pozicionit"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email i përdoruesit"
+    },
+    "match_score": {
+      "type": "number",
+      "description": "Rezultati i përputhjes (0-100)"
+    },
+    "match_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Arsyet e përputhjes"
+    },
+    "is_viewed": {
+      "type": "boolean",
+      "default": false,
+      "description": "A është parë"
+    },
+    "is_dismissed": {
+      "type": "boolean",
+      "default": false,
+      "description": "A është refuzuar"
+    }
+  },
+  "required": [
+    "job_id",
+    "user_email",
+    "match_score"
+  ]
+}

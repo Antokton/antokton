@@ -1,0 +1,87 @@
+{
+  "name": "AkademiaCourse",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Course title"
+    },
+    "category": {
+      "type": "string",
+      "description": "Training category"
+    },
+    "description": {
+      "type": "string",
+      "description": "Course description"
+    },
+    "daily_program": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "day": { "type": "number" },
+          "title": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      },
+      "description": "Daily course program"
+    },
+    "requirements": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Candidate requirements"
+    },
+    "city": {
+      "type": "string",
+      "description": "City"
+    },
+    "country": {
+      "type": "string",
+      "description": "Country"
+    },
+    "duration_days": {
+      "type": "number",
+      "default": 5,
+      "description": "Duration in days"
+    },
+    "price": {
+      "type": "number",
+      "default": 0,
+      "description": "Course price"
+    },
+    "currency": {
+      "type": "string",
+      "default": "EUR",
+      "description": "Currency"
+    },
+    "mentor_id": {
+      "type": "string",
+      "description": "Assigned mentor user id"
+    },
+    "mentor_email": {
+      "type": "string",
+      "description": "Assigned mentor email"
+    },
+    "mentor_name": {
+      "type": "string",
+      "description": "Assigned mentor display name"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Course start date"
+    },
+    "capacity": {
+      "type": "number",
+      "default": 12,
+      "description": "Maximum candidates"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "active", "archived", "completed"],
+      "default": "active",
+      "description": "Course lifecycle status"
+    }
+  },
+  "required": ["title", "category", "description", "city", "country", "duration_days", "start_date", "status"]
+}

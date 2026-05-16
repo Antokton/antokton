@@ -1,0 +1,82 @@
+{
+  "name": "MediaPost",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Titulli i postimit"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "tv",
+        "radio",
+        "revista",
+        "gazeta",
+        "shkrime",
+        "podcast",
+        "blog"
+      ],
+      "description": "Kategoria mediatike"
+    },
+    "description": {
+      "type": "string",
+      "description": "P\u00ebrshkrimi / teksti i plot\u00eb"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Imazh kryesor"
+    },
+    "link_url": {
+      "type": "string",
+      "description": "Linku i jasht\u00ebm"
+    },
+    "embed_url": {
+      "type": "string",
+      "description": "URL embed p\u00ebr luajtje brenda app-it (YouTube, Spotify, SoundCloud etj.)"
+    },
+    "channel_name": {
+      "type": "string",
+      "description": "Emri i kanalit / burimit"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Autori (p\u00ebr shkrime/blog)"
+    },
+    "author_bio": {
+      "type": "string",
+      "description": "Bio e shkurt\u00ebr e autorit"
+    },
+    "author_photo_url": {
+      "type": "string",
+      "description": "Foto e autorit"
+    },
+    "reading_time_min": {
+      "type": "number",
+      "description": "Koha e leximit n\u00eb minuta"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tags tematike"
+    },
+    "is_featured": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "order": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "title",
+    "category"
+  ]
+}

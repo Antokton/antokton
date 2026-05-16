@@ -1,0 +1,4 @@
+{
+  "name": "getStripeConfig",
+  "entry": "entry.ts"
+}

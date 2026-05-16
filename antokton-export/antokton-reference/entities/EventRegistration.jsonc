@@ -1,0 +1,46 @@
+{
+  "name": "EventRegistration",
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "ID e ngjarjes"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email i pjesëmarrësit"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Emri i pjesëmarrësit"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "registered",
+        "attended",
+        "cancelled"
+      ],
+      "default": "registered",
+      "description": "Statusi i regjistrimit"
+    },
+    "networking_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "A dëshiron të kontaktohet për networking"
+    },
+    "bio": {
+      "type": "string",
+      "description": "Bio për networking"
+    },
+    "interests": {
+      "type": "string",
+      "description": "Interesat për networking"
+    }
+  },
+  "required": [
+    "event_id",
+    "user_email",
+    "user_name"
+  ]
+}

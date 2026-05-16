@@ -1,0 +1,4 @@
+{
+  "name": "analyzeCVForJob",
+  "entry": "entry.ts"
+}

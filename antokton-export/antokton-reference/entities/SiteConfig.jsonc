@@ -1,0 +1,26 @@
+{
+  "name": "SiteConfig",
+  "type": "object",
+  "properties": {
+    "key": {
+      "type": "string",
+      "description": "Çelësi unik i konfigurimit (p.sh. 'contact_email')"
+    },
+    "value": {
+      "type": "string",
+      "description": "Vlera e konfigurimit"
+    },
+    "label": {
+      "type": "string",
+      "description": "Etiketa e shfaqur për admin"
+    },
+    "group": {
+      "type": "string",
+      "description": "Grupi (contact, seo, promo, social, footer)"
+    }
+  },
+  "required": [
+    "key",
+    "value"
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "name": "AkademiaCertificate",
+  "type": "object",
+  "properties": {
+    "certificate_number": {
+      "type": "string",
+      "description": "Public certificate number"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Candidate user id"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Candidate email"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Candidate display name"
+    },
+    "course_id": {
+      "type": "string",
+      "description": "Course id"
+    },
+    "course_title": {
+      "type": "string",
+      "description": "Course title at issue time"
+    },
+    "application_id": {
+      "type": "string",
+      "description": "Application id"
+    },
+    "evaluation_id": {
+      "type": "string",
+      "description": "Evaluation id"
+    },
+    "issue_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Issue date"
+    },
+    "issued_by": {
+      "type": "string",
+      "description": "Issuer email"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["valid", "revoked"],
+      "default": "valid",
+      "description": "Certificate status"
+    },
+    "revoked_by": {
+      "type": "string",
+      "description": "Revoker email"
+    },
+    "revoked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Revocation timestamp"
+    }
+  },
+  "required": ["certificate_number", "user_email", "course_id", "issue_date", "status"]
+}

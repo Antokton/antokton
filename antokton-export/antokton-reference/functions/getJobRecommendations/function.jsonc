@@ -1,0 +1,4 @@
+{
+  "name": "getJobRecommendations",
+  "entry": "entry.ts"
+}

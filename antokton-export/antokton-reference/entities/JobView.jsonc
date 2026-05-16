@@ -1,0 +1,28 @@
+{
+  "name": "JobView",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "ID e njoftimit"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email i përdoruesit"
+    },
+    "view_count": {
+      "type": "number",
+      "default": 1,
+      "description": "Numri i herëve që është parë"
+    },
+    "last_viewed": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e fundit e shikimit"
+    }
+  },
+  "required": [
+    "job_id",
+    "user_email"
+  ]
+}

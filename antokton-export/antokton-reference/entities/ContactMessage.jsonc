@@ -1,0 +1,38 @@
+{
+  "name": "ContactMessage",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Emri i kontaktuesit"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email i kontaktuesit"
+    },
+    "subject": {
+      "type": "string",
+      "description": "Subjekti i mesazhit"
+    },
+    "message": {
+      "type": "string",
+      "description": "Përmbajtja e mesazhit"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "read",
+        "responded"
+      ],
+      "default": "new",
+      "description": "Statusi i mesazhit"
+    }
+  },
+  "required": [
+    "name",
+    "email",
+    "subject",
+    "message"
+  ]
+}

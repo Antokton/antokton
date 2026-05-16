@@ -1,0 +1,40 @@
+{
+  "name": "NavConfig",
+  "type": "object",
+  "properties": {
+    "owner_email": {
+      "type": "string",
+      "description": "Email i pronarit (null = konfigurim global i adminit)"
+    },
+    "is_global": {
+      "type": "boolean",
+      "default": false,
+      "description": "N\u00ebse true, aplikohet p\u00ebr t\u00eb gjith\u00eb p\u00ebrdoruesit (vet\u00ebm admin mund ta vendos\u00eb)"
+    },
+    "tabs": {
+      "type": "array",
+      "description": "Tabs e menus\u00eb fundore (max 7)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string",
+            "description": "Emri i ikon\u00ebs nga lucide-react"
+          },
+          "path": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "tabs"
+  ]
+}

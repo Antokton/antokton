@@ -1,0 +1,47 @@
+{
+  "name": "Subscription",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email i anëtarit"
+    },
+    "plan_type": {
+      "type": "string",
+      "enum": [
+        "single",
+        "basic",
+        "standard",
+        "premium"
+      ],
+      "description": "Lloji i planit"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Shuma e paguar"
+    },
+    "posts_included": {
+      "type": "number",
+      "description": "Numri i njoftimeve të përfshira"
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Valide deri më"
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "completed",
+        "failed"
+      ],
+      "default": "pending"
+    }
+  },
+  "required": [
+    "user_email",
+    "plan_type",
+    "amount"
+  ]
+}

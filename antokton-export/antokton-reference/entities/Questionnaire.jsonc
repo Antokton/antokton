@@ -1,0 +1,49 @@
+{
+  "name": "Questionnaire",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "ID e pozicionit"
+    },
+    "title": {
+      "type": "string",
+      "description": "Titulli i pyetësorit"
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "multiple_choice",
+              "rating"
+            ]
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "description": "Lista e pyetjeve"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "job_id",
+    "title",
+    "questions"
+  ]
+}

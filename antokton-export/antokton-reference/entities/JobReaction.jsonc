@@ -1,0 +1,26 @@
+{
+  "name": "JobReaction",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "ID e njoftimit"
+    },
+    "reaction_type": {
+      "type": "string",
+      "enum": [
+        "like",
+        "dislike"
+      ],
+      "description": "Lloji i reagimit"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email i përdoruesit"
+    }
+  },
+  "required": [
+    "job_id",
+    "reaction_type"
+  ]
+}

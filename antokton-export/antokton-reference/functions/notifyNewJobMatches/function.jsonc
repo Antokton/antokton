@@ -1,0 +1,16 @@
+{
+  "name": "notifyNewJobMatches",
+  "entry": "entry.ts",
+  "automations": [
+    {
+      "type": "entity",
+      "description": "Send notifications to users when a new job matches their saved searches",
+      "entity_name": "Job",
+      "event_types": [
+        "create"
+      ],
+      "is_active": true,
+      "name": "Notify Saved Search Matches"
+    }
+  ]
+}

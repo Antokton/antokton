@@ -1,0 +1,170 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    overscroll-behavior-y: none;
+  }
+}
+
+/* Scroll to top button - override aggressive button rules */
+.scroll-top-btn {
+  background: linear-gradient(to right, #8ab4ff, #9bffd6) !important;
+  background-image: linear-gradient(to right, #8ab4ff, #9bffd6) !important;
+}
+
+/* Facebook-style action buttons - no border, no background */
+.fb-action-btn,
+button.fb-action-btn,
+button.fb-action-btn:not(.bg-primary):not(.bg-accent) {
+  background: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+.fb-action-btn:hover,
+button.fb-action-btn:hover,
+button.fb-action-btn:not(.bg-primary):not(.bg-accent):hover {
+  background: rgba(255,255,255,0.06) !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: inherit !important;
+}
+
+@layer base {
+
+  button,
+  badge,
+  [class*="MobileBottomNav"] {
+    user-select: none;
+  }
+}
+
+@layer utilities {
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Hide scrollbars while keeping scroll functionality - global */
+html, body {
+  overflow-x: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Fix: Dropdown/Select/Command item text visibility on hover - global fix */
+[data-radix-select-viewport] [data-highlighted],
+[data-radix-dropdown-menu-content] [data-highlighted],
+[data-radix-context-menu-content] [data-highlighted],
+[cmdk-item][aria-selected="true"],
+[role="option"]:focus,
+[role="option"]:hover,
+[role="menuitem"]:focus,
+[role="menuitem"]:hover {
+  background-color: rgba(138, 180, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+body.theme-light [data-radix-select-viewport] [data-highlighted],
+body.theme-light [data-radix-dropdown-menu-content] [data-highlighted],
+body.theme-light [role="option"]:focus,
+body.theme-light [role="option"]:hover,
+body.theme-light [role="menuitem"]:focus,
+body.theme-light [role="menuitem"]:hover {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+  color: #1a202c !important;
+}
+
+/* Fix: Prevent button text from turning black on hover - force white/60 */
+body.theme-dark button:not(.bg-primary):not(.bg-accent):hover {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Fix: Override the aggressive button rule from index.css that kills gradient/colored buttons */
+button:not(.bg-primary):not(.bg-accent)[class*="from-[#"] {
+  background: linear-gradient(to right, #8ab4ff, #9bffd6) !important;
+  border: none !important;
+}
+button:not(.bg-primary):not(.bg-accent)[class*="bg-gradient-to-r"][class*="from-[#8ab4ff]"] {
+  background: linear-gradient(to right, #8ab4ff, #9bffd6) !important;
+  border: none !important;
+}
+button:not(.bg-primary):not(.bg-accent)[class*="bg-gradient-to-r"][class*="from-[#f"] {
+  background: linear-gradient(to right, #f97316, #ef4444) !important;
+  border: none !important;
+}
+button:not(.bg-primary):not(.bg-accent).bg-green-500 {
+  background-color: rgb(34 197 94) !important;
+  border: none !important;
+}
+button:not(.bg-primary):not(.bg-accent).bg-green-600 {
+  background-color: rgb(22 163 74) !important;
+  border: none !important;
+}
+button:not(.bg-primary):not(.bg-accent).bg-red-500 {
+  background-color: rgb(239 68 68) !important;
+  border: none !important;
+}
+button:not(.bg-primary):not(.bg-accent).bg-red-600 {
+  background-color: rgb(220 38 38) !important;
+  border: none !important;
+}
+button:not(.bg-primary):not(.bg-accent).bg-\[#8ab4ff\] {
+  background-color: #8ab4ff !important;
+  border: none !important;
+}
+
+/* Ensure 44px minimum tap targets - icon buttons only */
+a[role="button"],
+[role="tab"],
+[role="menuitem"],
+[role="option"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Hero overlay links must stay fully transparent */
+a[title="Punë në Europë"],
+a[title="Komunitet"],
+a[title="Edukim & Media"] {
+  background: transparent !important;
+  border: none !important;
+}

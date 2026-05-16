@@ -1,0 +1,63 @@
+{
+  "name": "Rating",
+  "type": "object",
+  "properties": {
+    "rated_user_email": {
+      "type": "string",
+      "description": "Email i përdoruesit që vlerësohet"
+    },
+    "rater_email": {
+      "type": "string",
+      "description": "Email i vlerësuesit"
+    },
+    "rating_type": {
+      "type": "string",
+      "enum": [
+        "general",
+        "professional_inspector",
+        "halal_compliance"
+      ],
+      "description": "Lloji i vlerësimit"
+    },
+    "score": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Rezultati 1-5"
+    },
+    "comment": {
+      "type": "string",
+      "description": "Komenti"
+    },
+    "verified": {
+      "type": "boolean",
+      "default": false,
+      "description": "A është verifikuar nga admin/inspektori"
+    },
+    "inspector_notes": {
+      "type": "string",
+      "description": "Shënime nga inspektori"
+    },
+    "halal_compliant": {
+      "type": "boolean",
+      "description": "A respekton standardet halal"
+    },
+    "professionalism_score": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Vlerësim profesionalizmi"
+    },
+    "reliability_score": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Vlerësim serioziteti"
+    }
+  },
+  "required": [
+    "rated_user_email",
+    "rating_type",
+    "score"
+  ]
+}

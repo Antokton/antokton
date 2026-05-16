@@ -1,0 +1,31 @@
+{
+  "name": "StaffMessage",
+  "type": "object",
+  "properties": {
+    "sender_email": {
+      "type": "string",
+      "description": "Email i dërguesit"
+    },
+    "message": {
+      "type": "string",
+      "description": "Përmbajtja e mesazhit"
+    },
+    "is_resolved": {
+      "type": "boolean",
+      "default": false,
+      "description": "A është zgjidhur pyetja"
+    },
+    "resolved_by": {
+      "type": "string",
+      "description": "Admin që e zgjidhi"
+    },
+    "response": {
+      "type": "string",
+      "description": "Përgjigja nga stafi"
+    }
+  },
+  "required": [
+    "sender_email",
+    "message"
+  ]
+}

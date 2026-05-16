@@ -1,0 +1,51 @@
+{
+  "name": "RecurringEvent",
+  "type": "object",
+  "properties": {
+    "base_event_id": {
+      "type": "string",
+      "description": "ID e ngjarjes bazë"
+    },
+    "recurrence_pattern": {
+      "type": "string",
+      "enum": [
+        "daily",
+        "weekly",
+        "biweekly",
+        "monthly",
+        "yearly"
+      ],
+      "description": "Modeli i përsëritjes"
+    },
+    "recurrence_interval": {
+      "type": "number",
+      "default": 1,
+      "description": "Intervali i përsëritjes"
+    },
+    "recurrence_days": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Ditë për përsëritje javore (Mon, Tue, etj)"
+    },
+    "recurrence_end_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e fundit të përsëritjes"
+    },
+    "recurrence_max_occurrences": {
+      "type": "number",
+      "description": "Numri maksimal i përsëritjeve"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "A është aktive përsëritja"
+    }
+  },
+  "required": [
+    "base_event_id",
+    "recurrence_pattern"
+  ]
+}

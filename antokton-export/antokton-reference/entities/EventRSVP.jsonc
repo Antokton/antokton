@@ -1,0 +1,42 @@
+{
+  "name": "EventRSVP",
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "ID e ngjarjes"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email i përdoruesit"
+    },
+    "response": {
+      "type": "string",
+      "enum": [
+        "going",
+        "maybe",
+        "not_going"
+      ],
+      "default": "maybe",
+      "description": "Përgjigja e RSVP"
+    },
+    "guests_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Numri i mysafirëve shtesë"
+    },
+    "special_requests": {
+      "type": "string",
+      "description": "Kërkesa të veçanta (alergjije, etj)"
+    },
+    "responded_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Kur u përgjigj"
+    }
+  },
+  "required": [
+    "event_id",
+    "user_email"
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "name": "UserReview",
+  "type": "object",
+  "properties": {
+    "reviewer_email": {
+      "type": "string",
+      "description": "Email i vlerësuesit"
+    },
+    "reviewed_email": {
+      "type": "string",
+      "description": "Email i përdoruesit të vlerësuar"
+    },
+    "rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Vlerësimi i përgjithshëm (1-5 yje)"
+    },
+    "professionalism": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Profesionalizmi"
+    },
+    "communication": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Komunikimi"
+    },
+    "reliability": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Besueshmëria"
+    },
+    "comment": {
+      "type": "string",
+      "description": "Komenti"
+    },
+    "is_verified": {
+      "type": "boolean",
+      "default": false,
+      "description": "A është verifikuar recensioni"
+    }
+  },
+  "required": [
+    "reviewer_email",
+    "reviewed_email",
+    "rating"
+  ]
+}

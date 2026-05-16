@@ -1,0 +1,47 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email i përdoruesit që merr notifikimin"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "application",
+        "status_update",
+        "comment",
+        "system"
+      ],
+      "description": "Lloji i notifikimit"
+    },
+    "title": {
+      "type": "string",
+      "description": "Titulli i notifikimit"
+    },
+    "message": {
+      "type": "string",
+      "description": "Mesazhi"
+    },
+    "link": {
+      "type": "string",
+      "description": "Link për të parë detajet"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false,
+      "description": "A është lexuar"
+    },
+    "related_id": {
+      "type": "string",
+      "description": "ID e entitetit të lidhur"
+    }
+  },
+  "required": [
+    "user_email",
+    "type",
+    "title",
+    "message"
+  ]
+}

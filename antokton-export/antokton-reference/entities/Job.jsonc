@@ -1,0 +1,140 @@
+{
+  "name": "Job",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Titulli i njoftimit"
+    },
+    "description": {
+      "type": "string",
+      "description": "P\u00ebrshkrimi i detajuar i pun\u00ebs"
+    },
+    "job_type": {
+      "type": "string",
+      "enum": [
+        "ofroj",
+        "kerkoj"
+      ],
+      "default": "ofroj",
+      "description": "Lloji: Ofroj ose K\u00ebrkoj"
+    },
+    "country": {
+      "type": "string",
+      "description": "Vendi ku ofrohet puna"
+    },
+    "city": {
+      "type": "string",
+      "description": "Qyteti"
+    },
+    "zone": {
+      "type": "string",
+      "description": "Zona/rajoni Antokton"
+    },
+    "address": {
+      "type": "string",
+      "description": "Adresa e plot\u00eb"
+    },
+    "location_precision": {
+      "type": "string",
+      "enum": [
+        "sakte",
+        "perafersisht"
+      ],
+      "default": "sakte",
+      "description": "Sakt\u00ebsia e vendndodhjes"
+    },
+    "category": {
+      "type": "string",
+      "description": "Kategoria e njoftimit"
+    },
+    "subcategory": {
+      "type": "string",
+      "description": "Nnkategoria"
+    },
+    "price": {
+      "type": "number",
+      "description": "\u00c7mimi"
+    },
+    "currency": {
+      "type": "string",
+      "default": "EUR",
+      "description": "Valuta"
+    },
+    "price_type": {
+      "type": "string",
+      "enum": [
+        "fiks",
+        "negociueshme",
+        "pa_cmim"
+      ],
+      "default": "fiks",
+      "description": "Lloji i \u00e7mimit"
+    },
+    "phone_number": {
+      "type": "string",
+      "description": "Numri i telefonit"
+    },
+    "whatsapp": {
+      "type": "boolean",
+      "default": false,
+      "description": "A \u00ebsht\u00eb i disponuesh\u00ebm n\u00eb WhatsApp"
+    },
+    "contact_email": {
+      "type": "string",
+      "description": "Email-i i kontaktit"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "aktiv",
+        "jo_aktiv",
+        "pending",
+        "refuzuar"
+      ],
+      "default": "aktiv",
+      "description": "Statusi i njoftimit"
+    },
+    "likes_count": {
+      "type": "number",
+      "default": 0
+    },
+    "dislikes_count": {
+      "type": "number",
+      "default": 0
+    },
+    "comments_count": {
+      "type": "number",
+      "default": 0
+    },
+    "poster_name": {
+      "type": "string",
+      "description": "Emri i postuesit"
+    },
+    "author_profile_url": {
+      "type": "string",
+      "description": "URL e profilit t\u00eb postuesit"
+    },
+    "source_url": {
+      "type": "string",
+      "description": "URL e burimit origjinal"
+    },
+    "show_source_url": {
+      "type": "boolean",
+      "default": false,
+      "description": "Shfaq linkun origjinal te kontakti"
+    },
+    "image_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URL-t\u00eb e fotove t\u00eb njoftimit"
+    }
+  },
+  "required": [
+    "title",
+    "description",
+    "category"
+  ]
+}

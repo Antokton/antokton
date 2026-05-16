@@ -1,0 +1,74 @@
+{
+  "name": "ContentModeration",
+  "type": "object",
+  "properties": {
+    "content_id": {
+      "type": "string",
+      "description": "ID e përmbajtjes (job_id ose review_id)"
+    },
+    "content_type": {
+      "type": "string",
+      "enum": [
+        "job_posting",
+        "company_review"
+      ],
+      "description": "Lloji i përmbajtjes"
+    },
+    "content_text": {
+      "type": "string",
+      "description": "Teksti i përmbajtjes"
+    },
+    "ai_flag_status": {
+      "type": "string",
+      "enum": [
+        "approved",
+        "flagged",
+        "rejected"
+      ],
+      "default": "approved",
+      "description": "Statusi i flamurit të AI"
+    },
+    "ai_violation_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Arsyete e shkeljes sipas AI"
+    },
+    "ai_confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Sigurimi i AI (0-100%)"
+    },
+    "admin_decision": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "override_approved"
+      ],
+      "default": "pending",
+      "description": "Vendimi i adminit"
+    },
+    "admin_notes": {
+      "type": "string",
+      "description": "Shënimet e adminit"
+    },
+    "reviewed_by": {
+      "type": "string",
+      "description": "Admini që shqyrtoi"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Kur u shqyrtua"
+    }
+  },
+  "required": [
+    "content_id",
+    "content_type",
+    "content_text"
+  ]
+}

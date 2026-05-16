@@ -1,0 +1,1258 @@
+import React, { useState, useEffect } from "react";
+import { base44 } from "@/api/antoktonClient";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MapPin, Clock, ThumbsUp, ThumbsDown, MessageCircle, User, Send, ArrowLeft, Phone, Briefcase, Heart, Flag, Share2, Copy, Users as UsersIcon, X, Pencil, Check, MoreVertical, ExternalLink, Link2 } from "lucide-react";
+import LocationPicker from "../components/job/LocationPicker";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "../utils";
+import moment from "moment";
+import { motion, AnimatePresence } from "framer-motion";
+import ApplicationForm from "../components/job/ApplicationForm";
+import CommentItem from "../components/job/CommentItem";
+
+function SimilarPosts({ currentJobId, category }) {
+  const { data: similarJobs = [] } = useQuery({
+    queryKey: ['similar-jobs', category, currentJobId],
+    queryFn: async () => {
+      const jobs = await base44.entities.Job.filter({ 
+        status: "approved",
+        category: category 
+      }, "-created_date", 50);
+      return jobs.filter(j => j.id !== currentJobId).slice(0, 4);
+    },
+    enabled: !!category && !!currentJobId
+  });
+
+  if (similarJobs.length === 0) return null;
+
+  return (
+    <div className="mt-8 pt-8 border-t border-white/10">
+      <h2 className="text-xl font-bold text-white mb-4">Postime të Ngjashme</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {similarJobs.map(job => (
+          <a
+            key={job.id}
+            href={createPageUrl("PostDetail") + `?id=${job.id}`}
+            className="block p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/8 transition-all group"
+          >
+            <h3 className="text-white font-semibold text-sm group-hover:text-[#8ab4ff] transition-colors mb-2 line-clamp-2">
+              {job.title}
+            </h3>
+            <div className="flex items-center gap-2 text-xs text-white mb-2">
+              <MapPin className="w-3 h-3" />
+              {[job.city, job.country].filter(Boolean).join(", ")}
+            </div>
+            <p className="text-white text-xs line-clamp-2">{job.description}</p>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Opsionet e raportimit sipas kategorisë
+const getReportReasons = (category) => {
+  const base = [
+    { value: "spam", label: "🚫 Spam / Reklamë e padëshiruar" },
+    { value: "fake", label: "❌ Rremë / Mashtrim" },
+    { value: "offensive", label: "⚠️ Ofensiv / Papërshtatshëm" },
+    { value: "other", label: "💬 Tjetër" },
+  ];
+  if (category === "prona" || category === "pazar") {
+    return [
+      { value: "i_shitur", label: "✅ Është shitur / Nuk është më në dispozicion" },
+      { value: "cmim_i_ndryshuar", label: "💰 Çmimi është ndryshuar" },
+      ...base,
+    ];
+  }
+  if (category === "pune") {
+    return [
+      { value: "vend_i_plotesuar", label: "✅ Vendi i punës është plotësuar tashmë" },
+      { value: "nuk_jepet_me", label: "🚪 Pozicioni nuk ofrohet më" },
+      ...base,
+    ];
+  }
+  if (category === "sherbime") {
+    return [
+      { value: "nuk_jepet_me", label: "🚪 Shërbimi nuk ofrohet më" },
+      { value: "cmim_i_ndryshuar", label: "💰 Çmimi është ndryshuar" },
+      ...base,
+    ];
+  }
+  return base;
+};
+
+const reportReasonLabel = (value) => {
+  const all = [
+    { value: "i_shitur", label: "I shitur / Nuk është më" },
+    { value: "vend_i_plotesuar", label: "Vend i plotësuar" },
+    { value: "nuk_jepet_me", label: "Nuk ofrohet më" },
+    { value: "cmim_i_ndryshuar", label: "Çmimi ndryshoi" },
+    { value: "spam", label: "Spam" },
+    { value: "fake", label: "Rremë/Mashtrim" },
+    { value: "offensive", label: "Ofensiv" },
+    { value: "other", label: "Tjetër" },
+  ];
+  return all.find(r => r.value === value)?.label || value;
+};
+
+const categoryLabels = {
+  pune: "Punë", shtepi: "Shtëpi", juridike: "Juridike",
+  edukim: "Edukim", bamiresi: "Bamirësi", media: "Media", sherbime: "Shërbime"
+};
+
+export default function PostDetail() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const jobId = urlParams.get("id");
+
+  const [user, setUser] = useState(null);
+  const [isAuth, setIsAuth] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [userReaction, setUserReaction] = useState(null);
+  const [showApplicationForm, setShowApplicationForm] = useState(false);
+
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [showPostReactionPicker, setShowPostReactionPicker] = useState(false);
+  const [showQuickApply, setShowQuickApply] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [quickApplyForm, setQuickApplyForm] = useState({ name: "", email: "", message: "" });
+  const [reportForm, setReportForm] = useState({ reason: "", details: "" });
+  const [reportReasons, setReportReasons] = useState([]);
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [showComments, setShowComments] = useState(false);
+
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const authenticated = await base44.auth.isAuthenticated();
+      setIsAuth(authenticated);
+      if (authenticated) {
+        const me = await base44.auth.me();
+        setUser(me);
+        
+        // Check for active subscription
+        const subscriptions = await base44.entities.PremiumSubscription.filter({
+          user_email: me.email,
+          is_active: true
+        });
+        
+        const now = new Date();
+        const hasActive = subscriptions.some(sub => new Date(sub.end_date) > now);
+        setHasActiveSubscription(hasActive);
+      }
+    };
+    checkAuth();
+  }, []);
+
+  // Track job view
+  useEffect(() => {
+    const trackView = async () => {
+      if (user && jobId) {
+        try {
+          const existingViews = await base44.entities.JobView.filter({ 
+            job_id: jobId, 
+            user_email: user.email 
+          });
+          
+          if (existingViews.length > 0) {
+            await base44.entities.JobView.update(existingViews[0].id, {
+              view_count: (existingViews[0].view_count || 1) + 1,
+              last_viewed: new Date().toISOString()
+            });
+          } else {
+            await base44.entities.JobView.create({
+              job_id: jobId,
+              user_email: user.email,
+              last_viewed: new Date().toISOString()
+            });
+          }
+        } catch (error) {
+          console.error('Error tracking view:', error);
+        }
+      }
+    };
+    trackView();
+  }, [user, jobId]);
+
+  const { data: job, isLoading } = useQuery({
+    queryKey: ["job", jobId],
+    queryFn: async () => {
+      if (!jobId) return null;
+      const result = await base44.entities.Job.filter({ id: jobId });
+      return result[0] || null;
+    },
+    enabled: !!jobId,
+  });
+
+  const { data: comments = [] } = useQuery({
+    queryKey: ["comments", jobId],
+    queryFn: () => base44.entities.JobComment.filter({ job_id: jobId }, "-created_date", 100),
+    enabled: !!jobId,
+    staleTime: 30 * 1000,
+  });
+
+  const { data: reactions = [] } = useQuery({
+    queryKey: ["reactions", jobId],
+    queryFn: () => base44.entities.JobReaction.filter({ job_id: jobId }),
+    enabled: !!jobId,
+  });
+
+  const { data: commentLikes = [] } = useQuery({
+    queryKey: ["commentLikes", jobId],
+    queryFn: () => base44.entities.CommentLike.list(),
+    enabled: !!jobId,
+  });
+
+  const { data: commentReports = [] } = useQuery({
+    queryKey: ["commentReports", jobId],
+    queryFn: () => base44.entities.CommentReport.filter({ status: "pending" }),
+    enabled: !!jobId && (user?.role === "admin" || user?.role === "moderator"),
+  });
+
+  const { data: applications = [] } = useQuery({
+    queryKey: ["jobApplications", jobId],
+    queryFn: () => base44.entities.JobApplication.filter({ job_id: jobId }),
+    enabled: !!jobId
+  });
+
+  useEffect(() => {
+    if (user && reactions.length > 0) {
+      const myReaction = reactions.find(r => r.user_email === user.email);
+      if (myReaction) setUserReaction(myReaction.reaction_type);
+    }
+  }, [reactions, user]);
+
+  useEffect(() => {
+    if (!job?.deadline) return;
+    
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const deadline = new Date(job.deadline);
+      const diff = deadline - now;
+      
+      if (diff <= 0) {
+        setTimeLeft({ expired: true });
+        return;
+      }
+      
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      
+      setTimeLeft({ days, hours, isUrgent: days < 3 });
+    };
+    
+    calculateTimeLeft();
+    const interval = setInterval(calculateTimeLeft, 60000); // Update every minute
+    
+    return () => clearInterval(interval);
+  }, [job?.deadline]);
+
+  const commentMutation = useMutation({
+    mutationFn: async () => {
+      // Check comment limit for non-subscribed users
+      if (user.subscription_type === "none") {
+        const userComments = comments.filter(c => c.created_by === user.email);
+        if (userComments.length >= 2) {
+          throw new Error("Anëtarët e pa-abonuar mund të lënë maksimum 2 komente për njoftim.");
+        }
+      }
+
+      const displayName = user?.first_name && user?.surname 
+        ? `${user.first_name} ${user.surname}`
+        : user?.first_name || user?.full_name || user?.email?.split('@')[0] || "Anonim";
+      
+      await base44.entities.JobComment.create({
+        job_id: jobId,
+        text: commentText,
+        author_name: displayName,
+      });
+      await base44.entities.Job.update(jobId, {
+        comments_count: (job?.comments_count || 0) + 1,
+      });
+    },
+    onSuccess: () => {
+      setCommentText("");
+      queryClient.invalidateQueries({ queryKey: ["comments", jobId] });
+      queryClient.invalidateQueries({ queryKey: ["job", jobId] });
+    },
+    onError: (error) => {
+      alert(error.message);
+    },
+  });
+
+  const reactionMutation = useMutation({
+    mutationFn: async (type) => {
+      const existingReaction = reactions.find(r => r.user_email === user?.email);
+      
+      if (existingReaction) {
+        if (existingReaction.reaction_type === type) return;
+        await base44.entities.JobReaction.update(existingReaction.id, { reaction_type: type });
+      } else {
+        await base44.entities.JobReaction.create({
+          job_id: jobId,
+          reaction_type: type,
+          user_email: user?.email,
+        });
+      }
+
+      const allReactions = await base44.entities.JobReaction.filter({ job_id: jobId });
+      const likes = allReactions.filter(r => r.reaction_type === "like").length;
+      const dislikes = allReactions.filter(r => r.reaction_type === "dislike").length;
+      await base44.entities.Job.update(jobId, { likes_count: likes, dislikes_count: dislikes });
+    },
+    onMutate: async (type) => {
+      await queryClient.cancelQueries({ queryKey: ["reactions", jobId] });
+      await queryClient.cancelQueries({ queryKey: ["job", jobId] });
+      
+      const previousJob = queryClient.getQueryData(["job", jobId]);
+      const updatedJob = {
+        ...previousJob,
+        likes_count: type === "like" ? (previousJob.likes_count || 0) + 1 : previousJob.likes_count,
+        dislikes_count: type === "dislike" ? (previousJob.dislikes_count || 0) + 1 : previousJob.dislikes_count,
+      };
+      
+      queryClient.setQueryData(["job", jobId], updatedJob);
+      
+      return { previousJob };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reactions", jobId] });
+      queryClient.invalidateQueries({ queryKey: ["job", jobId] });
+    },
+    onError: (_err, _newData, context) => {
+      if (context?.previousJob) {
+        queryClient.setQueryData(["job", jobId], context.previousJob);
+      }
+    },
+  });
+
+  const handleReaction = (type) => {
+    if (!isAuth) {
+      base44.auth.redirectToLogin();
+      return;
+    }
+    setUserReaction(type);
+    reactionMutation.mutate(type);
+  };
+
+
+
+  const quickApplyMutation = useMutation({
+    mutationFn: async () => {
+      await base44.entities.JobApplication.create({
+        job_id: jobId,
+        applicant_name: quickApplyForm.name,
+        applicant_email: quickApplyForm.email,
+        cover_letter: quickApplyForm.message,
+        status: "applied"
+      });
+      
+      // Send notification to job poster
+      if (job?.created_by) {
+        await base44.entities.Notification.create({
+          user_email: job.created_by,
+          type: "application",
+          title: "Aplikim i Ri",
+          message: `Keni një aplikim të ri nga ${quickApplyForm.name}`,
+          link: createPageUrl("EmployerDashboard"),
+          related_id: jobId
+        });
+      }
+    },
+    onSuccess: () => {
+      setShowQuickApply(false);
+      setQuickApplyForm({ name: "", email: "", message: "" });
+      queryClient.invalidateQueries({ queryKey: ["jobApplications", jobId] });
+      alert("Aplikimi juaj u dërgua me sukses!");
+    }
+  });
+
+  const deleteJobMutation = useMutation({
+    mutationFn: async () => {
+      // Ruaj historikun para fshirjes
+      const logData = {
+        entity_id: jobId,
+        entity_type: "job",
+        entity_title: job?.title || "",
+        action_type: "delete",
+        performed_by: user?.email || "unknown",
+        previous_status: job?.status || "approved",
+        new_status: "deleted",
+        reason: user?.email === job?.created_by ? "Fshirë nga autori" : "Fshirë nga moderatori/admini",
+      };
+
+      // AdminAction - i dukshëm për admin/moderatorë
+      await base44.entities.AdminAction.create(logData);
+
+      // UserActivity - i dukshëm për postuesin (autorin)
+      await base44.entities.UserActivity.create({
+        user_email: job?.created_by || user?.email,
+        activity_type: "job_delete",
+        related_job_id: jobId,
+        metadata: {
+          job_title: job?.title || "",
+          deleted_by: user?.email,
+          deleted_by_role: user?.role || "user",
+          category: job?.category || "",
+        }
+      });
+
+      await base44.entities.Job.delete(jobId);
+    },
+    onSuccess: () => {
+      window.location.href = "/Feed";
+    }
+  });
+
+  const handleDeleteJob = () => {
+    setShowDeleteModal(true);
+  };
+
+  const editJobMutation = useMutation({
+    mutationFn: async () => {
+      await base44.entities.Job.update(jobId, {
+        ...editForm,
+        address: editForm.address || editForm.city || "",
+        phone_number: editForm.phone_number || "",
+        phone_app: editForm.phone_app || "telefon",
+        category: editForm.category,
+        pazar_category: editForm.pazar_category || undefined,
+        poster_name: editForm.poster_name || job.poster_name,
+      });
+    },
+    onSuccess: () => {
+      setIsEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["job", jobId] });
+    }
+  });
+
+  const reportPostMutation = useMutation({
+    mutationFn: async () => {
+      await base44.entities.Report.create({
+        post_id: jobId,
+        post_title: job?.title || "",
+        post_category: job?.category || "",
+        reporter_email: user?.email,
+        reason: reportForm.reason,
+        details: reportForm.details,
+        status: "pending"
+      });
+      // Dërgo notifikim tek të gjithë adminët/moderatorët
+      const staffUsers = await base44.entities.User.list();
+      const staff = staffUsers.filter(u => u.role === "admin" || u.role === "moderator");
+      await Promise.all(staff.map(s =>
+        base44.entities.Notification.create({
+          user_email: s.email,
+          type: "system",
+          title: "📋 Raportim i Ri",
+          message: `"${job?.title || "Njoftim"}" u raportua si: ${reportReasonLabel(reportForm.reason)}`,
+          link: `/PostDetail?id=${jobId}`,
+          related_id: jobId
+        })
+      ));
+    },
+    onSuccess: () => {
+      setShowReportModal(false);
+      setReportForm({ reason: "", details: "" });
+      alert("Raportimi u dërgua tek stafi. Faleminderit!");
+    }
+  });
+
+  const handleShare = (platform) => {
+    const url = window.location.href;
+    const text = `${job.title} - Antokton`;
+    
+    const urls = {
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
+      whatsapp: `https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`,
+      twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
+      instagram: `https://www.instagram.com/`
+    };
+    
+    if (platform === 'copy') {
+      navigator.clipboard.writeText(url);
+      alert('Linku u kopjua!');
+    } else {
+      window.open(urls[platform], '_blank', 'width=600,height=400');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-6 h-6 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!job || !jobId) {
+    window.location.href = createPageUrl("Feed");
+    return null;
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+      {/* Back */}
+      <Link
+        to={createPageUrl("Feed")}
+        className="inline-flex items-center gap-1.5 text-sm text-white/40 hover:text-white/70 transition-colors mb-6"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Kthehu
+      </Link>
+
+      {/* Post Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-2xl border border-white/10 overflow-hidden"
+        style={{ background: 'rgba(255, 255, 255, 0.06)' }}
+      >
+        <div className="p-6 sm:p-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="bg-blue-500/20 text-blue-300 border-blue-500/30 text-xs">
+                {categoryLabels[job.category] || job.category}
+              </Badge>
+              {job.profession && (
+                <Badge variant="outline" className="text-xs border-white/20 text-white/60">
+                  <Briefcase className="w-3 h-3 mr-1" />
+                  {job.profession}
+                </Badge>
+              )}
+            </div>
+            {/* 3-dot menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-white/40 hover:text-white hover:bg-white/10 w-8 h-8 p-0">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-[#0b1020] border-white/10 w-48">
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (!isAuth) { base44.auth.redirectToLogin(); return; }
+                    const reasons = getReportReasons(job?.category);
+                    setReportReasons(reasons);
+                    setReportForm({ reason: reasons[0]?.value || "spam", details: "" });
+                    setShowReportModal(true);
+                  }}
+                  className="text-red-400 hover:text-red-300 cursor-pointer"
+                >
+                  <Flag className="w-4 h-4 mr-2" />
+                  Raporto Njoftimin
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Admin/Moderator/Author Edit Bar */}
+          {isAuth && (user?.role === 'admin' || user?.role === 'moderator' || user?.email === job?.created_by) && !isEditing && (
+            <div className="mb-4 flex justify-end gap-2">
+              <Button
+                size="sm"
+                onClick={() => { setEditForm({ title: job.title, description: job.description, contact_info: job.contact_info || '', phone_number: job.phone_number || '', phone_app: job.phone_app || 'telefon', salary_info: job.salary_info || '', address: job.address || [job.city, job.country].filter(Boolean).join(", ") || '', city: job.city || '', zone: job.zone || '', country: job.country || '', location_precision: job.location_precision || 'sakte', category: job.category || '', pazar_category: job.pazar_category || '', poster_name: job.poster_name || '' }); setIsEditing(true); }}
+                className="bg-[#8ab4ff]/10 text-[#8ab4ff] border border-[#8ab4ff]/30 hover:bg-[#8ab4ff]/20 gap-1.5"
+              >
+                <Pencil className="w-3.5 h-3.5" /> Përpuno
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleDeleteJob}
+                disabled={deleteJobMutation.isPending}
+                className="bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 gap-1.5"
+              >
+                <X className="w-3.5 h-3.5" /> {deleteJobMutation.isPending ? "Duke fshirë..." : "Fshi"}
+              </Button>
+            </div>
+          )}
+
+          {/* Edit Form */}
+          {isEditing && (
+            <div className="mb-6 p-4 rounded-xl border border-[#8ab4ff]/40 bg-[#8ab4ff]/5 space-y-3">
+              <p className="text-[#8ab4ff] text-xs font-semibold uppercase tracking-wider">Përpuno Njoftimin</p>
+              <div className="space-y-1">
+                <Label className="text-white/60 text-xs">Titulli</Label>
+                <Input value={editForm.title} onChange={e => setEditForm({...editForm, title: e.target.value})} className="bg-white/5 border-white/10 text-white" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-white/60 text-xs">Përshkrimi</Label>
+                <Textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} className="bg-white/5 border-white/10 text-white min-h-[120px]" />
+              </div>
+              <div className="space-y-1">
+              <Label className="text-white/60 text-xs">Numri i telefonit</Label>
+               <div className="flex gap-2">
+                 <Input value={editForm.phone_number || ''} onChange={e => setEditForm({...editForm, phone_number: e.target.value})} placeholder="+XX XXX XXX XXX" className="bg-white/5 border-white/10 text-white flex-1 min-w-0" />
+                 {(() => {
+                   const editPhoneIcons = {
+                     telefon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-white/70"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.73 9.5a19.79 19.79 0 01-3.07-8.67A2 2 0 012.64 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.59a16 16 0 006.29 6.29l.96-.96a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>,
+                     whatsapp: <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-[#25D366]"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>,
+                     viber: <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-[#7360F2]"><path d="M11.4 0C5.5.3.3 5.2.3 11.1c0 2.2.6 4.3 1.8 6.1L.3 24l6.9-1.8c1.7 1 3.6 1.5 5.6 1.5h.1c5.8 0 10.8-4.7 11.1-10.5C24.2 7 20.3 2.5 15.2.6 14 .2 12.7 0 11.4 0zm4.1 16.9c-.3.8-1.5 1.5-2.1 1.6-.5.1-1.2.1-1.9-.1-.4-.1-1-.3-1.7-.6-3-1.3-5-4.3-5.1-4.5-.1-.2-1.2-1.6-1.2-3s.7-2.1 1-2.4c.2-.3.5-.4.7-.4h.5c.2 0 .4 0 .5.4.2.4.7 1.7.8 1.8.1.1.1.3 0 .5-.1.1-.2.3-.3.4-.1.1-.3.3-.4.4-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.5 1.5.3.1.5.1.7-.1.2-.2.7-.8.9-1.1.2-.3.4-.2.7-.1.3.1 1.8.9 2.1 1 .3.2.5.3.6.4.1.2 0 .9-.4 1.5z"/></svg>,
+                     telegram: <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-[#2AABEE]"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a12 12 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.96 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>,
+                     bip: <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4"><rect width="24" height="24" rx="6" fill="#1DA1F2"/><text x="3.5" y="16.5" fontSize="9" fill="white" fontWeight="bold" fontFamily="Arial">BiP</text></svg>,
+                     signal: <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-[#3A76F0]"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 4.5a7.5 7.5 0 110 15 7.5 7.5 0 010-15zm0 2a5.5 5.5 0 100 11 5.5 5.5 0 000-11zm0 2a3.5 3.5 0 110 7 3.5 3.5 0 010-7z"/></svg>,
+                     tjeter: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-white/50"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>,
+                   };
+                   const apps = [{v:"telefon",l:"Telefon"},{v:"whatsapp",l:"WhatsApp"},{v:"viber",l:"Viber"},{v:"telegram",l:"Telegram"},{v:"bip",l:"BiP"},{v:"signal",l:"Signal"},{v:"tjeter",l:"Tjetër"}];
+                   const cur = editForm.phone_app || 'telefon';
+                   return (
+                     <Select value={cur} onValueChange={v => setEditForm({...editForm, phone_app: v})}>
+                       <SelectTrigger className="flex-shrink-0 w-[130px]" style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', color: '#ffffff' }}>
+                         <div className="flex items-center gap-2">
+                           {editPhoneIcons[cur]}
+                           <span className="text-sm">{apps.find(a=>a.v===cur)?.l}</span>
+                         </div>
+                       </SelectTrigger>
+                       <SelectContent style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)' }}>
+                         {apps.map(a => (
+                           <SelectItem key={a.v} value={a.v}>
+                             <div className="flex items-center gap-2">{editPhoneIcons[a.v]}<span>{a.l}</span></div>
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
+                     </Select>
+                   );
+                 })()}
+               </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-white/60 text-xs">Email / Kontakt tjetër</Label>
+                <Input value={editForm.contact_info} onChange={e => setEditForm({...editForm, contact_info: e.target.value})} className="bg-white/5 border-white/10 text-white" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-white/60 text-xs">Kategoria</Label>
+                <select value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})}
+                  className="w-full rounded-md px-3 py-2 text-sm text-white border border-white/10" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                  {[{v:'pune',l:'Punë'},{v:'sherbime',l:'Shërbime'},{v:'prona',l:'Prona'},{v:'edukim',l:'Edukim'},{v:'bamiresi',l:'Bamirësi'},{v:'media',l:'Media'},{v:'pazar',l:'Pazar'}].map(c => (
+                    <option key={c.v} value={c.v} className="bg-[#0b1020]">{c.l}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-white/60 text-xs">Paga/Çmimi</Label>
+                <Input value={editForm.salary_info} onChange={e => setEditForm({...editForm, salary_info: e.target.value})} className="bg-white/5 border-white/10 text-white" />
+              </div>
+              {(user?.role === 'admin' || user?.role === 'moderator') && (
+                <div className="space-y-1 p-3 rounded-lg border border-amber-500/30 bg-amber-500/5">
+                  <Label className="text-amber-300 text-xs font-semibold">🛡️ Emri i Postuesit (Admin/Mod)</Label>
+                  <Input value={editForm.poster_name || ''} onChange={e => setEditForm({...editForm, poster_name: e.target.value})} placeholder="Emri që shfaqet publikisht..." className="bg-white/5 border-white/10 text-white" />
+                </div>
+              )}
+              <div className="space-y-1">
+                <Label className="text-white/60 text-xs">Vendndodhja</Label>
+                <LocationPicker
+                  value={{ address: editForm.address || [editForm.city, editForm.zone, editForm.country].filter(Boolean).join(", "), country: editForm.country, zone: editForm.zone || "", city: editForm.city, location_precision: editForm.location_precision }}
+                  onChange={loc => setEditForm(f => ({ ...f, address: loc.address, country: loc.country, zone: loc.zone || "", city: loc.city, location_precision: loc.location_precision }))}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button onClick={() => editJobMutation.mutate()} disabled={editJobMutation.isPending} className="bg-green-500 hover:bg-green-600 text-white gap-1.5 flex-1 min-w-[140px]">
+                  <Check className="w-3.5 h-3.5" /> {editJobMutation.isPending ? "Duke ruajtur..." : "Ruaj Ndryshimet"}
+                </Button>
+                <Button onClick={() => setIsEditing(false)} variant="ghost" className="text-white/60 hover:text-white border border-white/20 flex-1 min-w-[80px]">
+                  <X className="w-3.5 h-3.5 mr-1" /> Anulo
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
+            {isEditing ? editForm.title : job.title}
+          </h1>
+
+          <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-white">
+            {(job.country || job.city) && (() => {
+              const isAntokton = job.country === "Antokton";
+              const isPrecise = job.location_precision !== 'perafersisht';
+              // Kur është "përafërsisht", shfaq vetëm zonën/qytetin - jo adresën e saktë
+              const displayAddress = isPrecise
+                ? (job.address && job.address !== job.city ? job.address : [job.city, isAntokton ? "Antokton" : job.country].filter(Boolean).join(", "))
+                : [job.city || job.zone, isAntokton ? "Antokton" : job.country].filter(Boolean).join(", ");
+              const mapsQuery = isPrecise
+                ? (job.address && job.address !== job.city ? job.address : [job.city, isAntokton ? "Shqipëri" : job.country].filter(Boolean).join(", "))
+                : [job.city || job.zone, isAntokton ? "Shqipëri" : job.country].filter(Boolean).join(", ");
+              return (
+                <a
+                  href={`https://www.google.com/maps/search/${encodeURIComponent(mapsQuery)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-white hover:text-[#8ab4ff] transition-colors"
+                >
+                  <MapPin className="w-4 h-4" />
+                  {displayAddress}
+                  {!isPrecise && (
+                    <span className="text-xs text-white/40 ml-0.5">(zonë ~1km)</span>
+                  )}
+                </a>
+              );
+            })()}
+            <span className="flex items-center gap-1.5 text-white/70">
+              <Clock className="w-4 h-4" />
+              {moment(job.created_date).format("D MMMM YYYY")}
+            </span>
+            {job.poster_name && (() => {
+              const canSeeProfile = isAuth && (hasActiveSubscription || user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'inspector');
+              const profileLink = job.created_by ? `/UserProfiles?email=${encodeURIComponent(job.created_by)}` : null;
+              const externalLink = job.author_profile_url || null;
+              if (canSeeProfile && (profileLink || externalLink)) {
+                return (
+                  <a
+                    href={profileLink || externalLink}
+                    target={externalLink && !profileLink ? "_blank" : "_self"}
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-[#8ab4ff] hover:text-[#9bffd6] transition-colors underline underline-offset-2"
+                  >
+                    <User className="w-4 h-4" />
+                    {job.poster_name}
+                  </a>
+                );
+              }
+              return (
+                <span className="flex items-center gap-1.5 text-white/70">
+                  <User className="w-4 h-4" />
+                  {job.poster_name}
+                </span>
+              );
+            })()}
+          </div>
+
+          {job.salary_info && (
+            <div className="mt-4 px-4 py-2.5 rounded-xl bg-green-500/10 border border-green-500/20 text-green-300 text-sm font-medium">
+              💰 {job.salary_info}
+            </div>
+          )}
+
+          {/* Foto gallery - nga image_urls (array) ose image_url (singular fallback) */}
+          {(() => {
+            const imgs = Array.isArray(job.image_urls) && job.image_urls.length > 0
+              ? job.image_urls.slice(0, 3)
+              : job.image_url ? [job.image_url] : [];
+            if (imgs.length === 0) return null;
+            return (
+              <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+                {imgs.map((imgUrl, i) => (
+                  <a key={i} href={imgUrl} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                    <img
+                      src={imgUrl}
+                      alt={`foto ${i + 1}`}
+                      className="h-44 w-auto max-w-[260px] rounded-xl object-cover border border-white/10 hover:opacity-90 transition-opacity cursor-pointer"
+                      onError={e => e.target.style.display = 'none'}
+                    />
+                  </a>
+                ))}
+              </div>
+            );
+          })()}
+
+          <div className="mt-6 text-white leading-relaxed whitespace-pre-wrap">
+            {String((isEditing ? editForm.description : job.description) || "").split(/(https?:\/\/[^\s]+)/g).map((part, i) => {
+              if (part.match(/https?:\/\/[^\s]+/)) {
+                return (
+                  <a
+                    key={i}
+                    href={part}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#8ab4ff] hover:text-[#9bffd6] underline"
+                  >
+                    {part}
+                  </a>
+                );
+              }
+              return <span key={i}>{part}</span>;
+            })}
+          </div>
+
+          {(job.contact_info || job.phone_number) && (() => {
+            const canSeeContact = isAuth && (hasActiveSubscription || user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'inspector');
+            const phoneAppLabels = { telefon: "Telefon", whatsapp: "WhatsApp", viber: "Viber", telegram: "Telegram", bip: "BiP", signal: "Signal", tjeter: "" };
+            const phoneAppSvgs = {
+              telefon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 flex-shrink-0 text-white/70"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.73 9.5a19.79 19.79 0 01-3.07-8.67A2 2 0 012.64 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.59a16 16 0 006.29 6.29l.96-.96a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>,
+              whatsapp: <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 flex-shrink-0 text-[#25D366]"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>,
+              viber: <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 flex-shrink-0 text-[#7360F2]"><path d="M11.4 0C5.5.3.3 5.2.3 11.1c0 2.2.6 4.3 1.8 6.1L.3 24l6.9-1.8c1.7 1 3.6 1.5 5.6 1.5h.1c5.8 0 10.8-4.7 11.1-10.5C24.2 7 20.3 2.5 15.2.6 14 .2 12.7 0 11.4 0zm4.1 16.9c-.3.8-1.5 1.5-2.1 1.6-.5.1-1.2.1-1.9-.1-.4-.1-1-.3-1.7-.6-3-1.3-5-4.3-5.1-4.5-.1-.2-1.2-1.6-1.2-3s.7-2.1 1-2.4c.2-.3.5-.4.7-.4h.5c.2 0 .4 0 .5.4.2.4.7 1.7.8 1.8.1.1.1.3 0 .5-.1.1-.2.3-.3.4-.1.1-.3.3-.4.4-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.5 1.5.3.1.5.1.7-.1.2-.2.7-.8.9-1.1.2-.3.4-.2.7-.1.3.1 1.8.9 2.1 1 .3.2.5.3.6.4.1.2 0 .9-.4 1.5z"/></svg>,
+              telegram: <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 flex-shrink-0 text-[#2AABEE]"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a12 12 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.96 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>,
+              bip: <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5 flex-shrink-0"><rect width="24" height="24" rx="6" fill="#1DA1F2"/><text x="3.5" y="16.5" fontSize="9" fill="white" fontWeight="bold" fontFamily="Arial">BiP</text></svg>,
+              signal: <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 flex-shrink-0 text-[#3A76F0]"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 4.5a7.5 7.5 0 110 15 7.5 7.5 0 010-15zm0 2a5.5 5.5 0 100 11 5.5 5.5 0 000-11zm0 2a3.5 3.5 0 110 7 3.5 3.5 0 010-7z"/></svg>,
+              tjeter: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 flex-shrink-0 text-white/50"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>,
+            };
+            const phoneApp = job.phone_app || "telefon";
+            const phoneIcon = phoneAppSvgs[phoneApp] || phoneAppSvgs.telefon;
+            const phoneLabel = phoneAppLabels[phoneApp] || "";
+            const cleanPhone = (job.phone_number || "").replace(/\s/g, "");
+            const digitsOnly = cleanPhone.replace(/[^\d]/g, "");
+            const phoneHref = phoneApp === "whatsapp"
+              ? `https://wa.me/${digitsOnly}`
+              : phoneApp === "viber"
+              ? `viber://chat?number=${cleanPhone}`
+              : phoneApp === "telegram"
+              ? `https://t.me/${cleanPhone}`
+              : `tel:${cleanPhone}`;
+
+            return (
+              <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10">
+                <div className="flex items-center gap-2 text-sm font-medium text-white mb-2">
+                  <Phone className="w-4 h-4" />
+                  Kontakt
+                </div>
+                {canSeeContact ? (
+                 <div className="text-white text-sm space-y-2">
+                   {/* Numri i telefonit - direkt i klikueshëm */}
+                   {job.phone_number && (
+                     <div className="flex items-center gap-3">
+                       <a
+                         href={`tel:${cleanPhone}`}
+                         className="flex items-center gap-2 text-[#8ab4ff] hover:text-[#9bffd6] font-semibold text-base transition-colors"
+                       >
+                         {phoneIcon}
+                         {job.phone_number}
+                       </a>
+                       {(phoneApp === "whatsapp" || phoneApp === "telefon") && (
+                         <a
+                           href={`https://wa.me/${digitsOnly}`}
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           title="Dërgo mesazh WhatsApp"
+                           className="flex items-center justify-center w-8 h-8 rounded-full transition-all hover:scale-110"
+                           style={{ background: '#25D366' }}
+                         >
+                           <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                         </a>
+                       )}
+                     </div>
+                   )}
+                    {/* Info tjetër kontakti */}
+                    {job.contact_info && job.contact_info.split(/\n/).map((line, i) => {
+                      const emailMatch = line.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+                      const urlMatch = line.match(/https?:\/\/[^\s]+/);
+                      const mapsMatch = line.match(/^(rr\.|rruga|adresa|adresë|str\.|sheshi|bul\.)/i);
+                      const phoneMatch = line.match(/[\+]?[\d\s\-\(\)]{7,}/);
+                      if (emailMatch) return <a key={i} href={`mailto:${emailMatch[0]}`} className="block text-[#8ab4ff] hover:text-[#9bffd6] underline">{line}</a>;
+                      if (urlMatch) return <a key={i} href={urlMatch[0]} target="_blank" rel="noopener noreferrer" className="block text-[#8ab4ff] hover:text-[#9bffd6] underline">{line}</a>;
+                      if (mapsMatch) return <a key={i} href={`https://www.google.com/maps/search/${encodeURIComponent(line)}`} target="_blank" rel="noopener noreferrer" className="block text-[#8ab4ff] hover:text-[#9bffd6] underline">📍 {line}</a>;
+                      if (phoneMatch && line.replace(/[^\d]/g,'').length >= 7) return <a key={i} href={`tel:${line.replace(/\s/g,'')}`} className="block text-[#8ab4ff] hover:text-[#9bffd6] underline">{line}</a>;
+                      return <span key={i} className="block">{line}</span>;
+                    })}
+                    {(job.city || job.country) && (
+                      <a
+                        href={`https://www.google.com/maps/search/${encodeURIComponent([job.city, job.country === "Antokton" ? null : job.country].filter(Boolean).join(", "))}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 mt-1 text-xs text-[#9bffd6] hover:text-white border border-[#9bffd6]/30 rounded-full px-2.5 py-1"
+                      >
+                        <MapPin className="w-3 h-3" /> Hap në Google Maps
+                      </a>
+                    )}
+                              {job.source_url && job.show_source_url && (
+            <a
+              href={job.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 mt-1 text-xs text-[#8ab4ff] hover:text-[#9bffd6] transition-colors underline underline-offset-2"
+            >
+              <ExternalLink className="w-3 h-3" /> Shiko njoftimin origjinal
+            </a>
+          )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                      <p className="text-yellow-300 text-sm font-medium mb-2">🔒 Kontaktet e plota janë të fshehura</p>
+                      <p className="text-white text-xs">Bëhu Premium për të parë numrin e telefonit dhe emailin e plotë të postuesit</p>
+                    </div>
+                    <Link to={createPageUrl("Subscriptions")} className="inline-block w-full text-center px-4 py-3 bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] rounded-lg text-sm font-semibold hover:opacity-90">
+                      Bëhu Premium
+                    </Link>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {applications.length > 0 && (
+            <div className="mt-6 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+              <div className="flex items-center gap-2 text-blue-300">
+                <UsersIcon className="w-5 h-5" />
+                <span className="font-semibold">{applications.length} persona kanë aplikuar për këtë pozicion</span>
+              </div>
+            </div>
+          )}
+
+          {/* Butoni "Apliko Tani" - vetëm për punë */}
+          {job.category === "pune" && job.job_type === "ofroj" && (
+            <div className="mt-5">
+              <Button
+                onClick={() => setShowQuickApply(true)}
+                className="w-full bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] hover:opacity-90 h-12 font-semibold text-sm"
+              >
+                <Briefcase className="w-4 h-4 mr-2" />
+                Apliko Tani
+              </Button>
+            </div>
+          )}
+
+          {/* Linku i burimit - i klikueshëm */}
+          {job.source_url && (
+            <div className="mt-3">
+              <a
+                href={job.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-xs text-[#8ab4ff] hover:text-[#9bffd6] transition-colors"
+              >
+                <Link2 className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate underline underline-offset-2">{job.source_url}</span>
+                <ExternalLink className="w-3 h-3 flex-shrink-0" />
+              </a>
+            </div>
+          )}
+
+          {/* Facebook-style action bar */}
+          <div className="mt-4 pt-4 border-t border-white/10">
+            {/* Counts row */}
+            {(reactions.length > 0 || comments.length > 0) && (
+              <div className="flex items-center justify-between text-xs text-white/40 mb-2 px-1">
+                <div className="flex items-center gap-1">
+                  {reactions.length > 0 && (
+                    <span className="flex items-center gap-0.5">
+                      {["👍","❤️","😂","😮","😢","😡","👎"]
+                        .filter(e => reactions.some(r => r.reaction_type === e))
+                        .slice(0, 3)
+                        .map(e => <span key={e}>{e}</span>)}
+                      <span className="ml-0.5">{reactions.length}</span>
+                    </span>
+                  )}
+                </div>
+                {comments.length > 0 && (
+                  <button onClick={() => setShowComments(v => !v)} className="hover:text-white/70 transition-colors">
+                    {comments.length} komente
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Action buttons row */}
+            <div className="flex items-center border-t border-white/10 pt-1 gap-0">
+              {/* Emoji Reaction button */}
+              <div className="relative flex-1 flex justify-center">
+                <button
+                  onClick={() => {
+                    if (!isAuth) { base44.auth.redirectToLogin(); return; }
+                    setShowPostReactionPicker(v => !v);
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full justify-center ${userReaction ? "text-[#9bffd6]" : "text-white/50 hover:text-white hover:bg-white/5"}`}
+                >
+                  <span className="text-base leading-none select-none">
+                    {userReaction === "like" ? "👍" : userReaction === "dislike" ? "👎" : userReaction || "👍"}
+                  </span>
+                  <span className="hidden sm:inline text-xs">{userReaction ? "Reagova" : "Reago"}</span>
+                </button>
+                <AnimatePresence>
+                  {showPostReactionPicker && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8, y: 6 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, y: 6 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute bottom-12 left-1/2 -translate-x-1/2 z-50 flex items-center gap-0.5 px-2 py-1.5 rounded-full shadow-xl"
+                      style={{ background: 'rgba(15,23,42,0.98)', border: '1px solid rgba(255,255,255,0.18)' }}
+                    >
+                      {["👍","❤️","😂","😮","😢","😡","👎"].map(emoji => (
+                        <button
+                          key={emoji}
+                          onClick={() => {
+                            setShowPostReactionPicker(false);
+                            const mapped = emoji === "👍" ? "like" : emoji === "👎" ? "dislike" : emoji;
+                            handleReaction(mapped);
+                          }}
+                          className="text-xl p-0.5 hover:scale-150 active:scale-125 transition-transform duration-100 select-none"
+                          style={{ lineHeight: 1 }}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <div className="w-px h-5 bg-white/10" />
+
+              {/* Comment button */}
+              <button
+                onClick={() => setShowComments(v => !v)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex-1 justify-center ${showComments ? "text-[#9bffd6]" : "text-white/50 hover:text-white hover:bg-white/5"}`}
+              >
+                <MessageCircle className={`w-4 h-4 ${showComments ? "fill-[#9bffd6]/20" : ""}`} />
+                <span className="hidden sm:inline">Komento</span>
+                {comments.length > 0 && <span className="text-xs bg-white/10 rounded-full px-1.5">{comments.length}</span>}
+              </button>
+
+              <div className="w-px h-5 bg-white/10 mx-1" />
+
+              {/* Share dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-white/50 hover:text-white hover:bg-white/5 transition-colors flex-1 justify-center">
+                    <Share2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Shpërnda</span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-[#0b1020] border-white/10 w-52">
+                  <DropdownMenuItem onClick={() => handleShare('facebook')} className="cursor-pointer text-white/70 hover:text-white gap-2">
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-blue-400"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                    Facebook
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare('whatsapp')} className="cursor-pointer text-white/70 hover:text-white gap-2">
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-green-400"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    WhatsApp
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare('twitter')} className="cursor-pointer text-white/70 hover:text-white gap-2">
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    Twitter / X
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare('linkedin')} className="cursor-pointer text-white/70 hover:text-white gap-2">
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-blue-500"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                    LinkedIn
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare('copy')} className="cursor-pointer text-white/70 hover:text-white gap-2">
+                    <Copy className="w-4 h-4" />
+                    Kopjo Linkun
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Comments Section - toggleable */}
+      {showComments && (
+        <div id="comments" className="mt-3 space-y-2">
+          {comments.filter(c => !c.parent_id).map((comment, i) => (
+            <motion.div key={comment.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
+              <CommentItem
+                comment={comment}
+                allComments={comments}
+                commentLikes={commentLikes}
+                user={user}
+                isAuth={isAuth}
+                canComment={isAuth && (hasActiveSubscription || user?.role === 'admin' || user?.role === 'moderator')}
+                jobId={jobId}
+              />
+            </motion.div>
+          ))}
+
+          {isAuth && (hasActiveSubscription || user?.role === 'admin' || user?.role === 'moderator') ? (
+            <div className="flex items-center gap-2 mt-3 px-1">
+              <div
+                className="flex-shrink-0 rounded-full flex items-center justify-center font-bold text-[#0b1020]"
+                style={{ width: 30, height: 30, fontSize: 11, background: 'linear-gradient(135deg, #8ab4ff, #9bffd6)' }}
+              >
+                {(user?.first_name || user?.full_name || "A")[0].toUpperCase()}
+              </div>
+              <div
+                className="flex-1 flex items-center gap-2 rounded-full px-4 py-2"
+                style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
+              >
+                <input
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey && commentText.trim() && !commentMutation.isPending) {
+                      e.preventDefault();
+                      commentMutation.mutate();
+                    }
+                  }}
+                  placeholder="Shkruaj një koment…"
+                  className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/35 min-w-0"
+                  autoFocus
+                />
+                <button
+                  onClick={() => commentText.trim() && !commentMutation.isPending && commentMutation.mutate()}
+                  disabled={!commentText.trim() || commentMutation.isPending}
+                  className={`flex-shrink-0 transition-colors ${commentText.trim() ? "text-[#8ab4ff] hover:text-[#9bffd6]" : "text-white/20"}`}
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-sm py-2">
+              {!isAuth ? (
+                <p className="text-white/40">
+                  <button onClick={() => base44.auth.redirectToLogin()} className="text-[#8ab4ff] font-medium hover:underline">
+                    Hyr në llogari
+                  </button>
+                  {" "}për të komentuar
+                </p>
+              ) : (
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-white/40 text-xs">🔒 Vetëm anëtarët Premium mund të komentojnë</span>
+                  <Link to={createPageUrl("Subscriptions")} className="text-[#8ab4ff] text-xs font-semibold hover:underline">
+                    Bëhu Premium
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      <AnimatePresence>
+        {showApplicationForm && (
+          <ApplicationForm
+            job={job}
+            onClose={() => setShowApplicationForm(false)}
+            onSuccess={() => {
+              setShowApplicationForm(false);
+              alert("Aplikimi juaj u dërgua me sukses!");
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Quick Apply Modal */}
+      <Dialog open={showQuickApply} onOpenChange={setShowQuickApply}>
+        <DialogContent className="bg-[#0b1020] border-white/10 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Briefcase className="w-5 h-5" />
+              Apliko Tani
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Emri dhe Mbiemri *</Label>
+              <Input
+                value={quickApplyForm.name}
+                onChange={(e) => setQuickApplyForm({ ...quickApplyForm, name: e.target.value })}
+                placeholder="Emri juaj"
+                className="bg-white/5 border-white/10 text-white"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Email *</Label>
+              <Input
+                type="email"
+                value={quickApplyForm.email}
+                onChange={(e) => setQuickApplyForm({ ...quickApplyForm, email: e.target.value })}
+                placeholder="email@example.com"
+                className="bg-white/5 border-white/10 text-white"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Mesazhi juaj</Label>
+              <Textarea
+                value={quickApplyForm.message}
+                onChange={(e) => setQuickApplyForm({ ...quickApplyForm, message: e.target.value })}
+                placeholder="Përshkruaj shkurtimisht pse jeni të interesuar..."
+                className="bg-white/5 border-white/10 text-white min-h-[100px]"
+              />
+            </div>
+            <Button
+              onClick={() => quickApplyMutation.mutate()}
+              disabled={!quickApplyForm.name || !quickApplyForm.email || quickApplyMutation.isPending}
+              className="w-full bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] hover:opacity-90"
+            >
+              {quickApplyMutation.isPending ? "Duke dërguar..." : "Dërgo Aplikimin"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Modal */}
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent className="bg-[#0b1020] border-white/10 max-w-sm">
+          <DialogHeader>
+            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-500/10 border border-red-500/20 mx-auto mb-2">
+              <X className="w-7 h-7 text-red-400" />
+            </div>
+            <DialogTitle className="text-white text-center text-lg">Fshi Njoftimin</DialogTitle>
+            <DialogDescription className="text-white/50 text-center text-sm mt-1">
+              Jeni të sigurt që doni ta fshini njoftimin<br />
+              <span className="text-white/70 font-medium">"{job?.title}"</span>?<br />
+              <span className="text-red-400/80 text-xs mt-1 block">Ky veprim është i pakthyeshëm.</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 mt-4">
+            <Button
+              onClick={() => setShowDeleteModal(false)}
+              variant="ghost"
+              className="flex-1 border border-white/15 text-white/60 hover:text-white hover:bg-white/8"
+            >
+              Anulo
+            </Button>
+            <Button
+              onClick={() => { setShowDeleteModal(false); deleteJobMutation.mutate(); }}
+              disabled={deleteJobMutation.isPending}
+              className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold"
+            >
+              {deleteJobMutation.isPending ? "Duke fshirë..." : "Po, Fshi"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Report Modal */}
+      <Dialog open={showReportModal} onOpenChange={setShowReportModal}>
+        <DialogContent className="bg-[#0b1020] border-white/10 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Flag className="w-5 h-5 text-red-400" />
+              Raporto Njoftimin
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-white/50 text-xs">Raporti shkon direkt tek stafi ynë për shqyrtim.</p>
+            <div className="space-y-2">
+              <Label className="text-white/70">Zgjidhni arsyen *</Label>
+              <div className="space-y-2">
+                {reportReasons.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setReportForm({ ...reportForm, reason: opt.value })}
+                    className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-all border ${
+                      reportForm.reason === opt.value
+                        ? "border-[#8ab4ff] bg-[#8ab4ff]/10 text-white"
+                        : "border-white/10 bg-white/5 text-white/70 hover:bg-white/8"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Detaje shtesë (opcionale)</Label>
+              <Textarea
+                value={reportForm.details}
+                onChange={(e) => setReportForm({ ...reportForm, details: e.target.value })}
+                placeholder="Shpjego nëse dëshironi..."
+                className="bg-white/5 border-white/10 text-white min-h-[70px]"
+              />
+            </div>
+            <Button
+              onClick={() => reportPostMutation.mutate()}
+              disabled={reportPostMutation.isPending}
+              className="w-full bg-red-500 hover:bg-red-600 text-white"
+            >
+              {reportPostMutation.isPending ? "Duke dërguar..." : "Dërgo Raportimin"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

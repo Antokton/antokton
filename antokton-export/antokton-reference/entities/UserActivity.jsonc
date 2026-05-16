@@ -1,0 +1,59 @@
+{
+  "name": "UserActivity",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email i p\u00ebrdoruesit"
+    },
+    "activity_type": {
+      "type": "string",
+      "enum": [
+        "job_view",
+        "job_apply",
+        "profile_view",
+        "search",
+        "job_delete"
+      ],
+      "description": "Lloji i aktivitetit"
+    },
+    "related_job_id": {
+      "type": "string",
+      "description": "ID e njoftimit (p\u00ebr job_view, job_apply, job_delete)"
+    },
+    "related_user_email": {
+      "type": "string",
+      "description": "Email i p\u00ebrdoruesit (p\u00ebr profile_view)"
+    },
+    "search_query": {
+      "type": "string",
+      "description": "Query i k\u00ebrkimit (p\u00ebr search)"
+    },
+    "search_filters": {
+      "type": "object",
+      "description": "Filtrat e k\u00ebrkimit",
+      "properties": {
+        "category": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "profession": {
+          "type": "string"
+        },
+        "experience_level": {
+          "type": "string"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Metadata shtes\u00eb (p.sh. titulli, kush e fshiu, roli)"
+    }
+  },
+  "required": [
+    "user_email",
+    "activity_type"
+  ]
+}

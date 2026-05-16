@@ -1,0 +1,16 @@
+{
+  "name": "notifyJobApplication",
+  "entry": "entry.ts",
+  "automations": [
+    {
+      "type": "entity",
+      "description": "Dërgon notifikim kur aplikohet për një punë",
+      "entity_name": "JobApplication",
+      "event_types": [
+        "create"
+      ],
+      "is_active": true,
+      "name": "Notifikim për aplikim të ri"
+    }
+  ]
+}

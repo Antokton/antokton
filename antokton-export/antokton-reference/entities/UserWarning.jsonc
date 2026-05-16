@@ -1,0 +1,31 @@
+{
+  "name": "UserWarning",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email i anëtarit"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Arsyeja e paralajmërimit"
+    },
+    "issued_by": {
+      "type": "string",
+      "description": "Moderatori që dha paralajmërimin"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "minor",
+        "major"
+      ],
+      "default": "minor",
+      "description": "Rëndësia e shkeljes"
+    }
+  },
+  "required": [
+    "user_email",
+    "reason"
+  ]
+}

@@ -1,0 +1,93 @@
+{
+  "name": "UserReference",
+  "type": "object",
+  "properties": {
+    "referenced_user_email": {
+      "type": "string",
+      "description": "Email i përdoruesit që vlerësohet"
+    },
+    "referee_email": {
+      "type": "string",
+      "description": "Email i personit që jep referencën"
+    },
+    "referee_name": {
+      "type": "string",
+      "description": "Emri i personit që jep referencën"
+    },
+    "relationship": {
+      "type": "string",
+      "enum": [
+        "colleague",
+        "supervisor",
+        "employee",
+        "client",
+        "other"
+      ],
+      "description": "Marrëdhënia me përdoruesin"
+    },
+    "relationship_description": {
+      "type": "string",
+      "description": "Si e njeh përdoruesin"
+    },
+    "work_description": {
+      "type": "string",
+      "description": "Përshkrimi i punës së bërë së bashku"
+    },
+    "rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Vlerësimi (1-5 yje)"
+    },
+    "professionalism": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Profesionalizmi"
+    },
+    "reliability": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Besueshmëria"
+    },
+    "communication": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Komunikimi"
+    },
+    "supporting_documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Dokumente mbështetëse"
+    },
+    "is_verified": {
+      "type": "boolean",
+      "default": false,
+      "description": "A është verifikuar nga admini"
+    },
+    "verified_by": {
+      "type": "string",
+      "description": "Email i adminit që verifikoi"
+    }
+  },
+  "required": [
+    "referenced_user_email",
+    "referee_email",
+    "referee_name",
+    "relationship",
+    "work_description",
+    "rating"
+  ]
+}

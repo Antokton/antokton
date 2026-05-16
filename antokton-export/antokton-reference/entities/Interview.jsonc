@@ -1,0 +1,55 @@
+{
+  "name": "Interview",
+  "type": "object",
+  "properties": {
+    "application_id": {
+      "type": "string",
+      "description": "ID e aplikimit"
+    },
+    "applicant_email": {
+      "type": "string",
+      "description": "Email i kandidatit"
+    },
+    "interviewer_email": {
+      "type": "string",
+      "description": "Email i intervistuesit"
+    },
+    "scheduled_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e intervistës"
+    },
+    "duration_minutes": {
+      "type": "number",
+      "default": 60,
+      "description": "Kohëzgjatja në minuta"
+    },
+    "meeting_link": {
+      "type": "string",
+      "description": "Link i takimit"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Shënime"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "completed",
+        "cancelled"
+      ],
+      "default": "scheduled"
+    },
+    "google_event_id": {
+      "type": "string",
+      "description": "ID e eventit në Google Calendar"
+    }
+  },
+  "required": [
+    "application_id",
+    "applicant_email",
+    "interviewer_email",
+    "scheduled_date"
+  ]
+}

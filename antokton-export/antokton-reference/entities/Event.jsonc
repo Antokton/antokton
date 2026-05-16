@@ -1,0 +1,232 @@
+{
+  "name": "Event",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Titulli i ngjarjes"
+    },
+    "description": {
+      "type": "string",
+      "description": "Përshkrimi i ngjarjes"
+    },
+    "event_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data dhe ora e ngjarjes (Gregoriane)"
+    },
+    "hijri_date": {
+      "type": "object",
+      "properties": {
+        "day": {
+          "type": "number"
+        },
+        "month": {
+          "type": "number"
+        },
+        "month_name": {
+          "type": "string"
+        },
+        "year": {
+          "type": "number"
+        }
+      },
+      "description": "Data Hixhri e ngjarjes"
+    },
+    "location": {
+      "type": "string",
+      "description": "Vendndodhja"
+    },
+    "country": {
+      "type": "string",
+      "description": "Vendi"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "conference",
+        "ekspedite",
+        "ekspozite",
+        "kampionat",
+        "konkurs",
+        "meetup",
+        "networking",
+        "panair",
+        "perkujtim",
+        "prezantim",
+        "promovim",
+        "social",
+        "turne",
+        "vizite",
+        "webinar",
+        "workshop"
+      ],
+      "default": "meetup",
+      "description": "Kategoria e ngjarjes"
+    },
+    "organizer_email": {
+      "type": "string",
+      "description": "Email i organizatorit"
+    },
+    "max_participants": {
+      "type": "number",
+      "description": "Numri maksimal i pjesëmarrësve"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "online",
+        "in_person",
+        "hybrid"
+      ],
+      "default": "in_person",
+      "description": "Lloji i ngjarjes"
+    },
+    "is_virtual": {
+      "type": "boolean",
+      "default": false,
+      "description": "A është virtuale"
+    },
+    "meeting_link": {
+      "type": "string",
+      "description": "Link për takim virtual"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "URL e fotos së ngjarjes"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "deletion_requested",
+        "deleted_public"
+      ],
+      "default": "pending",
+      "description": "Statusi i moderimit"
+    },
+    "deleted_by": {
+      "type": "string",
+      "description": "Kush e fshiu"
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Kur u fshi"
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "public",
+        "members_only",
+        "custom"
+      ],
+      "default": "public",
+      "description": "Niveli i dukshmërisë"
+    },
+    "visible_to_countries": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Shtetet ku është i dukshëm"
+    },
+    "visible_to_cities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Qytetet ku është i dukshëm"
+    },
+    "visible_to_age_min": {
+      "type": "number",
+      "description": "Mosha minimale"
+    },
+    "visible_to_age_max": {
+      "type": "number",
+      "description": "Mosha maksimale"
+    },
+    "visible_to_genders": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Gjinete e dukshme"
+    },
+    "visible_to_religions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Besimi fetar"
+    },
+    "visible_to_education": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Niveli i arsimit"
+    },
+    "featured_day": {
+      "type": "boolean",
+      "default": false,
+      "description": "Ngjarje e ditës"
+    },
+    "featured_week": {
+      "type": "boolean",
+      "default": false,
+      "description": "Ngjarje e javës"
+    },
+    "featured_by": {
+      "type": "string",
+      "description": "Kush e bëri të veçantë"
+    },
+    "featured_day_expires": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Kur skadon featured day"
+    },
+    "featured_week_expires": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Kur skadon featured week"
+    },
+    "featured_request_type": {
+      "type": "string",
+      "enum": [
+        "day",
+        "week"
+      ],
+      "description": "Kerkesa e postuesit per ngjarje dite/jave"
+    },
+    "featured_request_duration_days": {
+      "type": "number",
+      "description": "Sa dite kerkon postuesi, bosh/null per pa afat"
+    },
+    "featured_request_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "description": "Statusi i kerkeses per ngjarje dite/jave"
+    },
+    "featured_requested_by": {
+      "type": "string",
+      "description": "Kush e kerkoi vendosjen si ngjarje dite/jave"
+    },
+    "featured_requested_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Kur u kerkua vendosja si ngjarje dite/jave"
+    }
+  },
+  "required": [
+    "title",
+    "event_date",
+    "category"
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "name": "SavedSearch",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email i përdoruesit"
+    },
+    "search_name": {
+      "type": "string",
+      "description": "Emri i kërkimit të ruajtur"
+    },
+    "filters": {
+      "type": "object",
+      "description": "Filtrat e kërkimit",
+      "properties": {
+        "category": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "profession": {
+          "type": "string"
+        },
+        "experience_level": {
+          "type": "string"
+        },
+        "contract_type": {
+          "type": "string"
+        },
+        "date_posted": {
+          "type": "string"
+        },
+        "keywords": {
+          "type": "string"
+        }
+      }
+    },
+    "notification_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Njoftime për kërkimin"
+    }
+  },
+  "required": [
+    "user_email",
+    "search_name",
+    "filters"
+  ]
+}

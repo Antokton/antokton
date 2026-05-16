@@ -1,0 +1,53 @@
+{
+  "name": "AkademiaEvaluation",
+  "type": "object",
+  "properties": {
+    "course_id": {
+      "type": "string",
+      "description": "Course id"
+    },
+    "application_id": {
+      "type": "string",
+      "description": "Application id"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Candidate user id"
+    },
+    "mentor_id": {
+      "type": "string",
+      "description": "Mentor user id"
+    },
+    "discipline_score": {
+      "type": "number",
+      "description": "Discipline score 1-5"
+    },
+    "skill_score": {
+      "type": "number",
+      "description": "Skill score 1-5"
+    },
+    "communication_score": {
+      "type": "number",
+      "description": "Communication score 1-5"
+    },
+    "reliability_score": {
+      "type": "number",
+      "description": "Reliability score 1-5"
+    },
+    "final_comment": {
+      "type": "string",
+      "description": "Final mentor comment"
+    },
+    "passed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether candidate passed"
+    },
+    "evaluated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Evaluation timestamp"
+    }
+  },
+  "required": ["course_id", "application_id", "discipline_score", "skill_score", "communication_score", "reliability_score", "passed"]
+}

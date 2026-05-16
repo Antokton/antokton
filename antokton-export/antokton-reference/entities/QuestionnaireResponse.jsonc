@@ -1,0 +1,44 @@
+{
+  "name": "QuestionnaireResponse",
+  "type": "object",
+  "properties": {
+    "questionnaire_id": {
+      "type": "string",
+      "description": "ID e pyetësorit"
+    },
+    "application_id": {
+      "type": "string",
+      "description": "ID e aplikimit"
+    },
+    "applicant_email": {
+      "type": "string",
+      "description": "Email i aplikantit"
+    },
+    "responses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Përgjigjet e kandidatit"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e plotësimit"
+    }
+  },
+  "required": [
+    "questionnaire_id",
+    "application_id",
+    "applicant_email",
+    "responses"
+  ]
+}
