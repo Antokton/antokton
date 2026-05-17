@@ -15,10 +15,19 @@ const {
   shouldLocalizeAsset
 } = require("./storage");
 const {
-  createDevAccessToken,
+  assertEmail,
+  assertPassword,
+  authenticatePassword,
+  createPasswordAccount,
+  createSession,
+  getAuthAccountByEmail,
   getAuthStatus,
   getDevUserEmail,
-  getRequestUserEmail
+  getRequestUserEmail,
+  isDevAuthActive,
+  normalizeEmail,
+  revokeRequestSession,
+  setPasswordForAccount
 } = require("./auth");
 
 const {
@@ -30,7 +39,9 @@ const {
   APP_ID,
   MAX_REMOTE_ASSET_BYTES,
   STRIPE_PUBLISHABLE_KEY,
-  STRIPE_FALLBACK_URL
+  STRIPE_FALLBACK_URL,
+  AUTH_BOOTSTRAP_ADMIN_EMAIL,
+  AUTH_BOOTSTRAP_ADMIN_PASSWORD
 } = config;
 const DEV_USER_EMAIL = getDevUserEmail();
 
@@ -234,25 +245,82 @@ async function localizeRemoteAssets(value, keyPath = []) {
   }
 }
 
-function ensureUser(email = DEV_USER_EMAIL, overrides = {}) {
-  const existing = [...statements.listEntity.all(APP_ID, "User")]
+function findUserByEmail(email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+  return [...statements.listEntity.all(APP_ID, "User")]
     .map(recordFromRow)
-    .find((user) => user.email === email);
+    .find((user) => normalizeEmail(user.email) === normalizedEmail) || null;
+}
+
+function isPrivilegedUser(user) {
+  const role = String(user?.role || "").toLowerCase();
+  const category = String(user?.member_category || "").toLowerCase();
+  return ["admin", "moderator", "inspector"].includes(role) || ["admin", "moderator", "staff"].includes(category);
+}
+
+function requesterHasRole(req, roles = []) {
+  const user = findUserByEmail(getRequestUserEmail(req));
+  const allowed = new Set(roles.map((role) => String(role).toLowerCase()));
+  return allowed.has(String(user?.role || "").toLowerCase()) ||
+    allowed.has(String(user?.member_category || "").toLowerCase());
+}
+
+function publicUserFields(body = {}) {
+  const allowed = [
+    "full_name",
+    "first_name",
+    "surname",
+    "phone",
+    "city",
+    "country",
+    "desired_profession",
+    "current_profession",
+    "user_type"
+  ];
+  const clean = {};
+  for (const field of allowed) {
+    if (body[field] !== undefined) clean[field] = body[field];
+  }
+  return clean;
+}
+
+function sanitizeSelfUserPatch(body = {}) {
+  const trustedFields = [
+    "email",
+    "role",
+    "member_category",
+    "_app_role",
+    "collaborator_role",
+    "is_active",
+    "status",
+    "password",
+    "password_hash"
+  ];
+  const clean = { ...body };
+  for (const field of trustedFields) delete clean[field];
+  return clean;
+}
+
+function ensureUser(email = DEV_USER_EMAIL, overrides = {}) {
+  const normalizedEmail = normalizeEmail(email);
+  const existing = findUserByEmail(normalizedEmail);
 
   if (existing) return existing;
 
+  const isDevDefaultUser = isDevAuthActive() && normalizedEmail === normalizeEmail(DEV_USER_EMAIL);
   const created = {
-    email,
-    full_name: overrides.full_name || "Antokton Admin",
-    first_name: overrides.first_name || "Antokton",
-    surname: overrides.surname || "Admin",
-    role: overrides.role || "admin",
-    member_category: overrides.member_category || "staff",
+    email: normalizedEmail,
+    full_name: overrides.full_name || (isDevDefaultUser ? "Antokton Admin" : normalizedEmail),
+    first_name: overrides.first_name || (isDevDefaultUser ? "Antokton" : ""),
+    surname: overrides.surname || (isDevDefaultUser ? "Admin" : ""),
+    role: overrides.role || (isDevDefaultUser ? "admin" : "user"),
+    member_category: overrides.member_category || (isDevDefaultUser ? "staff" : "standard"),
     is_active: true,
     ...overrides
   };
 
-  return createRecord("User", created, email);
+  return createRecord("User", created, normalizedEmail);
 }
 
 function createRecord(entity, data, userEmail) {
@@ -463,9 +531,7 @@ function listEntity(entity, url) {
 
 function requesterCanAuditImports(req) {
   const email = getRequestUserEmail(req);
-  const user = statements.listEntity.all(APP_ID, "User")
-    .map(recordFromRow)
-    .find((record) => record.email === email);
+  const user = findUserByEmail(email);
   return ["admin", "moderator"].includes(String(user?.role || "").toLowerCase());
 }
 
@@ -682,7 +748,7 @@ function logFunction(functionName, payload, result) {
 async function handleFunction(req, res, functionName) {
   const payload = await readPayload(req);
   const userEmail = getRequestUserEmail(req);
-  const user = ensureUser(userEmail);
+  const user = userEmail ? ensureUser(userEmail) : null;
   let result;
 
   switch (functionName) {
@@ -873,7 +939,7 @@ async function handleFunction(req, res, functionName) {
       return send(res, 200, result, { "Content-Type": "application/pdf" });
     }
     case "trackActivity":
-      result = createRecord("UserActivity", { user_email: user.email, ...payload }, userEmail);
+      result = createRecord("UserActivity", { user_email: user?.email || null, ...payload }, userEmail);
       break;
     case "getStripeConfig":
       result = { publishableKey: STRIPE_PUBLISHABLE_KEY || "" };
@@ -898,13 +964,19 @@ async function handleEntity(req, res, url, segments) {
   const userEmail = getRequestUserEmail(req);
 
   if (entity === "User" && tail[0] === "me") {
+    if (!userEmail) return sendError(res, 401, "Authentication required");
     if (req.method === "GET") return send(res, 200, ensureUser(userEmail));
     if (req.method === "PUT") {
       const body = await readJson(req);
       const user = ensureUser(userEmail);
-      const localized = await localizeRemoteAssets(body, ["User"]);
+      const patch = config.NODE_ENV === "production" ? sanitizeSelfUserPatch(body) : body;
+      const localized = await localizeRemoteAssets(patch, ["User"]);
       return send(res, 200, updateRecord("User", user.id, localized));
     }
+  }
+
+  if (entity === "User" && req.method !== "GET" && config.NODE_ENV === "production" && !requesterHasRole(req, ["admin"])) {
+    return sendError(res, 403, "Admin role required");
   }
 
   if (!entity) return sendError(res, 400, "Missing entity name");
@@ -986,23 +1058,64 @@ async function handleAuth(req, res, segments) {
 
   if (req.method === "POST" && action === "login") {
     const body = await readJson(req);
-    const email = body.email || DEV_USER_EMAIL;
-    const user = ensureUser(email, body);
-    return send(res, 200, { access_token: createDevAccessToken(email), user });
+    const email = normalizeEmail(body.email);
+    const password = body.password;
+    const account = authenticatePassword({ email, password, req });
+    const user = ensureUser(account.email);
+    const session = createSession(account, user, req);
+    return send(res, 200, {
+      access_token: session.accessToken,
+      token_type: session.tokenType,
+      expires_at: session.expiresAt,
+      user
+    });
   }
 
   if (req.method === "POST" && action === "register") {
     const body = await readJson(req);
-    const email = body.email || DEV_USER_EMAIL;
-    const user = ensureUser(email, body);
-    return send(res, 200, { access_token: createDevAccessToken(email), user });
+    const email = assertEmail(body.email);
+    assertPassword(body.password);
+    const existingUser = findUserByEmail(email);
+    if (existingUser && isPrivilegedUser(existingUser)) {
+      return sendError(res, 403, "Existing privileged users must be migrated by an administrator");
+    }
+
+    const user = existingUser || ensureUser(email, {
+      ...publicUserFields(body),
+      role: "user",
+      member_category: "standard",
+      is_active: true
+    });
+    const account = createPasswordAccount({ email, password: body.password, user, req });
+    const session = createSession(account, user, req);
+    return send(res, 200, {
+      access_token: session.accessToken,
+      token_type: session.tokenType,
+      expires_at: session.expiresAt,
+      user
+    });
+  }
+
+  if (req.method === "POST" && action === "logout") {
+    revokeRequestSession(req);
+    return send(res, 200, { success: true });
   }
 
   if (req.method === "POST" && action === "verify-otp") return send(res, 200, { success: true });
   if (req.method === "POST" && action === "resend-otp") return send(res, 200, { success: true });
   if (req.method === "POST" && action === "reset-password-request") return send(res, 200, { success: true });
   if (req.method === "POST" && action === "reset-password") return send(res, 200, { success: true });
-  if (req.method === "POST" && action === "change-password") return send(res, 200, { success: true });
+  if (req.method === "POST" && action === "change-password") {
+    const userEmail = getRequestUserEmail(req);
+    if (!userEmail) return sendError(res, 401, "Authentication required");
+
+    const body = await readJson(req);
+    const currentPassword = body.current_password || body.currentPassword || body.old_password;
+    const newPassword = body.new_password || body.newPassword || body.password;
+    const account = authenticatePassword({ email: userEmail, password: currentPassword, req });
+    setPasswordForAccount(account, newPassword, req);
+    return send(res, 200, { success: true });
+  }
 
   return sendError(res, 404, "Auth endpoint not found");
 }
@@ -1010,11 +1123,52 @@ async function handleAuth(req, res, segments) {
 async function handleUsers(req, res, segments) {
   const action = segments.slice(4).join("/");
   if (req.method === "POST" && action === "invite-user") {
+    if (config.NODE_ENV === "production" && !requesterHasRole(req, ["admin"])) {
+      return sendError(res, 403, "Admin role required");
+    }
     const body = await readJson(req);
     const user = ensureUser(body.user_email || body.email || DEV_USER_EMAIL, { role: body.role || "user" });
     return send(res, 200, user);
   }
   return sendError(res, 404, "Users endpoint not found");
+}
+
+function bootstrapAdminAuth() {
+  const email = normalizeEmail(AUTH_BOOTSTRAP_ADMIN_EMAIL);
+  if (!email || !AUTH_BOOTSTRAP_ADMIN_PASSWORD) return;
+
+  let user = ensureUser(email, {
+    full_name: "Antokton Admin",
+    first_name: "Antokton",
+    surname: "Admin",
+    role: "admin",
+    member_category: "admin",
+    is_active: true
+  });
+
+  if (String(user.role || "").toLowerCase() !== "admin" || String(user.member_category || "").toLowerCase() !== "admin") {
+    user = updateRecord("User", user.id, {
+      role: "admin",
+      member_category: "admin",
+      is_active: true
+    });
+  }
+
+  const existingAccount = getAuthAccountByEmail(email);
+  if (existingAccount) {
+    setPasswordForAccount(existingAccount, AUTH_BOOTSTRAP_ADMIN_PASSWORD, null);
+    console.log(`Updated bootstrap admin auth account for ${email}`);
+    return;
+  }
+
+  createPasswordAccount({
+    email,
+    password: AUTH_BOOTSTRAP_ADMIN_PASSWORD,
+    user,
+    req: null,
+    emailVerified: true
+  });
+  console.log(`Created bootstrap admin auth account for ${email}`);
 }
 
 function serveStatic(req, res, pathname) {
@@ -1089,7 +1243,8 @@ function serveStatic(req, res, pathname) {
 }
 
 persistEntitySchemas();
-ensureUser();
+if (isDevAuthActive()) ensureUser();
+bootstrapAdminAuth();
 
 const server = http.createServer(async (req, res) => {
   try {
@@ -1181,7 +1336,8 @@ const server = http.createServer(async (req, res) => {
     return serveStatic(req, res, url.pathname);
   } catch (error) {
     console.error(error);
-    return sendError(res, 500, error.message || "Internal server error");
+    const status = Number.isInteger(error.status) && error.status >= 400 && error.status < 600 ? error.status : 500;
+    return sendError(res, status, error.message || "Internal server error");
   }
 });
 

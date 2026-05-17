@@ -54,6 +54,11 @@ Use `.env.example` as the reference. Do not commit a real `.env`.
 | `PORT` | `backend/config.js`, `backend/server.js` | Local backend/API/static server port. Default `8787`. |
 | `APP_ID` | `backend/config.js`, `backend/server.js`, scripts | Base44-compatible app id. |
 | `ANTOKTON_DEV_USER_EMAIL` | `backend/config.js`, `backend/server.js` | Development-only default identity. |
+| `ALLOW_DEV_AUTH` | `backend/config.js`, `backend/auth.js` | Keeps `dev:<email>` compatibility available only outside production. Ignored in `NODE_ENV=production`. |
+| `AUTH_TOKEN_TTL_HOURS` | `backend/config.js`, `backend/auth.js` | Lifetime for opaque bearer sessions created by real login/register. |
+| `AUTH_PASSWORD_MIN_LENGTH` | `backend/config.js`, `backend/auth.js` | Minimum password length enforced by local password auth. |
+| `AUTH_BOOTSTRAP_ADMIN_EMAIL` | `backend/config.js`, `backend/server.js` | Optional deployment-secret email for creating/updating the first admin auth account. |
+| `AUTH_BOOTSTRAP_ADMIN_PASSWORD` | `backend/config.js`, `backend/server.js` | Optional deployment-secret password for the first admin auth account. Never commit real values. |
 | `DATA_DIR` | `backend/config.js`, `backend/server.js`, `backend/import-live-data.js` | Local data directory. |
 | `UPLOAD_DIR` | `backend/config.js`, `backend/server.js`, `backend/import-live-data.js` | Local upload directory. |
 | `DB_PATH` | `backend/config.js`, `backend/server.js`, `backend/localize-assets.js`, `backend/import-live-data.js` | SQLite file path. |
@@ -74,11 +79,13 @@ SQLite remains the active local database. The initialization, table creation, PR
 
 Local uploads remain active under `backend/uploads`, with remote cached assets under `backend/uploads/remote`. The upload directory setup, `/uploads/...` path handling, MIME detection, uploaded file writes, and remote asset cache helpers now live behind `backend/storage.js`. This preserves the current local URL format and does not add S3/R2/Supabase Storage yet.
 
-## Local Development Auth
+## Authentication
 
-The backend currently uses a development-only auth compatibility layer in `backend/auth.js`. Local requests may send `Authorization: Bearer dev:<email>`, and the backend will treat that email as the current user. If no dev token is provided, the backend falls back to `ANTOKTON_DEV_USER_EMAIL` so the exported frontend keeps working locally.
+The backend now supports production-beta email/password auth in `backend/auth.js` using scrypt password hashes, server-side opaque bearer session tokens, and SQLite auth tables created through `backend/db.js`.
 
-This behavior is intentional for local development only. It is not production authentication and must be replaced before public deployment. `/health/config` reports safe auth status fields such as `authMode` and `devAuthActive`; it never exposes bearer tokens or configured emails.
+Local development can still use `Authorization: Bearer dev:<email>` when `NODE_ENV` is not `production` and `ALLOW_DEV_AUTH=true`. In `NODE_ENV=production`, dev auth is always disabled and `/User/me` requires a real `atk_...` session token from `/auth/login` or `/auth/register`.
+
+Use `AUTH_BOOTSTRAP_ADMIN_EMAIL` and `AUTH_BOOTSTRAP_ADMIN_PASSWORD` only as deployment secrets when a first admin auth account must be created or reset. `/health/config` reports only safe booleans/status fields such as `authMode`, `devAuthActive`, and whether bootstrap admin config is present; it never exposes passwords, tokens, or configured emails.
 
 ### Migration/import helper variables
 

@@ -5,6 +5,7 @@ const ROOT_DIR = path.resolve(__dirname, "..");
 const DEFAULT_APP_ID = "6991d40eddf82cc25ec834a7";
 const DEFAULT_DEV_USER_EMAIL = "admin@antokton.local";
 const DEFAULT_MAX_REMOTE_ASSET_BYTES = 75 * 1024 * 1024;
+const DEFAULT_AUTH_TOKEN_TTL_HOURS = 24 * 14;
 
 function readString(name, defaultValue = "") {
   const value = process.env[name];
@@ -28,6 +29,11 @@ function readPositiveInteger(name, defaultValue) {
     throw new Error(`${name} must be a positive integer`);
   }
   return value;
+}
+
+function readBoolean(name, defaultValue = false) {
+  const raw = readString(name, String(defaultValue));
+  return ["1", "true", "yes", "on"].includes(raw.toLowerCase());
 }
 
 function validateNodeEnv(value) {
@@ -73,6 +79,11 @@ const STRIPE_PUBLISHABLE_KEY = validateSingleLine("STRIPE_PUBLISHABLE_KEY", read
 const STRIPE_SECRET_KEY = validateSingleLine("STRIPE_SECRET_KEY", readString("STRIPE_SECRET_KEY", ""));
 const STRIPE_WEBHOOK_SECRET = validateSingleLine("STRIPE_WEBHOOK_SECRET", readString("STRIPE_WEBHOOK_SECRET", ""));
 const STRIPE_FALLBACK_URL = validateSingleLine("STRIPE_FALLBACK_URL", readString("STRIPE_FALLBACK_URL", ""));
+const ALLOW_DEV_AUTH = readBoolean("ALLOW_DEV_AUTH", NODE_ENV !== "production");
+const AUTH_TOKEN_TTL_HOURS = readPositiveInteger("AUTH_TOKEN_TTL_HOURS", DEFAULT_AUTH_TOKEN_TTL_HOURS);
+const AUTH_PASSWORD_MIN_LENGTH = readPositiveInteger("AUTH_PASSWORD_MIN_LENGTH", 10);
+const AUTH_BOOTSTRAP_ADMIN_EMAIL = validateSingleLine("AUTH_BOOTSTRAP_ADMIN_EMAIL", readString("AUTH_BOOTSTRAP_ADMIN_EMAIL", ""));
+const AUTH_BOOTSTRAP_ADMIN_PASSWORD = validateSingleLine("AUTH_BOOTSTRAP_ADMIN_PASSWORD", readString("AUTH_BOOTSTRAP_ADMIN_PASSWORD", ""));
 const EXPORT_DIR = path.join(ROOT_DIR, "antokton-export");
 const ANTOKTON_SCHEMA_DIR = path.join(EXPORT_DIR, "antokton-reference", "entities");
 const LEGACY_SCHEMA_DIR = path.join(EXPORT_DIR, "base44", "entities");
@@ -95,7 +106,12 @@ const config = {
   STRIPE_PUBLISHABLE_KEY,
   STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET,
-  STRIPE_FALLBACK_URL
+  STRIPE_FALLBACK_URL,
+  ALLOW_DEV_AUTH,
+  AUTH_TOKEN_TTL_HOURS,
+  AUTH_PASSWORD_MIN_LENGTH,
+  AUTH_BOOTSTRAP_ADMIN_EMAIL,
+  AUTH_BOOTSTRAP_ADMIN_PASSWORD
 };
 
 function existsSafe(targetPath) {
@@ -128,7 +144,10 @@ function safeConfigStatus() {
       fallbackUrlConfigured: Boolean(config.STRIPE_FALLBACK_URL)
     },
     auth: {
-      devAuthActive: config.NODE_ENV !== "production" && Boolean(config.ANTOKTON_DEV_USER_EMAIL)
+      devAuthActive: config.NODE_ENV !== "production" && config.ALLOW_DEV_AUTH && Boolean(config.ANTOKTON_DEV_USER_EMAIL),
+      passwordAuthConfigured: true,
+      bootstrapAdminConfigured: Boolean(config.AUTH_BOOTSTRAP_ADMIN_EMAIL && config.AUTH_BOOTSTRAP_ADMIN_PASSWORD),
+      tokenTtlHours: config.AUTH_TOKEN_TTL_HOURS
     }
   };
 }

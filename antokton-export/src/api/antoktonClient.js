@@ -3,10 +3,13 @@ import { appParams } from '@/lib/app-params';
 const appId = appParams.appId || import.meta.env.VITE_ANTOKTON_APP_ID || '6991d40eddf82cc25ec834a7';
 
 function getToken() {
-  return localStorage.getItem('antokton_access_token') ||
+  const storedToken = localStorage.getItem('antokton_access_token') ||
     localStorage.getItem('base44_access_token') ||
-    localStorage.getItem('token') ||
-    `dev:${import.meta.env.VITE_ANTOKTON_DEV_USER_EMAIL || 'admin@antokton.local'}`;
+    localStorage.getItem('token');
+
+  if (storedToken) return storedToken;
+  if (import.meta.env.DEV) return `dev:${import.meta.env.VITE_ANTOKTON_DEV_USER_EMAIL || 'admin@antokton.local'}`;
+  return null;
 }
 
 function setToken(token) {
@@ -149,9 +152,15 @@ const auth = {
     return result;
   },
   redirectToLogin(fromUrl = window.location.href) {
-    const email = import.meta.env.VITE_ANTOKTON_DEV_USER_EMAIL || 'admin@antokton.local';
-    setToken(`dev:${email}`);
-    window.location.href = fromUrl;
+    if (import.meta.env.DEV) {
+      const email = import.meta.env.VITE_ANTOKTON_DEV_USER_EMAIL || 'admin@antokton.local';
+      setToken(`dev:${email}`);
+      window.location.href = fromUrl;
+      return;
+    }
+    const target = new URL('/Login', window.location.origin);
+    target.searchParams.set('from_url', fromUrl);
+    window.location.href = target.toString();
   },
   logout(fromUrl) {
     clearToken();

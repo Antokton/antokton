@@ -20,6 +20,7 @@ import AkademiaAdmin from './pages/AkademiaAdmin';
 import AkademiaMentor from './pages/AkademiaMentor';
 import DesignerPage from './pages/DesignerPage';
 import VerifyCertificate from './pages/VerifyCertificate';
+import Login from './pages/Login';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import VisualEditMode from '@/components/admin/VisualEditMode';
@@ -80,6 +81,7 @@ const AuthenticatedApp = () => {
       <Route path="/AkademiaMentor" element={<LayoutWrapper currentPageName="AkademiaMentor"><AkademiaMentor /></LayoutWrapper>} />
       <Route path="/DesignerPage/:slug" element={<LayoutWrapper currentPageName="DesignerPage"><DesignerPage /></LayoutWrapper>} />
       <Route path="/verify-certificate/:certificateNumber" element={<LayoutWrapper currentPageName="VerifyCertificate"><VerifyCertificate /></LayoutWrapper>} />
+      <Route path="/Login" element={<Login />} />
       <Route path="/AdminSuggestions" element={<LayoutWrapper currentPageName="AdminSuggestions"><AdminSuggestions /></LayoutWrapper>} />
       <Route path="/AdminAnalytics" element={<LayoutWrapper currentPageName="AdminAnalytics"><AdminAnalytics /></LayoutWrapper>} />
       <Route path="/Bileta" element={<LayoutWrapper currentPageName="Bileta"><Bileta /></LayoutWrapper>} />

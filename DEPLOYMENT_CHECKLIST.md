@@ -91,7 +91,18 @@ DB_PATH=/data/antokton.sqlite
 UPLOAD_DIR=/data/uploads
 MAX_REMOTE_ASSET_BYTES=78643200
 STRIPE_FALLBACK_URL=/Subscriptions
+AUTH_TOKEN_TTL_HOURS=336
+AUTH_PASSWORD_MIN_LENGTH=10
 ```
+
+Optional first-admin bootstrap secrets:
+
+```text
+AUTH_BOOTSTRAP_ADMIN_EMAIL=<admin email>
+AUTH_BOOTSTRAP_ADMIN_PASSWORD=<strong temporary password>
+```
+
+Only set the bootstrap values in the host secret manager. Do not commit them. The backend creates a pre-auth SQLite backup the first time auth tables are added.
 
 Host-provided environment:
 
@@ -145,9 +156,9 @@ Required environment variables for beta:
 
 Beta-only warning:
 
-- Do not treat `ANTOKTON_DEV_USER_EMAIL` or `dev:` bearer tokens as production auth.
-- If the beta is public, real auth is a blocker.
-- If the beta is private/internal, dev auth can only be used temporarily with restricted access.
+- `ANTOKTON_DEV_USER_EMAIL` and `dev:` bearer tokens are disabled in `NODE_ENV=production`.
+- Real beta auth uses scrypt password hashes and opaque `atk_...` bearer sessions.
+- Password reset and email verification remain future hardening items before broad public launch.
 
 ## Vercel Frontend Checklist
 
@@ -238,7 +249,7 @@ GET /uploads/<known-file>
 
 ## First Online Beta Blockers
 
-1. Real auth is not implemented. Current dev auth and `dev:` tokens are unsafe for public production.
+1. Email/password auth is now implemented for restricted beta, but email verification, password reset email delivery, rate limiting, and broader RBAC hardening remain pending.
 2. SQLite and local uploads require a persistent disk/volume, backup plan, and single-instance deployment discipline.
 3. Cloudflare R2 is only planned. `backend/storage.js` still uses local storage only.
 4. Vercel split deployment needs rewrites for `/api` and `/uploads`, or the frontend will break.
@@ -258,7 +269,7 @@ Go for a restricted beta only if:
 
 No-go for a public beta until:
 
-- Real production auth is implemented.
+- Email/password beta auth is configured and dev auth is disabled in production.
 - Storage is moved to R2/S3-compatible object storage or equivalent.
 - Database migration path to PostgreSQL/Supabase-compatible schema is tested.
 - Admin/moderator permissions are enforced server-side.

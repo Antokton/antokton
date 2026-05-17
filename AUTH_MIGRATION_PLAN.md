@@ -396,7 +396,8 @@ Status:
 - [x] Backend auth abstraction added in `backend/auth.js` on 2026-05-13.
 - [x] `backend/server.js` now reads request user email and safe auth status through the auth module.
 - [x] Dev auth behavior remains compatible with the existing local frontend and Base44-shaped endpoints.
-- [ ] Production auth provider is not implemented yet.
+- [x] Local production-beta password auth implemented on 2026-05-17 with scrypt password hashes, opaque bearer sessions, auth audit logs, and production dev-token rejection.
+- [ ] Supabase Auth or another managed production provider is not implemented yet.
 
 Goal:
 
@@ -516,6 +517,13 @@ Expected changes:
 Goal:
 
 Ensure dev auth cannot accidentally run in production.
+
+Status:
+
+- [x] `dev:<email>` tokens are rejected when `NODE_ENV=production`.
+- [x] Missing tokens no longer fall back to `ANTOKTON_DEV_USER_EMAIL` in production.
+- [x] `/health/config` reports safe auth status without exposing tokens, passwords, or configured emails.
+- [ ] Dev auth remains available for local development only while the compatibility frontend is migrated.
 
 Likely files to change:
 

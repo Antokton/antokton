@@ -50,3 +50,49 @@ CREATE TABLE IF NOT EXISTS entity_schemas (
   source_path TEXT,
   loaded_at TEXT NOT NULL
 );
+
+-- Production beta authentication accounts.
+-- Passwords are stored as scrypt hashes; plaintext passwords are never stored.
+CREATE TABLE IF NOT EXISTS auth_accounts (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  user_record_id TEXT,
+  password_hash TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  email_verified_at TEXT,
+  created_date TEXT NOT NULL,
+  updated_date TEXT NOT NULL,
+  last_login_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_accounts_status
+  ON auth_accounts (status);
+
+-- Opaque bearer sessions. Only token hashes are stored server-side.
+CREATE TABLE IF NOT EXISTS auth_sessions (
+  id TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL,
+  user_record_id TEXT,
+  email TEXT NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  created_date TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  revoked_at TEXT,
+  user_agent TEXT,
+  ip_address TEXT,
+  FOREIGN KEY(account_id) REFERENCES auth_accounts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_email
+  ON auth_sessions (email);
+
+CREATE TABLE IF NOT EXISTS auth_audit_logs (
+  id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  email TEXT,
+  account_id TEXT,
+  ip_address TEXT,
+  user_agent TEXT,
+  metadata TEXT,
+  created_date TEXT NOT NULL
+);
