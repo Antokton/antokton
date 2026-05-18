@@ -158,6 +158,7 @@ const auth = {
       window.location.href = fromUrl;
       return;
     }
+    if (window.location.pathname.toLowerCase() === '/login') return;
     const target = new URL('/Login', window.location.origin);
     target.searchParams.set('from_url', fromUrl);
     window.location.href = target.toString();

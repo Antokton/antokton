@@ -35,6 +35,15 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const isLoginRoute = window.location.pathname.toLowerCase() === "/login";
+
+  if (isLoginRoute) {
+    return (
+      <Routes>
+        <Route path="/Login" element={<Login />} />
+      </Routes>
+    );
+  }
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
