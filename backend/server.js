@@ -1156,8 +1156,7 @@ function bootstrapAdminAuth() {
 
   const existingAccount = getAuthAccountByEmail(email);
   if (existingAccount) {
-    setPasswordForAccount(existingAccount, AUTH_BOOTSTRAP_ADMIN_PASSWORD, null);
-    console.log(`Updated bootstrap admin auth account for ${email}`);
+    console.log(`Bootstrap admin auth account already exists for ${email}`);
     return;
   }
 
