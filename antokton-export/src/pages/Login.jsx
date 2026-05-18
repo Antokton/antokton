@@ -19,6 +19,22 @@ export default function Login() {
   const fromUrl = searchParams.get("from_url") || "/Home";
   const redirectTarget = fromUrl.includes("/Login") ? "/Home" : fromUrl;
 
+  const getPostLoginUrl = (target, accessToken) => {
+    let url;
+    try {
+      url = new URL(target || "/Home", window.location.origin);
+    } catch {
+      url = new URL("/Home", window.location.origin);
+    }
+
+    if (url.origin !== window.location.origin || url.pathname.toLowerCase() === "/login") {
+      url = new URL("/Home", window.location.origin);
+    }
+
+    if (accessToken) url.searchParams.set("access_token", accessToken);
+    return url.toString();
+  };
+
   const submit = async (event) => {
     event.preventDefault();
     setLoading(true);
@@ -28,16 +44,17 @@ export default function Login() {
       const email = (emailRef.current?.value || form.email).trim().toLowerCase();
       const password = passwordRef.current?.value ?? form.password;
 
+      let authResult;
       if (mode === "register") {
-        await base44.auth.register({
+        authResult = await base44.auth.register({
           email,
           password,
           full_name: form.full_name.trim()
         });
       } else {
-        await base44.auth.loginViaEmailPassword(email, password);
+        authResult = await base44.auth.loginViaEmailPassword(email, password);
       }
-      window.location.replace(redirectTarget);
+      window.location.replace(getPostLoginUrl(redirectTarget, authResult?.access_token));
     } catch (err) {
       setError(err.message || "Nuk u krye kyçja. Kontrollo të dhënat dhe provo përsëri.");
       if (err.status === 401) {
@@ -83,7 +100,7 @@ export default function Login() {
                 ref={emailRef}
                 type="email"
                 required
-                value={form.email}
+                defaultValue={form.email}
                 onChange={(event) => setForm({ ...form, email: event.target.value })}
                 className="border-white/10 h-11 text-white bg-white/10 pl-9"
                 autoComplete="email"
@@ -99,7 +116,7 @@ export default function Login() {
                 type={showPassword ? "text" : "password"}
                 required
                 minLength={10}
-                value={form.password}
+                defaultValue={form.password}
                 onChange={(event) => setForm({ ...form, password: event.target.value })}
                 className="border-white/10 h-11 text-white bg-white/10 pr-12"
                 autoComplete={mode === "register" ? "new-password" : "current-password"}
