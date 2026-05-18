@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/antoktonClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Lock, Mail, UserPlus, LogIn, AlertCircle } from "lucide-react";
+import { Lock, Mail, UserPlus, LogIn, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const [searchParams] = useSearchParams();
@@ -12,6 +12,9 @@ export default function Login() {
   const [form, setForm] = useState({ email: "", password: "", full_name: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
 
   const fromUrl = searchParams.get("from_url") || "/Home";
   const redirectTarget = fromUrl.includes("/Login") ? "/Home" : fromUrl;
@@ -22,8 +25,8 @@ export default function Login() {
     setError("");
 
     try {
-      const email = form.email.trim().toLowerCase();
-      const password = mode === "login" ? form.password.trim() : form.password;
+      const email = (emailRef.current?.value || form.email).trim().toLowerCase();
+      const password = passwordRef.current?.value ?? form.password;
 
       if (mode === "register") {
         await base44.auth.register({
@@ -34,7 +37,7 @@ export default function Login() {
       } else {
         await base44.auth.loginViaEmailPassword(email, password);
       }
-      window.location.href = redirectTarget;
+      window.location.replace(redirectTarget);
     } catch (err) {
       setError(err.message || "Nuk u krye kyçja. Kontrollo të dhënat dhe provo përsëri.");
       if (err.status === 401) {
@@ -77,6 +80,7 @@ export default function Login() {
             <div className="relative">
               <Mail className="w-4 h-4 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" />
               <Input
+                ref={emailRef}
                 type="email"
                 required
                 value={form.email}
@@ -89,15 +93,27 @@ export default function Login() {
 
           <div className="space-y-1.5">
             <Label className="text-white/70 text-sm">Fjalëkalimi</Label>
-            <Input
-              type="password"
-              required
-              minLength={10}
-              value={form.password}
-              onChange={(event) => setForm({ ...form, password: event.target.value })}
-              className="border-white/10 h-11 text-white bg-white/10"
-              autoComplete={mode === "register" ? "new-password" : "current-password"}
-            />
+            <div className="relative">
+              <Input
+                ref={passwordRef}
+                type={showPassword ? "text" : "password"}
+                required
+                minLength={10}
+                value={form.password}
+                onChange={(event) => setForm({ ...form, password: event.target.value })}
+                className="border-white/10 h-11 text-white bg-white/10 pr-12"
+                autoComplete={mode === "register" ? "new-password" : "current-password"}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((visible) => !visible)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-300/60 rounded-md p-1"
+                aria-label={showPassword ? "Fshih fjalëkalimin" : "Shfaq fjalëkalimin"}
+                title={showPassword ? "Fshih fjalëkalimin" : "Shfaq fjalëkalimin"}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           {error && (

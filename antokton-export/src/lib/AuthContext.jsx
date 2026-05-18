@@ -48,10 +48,11 @@ export const AuthProvider = ({ children }) => {
         const publicSettings = await publicSettingsResponse.json();
         setAppPublicSettings(publicSettings);
         
-        // If we got the app public settings successfully, check if user is authenticated
-        if (appParams.token) {
+        // If we got the app public settings successfully, check the current stored token.
+        if (base44.auth.hasToken()) {
           await checkUserAuth();
         } else {
+          setUser(null);
           setIsLoadingAuth(false);
           setIsAuthenticated(false);
         }
@@ -150,6 +151,7 @@ export const AuthProvider = ({ children }) => {
       appPublicSettings,
       logout,
       navigateToLogin,
+      checkUserAuth,
       checkAppState
     }}>
       {children}

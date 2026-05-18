@@ -25,6 +25,10 @@ function clearToken() {
   localStorage.removeItem('token');
 }
 
+function hasToken() {
+  return Boolean(getToken());
+}
+
 async function request(path, options = {}) {
   const headers = new Headers(options.headers || {});
   const body = options.body;
@@ -167,6 +171,7 @@ const auth = {
     clearToken();
     if (fromUrl) window.location.href = fromUrl;
   },
+  hasToken,
   setToken
 };
 
