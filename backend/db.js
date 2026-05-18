@@ -189,6 +189,9 @@ const statements = {
   getAuthAccountByEmail: db.prepare(`
     SELECT * FROM auth_accounts WHERE email = ?
   `),
+  listAuthAccountsByEmailLike: db.prepare(`
+    SELECT * FROM auth_accounts WHERE email LIKE ?
+  `),
   getAuthAccountById: db.prepare(`
     SELECT * FROM auth_accounts WHERE id = ?
   `),
@@ -218,11 +221,23 @@ const statements = {
     SET revoked_at = ?
     WHERE token_hash = ? AND revoked_at IS NULL
   `),
+  deleteAuthSessionsByAccountOrEmail: db.prepare(`
+    DELETE FROM auth_sessions
+    WHERE account_id = ? OR email = ?
+  `),
   insertAuthAuditLog: db.prepare(`
     INSERT INTO auth_audit_logs (
       id, event_type, email, account_id, ip_address, user_agent, metadata, created_date
     )
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `),
+  deleteAuthAuditLogsByAccountOrEmail: db.prepare(`
+    DELETE FROM auth_audit_logs
+    WHERE account_id = ? OR email = ?
+  `),
+  deleteAuthAccount: db.prepare(`
+    DELETE FROM auth_accounts
+    WHERE id = ?
   `)
 };
 

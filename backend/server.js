@@ -18,6 +18,7 @@ const {
   assertEmail,
   assertPassword,
   authenticatePassword,
+  cleanupKnownTestAuthAccounts,
   createPasswordAccount,
   createSession,
   getAuthAccountByEmail,
@@ -1170,6 +1171,26 @@ function bootstrapAdminAuth() {
   console.log(`Created bootstrap admin auth account for ${email}`);
 }
 
+function cleanupKnownTestUsers() {
+  if (config.NODE_ENV !== "production") return;
+
+  const authCleanup = cleanupKnownTestAuthAccounts();
+  let userRecordsDeleted = 0;
+  const testEmailPattern = /^auth\.beta\.test\.[^@\s]+@example\.invalid$/i;
+
+  for (const row of statements.listEntity.all(APP_ID, "User")) {
+    const record = recordFromRow(row);
+    if (!testEmailPattern.test(String(record.email || ""))) continue;
+    statements.deleteEntity.run(APP_ID, "User", row.id);
+    userRecordsDeleted += 1;
+  }
+
+  const totalDeleted = authCleanup.accountsDeleted + authCleanup.sessionsDeleted + authCleanup.auditLogsDeleted + userRecordsDeleted;
+  if (totalDeleted > 0) {
+    console.log(`Cleaned known beta test auth records: accounts=${authCleanup.accountsDeleted}, sessions=${authCleanup.sessionsDeleted}, auditLogs=${authCleanup.auditLogsDeleted}, users=${userRecordsDeleted}`);
+  }
+}
+
 function serveStatic(req, res, pathname) {
   if (pathname.startsWith("/uploads/")) {
     const uploadFile = getUploadFilePath(pathname.slice("/uploads/".length));
@@ -1244,6 +1265,7 @@ function serveStatic(req, res, pathname) {
 persistEntitySchemas();
 if (isDevAuthActive()) ensureUser();
 bootstrapAdminAuth();
+cleanupKnownTestUsers();
 
 const server = http.createServer(async (req, res) => {
   try {

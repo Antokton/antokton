@@ -104,6 +104,29 @@ AUTH_BOOTSTRAP_ADMIN_PASSWORD=<strong temporary password>
 
 Only set the bootstrap values in the host secret manager. Do not commit them. The backend creates a pre-auth SQLite backup the first time auth tables are added.
 
+Render admin bootstrap steps:
+
+1. Open the Render web service for Antokton.
+2. Go to `Environment`.
+3. Add or update only these secret variables:
+   - `AUTH_BOOTSTRAP_ADMIN_EMAIL`
+   - `AUTH_BOOTSTRAP_ADMIN_PASSWORD`
+4. Use the real admin email and a strong temporary password.
+5. Click `Save, rebuild, and deploy`, or run a manual deploy/restart after saving.
+6. Verify `GET /health/config` after deploy:
+   - `auth.authMode` should be `password`
+   - `auth.devAuthActive` should be `false`
+   - `auth.bootstrapAdminConfigured` should be `true`
+7. Verify admin login through `POST /api/apps/{APP_ID}/auth/login`.
+8. Verify `GET /api/apps/{APP_ID}/entities/User/me` with the returned bearer token returns `role: "admin"`.
+
+Security notes:
+
+- `AUTH_BOOTSTRAP_ADMIN_PASSWORD` must never be written to Git, documentation, logs, screenshots, or chat summaries.
+- The backend creates the admin auth account only when it does not already exist; it does not reset an existing admin password on every restart.
+- After the first successful admin login and password rotation flow is ready, remove or rotate the bootstrap password in Render.
+- Test accounts such as `auth.beta.test.*` must be removed from both auth tables and the `User` entity before a wider beta.
+
 Host-provided environment:
 
 - Railway/Render normally provide `PORT`; do not hardcode it unless the host requires it.

@@ -141,6 +141,27 @@ function getAuthAccountByEmail(email) {
   return statements.getAuthAccountByEmail.get(normalizeEmail(email)) || null;
 }
 
+function cleanupKnownTestAuthAccounts() {
+  const result = {
+    accountsDeleted: 0,
+    sessionsDeleted: 0,
+    auditLogsDeleted: 0
+  };
+
+  const accounts = statements.listAuthAccountsByEmailLike.all("auth.beta.test.%@example.invalid");
+  for (const account of accounts) {
+    const sessions = statements.deleteAuthSessionsByAccountOrEmail.run(account.id, account.email);
+    const auditLogs = statements.deleteAuthAuditLogsByAccountOrEmail.run(account.id, account.email);
+    const deletedAccount = statements.deleteAuthAccount.run(account.id);
+
+    result.sessionsDeleted += sessions.changes || 0;
+    result.auditLogsDeleted += auditLogs.changes || 0;
+    result.accountsDeleted += deletedAccount.changes || 0;
+  }
+
+  return result;
+}
+
 function countAuthAccounts() {
   const row = statements.countAuthAccounts.get();
   return Number(row?.count || 0);
@@ -308,6 +329,7 @@ module.exports = {
   assertEmail,
   assertPassword,
   authenticatePassword,
+  cleanupKnownTestAuthAccounts,
   createDevAccessToken,
   createPasswordAccount,
   createSession,
