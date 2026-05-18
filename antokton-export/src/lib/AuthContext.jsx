@@ -13,6 +13,12 @@ export const AuthProvider = ({ children }) => {
   const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
 
   useEffect(() => {
+    if (window.location.pathname.toLowerCase() === '/login') {
+      setIsLoadingPublicSettings(false);
+      setIsLoadingAuth(false);
+      setAuthError(null);
+      return;
+    }
     checkAppState();
   }, []);
 
@@ -107,6 +113,7 @@ export const AuthProvider = ({ children }) => {
       
       // If user auth fails, it might be an expired token
       if (error.status === 401 || error.status === 403) {
+        base44.auth.logout();
         setAuthError({
           type: 'auth_required',
           message: 'Authentication required'

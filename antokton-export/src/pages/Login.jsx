@@ -22,18 +22,24 @@ export default function Login() {
     setError("");
 
     try {
+      const email = form.email.trim().toLowerCase();
+      const password = mode === "login" ? form.password.trim() : form.password;
+
       if (mode === "register") {
         await base44.auth.register({
-          email: form.email,
-          password: form.password,
-          full_name: form.full_name
+          email,
+          password,
+          full_name: form.full_name.trim()
         });
       } else {
-        await base44.auth.loginViaEmailPassword(form.email, form.password);
+        await base44.auth.loginViaEmailPassword(email, password);
       }
       window.location.href = redirectTarget;
     } catch (err) {
       setError(err.message || "Nuk u krye kyçja. Kontrollo të dhënat dhe provo përsëri.");
+      if (err.status === 401) {
+        setError("Emaili ose fjalëkalimi nuk është i saktë.");
+      }
     } finally {
       setLoading(false);
     }
