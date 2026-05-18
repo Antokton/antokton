@@ -6,6 +6,7 @@ const DEFAULT_APP_ID = "6991d40eddf82cc25ec834a7";
 const DEFAULT_DEV_USER_EMAIL = "admin@antokton.local";
 const DEFAULT_MAX_REMOTE_ASSET_BYTES = 75 * 1024 * 1024;
 const DEFAULT_AUTH_TOKEN_TTL_HOURS = 24 * 14;
+const DEFAULT_AUTH_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 
 function readString(name, defaultValue = "") {
   const value = process.env[name];
@@ -82,6 +83,10 @@ const STRIPE_FALLBACK_URL = validateSingleLine("STRIPE_FALLBACK_URL", readString
 const ALLOW_DEV_AUTH = readBoolean("ALLOW_DEV_AUTH", NODE_ENV !== "production");
 const AUTH_TOKEN_TTL_HOURS = readPositiveInteger("AUTH_TOKEN_TTL_HOURS", DEFAULT_AUTH_TOKEN_TTL_HOURS);
 const AUTH_PASSWORD_MIN_LENGTH = readPositiveInteger("AUTH_PASSWORD_MIN_LENGTH", 10);
+const AUTH_RATE_LIMIT_WINDOW_MS = readPositiveInteger("AUTH_RATE_LIMIT_WINDOW_MS", DEFAULT_AUTH_RATE_LIMIT_WINDOW_MS);
+const AUTH_LOGIN_RATE_LIMIT_MAX = readPositiveInteger("AUTH_LOGIN_RATE_LIMIT_MAX", 8);
+const AUTH_REGISTER_RATE_LIMIT_MAX = readPositiveInteger("AUTH_REGISTER_RATE_LIMIT_MAX", 5);
+const AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX = readPositiveInteger("AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX", 5);
 const AUTH_BOOTSTRAP_ADMIN_EMAIL = validateSingleLine("AUTH_BOOTSTRAP_ADMIN_EMAIL", readString("AUTH_BOOTSTRAP_ADMIN_EMAIL", ""));
 const AUTH_BOOTSTRAP_ADMIN_PASSWORD = validateSingleLine("AUTH_BOOTSTRAP_ADMIN_PASSWORD", readString("AUTH_BOOTSTRAP_ADMIN_PASSWORD", ""));
 const EXPORT_DIR = path.join(ROOT_DIR, "antokton-export");
@@ -110,6 +115,10 @@ const config = {
   ALLOW_DEV_AUTH,
   AUTH_TOKEN_TTL_HOURS,
   AUTH_PASSWORD_MIN_LENGTH,
+  AUTH_RATE_LIMIT_WINDOW_MS,
+  AUTH_LOGIN_RATE_LIMIT_MAX,
+  AUTH_REGISTER_RATE_LIMIT_MAX,
+  AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX,
   AUTH_BOOTSTRAP_ADMIN_EMAIL,
   AUTH_BOOTSTRAP_ADMIN_PASSWORD
 };
@@ -147,7 +156,14 @@ function safeConfigStatus() {
       devAuthActive: config.NODE_ENV !== "production" && config.ALLOW_DEV_AUTH && Boolean(config.ANTOKTON_DEV_USER_EMAIL),
       passwordAuthConfigured: true,
       bootstrapAdminConfigured: Boolean(config.AUTH_BOOTSTRAP_ADMIN_EMAIL && config.AUTH_BOOTSTRAP_ADMIN_PASSWORD),
-      tokenTtlHours: config.AUTH_TOKEN_TTL_HOURS
+      tokenTtlHours: config.AUTH_TOKEN_TTL_HOURS,
+      rateLimit: {
+        mode: "in-memory",
+        windowMs: config.AUTH_RATE_LIMIT_WINDOW_MS,
+        loginMax: config.AUTH_LOGIN_RATE_LIMIT_MAX,
+        registerMax: config.AUTH_REGISTER_RATE_LIMIT_MAX,
+        passwordChangeMax: config.AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX
+      }
     }
   };
 }

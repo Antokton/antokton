@@ -30,6 +30,7 @@ const {
   revokeRequestSession,
   setPasswordForAccount
 } = require("./auth");
+const { consumeAuthRateLimit } = require("./rateLimit");
 
 const {
   ROOT_DIR,
@@ -182,8 +183,18 @@ function send(res, status, body, headers = {}) {
   res.end(json);
 }
 
-function sendError(res, status, message, extra = {}) {
-  send(res, status, { message, detail: message, ...extra });
+function sendError(res, status, message, extra = {}, headers = {}) {
+  send(res, status, { message, detail: message, ...extra }, headers);
+}
+
+function sendRateLimitError(res, rateLimit) {
+  return sendError(
+    res,
+    429,
+    "Too many attempts. Please try again later.",
+    { retry_after_seconds: rateLimit.retryAfterSeconds },
+    { "Retry-After": String(rateLimit.retryAfterSeconds) }
+  );
 }
 
 function recordFromRow(row) {
@@ -1060,6 +1071,9 @@ async function handleAuth(req, res, segments) {
   if (req.method === "POST" && action === "login") {
     const body = await readJson(req);
     const email = normalizeEmail(body.email);
+    const rateLimit = consumeAuthRateLimit("login", req, email);
+    if (!rateLimit.allowed) return sendRateLimitError(res, rateLimit);
+
     const password = body.password;
     const account = authenticatePassword({ email, password, req });
     const user = ensureUser(account.email);
@@ -1074,6 +1088,9 @@ async function handleAuth(req, res, segments) {
 
   if (req.method === "POST" && action === "register") {
     const body = await readJson(req);
+    const rateLimit = consumeAuthRateLimit("register", req, body.email);
+    if (!rateLimit.allowed) return sendRateLimitError(res, rateLimit);
+
     const email = assertEmail(body.email);
     assertPassword(body.password);
     const existingUser = findUserByEmail(email);
@@ -1109,6 +1126,8 @@ async function handleAuth(req, res, segments) {
   if (req.method === "POST" && action === "change-password") {
     const userEmail = getRequestUserEmail(req);
     if (!userEmail) return sendError(res, 401, "Authentication required");
+    const rateLimit = consumeAuthRateLimit("change-password", req, userEmail);
+    if (!rateLimit.allowed) return sendRateLimitError(res, rateLimit);
 
     const body = await readJson(req);
     const currentPassword = body.current_password || body.currentPassword || body.old_password;

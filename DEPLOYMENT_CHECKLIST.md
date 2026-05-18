@@ -93,6 +93,10 @@ MAX_REMOTE_ASSET_BYTES=78643200
 STRIPE_FALLBACK_URL=/Subscriptions
 AUTH_TOKEN_TTL_HOURS=336
 AUTH_PASSWORD_MIN_LENGTH=10
+AUTH_RATE_LIMIT_WINDOW_MS=900000
+AUTH_LOGIN_RATE_LIMIT_MAX=8
+AUTH_REGISTER_RATE_LIMIT_MAX=5
+AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX=5
 ```
 
 Optional first-admin bootstrap secrets:
@@ -126,6 +130,18 @@ Security notes:
 - The backend creates the admin auth account only when it does not already exist; it does not reset an existing admin password on every restart.
 - After the first successful admin login and password rotation flow is ready, remove or rotate the bootstrap password in Render.
 - Test accounts such as `auth.beta.test.*` must be removed from both auth tables and the `User` entity before a wider beta.
+
+Auth rate limiting:
+
+- Restricted beta uses in-memory auth rate limiting only.
+- This is suitable only for a single Render instance.
+- Defaults:
+  - `AUTH_RATE_LIMIT_WINDOW_MS=900000`
+  - `AUTH_LOGIN_RATE_LIMIT_MAX=8`
+  - `AUTH_REGISTER_RATE_LIMIT_MAX=5`
+  - `AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX=5`
+- Rate limit responses are generic and must not reveal whether an account exists.
+- If the service restarts, the in-memory counters reset. This is acceptable for restricted beta only.
 
 Host-provided environment:
 
@@ -176,11 +192,23 @@ Required environment variables for beta:
 - `UPLOAD_DIR=/data/uploads`
 - `MAX_REMOTE_ASSET_BYTES=78643200`
 - `STRIPE_FALLBACK_URL=/Subscriptions`
+- `AUTH_RATE_LIMIT_WINDOW_MS=900000`
+- `AUTH_LOGIN_RATE_LIMIT_MAX=8`
+- `AUTH_REGISTER_RATE_LIMIT_MAX=5`
+- `AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX=5`
+
+Render persistent disk backup checklist:
+
+- Back up both `/data/antokton.sqlite` and `/data/uploads`.
+- Create backups before each deploy that changes auth, database, uploads, or migrations.
+- Keep at least one daily backup outside Render.
+- See `BACKUP_AND_RECOVERY.md` for the beta backup and restore process.
 
 Beta-only warning:
 
 - `ANTOKTON_DEV_USER_EMAIL` and `dev:` bearer tokens are disabled in `NODE_ENV=production`.
 - Real beta auth uses scrypt password hashes and opaque `atk_...` bearer sessions.
+- Auth rate limiting is in-memory and single-instance only.
 - Password reset and email verification remain future hardening items before broad public launch.
 
 ## Vercel Frontend Checklist
@@ -272,7 +300,7 @@ GET /uploads/<known-file>
 
 ## First Online Beta Blockers
 
-1. Email/password auth is now implemented for restricted beta, but email verification, password reset email delivery, rate limiting, and broader RBAC hardening remain pending.
+1. Email/password auth and basic in-memory auth rate limiting are implemented for restricted beta, but email verification, password reset email delivery, persistent/distributed rate limiting, and broader RBAC hardening remain pending.
 2. SQLite and local uploads require a persistent disk/volume, backup plan, and single-instance deployment discipline.
 3. Cloudflare R2 is only planned. `backend/storage.js` still uses local storage only.
 4. Vercel split deployment needs rewrites for `/api` and `/uploads`, or the frontend will break.
