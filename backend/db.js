@@ -6,28 +6,41 @@ const usePostgres = config.DATABASE_PROVIDER === "postgres" || Boolean(config.DA
 
 let _dbLoaded = false;
 
+const _diagPath = require("node:path").join(__dirname, "data", "db-diag.json");
+
+function _writeDiag(data) {
+  try {
+    require("node:fs").mkdirSync(require("node:path").join(__dirname, "data"), { recursive: true });
+    require("node:fs").writeFileSync(_diagPath, JSON.stringify({ ...data, ts: new Date().toISOString() }));
+  } catch (e) { /* ignore */ }
+}
+
 if (usePostgres) {
+  _writeDiag({ step: "before_require_pg", usePostgres });
   try {
     console.log("Using PostgreSQL database");
     const pgDb = require("./db-postgres");
+    _writeDiag({ step: "after_require_pg_success", usePostgres });
     module.exports = pgDb;
     _dbLoaded = true;
+    _writeDiag({ step: "dbLoaded_true", usePostgres, _dbLoaded });
     global.__dbLoadState = { loaded: "postgres", error: null };
-    console.log("PostgreSQL driver loaded successfully, _dbLoaded=" + _dbLoaded);
+    console.log("PostgreSQL driver loaded successfully");
   } catch (err) {
+    _writeDiag({ step: "catch", error: err.message, stack: err.stack });
     global.__pgLoadError = err.message + "\n" + err.stack;
     global.__dbLoadState = { loaded: "none", error: err.message };
     console.error(`Failed to load PostgreSQL driver: ${err.message}`);
     console.error(err.stack);
-    console.error("DATABASE_PROVIDER=postgres but pg could not be loaded — falling back to SQLite");
   }
 }
 
-console.log("After postgres block: _dbLoaded=" + _dbLoaded + " usePostgres=" + usePostgres);
+_writeDiag({ step: "after_if_usePostgres", _dbLoaded, usePostgres });
 
 if (!_dbLoaded) {
   global.__dbLoadState = (global.__dbLoadState || { loaded: "none", error: null });
   global.__dbLoadState.sqliteFallback = true;
+  _writeDiag({ step: "sqlite_fallback", _dbLoaded });
   console.log(`Using SQLite database: ${config.DB_PATH}`);
 
 const fs = require("node:fs");
