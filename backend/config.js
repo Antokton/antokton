@@ -72,6 +72,8 @@ const NODE_ENV = validateNodeEnv(readString("NODE_ENV", "development"));
 const DATA_DIR = validateSingleLine("DATA_DIR", readString("DATA_DIR", path.join(__dirname, "data")));
 const UPLOAD_DIR = validateSingleLine("UPLOAD_DIR", readString("UPLOAD_DIR", path.join(__dirname, "uploads")));
 const DB_PATH = validateSingleLine("DB_PATH", readString("DB_PATH", path.join(DATA_DIR, "antokton.sqlite")));
+const DATABASE_PROVIDER = readString("DATABASE_PROVIDER", "sqlite");
+const DATABASE_URL = readString("DATABASE_URL", "");
 const PORT = readPort("PORT", 8787);
 const APP_ID = validateSingleLine("APP_ID", validateNonEmpty("APP_ID", readString("APP_ID", DEFAULT_APP_ID)));
 const ANTOKTON_DEV_USER_EMAIL = validateDevEmail(readString("ANTOKTON_DEV_USER_EMAIL", DEFAULT_DEV_USER_EMAIL));
@@ -106,6 +108,8 @@ const config = {
   UPLOAD_DIR,
   REMOTE_ASSET_DIR: path.join(UPLOAD_DIR, "remote"),
   DB_PATH,
+  DATABASE_PROVIDER,
+  DATABASE_URL,
   PORT,
   APP_ID,
   ANTOKTON_DEV_USER_EMAIL,
@@ -140,10 +144,10 @@ function safeConfigStatus() {
     environment: config.NODE_ENV,
     port: config.PORT,
     database: {
-      type: "sqlite",
-      configured: Boolean(config.DB_PATH),
-      directoryExists: existsSafe(path.dirname(config.DB_PATH)),
-      fileExists: existsSafe(config.DB_PATH)
+      type: config.DATABASE_PROVIDER,
+      configured: config.DATABASE_PROVIDER === "postgres" ? Boolean(config.DATABASE_URL) : Boolean(config.DB_PATH),
+      directoryExists: config.DATABASE_PROVIDER === "postgres" ? true : existsSafe(path.dirname(config.DB_PATH)),
+      fileExists: config.DATABASE_PROVIDER === "postgres" ? true : existsSafe(config.DB_PATH)
     },
     uploads: {
       configured: Boolean(config.UPLOAD_DIR),
