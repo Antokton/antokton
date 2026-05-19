@@ -1,7 +1,21 @@
+const { config } = require("./config");
+
+// Runtime database provider detection.
+// Use PostgreSQL when DATABASE_PROVIDER=postgres OR DATABASE_URL is set.
+const usePostgres = config.DATABASE_PROVIDER === "postgres" || Boolean(config.DATABASE_URL);
+
+if (usePostgres) {
+  console.log("Using PostgreSQL database");
+  module.exports = require("./db-postgres");
+  // Stop here – the rest of this file is SQLite-only.
+  return; // CommonJS early exit trick via wrapper
+}
+
+console.log(`Using SQLite database: ${config.DB_PATH}`);
+
 const fs = require("node:fs");
 const path = require("node:path");
 const { DatabaseSync } = require("node:sqlite");
-const { config } = require("./config");
 
 const { DATA_DIR, DB_PATH } = config;
 
