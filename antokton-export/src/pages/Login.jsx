@@ -135,7 +135,7 @@ export default function Login() {
           {mode !== "reset" && (
             <div className="space-y-1.5">
               <Label className="text-white/70 text-sm">Fjalëkalimi</Label>
-              <div className="relative">
+              <div className="flex items-stretch gap-2">
                 <Input
                   ref={passwordRef}
                   type={showPassword ? "text" : "password"}
@@ -143,13 +143,13 @@ export default function Login() {
                   minLength={10}
                   defaultValue={form.password}
                   onChange={(event) => setForm({ ...form, password: event.target.value })}
-                  className="border-white/10 h-11 text-white bg-white/10 pr-24"
+                  className="min-w-0 flex-1 border-white/10 h-11 text-white bg-white/10"
                   autoComplete={mode === "register" ? "new-password" : "current-password"}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((visible) => !visible)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-[#172237] px-2.5 py-1.5 text-xs font-semibold text-white/85 hover:bg-[#20304d] hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-300/60"
+                  className="h-11 shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg border border-blue-300/35 bg-[#0f172a] px-3 text-xs font-semibold text-white shadow-sm hover:bg-[#1d2b47] focus:outline-none focus:ring-2 focus:ring-blue-300/60"
                   aria-label={showPassword ? "Fshih fjalëkalimin" : "Shfaq fjalëkalimin"}
                   title={showPassword ? "Fshih fjalëkalimin" : "Shfaq fjalëkalimin"}
                 >
