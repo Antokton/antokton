@@ -10,7 +10,9 @@ if (usePostgres) {
     module.exports = require("./db-postgres");
     return; // CommonJS early exit trick via wrapper
   } catch (err) {
+    global.__pgLoadError = err.message + "\n" + err.stack;
     console.error(`Failed to load PostgreSQL driver: ${err.message}`);
+    console.error(err.stack);
     console.error("DATABASE_PROVIDER=postgres but pg could not be loaded — falling back to SQLite");
   }
 }
