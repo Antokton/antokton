@@ -1354,6 +1354,7 @@ const server = http.createServer(async (req, res) => {
         dbMode: getDatabaseMode(),
         pgLoadError: global.__pgLoadError || null,
         dbLoadState: global.__dbLoadState || null,
+        dbDiagFile: (() => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, "data", "db-diag.json"), "utf8")); } catch(e) { return `err:${e.message}`; } })(),
         pgResolve,
         pgError,
         pgDirectTest,
