@@ -4,7 +4,7 @@ import { base44 } from "@/api/antoktonClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Lock, Mail, UserPlus, LogIn, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Lock, Mail, UserPlus, LogIn, AlertCircle, Eye, EyeOff, KeyRound } from "lucide-react";
 
 export default function Login() {
   const [searchParams] = useSearchParams();
@@ -12,6 +12,7 @@ export default function Login() {
   const [form, setForm] = useState({ email: "", password: "", full_name: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
@@ -39,10 +40,17 @@ export default function Login() {
     event.preventDefault();
     setLoading(true);
     setError("");
+    setSuccessMessage("");
 
     try {
       const email = (emailRef.current?.value || form.email).trim().toLowerCase();
       const password = passwordRef.current?.value ?? form.password;
+
+      if (mode === "reset") {
+        await base44.auth.requestPasswordReset(email);
+        setSuccessMessage("Nëse ky email ekziston, do të dërgohen udhëzimet për rivendosjen e fjalëkalimit.");
+        return;
+      }
 
       let authResult;
       if (mode === "register") {
@@ -56,7 +64,7 @@ export default function Login() {
       }
       window.location.replace(getPostLoginUrl(redirectTarget, authResult?.access_token));
     } catch (err) {
-      setError(err.message || "Nuk u krye kyçja. Kontrollo të dhënat dhe provo përsëri.");
+      setError(err.message || "Nuk u krye hyrja. Kontrollo të dhënat dhe provo përsëri.");
       if (err.status === 401) {
         setError("Emaili ose fjalëkalimi nuk është i saktë.");
       }
@@ -65,18 +73,34 @@ export default function Login() {
     }
   };
 
+  const switchMode = (nextMode) => {
+    setError("");
+    setSuccessMessage("");
+    setMode(nextMode);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-[#07101f]">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.06] p-7 shadow-2xl">
         <div className="w-14 h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center mx-auto mb-5">
-          {mode === "register" ? <UserPlus className="w-7 h-7 text-blue-300" /> : <Lock className="w-7 h-7 text-blue-300" />}
+          {mode === "register" ? (
+            <UserPlus className="w-7 h-7 text-blue-300" />
+          ) : mode === "reset" ? (
+            <KeyRound className="w-7 h-7 text-blue-300" />
+          ) : (
+            <Lock className="w-7 h-7 text-blue-300" />
+          )}
         </div>
 
         <h1 className="text-2xl font-bold text-white text-center mb-2">
-          {mode === "register" ? "Krijo llogari" : "Hyr në Antokton"}
+          {mode === "register" ? "Krijo llogari" : mode === "reset" ? "Rivendos fjalëkalimin" : "Hyr në Antokton"}
         </h1>
         <p className="text-white/50 text-sm text-center mb-6">
-          {mode === "register" ? "Regjistrohu për beta të kufizuar." : "Përdor emailin dhe fjalëkalimin tënd."}
+          {mode === "register"
+            ? "Regjistrohu për beta të kufizuar."
+            : mode === "reset"
+              ? "Shkruaj emailin e llogarisë për të kërkuar rivendosjen."
+              : "Përdor emailin dhe fjalëkalimin tënd."}
         </p>
 
         <form onSubmit={submit} className="space-y-4">
@@ -108,30 +132,32 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-white/70 text-sm">Fjalëkalimi</Label>
-            <div className="relative">
-              <Input
-                ref={passwordRef}
-                type={showPassword ? "text" : "password"}
-                required
-                minLength={10}
-                defaultValue={form.password}
-                onChange={(event) => setForm({ ...form, password: event.target.value })}
-                className="border-white/10 h-11 text-white bg-white/10 pr-12"
-                autoComplete={mode === "register" ? "new-password" : "current-password"}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((visible) => !visible)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-300/60 rounded-md p-1"
-                aria-label={showPassword ? "Fshih fjalëkalimin" : "Shfaq fjalëkalimin"}
-                title={showPassword ? "Fshih fjalëkalimin" : "Shfaq fjalëkalimin"}
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+          {mode !== "reset" && (
+            <div className="space-y-1.5">
+              <Label className="text-white/70 text-sm">Fjalëkalimi</Label>
+              <div className="relative">
+                <Input
+                  ref={passwordRef}
+                  type={showPassword ? "text" : "password"}
+                  required
+                  minLength={10}
+                  defaultValue={form.password}
+                  onChange={(event) => setForm({ ...form, password: event.target.value })}
+                  className="border-white/10 h-11 text-white bg-white/10 pr-12"
+                  autoComplete={mode === "register" ? "new-password" : "current-password"}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-300/60 rounded-md p-1"
+                  aria-label={showPassword ? "Fshih fjalëkalimin" : "Shfaq fjalëkalimin"}
+                  title={showPassword ? "Fshih fjalëkalimin" : "Shfaq fjalëkalimin"}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {error && (
             <div className="flex items-start gap-2 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-red-300 text-sm">
@@ -140,25 +166,45 @@ export default function Login() {
             </div>
           )}
 
+          {successMessage && (
+            <div className="flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-emerald-200 text-sm">
+              <Mail className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{successMessage}</span>
+            </div>
+          )}
+
           <Button
             type="submit"
             disabled={loading}
             className="w-full bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] font-semibold h-11"
           >
-            {mode === "register" ? <UserPlus className="w-4 h-4 mr-2" /> : <LogIn className="w-4 h-4 mr-2" />}
-            {loading ? "Duke punuar..." : mode === "register" ? "Regjistrohu" : "Hyr"}
+            {mode === "register" ? (
+              <UserPlus className="w-4 h-4 mr-2" />
+            ) : mode === "reset" ? (
+              <KeyRound className="w-4 h-4 mr-2" />
+            ) : (
+              <LogIn className="w-4 h-4 mr-2" />
+            )}
+            {loading ? "Duke punuar..." : mode === "register" ? "Regjistrohu" : mode === "reset" ? "Dërgo kërkesën" : "Hyr"}
           </Button>
         </form>
 
+        {mode === "login" && (
+          <button
+            type="button"
+            onClick={() => switchMode("reset")}
+            className="w-full mt-4 text-sm text-blue-200 hover:text-white"
+          >
+            Ke harruar fjalëkalimin?
+          </button>
+        )}
+
         <button
           type="button"
-          onClick={() => {
-            setError("");
-            setMode(mode === "register" ? "login" : "register");
-          }}
+          onClick={() => switchMode(mode === "register" || mode === "reset" ? "login" : "register")}
           className="w-full mt-5 text-sm text-blue-200 hover:text-white"
         >
-          {mode === "register" ? "Ke llogari? Hyr këtu" : "Nuk ke llogari? Regjistrohu"}
+          {mode === "register" ? "Ke llogari? Hyr këtu" : mode === "reset" ? "Kthehu te hyrja" : "Nuk ke llogari? Regjistrohu"}
         </button>
       </div>
     </div>

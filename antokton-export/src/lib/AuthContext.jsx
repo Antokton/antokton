@@ -48,14 +48,8 @@ export const AuthProvider = ({ children }) => {
         const publicSettings = await publicSettingsResponse.json();
         setAppPublicSettings(publicSettings);
         
-        // If we got the app public settings successfully, check the current stored token.
-        if (base44.auth.hasToken()) {
-          await checkUserAuth();
-        } else {
-          setUser(null);
-          setIsLoadingAuth(false);
-          setIsAuthenticated(false);
-        }
+        // Check quietly on every load so a secure session cookie survives refresh.
+        await checkUserAuth({ silent: true });
         setIsLoadingPublicSettings(false);
       } catch (appError) {
         console.error('App state check failed:', appError);
@@ -99,7 +93,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const checkUserAuth = async () => {
+  const checkUserAuth = async ({ silent = false } = {}) => {
     try {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
@@ -109,16 +103,19 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(false);
     } catch (error) {
       console.error('User auth check failed:', error);
+      setUser(null);
       setIsLoadingAuth(false);
       setIsAuthenticated(false);
       
       // If user auth fails, it might be an expired token
       if (error.status === 401 || error.status === 403) {
         base44.auth.logout();
-        setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required'
-        });
+        if (!silent) {
+          setAuthError({
+            type: 'auth_required',
+            message: 'Authentication required'
+          });
+        }
       }
     }
   };

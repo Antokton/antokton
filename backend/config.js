@@ -87,6 +87,8 @@ const AUTH_RATE_LIMIT_WINDOW_MS = readPositiveInteger("AUTH_RATE_LIMIT_WINDOW_MS
 const AUTH_LOGIN_RATE_LIMIT_MAX = readPositiveInteger("AUTH_LOGIN_RATE_LIMIT_MAX", 8);
 const AUTH_REGISTER_RATE_LIMIT_MAX = readPositiveInteger("AUTH_REGISTER_RATE_LIMIT_MAX", 5);
 const AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX = readPositiveInteger("AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX", 5);
+const SESSION_COOKIE_NAME = validateSingleLine("SESSION_COOKIE_NAME", readString("SESSION_COOKIE_NAME", "antokton_session"));
+const SESSION_COOKIE_SECURE = readBoolean("SESSION_COOKIE_SECURE", NODE_ENV === "production");
 const AUTH_BOOTSTRAP_ADMIN_EMAIL = validateSingleLine("AUTH_BOOTSTRAP_ADMIN_EMAIL", readString("AUTH_BOOTSTRAP_ADMIN_EMAIL", ""));
 const AUTH_BOOTSTRAP_ADMIN_PASSWORD = validateSingleLine("AUTH_BOOTSTRAP_ADMIN_PASSWORD", readString("AUTH_BOOTSTRAP_ADMIN_PASSWORD", ""));
 const EXPORT_DIR = path.join(ROOT_DIR, "antokton-export");
@@ -119,6 +121,8 @@ const config = {
   AUTH_LOGIN_RATE_LIMIT_MAX,
   AUTH_REGISTER_RATE_LIMIT_MAX,
   AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX,
+  SESSION_COOKIE_NAME,
+  SESSION_COOKIE_SECURE,
   AUTH_BOOTSTRAP_ADMIN_EMAIL,
   AUTH_BOOTSTRAP_ADMIN_PASSWORD
 };
@@ -163,7 +167,9 @@ function safeConfigStatus() {
         loginMax: config.AUTH_LOGIN_RATE_LIMIT_MAX,
         registerMax: config.AUTH_REGISTER_RATE_LIMIT_MAX,
         passwordChangeMax: config.AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX
-      }
+      },
+      sessionCookieConfigured: Boolean(config.SESSION_COOKIE_NAME),
+      sessionCookieSecure: config.SESSION_COOKIE_SECURE
     }
   };
 }

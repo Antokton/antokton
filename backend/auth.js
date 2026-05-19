@@ -33,9 +33,36 @@ function assertEmail(email) {
   return normalizedEmail;
 }
 
+function parseCookies(req) {
+  const header = String(req?.headers?.cookie || "");
+  const cookies = {};
+  for (const part of header.split(";")) {
+    const [rawName, ...rawValue] = part.trim().split("=");
+    if (!rawName) continue;
+    try {
+      cookies[rawName] = decodeURIComponent(rawValue.join("=") || "");
+    } catch {
+      cookies[rawName] = rawValue.join("=") || "";
+    }
+  }
+  return cookies;
+}
+
 function getBearerToken(req) {
   const header = req?.headers?.authorization || "";
   return header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+}
+
+function getAuthTokens(req) {
+  const tokens = [];
+  const bearerToken = getBearerToken(req);
+  const cookieToken = parseCookies(req)[config.SESSION_COOKIE_NAME];
+
+  for (const token of [bearerToken, cookieToken]) {
+    if (token && !tokens.includes(token)) tokens.push(token);
+  }
+
+  return tokens;
 }
 
 function getClientIp(req) {
@@ -275,22 +302,24 @@ function getSessionAuth(token) {
 }
 
 function getRequestAuth(req) {
-  const token = getBearerToken(req);
+  const tokens = getAuthTokens(req);
 
-  if (token.startsWith("dev:")) {
-    if (!isDevAuthActive()) return null;
-    return {
-      mode: "dev",
-      email: normalizeEmail(token.slice(4)),
-      accountId: null,
-      userRecordId: null
-    };
+  for (const token of tokens) {
+    if (token.startsWith("dev:")) {
+      if (!isDevAuthActive()) continue;
+      return {
+        mode: "dev",
+        email: normalizeEmail(token.slice(4)),
+        accountId: null,
+        userRecordId: null
+      };
+    }
+
+    const sessionAuth = getSessionAuth(token);
+    if (sessionAuth) return sessionAuth;
   }
 
-  const sessionAuth = getSessionAuth(token);
-  if (sessionAuth) return sessionAuth;
-
-  if (!token && isDevAuthActive()) {
+  if (tokens.length === 0 && isDevAuthActive()) {
     return {
       mode: "dev",
       email: normalizeEmail(getDevUserEmail()),
@@ -307,10 +336,13 @@ function getRequestUserEmail(req) {
 }
 
 function revokeRequestSession(req) {
-  const token = getBearerToken(req);
-  if (!token || !token.startsWith(TOKEN_PREFIX)) return false;
-  statements.revokeAuthSession.run(now(), hashToken(token));
-  return true;
+  let revoked = false;
+  for (const token of getAuthTokens(req)) {
+    if (!token || !token.startsWith(TOKEN_PREFIX)) continue;
+    statements.revokeAuthSession.run(now(), hashToken(token));
+    revoked = true;
+  }
+  return revoked;
 }
 
 function getAuthStatus() {

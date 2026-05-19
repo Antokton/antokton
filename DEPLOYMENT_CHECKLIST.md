@@ -97,6 +97,8 @@ AUTH_RATE_LIMIT_WINDOW_MS=900000
 AUTH_LOGIN_RATE_LIMIT_MAX=8
 AUTH_REGISTER_RATE_LIMIT_MAX=5
 AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX=5
+SESSION_COOKIE_NAME=antokton_session
+SESSION_COOKIE_SECURE=true
 ```
 
 Optional first-admin bootstrap secrets:
@@ -208,6 +210,7 @@ Beta-only warning:
 
 - `ANTOKTON_DEV_USER_EMAIL` and `dev:` bearer tokens are disabled in `NODE_ENV=production`.
 - Real beta auth uses scrypt password hashes and opaque `atk_...` bearer sessions.
+- Login/register also set an HttpOnly same-site session cookie so browser refresh keeps the user signed in.
 - Auth rate limiting is in-memory and single-instance only.
 - Password reset and email verification remain future hardening items before broad public launch.
 

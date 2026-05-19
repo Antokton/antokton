@@ -85,6 +85,8 @@ The backend now supports production-beta email/password auth in `backend/auth.js
 
 Local development can still use `Authorization: Bearer dev:<email>` when `NODE_ENV` is not `production` and `ALLOW_DEV_AUTH=true`. In `NODE_ENV=production`, dev auth is always disabled and `/User/me` requires a real `atk_...` session token from `/auth/login` or `/auth/register`.
 
+Real login/register also sets an HttpOnly session cookie named by `SESSION_COOKIE_NAME`. `SESSION_COOKIE_SECURE` defaults to `true` in production and should stay `false` only for local HTTP testing. The frontend still accepts bearer-token compatibility, but the cookie lets a browser refresh keep the user logged in.
+
 Use `AUTH_BOOTSTRAP_ADMIN_EMAIL` and `AUTH_BOOTSTRAP_ADMIN_PASSWORD` only as deployment secrets when a first admin auth account must be created or reset. `/health/config` reports only safe booleans/status fields such as `authMode`, `devAuthActive`, and whether bootstrap admin config is present; it never exposes passwords, tokens, or configured emails.
 
 ### Migration/import helper variables

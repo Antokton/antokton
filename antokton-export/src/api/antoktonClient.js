@@ -44,6 +44,7 @@ async function request(path, options = {}) {
   const response = await fetch(path, {
     ...options,
     headers,
+    credentials: 'same-origin',
     body: body instanceof FormData || typeof body === 'string' ? body : body ? JSON.stringify(body) : undefined
   });
 
@@ -155,6 +156,12 @@ const auth = {
     setToken(result.access_token);
     return result;
   },
+  async requestPasswordReset(email) {
+    return request(`/api/apps/${appId}/auth/reset-password-request`, {
+      method: 'POST',
+      body: { email }
+    });
+  },
   redirectToLogin(fromUrl = window.location.href) {
     if (import.meta.env.DEV) {
       const email = import.meta.env.VITE_ANTOKTON_DEV_USER_EMAIL || 'admin@antokton.local';
@@ -168,6 +175,7 @@ const auth = {
     window.location.href = target.toString();
   },
   logout(fromUrl) {
+    request(`/api/apps/${appId}/auth/logout`, { method: 'POST', body: {} }).catch(() => {});
     clearToken();
     if (fromUrl) window.location.href = fromUrl;
   },

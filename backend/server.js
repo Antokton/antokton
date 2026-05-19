@@ -42,6 +42,9 @@ const {
   MAX_REMOTE_ASSET_BYTES,
   STRIPE_PUBLISHABLE_KEY,
   STRIPE_FALLBACK_URL,
+  AUTH_TOKEN_TTL_HOURS,
+  SESSION_COOKIE_NAME,
+  SESSION_COOKIE_SECURE,
   AUTH_BOOTSTRAP_ADMIN_EMAIL,
   AUTH_BOOTSTRAP_ADMIN_PASSWORD
 } = config;
@@ -195,6 +198,30 @@ function sendRateLimitError(res, rateLimit) {
     { retry_after_seconds: rateLimit.retryAfterSeconds },
     { "Retry-After": String(rateLimit.retryAfterSeconds) }
   );
+}
+
+function serializeCookie(name, value, options = {}) {
+  const parts = [`${name}=${encodeURIComponent(value)}`];
+  parts.push("Path=/");
+  parts.push("SameSite=Lax");
+  parts.push("HttpOnly");
+  if (options.maxAgeSeconds !== undefined) parts.push(`Max-Age=${options.maxAgeSeconds}`);
+  if (options.secure) parts.push("Secure");
+  return parts.join("; ");
+}
+
+function authCookieHeader(accessToken) {
+  return serializeCookie(SESSION_COOKIE_NAME, accessToken, {
+    maxAgeSeconds: AUTH_TOKEN_TTL_HOURS * 60 * 60,
+    secure: SESSION_COOKIE_SECURE
+  });
+}
+
+function clearAuthCookieHeader() {
+  return serializeCookie(SESSION_COOKIE_NAME, "", {
+    maxAgeSeconds: 0,
+    secure: SESSION_COOKIE_SECURE
+  });
 }
 
 function recordFromRow(row) {
@@ -1083,7 +1110,7 @@ async function handleAuth(req, res, segments) {
       token_type: session.tokenType,
       expires_at: session.expiresAt,
       user
-    });
+    }, { "Set-Cookie": authCookieHeader(session.accessToken) });
   }
 
   if (req.method === "POST" && action === "register") {
@@ -1111,12 +1138,12 @@ async function handleAuth(req, res, segments) {
       token_type: session.tokenType,
       expires_at: session.expiresAt,
       user
-    });
+    }, { "Set-Cookie": authCookieHeader(session.accessToken) });
   }
 
   if (req.method === "POST" && action === "logout") {
     revokeRequestSession(req);
-    return send(res, 200, { success: true });
+    return send(res, 200, { success: true }, { "Set-Cookie": clearAuthCookieHeader() });
   }
 
   if (req.method === "POST" && action === "verify-otp") return send(res, 200, { success: true });
