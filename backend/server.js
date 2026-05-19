@@ -1339,6 +1339,23 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
+    if (url.pathname === "/health/db-debug") {
+      let pgResolve = null, pgError = null;
+      try { pgResolve = require.resolve("pg"); } catch (e) { pgError = e.message; }
+      const backendNm = path.join(__dirname, "node_modules");
+      let nmContents = null;
+      try { nmContents = fs.readdirSync(backendNm).slice(0, 30); } catch (e) { nmContents = `err: ${e.message}`; }
+      return send(res, 200, {
+        DATABASE_PROVIDER: process.env.DATABASE_PROVIDER,
+        DATABASE_URL: process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:([^:@]+)@/, ":***@") : null,
+        pgResolve,
+        pgError,
+        cwd: process.cwd(),
+        dirname: __dirname,
+        backendNodeModules: nmContents
+      });
+    }
+
     if (url.pathname === "/health/config") {
       const configStatus = safeConfigStatus();
       return send(res, 200, {
