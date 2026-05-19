@@ -143,17 +143,18 @@ export default function Login() {
                   minLength={10}
                   defaultValue={form.password}
                   onChange={(event) => setForm({ ...form, password: event.target.value })}
-                  className="border-white/10 h-11 text-white bg-white/10 pr-12"
+                  className="border-white/10 h-11 text-white bg-white/10 pr-24"
                   autoComplete={mode === "register" ? "new-password" : "current-password"}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((visible) => !visible)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-300/60 rounded-md p-1"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-[#172237] px-2.5 py-1.5 text-xs font-semibold text-white/85 hover:bg-[#20304d] hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-300/60"
                   aria-label={showPassword ? "Fshih fjalëkalimin" : "Shfaq fjalëkalimin"}
                   title={showPassword ? "Fshih fjalëkalimin" : "Shfaq fjalëkalimin"}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  <span>{showPassword ? "Fshih" : "Shfaq"}</span>
                 </button>
               </div>
             </div>
