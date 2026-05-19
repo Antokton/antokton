@@ -5,10 +5,14 @@ const { config } = require("./config");
 const usePostgres = config.DATABASE_PROVIDER === "postgres" || Boolean(config.DATABASE_URL);
 
 if (usePostgres) {
-  console.log("Using PostgreSQL database");
-  module.exports = require("./db-postgres");
-  // Stop here – the rest of this file is SQLite-only.
-  return; // CommonJS early exit trick via wrapper
+  try {
+    console.log("Using PostgreSQL database");
+    module.exports = require("./db-postgres");
+    return; // CommonJS early exit trick via wrapper
+  } catch (err) {
+    console.error(`Failed to load PostgreSQL driver: ${err.message}`);
+    console.error("DATABASE_PROVIDER=postgres but pg could not be loaded — falling back to SQLite");
+  }
 }
 
 console.log(`Using SQLite database: ${config.DB_PATH}`);
