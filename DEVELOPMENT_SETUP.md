@@ -59,6 +59,8 @@ Use `.env.example` as the reference. Do not commit a real `.env`.
 | `AUTH_PASSWORD_MIN_LENGTH` | `backend/config.js`, `backend/auth.js` | Minimum password length enforced by local password auth. |
 | `AUTH_BOOTSTRAP_ADMIN_EMAIL` | `backend/config.js`, `backend/server.js` | Optional deployment-secret email for creating/updating the first admin auth account. |
 | `AUTH_BOOTSTRAP_ADMIN_PASSWORD` | `backend/config.js`, `backend/server.js` | Optional deployment-secret password for the first admin auth account. Never commit real values. |
+| `DATABASE_PROVIDER` | `backend/config.js`, `backend/db.js` | Database provider selector. Keep `sqlite` until PostgreSQL runtime is tested. |
+| `DATABASE_URL` | `backend/config.js`, `backend/scripts/migrate-sqlite-to-postgres.js` | PostgreSQL connection string for migration tooling. Never expose real values. |
 | `DATA_DIR` | `backend/config.js`, `backend/server.js`, `backend/import-live-data.js` | Local data directory. |
 | `UPLOAD_DIR` | `backend/config.js`, `backend/server.js`, `backend/import-live-data.js` | Local upload directory. |
 | `DB_PATH` | `backend/config.js`, `backend/server.js`, `backend/localize-assets.js`, `backend/import-live-data.js` | SQLite file path. |
@@ -74,6 +76,19 @@ Use `.env.example` as the reference. Do not commit a real `.env`.
 ## Local SQLite Database
 
 SQLite remains the active local database. The initialization, table creation, PRAGMA settings, and prepared statements now live behind `backend/db.js`, while `backend/server.js` continues to use the same statement names and API behavior as before. This is only an abstraction layer; it does not replace SQLite or change the stored data.
+
+`DATABASE_PROVIDER` defaults to `sqlite`. PostgreSQL schema, migration tooling, and the runtime statement adapter exist for staging, but the live Render service should not be switched to `DATABASE_PROVIDER=postgres` until the PostgreSQL staging smoke tests in `POSTGRESQL_MIGRATION_RUNBOOK.md` pass.
+
+Local PostgreSQL runtime rehearsal:
+
+```bash
+npm install --ignore-scripts
+set DATABASE_PROVIDER=postgres
+set DATABASE_URL=<local-or-staging-postgres-url>
+node backend/server.js
+```
+
+Keep real `DATABASE_URL` values out of Git, logs, screenshots, and chat.
 
 ## Local Upload Storage
 

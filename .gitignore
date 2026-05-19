@@ -12,6 +12,7 @@ antokton-index.css
 antokton-index.js
 antokton-design-import-archive-*/
 
+node_modules/
 backend/data/
 backend/uploads/
 backend/*.log

@@ -1,0 +1,13 @@
+{
+  "name": "antokton-backend-tools",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Backend migration and deployment helper scripts for Antokton.",
+  "scripts": {
+    "db:migrate:postgres": "node backend/scripts/migrate-sqlite-to-postgres.js",
+    "db:migrate:postgres:dry-run": "node backend/scripts/migrate-sqlite-to-postgres.js --dry-run"
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
+  }
+}

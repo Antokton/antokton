@@ -86,6 +86,7 @@ Required beta environment variables:
 ```text
 NODE_ENV=production
 APP_ID=6991d40eddf82cc25ec834a7
+DATABASE_PROVIDER=sqlite
 DATA_DIR=/data
 DB_PATH=/data/antokton.sqlite
 UPLOAD_DIR=/data/uploads
@@ -189,6 +190,7 @@ Required environment variables for beta:
 - `NODE_ENV=production`
 - `PORT` should be provided by the host, or set by the service if required.
 - `APP_ID=6991d40eddf82cc25ec834a7`
+- `DATABASE_PROVIDER=sqlite`
 - `DATA_DIR=/data` or the host's persistent disk path
 - `DB_PATH=/data/antokton.sqlite`
 - `UPLOAD_DIR=/data/uploads`
@@ -212,6 +214,7 @@ Beta-only warning:
 - Real beta auth uses scrypt password hashes and opaque `atk_...` bearer sessions.
 - Login/register also set an HttpOnly same-site session cookie so browser refresh keeps the user signed in.
 - Auth rate limiting is in-memory and single-instance only.
+- PostgreSQL schema and migration tooling are prepared, but do not set `DATABASE_PROVIDER=postgres` or `DATABASE_URL` on the live web service until the PostgreSQL runtime adapter is tested. See `POSTGRESQL_MIGRATION_RUNBOOK.md`.
 - Password reset and email verification remain future hardening items before broad public launch.
 
 ## Vercel Frontend Checklist

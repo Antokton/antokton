@@ -59,6 +59,15 @@ function validateSingleLine(name, value) {
   return value;
 }
 
+function validateDatabaseProvider(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  const allowed = new Set(["sqlite", "postgres"]);
+  if (!allowed.has(normalized)) {
+    throw new Error("DATABASE_PROVIDER must be sqlite or postgres");
+  }
+  return normalized;
+}
+
 function validateDevEmail(value) {
   validateNonEmpty("ANTOKTON_DEV_USER_EMAIL", value);
   validateSingleLine("ANTOKTON_DEV_USER_EMAIL", value);
@@ -72,6 +81,8 @@ const NODE_ENV = validateNodeEnv(readString("NODE_ENV", "development"));
 const DATA_DIR = validateSingleLine("DATA_DIR", readString("DATA_DIR", path.join(__dirname, "data")));
 const UPLOAD_DIR = validateSingleLine("UPLOAD_DIR", readString("UPLOAD_DIR", path.join(__dirname, "uploads")));
 const DB_PATH = validateSingleLine("DB_PATH", readString("DB_PATH", path.join(DATA_DIR, "antokton.sqlite")));
+const DATABASE_PROVIDER = validateDatabaseProvider(readString("DATABASE_PROVIDER", "sqlite"));
+const DATABASE_URL = validateSingleLine("DATABASE_URL", readString("DATABASE_URL", ""));
 const PORT = readPort("PORT", 8787);
 const APP_ID = validateSingleLine("APP_ID", validateNonEmpty("APP_ID", readString("APP_ID", DEFAULT_APP_ID)));
 const ANTOKTON_DEV_USER_EMAIL = validateDevEmail(readString("ANTOKTON_DEV_USER_EMAIL", DEFAULT_DEV_USER_EMAIL));
@@ -106,6 +117,8 @@ const config = {
   UPLOAD_DIR,
   REMOTE_ASSET_DIR: path.join(UPLOAD_DIR, "remote"),
   DB_PATH,
+  DATABASE_PROVIDER,
+  DATABASE_URL,
   PORT,
   APP_ID,
   ANTOKTON_DEV_USER_EMAIL,
@@ -140,10 +153,12 @@ function safeConfigStatus() {
     environment: config.NODE_ENV,
     port: config.PORT,
     database: {
-      type: "sqlite",
-      configured: Boolean(config.DB_PATH),
-      directoryExists: existsSafe(path.dirname(config.DB_PATH)),
-      fileExists: existsSafe(config.DB_PATH)
+      type: config.DATABASE_PROVIDER,
+      provider: config.DATABASE_PROVIDER,
+      configured: config.DATABASE_PROVIDER === "sqlite" ? Boolean(config.DB_PATH) : Boolean(config.DATABASE_URL),
+      directoryExists: config.DATABASE_PROVIDER === "sqlite" ? existsSafe(path.dirname(config.DB_PATH)) : null,
+      fileExists: config.DATABASE_PROVIDER === "sqlite" ? existsSafe(config.DB_PATH) : null,
+      databaseUrlConfigured: config.DATABASE_PROVIDER === "postgres" ? Boolean(config.DATABASE_URL) : false
     },
     uploads: {
       configured: Boolean(config.UPLOAD_DIR),

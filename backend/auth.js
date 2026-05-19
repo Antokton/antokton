@@ -130,9 +130,9 @@ function assertPassword(password) {
   }
 }
 
-function auditAuth(eventType, req, details = {}) {
+async function auditAuth(eventType, req, details = {}) {
   try {
-    statements.insertAuthAuditLog.run(
+    await statements.insertAuthAuditLog.run(
       crypto.randomUUID(),
       eventType,
       details.email ? normalizeEmail(details.email) : null,
@@ -164,22 +164,22 @@ function createDevAccessToken(email = getDevUserEmail()) {
   return `dev:${normalizeEmail(email)}`;
 }
 
-function getAuthAccountByEmail(email) {
-  return statements.getAuthAccountByEmail.get(normalizeEmail(email)) || null;
+async function getAuthAccountByEmail(email) {
+  return await statements.getAuthAccountByEmail.get(normalizeEmail(email)) || null;
 }
 
-function cleanupKnownTestAuthAccounts() {
+async function cleanupKnownTestAuthAccounts() {
   const result = {
     accountsDeleted: 0,
     sessionsDeleted: 0,
     auditLogsDeleted: 0
   };
 
-  const accounts = statements.listAuthAccountsByEmailLike.all("auth.beta.test.%@example.invalid");
+  const accounts = await statements.listAuthAccountsByEmailLike.all("auth.beta.test.%@example.invalid");
   for (const account of accounts) {
-    const sessions = statements.deleteAuthSessionsByAccountOrEmail.run(account.id, account.email);
-    const auditLogs = statements.deleteAuthAuditLogsByAccountOrEmail.run(account.id, account.email);
-    const deletedAccount = statements.deleteAuthAccount.run(account.id);
+    const sessions = await statements.deleteAuthSessionsByAccountOrEmail.run(account.id, account.email);
+    const auditLogs = await statements.deleteAuthAuditLogsByAccountOrEmail.run(account.id, account.email);
+    const deletedAccount = await statements.deleteAuthAccount.run(account.id);
 
     result.sessionsDeleted += sessions.changes || 0;
     result.auditLogsDeleted += auditLogs.changes || 0;
@@ -189,16 +189,16 @@ function cleanupKnownTestAuthAccounts() {
   return result;
 }
 
-function countAuthAccounts() {
-  const row = statements.countAuthAccounts.get();
+async function countAuthAccounts() {
+  const row = await statements.countAuthAccounts.get();
   return Number(row?.count || 0);
 }
 
-function createPasswordAccount({ email, password, user, req, status = "active", emailVerified = true }) {
+async function createPasswordAccount({ email, password, user, req, status = "active", emailVerified = true }) {
   const normalizedEmail = assertEmail(email);
   assertPassword(password);
 
-  if (getAuthAccountByEmail(normalizedEmail)) {
+  if (await getAuthAccountByEmail(normalizedEmail)) {
     const error = new Error("Account already exists");
     error.status = 409;
     throw error;
@@ -217,7 +217,7 @@ function createPasswordAccount({ email, password, user, req, status = "active", 
     last_login_at: null
   };
 
-  statements.insertAuthAccount.run(
+  await statements.insertAuthAccount.run(
     account.id,
     account.email,
     account.user_record_id,
@@ -229,16 +229,16 @@ function createPasswordAccount({ email, password, user, req, status = "active", 
     account.last_login_at
   );
 
-  auditAuth("register", req, { email: normalizedEmail, accountId: account.id });
-  return statements.getAuthAccountById.get(account.id);
+  await auditAuth("register", req, { email: normalizedEmail, accountId: account.id });
+  return await statements.getAuthAccountById.get(account.id);
 }
 
-function createSession(account, user, req) {
+async function createSession(account, user, req) {
   const token = createOpaqueToken();
   const timestamp = now();
   const expiresAt = new Date(Date.now() + config.AUTH_TOKEN_TTL_HOURS * 60 * 60 * 1000).toISOString();
 
-  statements.insertAuthSession.run(
+  await statements.insertAuthSession.run(
     crypto.randomUUID(),
     account.id,
     user?.id || account.user_record_id || null,
@@ -251,7 +251,7 @@ function createSession(account, user, req) {
     getClientIp(req)
   );
 
-  statements.updateAuthAccountLogin.run(user?.id || account.user_record_id || null, timestamp, timestamp, account.id);
+  await statements.updateAuthAccountLogin.run(user?.id || account.user_record_id || null, timestamp, timestamp, account.id);
 
   return {
     accessToken: token,
@@ -260,37 +260,37 @@ function createSession(account, user, req) {
   };
 }
 
-function authenticatePassword({ email, password, req }) {
+async function authenticatePassword({ email, password, req }) {
   const normalizedEmail = normalizeEmail(email);
-  const account = getAuthAccountByEmail(normalizedEmail);
+  const account = await getAuthAccountByEmail(normalizedEmail);
 
   if (!account || account.status !== "active" || !verifyPassword(password, account.password_hash)) {
-    auditAuth("login_failed", req, { email: normalizedEmail });
+    await auditAuth("login_failed", req, { email: normalizedEmail });
     const error = new Error("Invalid email or password");
     error.status = 401;
     throw error;
   }
 
-  auditAuth("login_success", req, { email: normalizedEmail, accountId: account.id });
+  await auditAuth("login_success", req, { email: normalizedEmail, accountId: account.id });
   return account;
 }
 
-function setPasswordForAccount(account, password, req) {
+async function setPasswordForAccount(account, password, req) {
   assertPassword(password);
   const timestamp = now();
-  statements.updateAuthAccountPassword.run(hashPassword(password), timestamp, account.id);
-  auditAuth("password_changed", req, { email: account.email, accountId: account.id, metadata: { source: "server" } });
-  return statements.getAuthAccountById.get(account.id);
+  await statements.updateAuthAccountPassword.run(hashPassword(password), timestamp, account.id);
+  await auditAuth("password_changed", req, { email: account.email, accountId: account.id, metadata: { source: "server" } });
+  return await statements.getAuthAccountById.get(account.id);
 }
 
-function getSessionAuth(token) {
+async function getSessionAuth(token) {
   if (!token || !token.startsWith(TOKEN_PREFIX)) return null;
 
-  const session = statements.getAuthSessionByTokenHash.get(hashToken(token));
+  const session = await statements.getAuthSessionByTokenHash.get(hashToken(token));
   if (!session || session.revoked_at) return null;
   if (Date.parse(session.expires_at) <= Date.now()) return null;
 
-  const account = statements.getAuthAccountById.get(session.account_id);
+  const account = await statements.getAuthAccountById.get(session.account_id);
   if (!account || account.status !== "active") return null;
 
   return {
@@ -301,7 +301,7 @@ function getSessionAuth(token) {
   };
 }
 
-function getRequestAuth(req) {
+async function getRequestAuth(req) {
   const tokens = getAuthTokens(req);
 
   for (const token of tokens) {
@@ -315,7 +315,7 @@ function getRequestAuth(req) {
       };
     }
 
-    const sessionAuth = getSessionAuth(token);
+    const sessionAuth = await getSessionAuth(token);
     if (sessionAuth) return sessionAuth;
   }
 
@@ -331,28 +331,28 @@ function getRequestAuth(req) {
   return null;
 }
 
-function getRequestUserEmail(req) {
-  return getRequestAuth(req)?.email || null;
+async function getRequestUserEmail(req) {
+  return (await getRequestAuth(req))?.email || null;
 }
 
-function revokeRequestSession(req) {
+async function revokeRequestSession(req) {
   let revoked = false;
   for (const token of getAuthTokens(req)) {
     if (!token || !token.startsWith(TOKEN_PREFIX)) continue;
-    statements.revokeAuthSession.run(now(), hashToken(token));
+    await statements.revokeAuthSession.run(now(), hashToken(token));
     revoked = true;
   }
   return revoked;
 }
 
-function getAuthStatus() {
+async function getAuthStatus() {
   const devAuthActive = isDevAuthActive();
   return {
     authMode: devAuthActive ? "password+dev" : "password",
     devAuthActive,
     passwordAuthActive: true,
     sessionTokenType: "opaque-bearer",
-    authAccounts: countAuthAccounts(),
+    authAccounts: await countAuthAccounts(),
     bootstrapAdminConfigured: Boolean(config.AUTH_BOOTSTRAP_ADMIN_EMAIL && config.AUTH_BOOTSTRAP_ADMIN_PASSWORD)
   };
 }

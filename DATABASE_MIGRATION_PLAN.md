@@ -412,7 +412,7 @@ Status:
 - [x] `backend/db.js` exports `db`, `statements`, `getDatabaseStatus()`, and `getDatabaseMode()`.
 - [x] `backend/server.js` now consumes the existing prepared statements from the database module.
 - [x] SQLite remains the active local database and no PostgreSQL/Supabase SDK was added.
-- [ ] PostgreSQL driver and migrations are not implemented yet.
+- [x] PostgreSQL schema, `DATABASE_PROVIDER`, `DATABASE_URL`, and a safe SQLite-to-PostgreSQL migration script were added on 2026-05-19.
 
 Goal:
 
@@ -443,7 +443,7 @@ Expected work:
   - `upsertEntitySchema`
 - Preserve the current Base44-shaped API responses.
 - Keep `node:sqlite` behavior as the default local driver.
-- Add `DATABASE_DRIVER=sqlite` and future `DATABASE_URL` config documentation.
+- Add `DATABASE_PROVIDER=sqlite` and `DATABASE_URL` config documentation.
 
 Do not do in Phase 1:
 
@@ -452,6 +452,14 @@ Do not do in Phase 1:
 - Do not normalize tables yet.
 
 ### Phase 2: Create PostgreSQL Schema And Migrations
+
+Status:
+
+- [x] Initial PostgreSQL compatibility schema added at `backend/postgres/schema.sql` on 2026-05-19.
+- [x] The schema mirrors the current SQLite compatibility tables and auth tables.
+- [x] Live runtime still defaults to SQLite.
+- [x] PostgreSQL API runtime adapter is available behind `DATABASE_PROVIDER=postgres` as of 2026-05-19.
+- [ ] PostgreSQL staging smoke test has not run yet because no `DATABASE_URL` is configured in the local environment.
 
 Goal:
 
@@ -478,6 +486,13 @@ Expected work:
 - Keep JSONB compatibility columns where schema is still moving.
 
 ### Phase 3: Write Migration Script From SQLite To PostgreSQL
+
+Status:
+
+- [x] Safe one-way migration helper added at `backend/scripts/migrate-sqlite-to-postgres.js` on 2026-05-19.
+- [x] The script refuses to import into non-empty PostgreSQL tables.
+- [x] Exact Render migration steps documented in `POSTGRESQL_MIGRATION_RUNBOOK.md`.
+- [ ] Migration has not been run against a real Render PostgreSQL database yet.
 
 Goal:
 
@@ -522,7 +537,7 @@ Likely files to change:
 
 Expected work:
 
-- Use `DATABASE_DRIVER=postgres` or infer PostgreSQL from `DATABASE_URL`.
+- Use `DATABASE_PROVIDER=postgres` after the PostgreSQL runtime adapter is tested.
 - Keep SQLite for local dev.
 - Keep endpoint responses compatible.
 - Run smoke tests against both SQLite and PostgreSQL.
@@ -873,18 +888,17 @@ Production should support:
 
 ## Recommended Next Step
 
-Implement only Phase 1 next:
+After the 2026-05-19 PostgreSQL runtime adapter, the next step is a staging-only PostgreSQL migration and smoke test:
 
-- Add a small database abstraction around the existing SQLite statements.
-- Keep SQLite as the default.
-- Preserve every current endpoint response.
-- Add PostgreSQL config placeholders only if needed.
-- Do not add Supabase SDK yet.
-- Do not normalize data yet.
+- Keep SQLite as the default for production.
+- Use `POSTGRESQL_MIGRATION_RUNBOOK.md` to migrate a backup into an empty Render PostgreSQL database.
+- Run the existing PostgreSQL statement adapter against a migrated staging database.
+- Run smoke tests against PostgreSQL in staging before any live switch.
+- Do not set `DATABASE_PROVIDER=postgres` on the live Render service until staging passes.
 
-Success criteria for Phase 1:
+Success criteria before switching:
 
-- App still runs locally on SQLite.
-- `/health`, `/health/config`, `User/me`, entity list/create/update/delete still work.
-- Backend code no longer has raw database calls scattered through request handlers.
-- A future PostgreSQL driver can be added without rewriting frontend pages.
+- SQLite mode still passes.
+- PostgreSQL migration imports all compatibility tables into an empty target.
+- PostgreSQL runtime passes `/health`, `/health/config`, `User/me`, entity list/create/update/delete, auth, statuses, events, marketplace, Akademia, and admin smoke tests.
+- Backup and restore are tested for PostgreSQL.
