@@ -4,7 +4,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const { URL } = require("node:url");
 const { config, safeConfigStatus } = require("./config");
-const { getDatabaseStatus, statements } = require("./db");
+const { getDatabaseMode, getDatabaseStatus, initializeAsync, statements } = require("./db");
 const {
   cacheRemoteAssetFile,
   getStorageStatus,
@@ -77,11 +77,11 @@ function loadEntitySchemas() {
 
 const entitySchemas = loadEntitySchemas();
 
-function persistEntitySchemas() {
+async function persistEntitySchemas() {
   const timestamp = now();
   for (const [entity, schema] of Object.entries(entitySchemas)) {
     const { source_path, ...cleanSchema } = schema;
-    statements.upsertSchema.run(entity, JSON.stringify(cleanSchema), source_path, timestamp);
+    await statements.upsertSchema.run(entity, JSON.stringify(cleanSchema), source_path, timestamp);
   }
 }
 
@@ -243,7 +243,7 @@ function stripMeta(data = {}) {
 async function cacheRemoteAsset(urlText) {
   const cached = await cacheRemoteAssetFile(urlText, MAX_REMOTE_ASSET_BYTES);
   if (cached.fileRecord) {
-    statements.insertFile.run(
+    await statements.insertFile.run(
       cached.fileRecord.id,
       cached.fileRecord.filename,
       cached.fileRecord.mimeType,
@@ -284,10 +284,10 @@ async function localizeRemoteAssets(value, keyPath = []) {
   }
 }
 
-function findUserByEmail(email) {
+async function findUserByEmail(email) {
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) return null;
-  return [...statements.listEntity.all(APP_ID, "User")]
+  return (await statements.listEntity.all(APP_ID, "User"))
     .map(recordFromRow)
     .find((user) => normalizeEmail(user.email) === normalizedEmail) || null;
 }
@@ -298,8 +298,8 @@ function isPrivilegedUser(user) {
   return ["admin", "moderator", "inspector"].includes(role) || ["admin", "moderator", "staff"].includes(category);
 }
 
-function requesterHasRole(req, roles = []) {
-  const user = findUserByEmail(getRequestUserEmail(req));
+async function requesterHasRole(req, roles = []) {
+  const user = await findUserByEmail(await getRequestUserEmail(req));
   const allowed = new Set(roles.map((role) => String(role).toLowerCase()));
   return allowed.has(String(user?.role || "").toLowerCase()) ||
     allowed.has(String(user?.member_category || "").toLowerCase());
@@ -341,9 +341,9 @@ function sanitizeSelfUserPatch(body = {}) {
   return clean;
 }
 
-function ensureUser(email = DEV_USER_EMAIL, overrides = {}) {
+async function ensureUser(email = DEV_USER_EMAIL, overrides = {}) {
   const normalizedEmail = normalizeEmail(email);
-  const existing = findUserByEmail(normalizedEmail);
+  const existing = await findUserByEmail(normalizedEmail);
 
   if (existing) return existing;
 
@@ -362,36 +362,36 @@ function ensureUser(email = DEV_USER_EMAIL, overrides = {}) {
   return createRecord("User", created, normalizedEmail);
 }
 
-function createRecord(entity, data, userEmail) {
+async function createRecord(entity, data, userEmail) {
   const timestamp = now();
   const id = data.id || crypto.randomUUID();
   const clean = stripMeta(coerceSchemaTypes(entity, applySchemaDefaults(entity, {
     ...data,
     created_by: data.created_by || data.email || userEmail || undefined
   })));
-  statements.insertEntity.run(id, APP_ID, entity, JSON.stringify(clean), timestamp, timestamp);
-  return recordFromRow(statements.getEntity.get(APP_ID, entity, id));
+  await statements.insertEntity.run(id, APP_ID, entity, JSON.stringify(clean), timestamp, timestamp);
+  return recordFromRow(await statements.getEntity.get(APP_ID, entity, id));
 }
 
-function updateRecord(entity, id, patch) {
-  const row = statements.getEntity.get(APP_ID, entity, id) || findRecordRowByNaturalId(entity, id);
+async function updateRecord(entity, id, patch) {
+  const row = (await statements.getEntity.get(APP_ID, entity, id)) || (await findRecordRowByNaturalId(entity, id));
   if (!row) return null;
   const existing = recordFromRow(row);
   const next = stripMeta(coerceSchemaTypes(entity, applySchemaDefaults(entity, { ...existing, ...patch })));
-  statements.updateEntity.run(JSON.stringify(next), now(), APP_ID, entity, row.id);
-  return recordFromRow(statements.getEntity.get(APP_ID, entity, row.id));
+  await statements.updateEntity.run(JSON.stringify(next), now(), APP_ID, entity, row.id);
+  return recordFromRow(await statements.getEntity.get(APP_ID, entity, row.id));
 }
 
-function deleteRecord(entity, id) {
-  const row = statements.getEntity.get(APP_ID, entity, id) || findRecordRowByNaturalId(entity, id);
+async function deleteRecord(entity, id) {
+  const row = (await statements.getEntity.get(APP_ID, entity, id)) || (await findRecordRowByNaturalId(entity, id));
   if (!row) return false;
-  statements.deleteEntity.run(APP_ID, entity, row.id);
+  await statements.deleteEntity.run(APP_ID, entity, row.id);
   return true;
 }
 
-function findRecordRowByNaturalId(entity, naturalId) {
+async function findRecordRowByNaturalId(entity, naturalId) {
   if (!naturalId) return null;
-  const records = statements.listEntity.all(APP_ID, entity);
+  const records = await statements.listEntity.all(APP_ID, entity);
   return records.find((row) => {
     const record = recordFromRow(row);
     return record.email === naturalId || record.key === naturalId || record.slug === naturalId;
@@ -546,8 +546,8 @@ async function readPayload(req) {
   }
 }
 
-function listEntity(entity, url) {
-  let records = statements.listEntity.all(APP_ID, entity).map(recordFromRow);
+async function listEntity(entity, url) {
+  let records = (await statements.listEntity.all(APP_ID, entity)).map(recordFromRow);
   const q = url.searchParams.get("q");
   if (q) {
     try {
@@ -568,13 +568,13 @@ function listEntity(entity, url) {
   return fields ? records.map((record) => selectFields(record, fields)) : records;
 }
 
-function requesterCanAuditImports(req) {
-  const email = getRequestUserEmail(req);
-  const user = findUserByEmail(email);
+async function requesterCanAuditImports(req) {
+  const email = await getRequestUserEmail(req);
+  const user = await findUserByEmail(email);
   return ["admin", "moderator"].includes(String(user?.role || "").toLowerCase());
 }
 
-function redactImportedStatus(record, canAudit) {
+async function redactImportedStatus(record, canAudit) {
   if (!record || !(record.imported_community_request || record.import_type === "community_request")) return record;
   if (canAudit) return record;
 
@@ -599,18 +599,22 @@ function redactImportedStatus(record, canAudit) {
   return redacted;
 }
 
-function redactEntityForRequest(entity, payload, req) {
+async function redactEntityForRequest(entity, payload, req) {
   if (entity !== "Status") return payload;
-  const canAudit = requesterCanAuditImports(req);
-  if (Array.isArray(payload)) return payload.map((record) => redactImportedStatus(record, canAudit));
+  const canAudit = await requesterCanAuditImports(req);
+  if (Array.isArray(payload)) {
+    const out = [];
+    for (const record of payload) out.push(await redactImportedStatus(record, canAudit));
+    return out;
+  }
   return redactImportedStatus(payload, canAudit);
 }
 
 function buildEmptySchemaResult(schema) {
   const props = schema?.properties || {};
   const result = {};
-  for (const [key, config] of Object.entries(props)) {
-    switch (config.type) {
+  for (const [key, fieldConfig] of Object.entries(props)) {
+    switch (fieldConfig.type) {
       case "boolean":
         result[key] = false;
         break;
@@ -635,7 +639,7 @@ function localEntityUrl() {
   return new URL("http://local");
 }
 
-function allRecords(entity) {
+async function allRecords(entity) {
   return listEntity(entity, localEntityUrl());
 }
 
@@ -746,7 +750,7 @@ async function handleCoreIntegration(req, res, operation) {
     }
 
     const saved = saveUploadedFile(file);
-    statements.insertFile.run(
+    await statements.insertFile.run(
       saved.id,
       saved.originalFilename,
       saved.contentType,
@@ -760,7 +764,7 @@ async function handleCoreIntegration(req, res, operation) {
   }
 
   if (operation === "SendEmail") {
-    statements.insertEmail.run(crypto.randomUUID(), JSON.stringify(payload), now());
+    await statements.insertEmail.run(crypto.randomUUID(), JSON.stringify(payload), now());
     return send(res, 200, { success: true, queued: true });
   }
 
@@ -774,8 +778,8 @@ async function handleCoreIntegration(req, res, operation) {
   return send(res, 200, { success: false, message: `Core integration ${operation} is not configured yet.` });
 }
 
-function logFunction(functionName, payload, result) {
-  statements.insertFunctionLog.run(
+async function logFunction(functionName, payload, result) {
+  await statements.insertFunctionLog.run(
     crypto.randomUUID(),
     functionName,
     JSON.stringify(payload || {}),
@@ -786,17 +790,17 @@ function logFunction(functionName, payload, result) {
 
 async function handleFunction(req, res, functionName) {
   const payload = await readPayload(req);
-  const userEmail = getRequestUserEmail(req);
-  const user = userEmail ? ensureUser(userEmail) : null;
+  const userEmail = await getRequestUserEmail(req);
+  const user = userEmail ? await ensureUser(userEmail) : null;
   let result;
 
   switch (functionName) {
     case "savePage": {
       const pageId = payload.pageId || "page";
       const data = await localizeRemoteAssets(payload.data || {}, ["SiteConfig", pageId]);
-      const existing = listEntity("SiteConfig", new URL("http://local")).find((item) => item.key === `static_page_${pageId}`);
-      if (existing) updateRecord("SiteConfig", existing.id, { value: JSON.stringify(data) });
-      else createRecord("SiteConfig", { key: `static_page_${pageId}`, value: JSON.stringify(data), group: "static_pages" });
+      const existing = (await listEntity("SiteConfig", new URL("http://local"))).find((item) => item.key === `static_page_${pageId}`);
+      if (existing) await updateRecord("SiteConfig", existing.id, { value: JSON.stringify(data) });
+      else await createRecord("SiteConfig", { key: `static_page_${pageId}`, value: JSON.stringify(data), group: "static_pages" });
       result = { success: true };
       break;
     }
@@ -824,7 +828,7 @@ async function handleFunction(req, res, functionName) {
       break;
     }
     case "advancedRecruiterSearch": {
-      const users = allRecords("User").filter((candidate) => candidate.email !== user.email);
+      const users = (await allRecords("User")).filter((candidate) => candidate.email !== user.email);
       const queryText = [payload.skills, payload.keywords, payload.profession, payload.location].filter(Boolean).join(" ");
       const candidates = basicSearch(users, queryText, ["skills", "job_title", "bio", "location", "first_name", "surname"])
         .map((candidate) => ({
@@ -851,9 +855,9 @@ async function handleFunction(req, res, functionName) {
       };
       break;
     case "aiJobMatching": {
-      const users = allRecords("User").filter((candidate) => candidate.user_type !== "employer");
-      const jobs = allRecords("Job").filter((job) => ["approved", "aktiv"].includes(job.status));
-      const existing = allRecords("JobMatch");
+      const users = (await allRecords("User")).filter((candidate) => candidate.user_type !== "employer");
+      const jobs = (await allRecords("Job")).filter((job) => ["approved", "aktiv"].includes(job.status));
+      const existing = await allRecords("JobMatch");
       let created = 0;
 
       for (const candidate of users) {
@@ -863,7 +867,7 @@ async function handleFunction(req, res, functionName) {
           const jobText = [job.title, job.description, job.profession, job.required_skills, job.city, job.country].join(" ");
           const score = overlapScore(profileText, jobText);
           if (score <= 0) continue;
-          createRecord("JobMatch", {
+          await createRecord("JobMatch", {
             user_email: candidate.email,
             job_id: job.id,
             job_title: job.title,
@@ -899,8 +903,8 @@ async function handleFunction(req, res, functionName) {
       };
       break;
     case "rankApplications": {
-      const applications = allRecords("JobApplication").filter((application) => application.job_id === payload.jobId);
-      const job = allRecords("Job").find((item) => item.id === payload.jobId) || {};
+      const applications = (await allRecords("JobApplication")).filter((application) => application.job_id === payload.jobId);
+      const job = (await allRecords("Job")).find((item) => item.id === payload.jobId) || {};
       result = applications
         .map((application) => ({
           ...application,
@@ -911,7 +915,7 @@ async function handleFunction(req, res, functionName) {
       break;
     }
     case "analyzeQuestionnaireResponses": {
-      const responses = allRecords("QuestionnaireResponse").filter((response) => response.questionnaire_id === payload.questionnaireId);
+      const responses = (await allRecords("QuestionnaireResponse")).filter((response) => response.questionnaire_id === payload.questionnaireId);
       result = {
         summary: `${responses.length} përgjigje të mbledhura.`,
         recommendations: responses.length ? ["Shiko përgjigjet me më shumë detaje para vendimit final."] : [],
@@ -922,21 +926,21 @@ async function handleFunction(req, res, functionName) {
     case "getRecommendations":
     case "getJobRecommendations":
     case "getRecruiterRecommendations": {
-      const activities = allRecords("UserActivity").filter((activity) => activity.user_email === user.email);
+      const activities = (await allRecords("UserActivity")).filter((activity) => activity.user_email === user.email);
       const topCategory = pickTopCounts(activities.map((activity) => activity.search_filters?.category || activity.category));
       const topCountry = pickTopCounts(activities.map((activity) => activity.search_filters?.country || activity.country));
-      const jobs = allRecords("Job")
+      const jobs = (await allRecords("Job"))
         .filter((job) => ["approved", "aktiv"].includes(job.status))
         .filter((job) => !topCategory || job.category === topCategory)
         .filter((job) => !topCountry || job.country === topCountry)
         .slice(0, 10);
-      const users = allRecords("User").filter((candidate) => candidate.email !== user.email).slice(0, 5);
-      const events = allRecords("Event").filter((event) => ["approved", "aktiv"].includes(event.status || "approved")).slice(0, 5);
+      const users = (await allRecords("User")).filter((candidate) => candidate.email !== user.email).slice(0, 5);
+      const events = (await allRecords("Event")).filter((event) => ["approved", "aktiv"].includes(event.status || "approved")).slice(0, 5);
       result = {
         jobs,
         users,
         events,
-        projects: allRecords("AntonktonProject").slice(0, 6),
+        projects: (await allRecords("AntonktonProject")).slice(0, 6),
         recommendedJobs: jobs,
         recommendedProfiles: users,
         recommendedEvents: events,
@@ -946,7 +950,7 @@ async function handleFunction(req, res, functionName) {
     }
     case "analyzeUserBehavior": {
       const email = payload.user_email || user.email;
-      const activities = allRecords("UserActivity").filter((activity) => activity.user_email === email);
+      const activities = (await allRecords("UserActivity")).filter((activity) => activity.user_email === email);
       const grouped = {};
       for (const activity of activities) grouped[activity.activity_type || "other"] = (grouped[activity.activity_type || "other"] || 0) + 1;
       result = { analysis: `Aktivitete totale: ${activities.length}`, grouped };
@@ -956,7 +960,7 @@ async function handleFunction(req, res, functionName) {
     case "createCheckout":
     case "createSubscriptionCheckout":
     case "createFeaturedCheckout": {
-      const subscription = createRecord("PremiumSubscription", {
+      const subscription = await createRecord("PremiumSubscription", {
         user_email: payload.userEmail || user.email,
         plan_type: payload.planType || payload.plan_type || "monthly",
         status: "pending",
@@ -974,11 +978,11 @@ async function handleFunction(req, res, functionName) {
     case "generateCV":
     case "downloadEnhancedProfile": {
       result = minimalPdf(functionName === "generateCV" ? "Antokton CV" : "Antokton Profile");
-      logFunction(functionName, payload, result);
+      await logFunction(functionName, payload, result);
       return send(res, 200, result, { "Content-Type": "application/pdf" });
     }
     case "trackActivity":
-      result = createRecord("UserActivity", { user_email: user?.email || null, ...payload }, userEmail);
+      result = await createRecord("UserActivity", { user_email: user?.email || null, ...payload }, userEmail);
       break;
     case "getStripeConfig":
       result = { publishableKey: STRIPE_PUBLISHABLE_KEY || "" };
@@ -993,40 +997,44 @@ async function handleFunction(req, res, functionName) {
       result = { success: false, message: `Function ${functionName} is not implemented yet.` };
   }
 
-  logFunction(functionName, payload, result);
+  await logFunction(functionName, payload, result);
   return send(res, 200, result);
 }
 
 async function handleEntity(req, res, url, segments) {
   const entity = decodeURIComponent(segments[4] || "");
   const tail = segments.slice(5).map(decodeURIComponent);
-  const userEmail = getRequestUserEmail(req);
+  const userEmail = await getRequestUserEmail(req);
 
   if (entity === "User" && tail[0] === "me") {
     if (!userEmail) return sendError(res, 401, "Authentication required");
-    if (req.method === "GET") return send(res, 200, ensureUser(userEmail));
+    if (req.method === "GET") return send(res, 200, await ensureUser(userEmail));
     if (req.method === "PUT") {
       const body = await readJson(req);
-      const user = ensureUser(userEmail);
+      const user = await ensureUser(userEmail);
       const patch = config.NODE_ENV === "production" ? sanitizeSelfUserPatch(body) : body;
       const localized = await localizeRemoteAssets(patch, ["User"]);
-      return send(res, 200, updateRecord("User", user.id, localized));
+      return send(res, 200, await updateRecord("User", user.id, localized));
     }
   }
 
-  if (entity === "User" && req.method !== "GET" && config.NODE_ENV === "production" && !requesterHasRole(req, ["admin"])) {
+  if (entity === "User" && req.method !== "GET" && config.NODE_ENV === "production" && !(await requesterHasRole(req, ["admin"]))) {
     return sendError(res, 403, "Admin role required");
   }
 
   if (!entity) return sendError(res, 400, "Missing entity name");
 
   if (req.method === "GET" && tail.length === 0) {
-    return send(res, 200, redactEntityForRequest(entity, listEntity(entity, url), req));
+    return send(res, 200, await redactEntityForRequest(entity, await listEntity(entity, url), req));
   }
 
   if (req.method === "GET" && tail[0]) {
-    const record = recordFromRow(statements.getEntity.get(APP_ID, entity, tail[0]) || findRecordRowByNaturalId(entity, tail[0]));
-    return record ? send(res, 200, redactEntityForRequest(entity, record, req)) : sendError(res, 404, "Record not found");
+    const record = recordFromRow(
+      (await statements.getEntity.get(APP_ID, entity, tail[0])) || (await findRecordRowByNaturalId(entity, tail[0]))
+    );
+    return record
+      ? send(res, 200, await redactEntityForRequest(entity, record, req))
+      : sendError(res, 404, "Record not found");
   }
 
   if (req.method === "POST" && tail[0] === "bulk") {
@@ -1034,7 +1042,9 @@ async function handleEntity(req, res, url, segments) {
     const items = Array.isArray(body) ? body : [];
     const localizedItems = [];
     for (const item of items) localizedItems.push(await localizeRemoteAssets(item, [entity]));
-    return send(res, 200, localizedItems.map((item) => createRecord(entity, item, userEmail)));
+    const results = [];
+    for (const item of localizedItems) results.push(await createRecord(entity, item, userEmail));
+    return send(res, 200, results);
   }
 
   if (req.method === "PUT" && tail[0] === "bulk") {
@@ -1043,7 +1053,7 @@ async function handleEntity(req, res, url, segments) {
     const updated = [];
     for (const item of items.filter((candidate) => candidate.id)) {
       const localized = await localizeRemoteAssets(item, [entity]);
-      const record = updateRecord(entity, item.id, localized);
+      const record = await updateRecord(entity, item.id, localized);
       if (record) updated.push(record);
     }
     return send(res, 200, updated);
@@ -1051,9 +1061,13 @@ async function handleEntity(req, res, url, segments) {
 
   if (req.method === "PATCH" && tail[0] === "update-many") {
     const body = await readJson(req);
-    const records = filterRecords(listEntity(entity, new URL("http://local")), body.query || {});
+    const records = filterRecords(await listEntity(entity, new URL("http://local")), body.query || {});
     const localized = await localizeRemoteAssets(body.data || {}, [entity]);
-    const updated = records.map((record) => updateRecord(entity, record.id, localized)).filter(Boolean);
+    const updated = [];
+    for (const record of records) {
+      const r = await updateRecord(entity, record.id, localized);
+      if (r) updated.push(r);
+    }
     return send(res, 200, { updated: updated.length, records: updated });
   }
 
@@ -1064,18 +1078,18 @@ async function handleEntity(req, res, url, segments) {
   if (req.method === "POST" && tail.length === 0) {
     const body = await readJson(req);
     const localized = await localizeRemoteAssets(body, [entity]);
-    return send(res, 200, createRecord(entity, localized, userEmail));
+    return send(res, 200, await createRecord(entity, localized, userEmail));
   }
 
   if (req.method === "PUT" && tail[0]) {
     const body = await readJson(req);
     const localized = await localizeRemoteAssets(body, [entity]);
-    const updated = updateRecord(entity, tail[0], localized);
+    const updated = await updateRecord(entity, tail[0], localized);
     return updated ? send(res, 200, updated) : sendError(res, 404, "Record not found");
   }
 
   if (req.method === "DELETE" && tail[0]) {
-    const ok = deleteRecord(entity, tail[0]);
+    const ok = await deleteRecord(entity, tail[0]);
     return ok ? send(res, 200, { success: true }) : sendError(res, 404, "Record not found");
   }
 
@@ -1084,7 +1098,7 @@ async function handleEntity(req, res, url, segments) {
     const ids = Array.isArray(body) ? body : body.ids || [];
     let deleted = 0;
     for (const id of ids) {
-      if (deleteRecord(entity, id)) deleted += 1;
+      if (await deleteRecord(entity, id)) deleted += 1;
     }
     return send(res, 200, { success: true, deleted });
   }
@@ -1102,9 +1116,9 @@ async function handleAuth(req, res, segments) {
     if (!rateLimit.allowed) return sendRateLimitError(res, rateLimit);
 
     const password = body.password;
-    const account = authenticatePassword({ email, password, req });
-    const user = ensureUser(account.email);
-    const session = createSession(account, user, req);
+    const account = await authenticatePassword({ email, password, req });
+    const user = await ensureUser(account.email);
+    const session = await createSession(account, user, req);
     return send(res, 200, {
       access_token: session.accessToken,
       token_type: session.tokenType,
@@ -1120,19 +1134,19 @@ async function handleAuth(req, res, segments) {
 
     const email = assertEmail(body.email);
     assertPassword(body.password);
-    const existingUser = findUserByEmail(email);
+    const existingUser = await findUserByEmail(email);
     if (existingUser && isPrivilegedUser(existingUser)) {
       return sendError(res, 403, "Existing privileged users must be migrated by an administrator");
     }
 
-    const user = existingUser || ensureUser(email, {
+    const user = existingUser || await ensureUser(email, {
       ...publicUserFields(body),
       role: "user",
       member_category: "standard",
       is_active: true
     });
-    const account = createPasswordAccount({ email, password: body.password, user, req });
-    const session = createSession(account, user, req);
+    const account = await createPasswordAccount({ email, password: body.password, user, req });
+    const session = await createSession(account, user, req);
     return send(res, 200, {
       access_token: session.accessToken,
       token_type: session.tokenType,
@@ -1142,7 +1156,7 @@ async function handleAuth(req, res, segments) {
   }
 
   if (req.method === "POST" && action === "logout") {
-    revokeRequestSession(req);
+    await revokeRequestSession(req);
     return send(res, 200, { success: true }, { "Set-Cookie": clearAuthCookieHeader() });
   }
 
@@ -1151,7 +1165,7 @@ async function handleAuth(req, res, segments) {
   if (req.method === "POST" && action === "reset-password-request") return send(res, 200, { success: true });
   if (req.method === "POST" && action === "reset-password") return send(res, 200, { success: true });
   if (req.method === "POST" && action === "change-password") {
-    const userEmail = getRequestUserEmail(req);
+    const userEmail = await getRequestUserEmail(req);
     if (!userEmail) return sendError(res, 401, "Authentication required");
     const rateLimit = consumeAuthRateLimit("change-password", req, userEmail);
     if (!rateLimit.allowed) return sendRateLimitError(res, rateLimit);
@@ -1159,8 +1173,8 @@ async function handleAuth(req, res, segments) {
     const body = await readJson(req);
     const currentPassword = body.current_password || body.currentPassword || body.old_password;
     const newPassword = body.new_password || body.newPassword || body.password;
-    const account = authenticatePassword({ email: userEmail, password: currentPassword, req });
-    setPasswordForAccount(account, newPassword, req);
+    const account = await authenticatePassword({ email: userEmail, password: currentPassword, req });
+    await setPasswordForAccount(account, newPassword, req);
     return send(res, 200, { success: true });
   }
 
@@ -1170,21 +1184,21 @@ async function handleAuth(req, res, segments) {
 async function handleUsers(req, res, segments) {
   const action = segments.slice(4).join("/");
   if (req.method === "POST" && action === "invite-user") {
-    if (config.NODE_ENV === "production" && !requesterHasRole(req, ["admin"])) {
+    if (config.NODE_ENV === "production" && !(await requesterHasRole(req, ["admin"]))) {
       return sendError(res, 403, "Admin role required");
     }
     const body = await readJson(req);
-    const user = ensureUser(body.user_email || body.email || DEV_USER_EMAIL, { role: body.role || "user" });
+    const user = await ensureUser(body.user_email || body.email || DEV_USER_EMAIL, { role: body.role || "user" });
     return send(res, 200, user);
   }
   return sendError(res, 404, "Users endpoint not found");
 }
 
-function bootstrapAdminAuth() {
+async function bootstrapAdminAuth() {
   const email = normalizeEmail(AUTH_BOOTSTRAP_ADMIN_EMAIL);
   if (!email || !AUTH_BOOTSTRAP_ADMIN_PASSWORD) return;
 
-  let user = ensureUser(email, {
+  let user = await ensureUser(email, {
     full_name: "Antokton Admin",
     first_name: "Antokton",
     surname: "Admin",
@@ -1194,20 +1208,20 @@ function bootstrapAdminAuth() {
   });
 
   if (String(user.role || "").toLowerCase() !== "admin" || String(user.member_category || "").toLowerCase() !== "admin") {
-    user = updateRecord("User", user.id, {
+    user = await updateRecord("User", user.id, {
       role: "admin",
       member_category: "admin",
       is_active: true
     });
   }
 
-  const existingAccount = getAuthAccountByEmail(email);
+  const existingAccount = await getAuthAccountByEmail(email);
   if (existingAccount) {
     console.log(`Bootstrap admin auth account already exists for ${email}`);
     return;
   }
 
-  createPasswordAccount({
+  await createPasswordAccount({
     email,
     password: AUTH_BOOTSTRAP_ADMIN_PASSWORD,
     user,
@@ -1217,17 +1231,17 @@ function bootstrapAdminAuth() {
   console.log(`Created bootstrap admin auth account for ${email}`);
 }
 
-function cleanupKnownTestUsers() {
+async function cleanupKnownTestUsers() {
   if (config.NODE_ENV !== "production") return;
 
-  const authCleanup = cleanupKnownTestAuthAccounts();
+  const authCleanup = await cleanupKnownTestAuthAccounts();
   let userRecordsDeleted = 0;
   const testEmailPattern = /^auth\.beta\.test\.[^@\s]+@example\.invalid$/i;
 
-  for (const row of statements.listEntity.all(APP_ID, "User")) {
+  for (const row of await statements.listEntity.all(APP_ID, "User")) {
     const record = recordFromRow(row);
     if (!testEmailPattern.test(String(record.email || ""))) continue;
-    statements.deleteEntity.run(APP_ID, "User", row.id);
+    await statements.deleteEntity.run(APP_ID, "User", row.id);
     userRecordsDeleted += 1;
   }
 
@@ -1308,11 +1322,6 @@ function serveStatic(req, res, pathname) {
   fs.createReadStream(filePath).pipe(res);
 }
 
-persistEntitySchemas();
-if (isDevAuthActive()) ensureUser();
-bootstrapAdminAuth();
-cleanupKnownTestUsers();
-
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
@@ -1320,10 +1329,12 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === "OPTIONS") return send(res, 204);
     if (url.pathname === "/health") {
+      const dbMode = getDatabaseMode();
       return send(res, 200, {
         ok: true,
         appId: APP_ID,
-        db: DB_PATH,
+        db: dbMode === "postgres" ? "postgres" : DB_PATH,
+        dbMode,
         schemas: Object.keys(entitySchemas).length
       });
     }
@@ -1337,7 +1348,7 @@ const server = http.createServer(async (req, res) => {
         storage: getStorageStatus(),
         auth: {
           ...configStatus.auth,
-          ...getAuthStatus()
+          ...(await getAuthStatus())
         }
       });
     }
@@ -1379,8 +1390,8 @@ const server = http.createServer(async (req, res) => {
 
     if (segments[0] === "api" && segments[1] === "app-logs") {
       const pageName = segments[4] || "unknown";
-      const userEmail = getRequestUserEmail(req);
-      createRecord("UserActivity", {
+      const userEmail = await getRequestUserEmail(req);
+      await createRecord("UserActivity", {
         user_email: userEmail,
         activity_type: "page_view",
         page_name: pageName
@@ -1408,7 +1419,30 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`Antokton Base44-compatible backend running on http://localhost:${PORT}`);
-  console.log(`SQLite database: ${DB_PATH}`);
-});
+// Async initialization: connect to DB, apply schema, bootstrap data, then start listening.
+async function initialize() {
+  if (typeof initializeAsync === "function") {
+    await initializeAsync();
+  }
+  await persistEntitySchemas();
+  if (isDevAuthActive()) await ensureUser();
+  await bootstrapAdminAuth();
+  await cleanupKnownTestUsers();
+}
+
+initialize()
+  .then(() => {
+    server.listen(PORT, () => {
+      const dbMode = getDatabaseMode();
+      console.log(`Antokton Base44-compatible backend running on http://localhost:${PORT}`);
+      if (dbMode === "postgres") {
+        console.log("Using PostgreSQL database");
+      } else {
+        console.log(`Using SQLite database: ${DB_PATH}`);
+      }
+    });
+  })
+  .catch((err) => {
+    console.error(`Server initialization failed: ${err.message}`);
+    process.exit(1);
+  });
