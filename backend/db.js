@@ -12,15 +12,22 @@ if (usePostgres) {
     const pgDb = require("./db-postgres");
     module.exports = pgDb;
     _dbLoaded = true;
+    global.__dbLoadState = { loaded: "postgres", error: null };
+    console.log("PostgreSQL driver loaded successfully, _dbLoaded=" + _dbLoaded);
   } catch (err) {
     global.__pgLoadError = err.message + "\n" + err.stack;
+    global.__dbLoadState = { loaded: "none", error: err.message };
     console.error(`Failed to load PostgreSQL driver: ${err.message}`);
     console.error(err.stack);
     console.error("DATABASE_PROVIDER=postgres but pg could not be loaded — falling back to SQLite");
   }
 }
 
+console.log("After postgres block: _dbLoaded=" + _dbLoaded + " usePostgres=" + usePostgres);
+
 if (!_dbLoaded) {
+  global.__dbLoadState = (global.__dbLoadState || { loaded: "none", error: null });
+  global.__dbLoadState.sqliteFallback = true;
   console.log(`Using SQLite database: ${config.DB_PATH}`);
 
 const fs = require("node:fs");

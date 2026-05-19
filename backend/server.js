@@ -1353,6 +1353,7 @@ const server = http.createServer(async (req, res) => {
         NODE_ENV: process.env.NODE_ENV,
         dbMode: getDatabaseMode(),
         pgLoadError: global.__pgLoadError || null,
+        dbLoadState: global.__dbLoadState || null,
         pgResolve,
         pgError,
         pgDirectTest,
