@@ -4,11 +4,14 @@ const { config } = require("./config");
 // Use PostgreSQL when DATABASE_PROVIDER=postgres OR DATABASE_URL is set.
 const usePostgres = config.DATABASE_PROVIDER === "postgres" || Boolean(config.DATABASE_URL);
 
+let _dbLoaded = false;
+
 if (usePostgres) {
   try {
     console.log("Using PostgreSQL database");
-    module.exports = require("./db-postgres");
-    return; // CommonJS early exit trick via wrapper
+    const pgDb = require("./db-postgres");
+    module.exports = pgDb;
+    _dbLoaded = true;
   } catch (err) {
     global.__pgLoadError = err.message + "\n" + err.stack;
     console.error(`Failed to load PostgreSQL driver: ${err.message}`);
@@ -17,7 +20,8 @@ if (usePostgres) {
   }
 }
 
-console.log(`Using SQLite database: ${config.DB_PATH}`);
+if (!_dbLoaded) {
+  console.log(`Using SQLite database: ${config.DB_PATH}`);
 
 const fs = require("node:fs");
 const path = require("node:path");
@@ -282,9 +286,10 @@ function getDatabaseStatus() {
   };
 }
 
-module.exports = {
-  db,
-  getDatabaseMode,
-  getDatabaseStatus,
-  statements
-};
+  module.exports = {
+    db,
+    getDatabaseMode,
+    getDatabaseStatus,
+    statements
+  };
+}
