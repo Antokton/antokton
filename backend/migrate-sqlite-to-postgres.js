@@ -50,6 +50,9 @@ const readline = require('readline');
 
 let Database, Client;
 try { Database = require('better-sqlite3'); } catch { /* loaded on demand */ }
+if (!Database) {
+  try { ({ DatabaseSync: Database } = require('node:sqlite')); } catch { /* loaded on demand */ }
+}
 try { ({ Client } = require('pg')); } catch { /* loaded on demand */ }
 
 // ---------- CLI ------------------------------------------------------------
@@ -99,13 +102,21 @@ function printHelp() {
 
 function requireDeps(needsSqlite = true) {
   if (needsSqlite && !Database) {
-    console.error('Missing dependency: better-sqlite3. Install with `npm install better-sqlite3`.');
+    console.error('Missing SQLite dependency: need better-sqlite3 or Node with node:sqlite.');
     process.exit(2);
   }
   if (!Client) {
     console.error('Missing dependency: pg. Install with `npm install pg`.');
     process.exit(2);
   }
+}
+
+function pgClient(connectionString) {
+  const pgConfig = { connectionString };
+  if (/render\.com/i.test(connectionString) || /sslmode=require/i.test(connectionString)) {
+    pgConfig.ssl = { rejectUnauthorized: false };
+  }
+  return new Client(pgConfig);
 }
 
 // ---------- Logging --------------------------------------------------------
@@ -202,7 +213,7 @@ async function migrate(opts) {
   const sqlite = new Database(opts.sqlite, { readonly: true, fileMustExist: true });
   log('info', `Opened SQLite (read-only): ${opts.sqlite}`);
 
-  const pg = new Client({ connectionString: opts.pg });
+  const pg = pgClient(opts.pg);
   await pg.connect();
   log('info', `Connected to PostgreSQL`);
 
@@ -372,7 +383,7 @@ async function rollback(opts) {
   if (!opts.pg) {
     log('err', `--pg connection string is required (or set DATABASE_URL).`); process.exit(2);
   }
-  const pg = new Client({ connectionString: opts.pg });
+  const pg = pgClient(opts.pg);
   await pg.connect();
   log('info', `Connected to PostgreSQL`);
 
