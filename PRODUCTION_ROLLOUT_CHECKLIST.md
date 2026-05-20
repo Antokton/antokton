@@ -14,6 +14,10 @@ Scope: pre-production readiness for Antokton. This checklist does not authorize 
 
 - [ ] `/health` returns `ok: true`.
 - [ ] `/health` reports `dbMode=postgres` for staging.
+- [ ] Cross-platform validation runner completed:
+  ```bash
+  node backend/scripts/staging-validation.js --base https://antokton-pg-staging.onrender.com --pg "$STAGING_DATABASE_URL" --sqlite backend/data/antokton.sqlite --migration dry-run
+  ```
 - [ ] Smoke test passes with `failed: 0`.
 - [ ] Auth register/login and `User/me` pass.
 - [ ] Entity create/read/list/update/delete pass.
