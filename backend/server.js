@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { URL } = require("node:url");
-const { config, safeConfigStatus } = require("./config");
+const { config, safeConfigStatus, validateStartupEnvironment } = require("./config");
 const { getDatabaseMode, getDatabaseStatus, initializeAsync, statements } = require("./db");
 const {
   cacheRemoteAssetFile,
@@ -30,7 +30,8 @@ const {
   revokeRequestSession,
   setPasswordForAccount
 } = require("./auth");
-const { consumeAuthRateLimit } = require("./rateLimit");
+const { logRequestError, requestId } = require("./errorLogger");
+const { consumeAuthRateLimit, consumeGeneralRateLimit } = require("./rateLimit");
 
 const {
   ROOT_DIR,
@@ -38,6 +39,7 @@ const {
   SCHEMA_DIR,
   DB_PATH,
   PORT,
+  REQUEST_TIMEOUT_MS,
   APP_ID,
   MAX_REMOTE_ASSET_BYTES,
   STRIPE_PUBLISHABLE_KEY,
@@ -49,6 +51,18 @@ const {
   AUTH_BOOTSTRAP_ADMIN_PASSWORD
 } = config;
 const DEV_USER_EMAIL = getDevUserEmail();
+
+const SECURITY_HEADERS = {
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "SAMEORIGIN",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  "Cross-Origin-Opener-Policy": "same-origin"
+};
+
+if (config.NODE_ENV === "production") {
+  SECURITY_HEADERS["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+}
 
 function stripJsonComments(text) {
   return text
@@ -148,6 +162,7 @@ function send(res, status, body, headers = {}) {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type, Authorization, X-App-Id, Base44-Functions-Version",
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    ...SECURITY_HEADERS,
     ...headers
   };
 
@@ -198,6 +213,28 @@ function sendRateLimitError(res, rateLimit) {
     { retry_after_seconds: rateLimit.retryAfterSeconds },
     { "Retry-After": String(rateLimit.retryAfterSeconds) }
   );
+}
+
+function applyRequestTimeout(req, res) {
+  req.setTimeout(REQUEST_TIMEOUT_MS, () => {
+    const error = new Error("Request timed out");
+    error.status = 408;
+    logRequestError(error, req);
+    if (!res.headersSent) sendError(res, 408, "Request timed out");
+    req.destroy();
+  });
+}
+
+function isGenerallyRateLimitedPath(pathname) {
+  return pathname.startsWith("/api/") || pathname === "/health/config";
+}
+
+function redirect(res, location) {
+  res.writeHead(302, {
+    Location: location,
+    ...SECURITY_HEADERS
+  });
+  res.end();
 }
 
 function serializeCookie(name, value, options = {}) {
@@ -1265,7 +1302,8 @@ function serveStatic(req, res, pathname) {
     res.writeHead(200, {
       "Content-Type": mimeTypeForPath(uploadFile),
       "Content-Length": fs.statSync(uploadFile).size,
-      "Access-Control-Allow-Origin": "*"
+      "Access-Control-Allow-Origin": "*",
+      ...SECURITY_HEADERS
     });
     return fs.createReadStream(uploadFile).pipe(res);
   }
@@ -1285,7 +1323,7 @@ function serveStatic(req, res, pathname) {
         ext === ".png" ? "image/png" :
         ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" :
         "application/octet-stream";
-      res.writeHead(200, { "Content-Type": type });
+      res.writeHead(200, { "Content-Type": type, ...SECURITY_HEADERS });
       fs.createReadStream(distPath).pipe(res);
       return;
     }
@@ -1294,7 +1332,7 @@ function serveStatic(req, res, pathname) {
     }
     const indexPath = path.join(distDir, "index.html");
     if (fs.existsSync(indexPath)) {
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", ...SECURITY_HEADERS });
       fs.createReadStream(indexPath).pipe(res);
       return;
     }
@@ -1318,16 +1356,26 @@ function serveStatic(req, res, pathname) {
     ext === ".json" ? "application/json; charset=utf-8" :
     "application/octet-stream";
 
-  res.writeHead(200, { "Content-Type": type });
+  res.writeHead(200, { "Content-Type": type, ...SECURITY_HEADERS });
   fs.createReadStream(filePath).pipe(res);
 }
 
 const server = http.createServer(async (req, res) => {
+  req.requestId = requestId(req);
+  res.setHeader("X-Request-Id", req.requestId);
+  applyRequestTimeout(req, res);
+
   try {
     const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
     const segments = url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
 
     if (req.method === "OPTIONS") return send(res, 204);
+
+    if (isGenerallyRateLimitedPath(url.pathname)) {
+      const rateLimit = consumeGeneralRateLimit(req);
+      if (!rateLimit.allowed) return sendRateLimitError(res, rateLimit);
+    }
+
     if (url.pathname === "/health") {
       const dbMode = getDatabaseMode();
       return send(res, 200, {
@@ -1372,8 +1420,7 @@ const server = http.createServer(async (req, res) => {
 
     if (segments[0] === "api" && segments[1] === "apps" && segments[2] === "auth" && segments[3] === "logout") {
       const fromUrl = url.searchParams.get("from_url") || "/";
-      res.writeHead(302, { Location: fromUrl });
-      return res.end();
+      return redirect(res, fromUrl);
     }
 
     if (segments[0] === "api" && segments[1] === "apps" && segments[3] === "entities") {
@@ -1413,14 +1460,19 @@ const server = http.createServer(async (req, res) => {
     if (segments[0] === "api") return sendError(res, 404, "API endpoint not found");
     return serveStatic(req, res, url.pathname);
   } catch (error) {
-    console.error(error);
+    logRequestError(error, req, { requestId: req.requestId });
     const status = Number.isInteger(error.status) && error.status >= 400 && error.status < 600 ? error.status : 500;
     return sendError(res, status, error.message || "Internal server error");
   }
 });
 
+server.requestTimeout = REQUEST_TIMEOUT_MS;
+server.headersTimeout = Math.max(REQUEST_TIMEOUT_MS + 5000, 65000);
+server.keepAliveTimeout = 5000;
+
 // Async initialization: connect to DB, apply schema, bootstrap data, then start listening.
 async function initialize() {
+  validateStartupEnvironment();
   if (typeof initializeAsync === "function") {
     await initializeAsync();
   }

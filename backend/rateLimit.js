@@ -40,13 +40,10 @@ function getActionLimit(action) {
   }
 }
 
-function consumeAuthRateLimit(action, req, identifier) {
+function consumeBucket(key, windowMs, maxAttempts) {
   const timestamp = nowMs();
   pruneExpiredBuckets(timestamp);
 
-  const windowMs = config.AUTH_RATE_LIMIT_WINDOW_MS;
-  const maxAttempts = getActionLimit(action);
-  const key = `${action}:${getClientIp(req)}:${normalizeIdentifier(identifier)}`;
   const existing = buckets.get(key);
   const bucket = existing && existing.resetAt > timestamp
     ? existing
@@ -73,17 +70,35 @@ function consumeAuthRateLimit(action, req, identifier) {
   };
 }
 
+function consumeAuthRateLimit(action, req, identifier) {
+  const windowMs = config.AUTH_RATE_LIMIT_WINDOW_MS;
+  const maxAttempts = getActionLimit(action);
+  const key = `${action}:${getClientIp(req)}:${normalizeIdentifier(identifier)}`;
+  return consumeBucket(key, windowMs, maxAttempts);
+}
+
+function consumeGeneralRateLimit(req) {
+  return consumeBucket(
+    `general:${getClientIp(req)}`,
+    config.GENERAL_RATE_LIMIT_WINDOW_MS,
+    config.GENERAL_RATE_LIMIT_MAX
+  );
+}
+
 function getRateLimitStatus() {
   return {
     mode: "in-memory",
     windowMs: config.AUTH_RATE_LIMIT_WINDOW_MS,
     loginMax: config.AUTH_LOGIN_RATE_LIMIT_MAX,
     registerMax: config.AUTH_REGISTER_RATE_LIMIT_MAX,
-    passwordChangeMax: config.AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX
+    passwordChangeMax: config.AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX,
+    generalWindowMs: config.GENERAL_RATE_LIMIT_WINDOW_MS,
+    generalMax: config.GENERAL_RATE_LIMIT_MAX
   };
 }
 
 module.exports = {
   consumeAuthRateLimit,
+  consumeGeneralRateLimit,
   getRateLimitStatus
 };

@@ -7,6 +7,8 @@ const DEFAULT_DEV_USER_EMAIL = "admin@antokton.local";
 const DEFAULT_MAX_REMOTE_ASSET_BYTES = 75 * 1024 * 1024;
 const DEFAULT_AUTH_TOKEN_TTL_HOURS = 24 * 14;
 const DEFAULT_AUTH_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const DEFAULT_GENERAL_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 60 * 1000;
 
 function readString(name, defaultValue = "") {
   const value = process.env[name];
@@ -75,6 +77,7 @@ const DB_PATH = validateSingleLine("DB_PATH", readString("DB_PATH", path.join(DA
 const DATABASE_PROVIDER = readString("DATABASE_PROVIDER", "sqlite");
 const DATABASE_URL = readString("DATABASE_URL", "");
 const PORT = readPort("PORT", 8787);
+const REQUEST_TIMEOUT_MS = readPositiveInteger("REQUEST_TIMEOUT_MS", DEFAULT_REQUEST_TIMEOUT_MS);
 const APP_ID = validateSingleLine("APP_ID", validateNonEmpty("APP_ID", readString("APP_ID", DEFAULT_APP_ID)));
 const ANTOKTON_DEV_USER_EMAIL = validateDevEmail(readString("ANTOKTON_DEV_USER_EMAIL", DEFAULT_DEV_USER_EMAIL));
 const MAX_REMOTE_ASSET_BYTES = readPositiveInteger("MAX_REMOTE_ASSET_BYTES", DEFAULT_MAX_REMOTE_ASSET_BYTES);
@@ -89,6 +92,8 @@ const AUTH_RATE_LIMIT_WINDOW_MS = readPositiveInteger("AUTH_RATE_LIMIT_WINDOW_MS
 const AUTH_LOGIN_RATE_LIMIT_MAX = readPositiveInteger("AUTH_LOGIN_RATE_LIMIT_MAX", 8);
 const AUTH_REGISTER_RATE_LIMIT_MAX = readPositiveInteger("AUTH_REGISTER_RATE_LIMIT_MAX", 5);
 const AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX = readPositiveInteger("AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX", 5);
+const GENERAL_RATE_LIMIT_WINDOW_MS = readPositiveInteger("GENERAL_RATE_LIMIT_WINDOW_MS", DEFAULT_GENERAL_RATE_LIMIT_WINDOW_MS);
+const GENERAL_RATE_LIMIT_MAX = readPositiveInteger("GENERAL_RATE_LIMIT_MAX", 600);
 const SESSION_COOKIE_NAME = validateSingleLine("SESSION_COOKIE_NAME", readString("SESSION_COOKIE_NAME", "antokton_session"));
 const SESSION_COOKIE_SECURE = readBoolean("SESSION_COOKIE_SECURE", NODE_ENV === "production");
 const AUTH_BOOTSTRAP_ADMIN_EMAIL = validateSingleLine("AUTH_BOOTSTRAP_ADMIN_EMAIL", readString("AUTH_BOOTSTRAP_ADMIN_EMAIL", ""));
@@ -111,6 +116,7 @@ const config = {
   DATABASE_PROVIDER,
   DATABASE_URL,
   PORT,
+  REQUEST_TIMEOUT_MS,
   APP_ID,
   ANTOKTON_DEV_USER_EMAIL,
   MAX_REMOTE_ASSET_BYTES,
@@ -125,6 +131,8 @@ const config = {
   AUTH_LOGIN_RATE_LIMIT_MAX,
   AUTH_REGISTER_RATE_LIMIT_MAX,
   AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX,
+  GENERAL_RATE_LIMIT_WINDOW_MS,
+  GENERAL_RATE_LIMIT_MAX,
   SESSION_COOKIE_NAME,
   SESSION_COOKIE_SECURE,
   AUTH_BOOTSTRAP_ADMIN_EMAIL,
@@ -170,7 +178,9 @@ function safeConfigStatus() {
         windowMs: config.AUTH_RATE_LIMIT_WINDOW_MS,
         loginMax: config.AUTH_LOGIN_RATE_LIMIT_MAX,
         registerMax: config.AUTH_REGISTER_RATE_LIMIT_MAX,
-        passwordChangeMax: config.AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX
+        passwordChangeMax: config.AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX,
+        generalWindowMs: config.GENERAL_RATE_LIMIT_WINDOW_MS,
+        generalMax: config.GENERAL_RATE_LIMIT_MAX
       },
       sessionCookieConfigured: Boolean(config.SESSION_COOKIE_NAME),
       sessionCookieSecure: config.SESSION_COOKIE_SECURE
@@ -178,7 +188,33 @@ function safeConfigStatus() {
   };
 }
 
+function validateStartupEnvironment() {
+  const errors = [];
+  const allowedProviders = new Set(["sqlite", "postgres"]);
+
+  if (!allowedProviders.has(config.DATABASE_PROVIDER)) {
+    errors.push("DATABASE_PROVIDER must be sqlite or postgres");
+  }
+
+  if (config.DATABASE_PROVIDER === "postgres" && !config.DATABASE_URL) {
+    errors.push("DATABASE_URL is required when DATABASE_PROVIDER=postgres");
+  }
+
+  if (config.DATABASE_URL && !/^postgres(?:ql)?:\/\//i.test(config.DATABASE_URL)) {
+    errors.push("DATABASE_URL must be a postgres:// or postgresql:// URL");
+  }
+
+  if (config.NODE_ENV === "production" && config.ALLOW_DEV_AUTH) {
+    errors.push("ALLOW_DEV_AUTH must be false when NODE_ENV=production");
+  }
+
+  if (errors.length) {
+    throw new Error(`Invalid startup environment: ${errors.join("; ")}`);
+  }
+}
+
 module.exports = {
   config,
-  safeConfigStatus
+  safeConfigStatus,
+  validateStartupEnvironment
 };
