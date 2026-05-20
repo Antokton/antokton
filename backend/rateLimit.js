@@ -73,17 +73,66 @@ function consumeAuthRateLimit(action, req, identifier) {
   };
 }
 
+// General endpoint rate limiting (non-auth)
+const GENERAL_LIMITS = {
+  upload: { windowMs: 60000, maxAttempts: 10 }, // 10 per minute
+  search: { windowMs: 60000, maxAttempts: 30 }, // 30 per minute
+  list: { windowMs: 60000, maxAttempts: 30 }, // 30 per minute
+  api: { windowMs: 60000, maxAttempts: 100 } // 100 per minute (default)
+};
+
+function getGeneralRateLimitConfig(endpointType) {
+  return GENERAL_LIMITS[endpointType] || GENERAL_LIMITS.api;
+}
+
+function consumeGeneralRateLimit(endpointType, req) {
+  const timestamp = nowMs();
+  pruneExpiredBuckets(timestamp);
+
+  const config = getGeneralRateLimitConfig(endpointType);
+  const windowMs = config.windowMs;
+  const maxAttempts = config.maxAttempts;
+  const key = `general:${endpointType}:${getClientIp(req)}`;
+  const existing = buckets.get(key);
+  const bucket = existing && existing.resetAt > timestamp
+    ? existing
+    : { count: 0, resetAt: timestamp + windowMs };
+
+  if (bucket.count >= maxAttempts) {
+    buckets.set(key, bucket);
+    return {
+      allowed: false,
+      limit: maxAttempts,
+      remaining: 0,
+      retryAfterSeconds: Math.max(1, Math.ceil((bucket.resetAt - timestamp) / 1000))
+    };
+  }
+
+  bucket.count += 1;
+  buckets.set(key, bucket);
+
+  return {
+    allowed: true,
+    limit: maxAttempts,
+    remaining: Math.max(0, maxAttempts - bucket.count),
+    retryAfterSeconds: 0
+  };
+}
+
 function getRateLimitStatus() {
   return {
     mode: "in-memory",
-    windowMs: config.AUTH_RATE_LIMIT_WINDOW_MS,
-    loginMax: config.AUTH_LOGIN_RATE_LIMIT_MAX,
-    registerMax: config.AUTH_REGISTER_RATE_LIMIT_MAX,
-    passwordChangeMax: config.AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX
+    authWindow: config.AUTH_RATE_LIMIT_WINDOW_MS,
+    authLogin: config.AUTH_LOGIN_RATE_LIMIT_MAX,
+    authRegister: config.AUTH_REGISTER_RATE_LIMIT_MAX,
+    authPasswordChange: config.AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX,
+    general: GENERAL_LIMITS
   };
 }
 
 module.exports = {
   consumeAuthRateLimit,
+  consumeGeneralRateLimit,
+  getGeneralRateLimitConfig,
   getRateLimitStatus
 };

@@ -30,7 +30,8 @@ const {
   revokeRequestSession,
   setPasswordForAccount
 } = require("./auth");
-const { consumeAuthRateLimit } = require("./rateLimit");
+const { consumeAuthRateLimit, consumeGeneralRateLimit } = require("./rateLimit");
+const { logError } = require("./errorLogger");
 
 const {
   ROOT_DIR,
@@ -144,10 +145,31 @@ function now() {
 }
 
 function send(res, status, body, headers = {}) {
-  const baseHeaders = {
-    "Access-Control-Allow-Origin": "*",
+  // Determine CORS origin based on environment
+  const allowedOrigin = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",")[0]
+    : (process.env.NODE_ENV === "production" ? "https://antokton.com" : "*");
+
+  // Security headers
+  const securityHeaders = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-XSS-Protection": "1; mode=block",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Content-Security-Policy": "default-src 'self'",
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Credentials": "true",
     "Access-Control-Allow-Headers": "Content-Type, Authorization, X-App-Id, Base44-Functions-Version",
-    "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+  };
+
+  // HSTS for production only
+  if (process.env.NODE_ENV === "production") {
+    securityHeaders["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+  }
+
+  const baseHeaders = {
+    ...securityHeaders,
     ...headers
   };
 
@@ -1323,6 +1345,20 @@ function serveStatic(req, res, pathname) {
 }
 
 const server = http.createServer(async (req, res) => {
+  // Request timeout protection (30 seconds)
+  req.setTimeout(30000, () => {
+    logError(new Error("Request timeout"), req, 408);
+    if (!res.headersSent) {
+      sendError(res, 408, "Request timeout");
+    }
+    req.destroy();
+  });
+
+  // Socket timeout protection (35 seconds)
+  req.socket.setTimeout(35000, () => {
+    logError(new Error("Socket timeout"), req, 408);
+    req.socket.destroy();
+  });
   try {
     const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
     const segments = url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
@@ -1413,14 +1449,58 @@ const server = http.createServer(async (req, res) => {
     if (segments[0] === "api") return sendError(res, 404, "API endpoint not found");
     return serveStatic(req, res, url.pathname);
   } catch (error) {
-    console.error(error);
     const status = Number.isInteger(error.status) && error.status >= 400 && error.status < 600 ? error.status : 500;
+    logError(error, req, status);
     return sendError(res, status, error.message || "Internal server error");
   }
 });
 
+// Validate production environment requirements
+function validateProductionEnvironment() {
+  if (process.env.NODE_ENV !== "production") return true;
+
+  const errors = [];
+  const warnings = [];
+
+  // Critical checks
+  if (!config.DATABASE_PROVIDER || config.DATABASE_PROVIDER === "sqlite") {
+    errors.push("DATABASE_PROVIDER must be 'postgres' in production (currently: " + config.DATABASE_PROVIDER + ")");
+  }
+  if (!process.env.DATABASE_URL) {
+    errors.push("DATABASE_URL environment variable is required in production");
+  }
+  if (SESSION_COOKIE_SECURE !== true) {
+    errors.push("SESSION_COOKIE_SECURE must be true in production");
+  }
+  if (config.ALLOW_DEV_AUTH === true) {
+    errors.push("ALLOW_DEV_AUTH must be false in production");
+  }
+
+  // Non-critical warnings
+  if (!AUTH_BOOTSTRAP_ADMIN_EMAIL) {
+    warnings.push("AUTH_BOOTSTRAP_ADMIN_EMAIL not configured—no admin will be created");
+  }
+  if (PORT < 10000) {
+    warnings.push("PORT < 10000 may conflict with system ports");
+  }
+
+  if (errors.length > 0) {
+    console.error("[FATAL] Production environment validation failed:");
+    errors.forEach((err) => console.error("  ❌", err));
+    process.exit(1);
+  }
+
+  if (warnings.length > 0) {
+    console.warn("[WARN] Production environment warnings:");
+    warnings.forEach((warn) => console.warn("  ⚠️", warn));
+  }
+
+  return true;
+}
+
 // Async initialization: connect to DB, apply schema, bootstrap data, then start listening.
 async function initialize() {
+  validateProductionEnvironment();
   if (typeof initializeAsync === "function") {
     await initializeAsync();
   }
