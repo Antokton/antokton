@@ -41,11 +41,12 @@ function parseArgs(argv) {
   const args = {
     base: process.env.SMOKE_BASE_URL || 'http://localhost:3000',
     adminToken: process.env.ADMIN_TOKEN || null,
-    entity: process.env.SMOKE_ENTITY || 'entities',
+    entity: process.env.SMOKE_ENTITY || 'SmokeTest',
     keep: false,
     json: null,
     verbose: false,
     timeoutMs: 15000,
+    appId: process.env.SMOKE_APP_ID || null,
   };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
@@ -58,6 +59,7 @@ function parseArgs(argv) {
       case '--json': args.json = next(); break;
       case '--verbose': case '-v': args.verbose = true; break;
       case '--timeout': args.timeoutMs = Number(next()); break;
+      case '--app-id': args.appId = next(); break;
       case '--help': case '-h': printHelp(); process.exit(0);
       default:
         console.error(`Unknown argument: ${a}`);
@@ -70,7 +72,7 @@ function parseArgs(argv) {
 }
 
 function printHelp() {
-  console.log(`Usage: node smoke-test.js --base <url> [--admin-token <token>] [--entity <name>] [--keep] [--json <file>] [--verbose]`);
+  console.log(`Usage: node smoke-test.js --base <url> [--admin-token <token>] [--entity <name>] [--app-id <id>] [--keep] [--json <file>] [--verbose]`);
 }
 
 // ---------- Reporting ------------------------------------------------------
@@ -187,9 +189,13 @@ async function runHealth(api) {
   // optional db-specific health
   const dbHealth = await api.get('/health/db', { expect: s => s === 200 || s === 404 });
   if (dbHealth.status === 200) {
-    record('health', 'GET /health/db', dbHealth.ok, `status=${dbHealth.status}`);
+    record('health', 'GET /health/db', dbHealth.ok, `status=${dbHealth.status}${dbHealth.json ? '' : ' (non-json response)'}`);
   }
-  return r.ok;
+  return r.ok ? r.json : null;
+}
+
+function appApiPath(api, path) {
+  return `/api/apps/${encodeURIComponent(api.appId)}/${path.replace(/^\/+/, '')}`;
 }
 
 async function runAuth(api) {
@@ -201,25 +207,29 @@ async function runAuth(api) {
     name: `Smoke ${suffix}`,
   };
 
-  const reg = await api.post('/api/auth/register', creds, {
+  const registerPath = appApiPath(api, '/auth/register');
+  const loginPath = appApiPath(api, '/auth/login');
+  const mePath = appApiPath(api, '/entities/User/me');
+
+  const reg = await api.post(registerPath, creds, {
     expect: s => s === 200 || s === 201 || s === 409,
   });
-  record('auth', 'POST /api/auth/register', reg.ok, `status=${reg.status}`);
+  record('auth', `POST ${registerPath}`, reg.ok, `status=${reg.status}`);
 
-  const login = await api.post('/api/auth/login', {
+  const login = await api.post(loginPath, {
     email: creds.email,
     username: creds.username,
     password: creds.password,
   });
-  record('auth', 'POST /api/auth/login', login.ok, `status=${login.status}`);
+  record('auth', `POST ${loginPath}`, login.ok, `status=${login.status}`);
 
   const token = pickToken(login.json);
   record('auth', 'login returned token', !!token, token ? '' : 'no token field found in response');
 
   let me = null;
   if (token) {
-    const r = await api.get('/api/auth/me', { headers: { authorization: `Bearer ${token}` } });
-    record('auth', 'GET /api/auth/me', r.ok, `status=${r.status}`);
+    const r = await api.get(mePath, { headers: { authorization: `Bearer ${token}` } });
+    record('auth', `GET ${mePath}`, r.ok, `status=${r.status}`);
     me = r.json;
   }
 
@@ -232,14 +242,9 @@ async function runSessions(api, token) {
     return;
   }
   const headers = { authorization: `Bearer ${token}` };
-  const list = await api.get('/api/sessions', { headers, expect: s => s === 200 || s === 404 });
-  if (list.status === 404) {
-    // Some apps mount it under /api/auth/sessions
-    const alt = await api.get('/api/auth/sessions', { headers, expect: s => s === 200 || s === 404 });
-    record('sessions', 'GET sessions list', alt.ok, `status=${alt.status} (alt path)`);
-    return;
-  }
-  record('sessions', 'GET /api/sessions', list.ok, `status=${list.status}`);
+  const sessionsPath = appApiPath(api, '/auth/sessions');
+  const list = await api.get(sessionsPath, { headers, expect: s => s === 200 || s === 404 });
+  record('sessions', `GET ${sessionsPath}`, list.ok, `status=${list.status}`);
 }
 
 async function runEntityCrud(api, token, entity) {
@@ -248,7 +253,7 @@ async function runEntityCrud(api, token, entity) {
     return;
   }
   const headers = { authorization: `Bearer ${token}` };
-  const base = `/api/${entity}`;
+  const base = appApiPath(api, `/entities/${entity}`);
   const payload = { name: `Smoke Entity ${Date.now()}`, description: 'created by smoke test' };
 
   const created = await api.post(base, payload, { headers, expect: s => s === 200 || s === 201 });
@@ -265,11 +270,11 @@ async function runEntityCrud(api, token, entity) {
   const list = await api.get(base, { headers });
   record('entities', `GET ${base} (list)`, list.ok, `status=${list.status}`);
 
-  const patched = await api.patch(`${base}/${id}`, { description: 'updated by smoke test' }, {
+  const patched = await api.put(`${base}/${id}`, { description: 'updated by smoke test' }, {
     headers,
     expect: s => s === 200 || s === 204,
   });
-  record('entities', `PATCH ${base}/:id`, patched.ok, `status=${patched.status}`);
+  record('entities', `PUT ${base}/:id`, patched.ok, `status=${patched.status}`);
 
   const deleted = await api.del(`${base}/${id}`, { headers, expect: s => s === 200 || s === 204 });
   record('entities', `DELETE ${base}/:id`, deleted.ok, `status=${deleted.status}`);
@@ -285,22 +290,14 @@ async function runUploads(api, token) {
   const bytes = crypto.randomBytes(1024);
   form.append('file', new Blob([bytes], { type: 'application/octet-stream' }), 'smoke.bin');
 
-  const up = await api.post('/api/uploads', form, {
+  const uploadPath = appApiPath(api, '/integration-endpoints/Core/UploadFile');
+  const up = await api.post(uploadPath, form, {
     headers,
-    expect: s => s === 200 || s === 201 || s === 404,
+    expect: s => s === 200 || s === 201,
   });
-  if (up.status === 404) {
-    // Try alternate path
-    const alt = await api.post('/api/upload', form, {
-      headers,
-      expect: s => s === 200 || s === 201 || s === 404,
-    });
-    record('uploads', 'POST /api/upload(s)', alt.ok && alt.status !== 404, `status=${alt.status}`);
-    return;
-  }
-  record('uploads', 'POST /api/uploads', up.ok, `status=${up.status}`);
+  record('uploads', `POST ${uploadPath}`, up.ok, `status=${up.status}`);
 
-  const url = up.json && (up.json.url || (up.json.data && up.json.data.url));
+  const url = up.json && (up.json.url || up.json.file_url || (up.json.data && (up.json.data.url || up.json.data.file_url)));
   if (url) {
     const fetched = await api.get(url.startsWith('http') ? url.replace(api.base || '', '') : url, {
       headers,
@@ -332,7 +329,9 @@ async function runAdmin(api, adminToken) {
   const api = makeClient(args);
   api.base = args.base;
 
-  await runHealth(api);
+  const health = await runHealth(api);
+  api.appId = args.appId || (health && (health.appId || health.app_id || (health.data && (health.data.appId || health.data.app_id)))) || 'prod';
+  record('health', 'appId selected', !!api.appId, `appId=${api.appId}`);
   const { token } = await runAuth(api);
   await runSessions(api, token);
   await runEntityCrud(api, token, args.entity);
