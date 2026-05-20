@@ -42,6 +42,7 @@ const {
   REQUEST_TIMEOUT_MS,
   APP_ID,
   MAX_REMOTE_ASSET_BYTES,
+  MAX_UPLOAD_BYTES,
   STRIPE_PUBLISHABLE_KEY,
   STRIPE_FALLBACK_URL,
   AUTH_TOKEN_TTL_HOURS,
@@ -62,6 +63,15 @@ const SECURITY_HEADERS = {
 
 if (config.NODE_ENV === "production") {
   SECURITY_HEADERS["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+}
+
+function resolveCorsOrigin(req) {
+  const allowed = config.CORS_ALLOWED_ORIGINS || ["*"];
+  if (allowed.includes("*")) return "*";
+
+  const origin = req?.headers?.origin;
+  if (origin && allowed.includes(origin)) return origin;
+  return "null";
 }
 
 function stripJsonComments(text) {
@@ -159,9 +169,10 @@ function now() {
 
 function send(res, status, body, headers = {}) {
   const baseHeaders = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": res.corsOrigin || "*",
     "Access-Control-Allow-Headers": "Content-Type, Authorization, X-App-Id, Base44-Functions-Version",
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    "Vary": "Origin",
     ...SECURITY_HEADERS,
     ...headers
   };
@@ -511,9 +522,25 @@ function selectFields(record, fields) {
   return selected;
 }
 
-async function readBody(req) {
+async function readBody(req, maxBytes = MAX_UPLOAD_BYTES) {
+  const contentLength = Number(req.headers["content-length"] || 0);
+  if (contentLength && contentLength > maxBytes) {
+    const err = new Error(`Request body too large (${contentLength} bytes)`);
+    err.status = 413;
+    throw err;
+  }
+
   const chunks = [];
-  for await (const chunk of req) chunks.push(chunk);
+  let total = 0;
+  for await (const chunk of req) {
+    total += chunk.length;
+    if (total > maxBytes) {
+      const err = new Error(`Request body too large (${total} bytes)`);
+      err.status = 413;
+      throw err;
+    }
+    chunks.push(chunk);
+  }
   return Buffer.concat(chunks);
 }
 
@@ -784,6 +811,9 @@ async function handleCoreIntegration(req, res, operation) {
     const file = payload.file;
     if (!file || !file.content) {
       return sendError(res, 400, "Missing file field");
+    }
+    if (file.content.length > MAX_UPLOAD_BYTES) {
+      return sendError(res, 413, "Uploaded file is too large");
     }
 
     const saved = saveUploadedFile(file);
@@ -1302,7 +1332,8 @@ function serveStatic(req, res, pathname) {
     res.writeHead(200, {
       "Content-Type": mimeTypeForPath(uploadFile),
       "Content-Length": fs.statSync(uploadFile).size,
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": res.corsOrigin || "*",
+      "Vary": "Origin",
       ...SECURITY_HEADERS
     });
     return fs.createReadStream(uploadFile).pipe(res);
@@ -1362,6 +1393,7 @@ function serveStatic(req, res, pathname) {
 
 const server = http.createServer(async (req, res) => {
   req.requestId = requestId(req);
+  res.corsOrigin = resolveCorsOrigin(req);
   res.setHeader("X-Request-Id", req.requestId);
   applyRequestTimeout(req, res);
 

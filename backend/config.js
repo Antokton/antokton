@@ -9,6 +9,7 @@ const DEFAULT_AUTH_TOKEN_TTL_HOURS = 24 * 14;
 const DEFAULT_AUTH_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const DEFAULT_GENERAL_RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const DEFAULT_REQUEST_TIMEOUT_MS = 60 * 1000;
+const DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 function readString(name, defaultValue = "") {
   const value = process.env[name];
@@ -37,6 +38,13 @@ function readPositiveInteger(name, defaultValue) {
 function readBoolean(name, defaultValue = false) {
   const raw = readString(name, String(defaultValue));
   return ["1", "true", "yes", "on"].includes(raw.toLowerCase());
+}
+
+function readCsv(name, defaultValue = "") {
+  return readString(name, defaultValue)
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
 }
 
 function validateNodeEnv(value) {
@@ -81,6 +89,8 @@ const REQUEST_TIMEOUT_MS = readPositiveInteger("REQUEST_TIMEOUT_MS", DEFAULT_REQ
 const APP_ID = validateSingleLine("APP_ID", validateNonEmpty("APP_ID", readString("APP_ID", DEFAULT_APP_ID)));
 const ANTOKTON_DEV_USER_EMAIL = validateDevEmail(readString("ANTOKTON_DEV_USER_EMAIL", DEFAULT_DEV_USER_EMAIL));
 const MAX_REMOTE_ASSET_BYTES = readPositiveInteger("MAX_REMOTE_ASSET_BYTES", DEFAULT_MAX_REMOTE_ASSET_BYTES);
+const MAX_UPLOAD_BYTES = readPositiveInteger("MAX_UPLOAD_BYTES", DEFAULT_MAX_UPLOAD_BYTES);
+const CORS_ALLOWED_ORIGINS = readCsv("CORS_ALLOWED_ORIGINS", "*");
 const STRIPE_PUBLISHABLE_KEY = validateSingleLine("STRIPE_PUBLISHABLE_KEY", readString("STRIPE_PUBLISHABLE_KEY", ""));
 const STRIPE_SECRET_KEY = validateSingleLine("STRIPE_SECRET_KEY", readString("STRIPE_SECRET_KEY", ""));
 const STRIPE_WEBHOOK_SECRET = validateSingleLine("STRIPE_WEBHOOK_SECRET", readString("STRIPE_WEBHOOK_SECRET", ""));
@@ -120,6 +130,8 @@ const config = {
   APP_ID,
   ANTOKTON_DEV_USER_EMAIL,
   MAX_REMOTE_ASSET_BYTES,
+  MAX_UPLOAD_BYTES,
+  CORS_ALLOWED_ORIGINS,
   STRIPE_PUBLISHABLE_KEY,
   STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET,
@@ -160,7 +172,8 @@ function safeConfigStatus() {
     uploads: {
       configured: Boolean(config.UPLOAD_DIR),
       directoryExists: existsSafe(config.UPLOAD_DIR),
-      remoteDirectoryExists: existsSafe(config.REMOTE_ASSET_DIR)
+      remoteDirectoryExists: existsSafe(config.REMOTE_ASSET_DIR),
+      maxUploadBytes: config.MAX_UPLOAD_BYTES
     },
     stripe: {
       publishableKeyConfigured: Boolean(config.STRIPE_PUBLISHABLE_KEY),
@@ -184,6 +197,9 @@ function safeConfigStatus() {
       },
       sessionCookieConfigured: Boolean(config.SESSION_COOKIE_NAME),
       sessionCookieSecure: config.SESSION_COOKIE_SECURE
+    },
+    cors: {
+      allowedOrigins: config.CORS_ALLOWED_ORIGINS.includes("*") ? ["*"] : config.CORS_ALLOWED_ORIGINS
     }
   };
 }
@@ -206,6 +222,10 @@ function validateStartupEnvironment() {
 
   if (config.NODE_ENV === "production" && config.ALLOW_DEV_AUTH) {
     errors.push("ALLOW_DEV_AUTH must be false when NODE_ENV=production");
+  }
+
+  if (!config.CORS_ALLOWED_ORIGINS.length) {
+    errors.push("CORS_ALLOWED_ORIGINS must include at least one origin or *");
   }
 
   if (errors.length) {
