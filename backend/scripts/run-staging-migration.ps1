@@ -17,11 +17,11 @@
 #
 # Required env vars (set in your shell before invoking):
 #   $env:DATABASE_URL = "postgres://...staging..."       # staging only
-#   $env:STAGING_BASE_URL = "https://antokton-pg-staging.onrender.com"  # optional, defaults shown
+#   $env:STAGING_BASE_URL = "https://antokton-pg-staging.onrender.com"  # optional
 #   $env:DB_PATH = "backend/data/antokton.sqlite"        # optional override
 #
-# Usage:
-#   pwsh backend/scripts/run-staging-migration.ps1 [-DryRunOnly] [-SkipBackup]
+# Usage (Windows PowerShell 5.1):
+#   powershell -ExecutionPolicy Bypass -File backend\scripts\run-staging-migration.ps1 [-DryRunOnly] [-SkipBackup]
 
 [CmdletBinding()]
 param(
@@ -32,7 +32,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$PSNativeCommandUseErrorActionPreference = $false
+# (PS7-only $PSNativeCommandUseErrorActionPreference intentionally omitted for Windows PowerShell 5.1 compatibility)
 
 function Section($title) {
   Write-Host ""
@@ -54,7 +54,7 @@ Set-Location $RepoRoot
 Section "Pre-flight"
 
 if (-not $env:DATABASE_URL) {
-  Fail "DATABASE_URL is not set in the environment. Set it to the STAGING connection string before running."
+  Fail "DATABASE_URL is not set. Set it to the STAGING connection string before running."
 }
 
 $pgUrl = $env:DATABASE_URL
@@ -64,7 +64,7 @@ $pgUrlRedacted = ($pgUrl -replace ":([^:@/]+)@", ":***@")
 # Safety: refuse anything that looks like production.
 $lowered = $pgUrl.ToLower()
 if ($lowered -match "prod") {
-  Fail "DATABASE_URL appears to contain 'prod'. Refusing to run against production. Got: $pgUrlRedacted"
+  Fail "DATABASE_URL appears to contain 'prod'. Refusing. Got: $pgUrlRedacted"
 }
 if ($lowered -notmatch "staging" -and $lowered -notmatch "stg" -and $lowered -notmatch "test") {
   Write-Host "WARNING: DATABASE_URL does not contain 'staging'/'stg'/'test' in its hostname." -ForegroundColor Yellow
@@ -95,8 +95,8 @@ Write-Host "  SQLite source:    $sqlitePath"
 Write-Host "  Staging PG URL:   $pgUrlRedacted"
 Write-Host "  Staging base URL: $base"
 Write-Host "  Artifacts:        $ArtDir"
-Write-Host "  pg_dump:          $(if ($pgDumpAvailable) {'available'} else {'MISSING (backup will be skipped)'})"
-Write-Host "  psql:             $(if ($psqlAvailable)   {'available'} else {'MISSING (diagnostics will be skipped)'})"
+Write-Host "  pg_dump:          $(if ($pgDumpAvailable) {'available'} else {'MISSING (backup skipped)'})"
+Write-Host "  psql:             $(if ($psqlAvailable)   {'available'} else {'MISSING (diagnostics skipped)'})"
 
 # ---------- 2. Backup staging Postgres ----------
 if (-not $SkipBackup -and $pgDumpAvailable) {
@@ -130,7 +130,6 @@ $liveLog = Join-Path $ArtDir "02-migration.log"
 $migExit = $LASTEXITCODE
 if ($migExit -ne 0) {
   Write-Host "WARNING: migration exited $migExit (some tables may not match)." -ForegroundColor Yellow
-  Write-Host "Continuing to verification so you can see the deltas."
 }
 
 # Find the rollback log the migration script wrote
