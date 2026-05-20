@@ -28,6 +28,11 @@
 const fs = require('fs');
 let Database, Client;
 try { Database = require('better-sqlite3'); } catch {}
+if (!Database) {
+  try {
+    ({ DatabaseSync: Database } = require('node:sqlite'));
+  } catch {}
+}
 try { ({ Client } = require('pg')); } catch {}
 
 // ---------- CLI ------------------------------------------------------------
@@ -306,7 +311,11 @@ async function checkSessionIntegrity(sqlite, pg, sessionsTable, sample) {
   if (!opts.sqlite || !fs.existsSync(opts.sqlite)) { console.error('SQLite not found: ' + opts.sqlite); process.exit(2); }
   if (!opts.pg) { console.error('--pg or DATABASE_URL required'); process.exit(2); }
   const sqlite = new Database(opts.sqlite, { readonly: true, fileMustExist: true });
-  const pg = new Client({ connectionString: opts.pg });
+  const pgConfig = { connectionString: opts.pg };
+  if (/render\.com/i.test(opts.pg) || /sslmode=require/i.test(opts.pg)) {
+    pgConfig.ssl = { rejectUnauthorized: false };
+  }
+  const pg = new Client(pgConfig);
   await pg.connect();
   const sqliteTables = listSqliteTables(sqlite, opts);
   const pgTablesRes = await pg.query(

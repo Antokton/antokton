@@ -15,6 +15,7 @@ antokton-design-import-archive-*/
 
 backend/data/
 backend/uploads/
+backend/node_modules/
 backend/*.log
 backend/sp-test.txt
 antokton-export/node_modules/
