@@ -89,7 +89,7 @@ export default function Terms() {
             <section>
               <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-wide">9. Kontakt</h2>
               <p className="leading-relaxed">
-                Për pyetje rreth këtyre termave, na kontaktoni në:
+                Për pyetje rreth këtyre termave, privatësisë ose përdorimit të cookies, na kontaktoni në:
                 <a href="mailto:legal@antokton.com" className="text-[#8ab4ff] hover:underline ml-1">
                   legal@antokton.com
                 </a>

@@ -67,7 +67,10 @@ export default function Privacy() {
               <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-wide">6. Cookies dhe teknologji të ngjashme</h2>
               <p className="leading-relaxed">
                 Ne përdorim cookies për të përmirësuar përvojën tuaj në platformë, për analitikë dhe për të
-                ruajtur preferencat tuaja.
+                ruajtur preferencat tuaja. Detajet janë të përshkruara në
+                <a href="/CookiePolicy" className="text-[#8ab4ff] hover:underline ml-1">
+                  Politikën e Cookies
+                </a>.
               </p>
             </section>
 

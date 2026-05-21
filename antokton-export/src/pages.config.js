@@ -58,6 +58,7 @@ import Companies from './pages/Companies';
 import CompanyDetail from './pages/CompanyDetail';
 import Contact from './pages/Contact';
 import ContentModeration from './pages/ContentModeration';
+import CookiePolicy from './pages/CookiePolicy';
 import CreatePost from './pages/CreatePost';
 import Dashboard from './pages/Dashboard';
 import EmployerDashboard from './pages/EmployerDashboard';
@@ -106,6 +107,7 @@ export const PAGES = {
     "CompanyDetail": CompanyDetail,
     "Contact": Contact,
     "ContentModeration": ContentModeration,
+    "CookiePolicy": CookiePolicy,
     "CreatePost": CreatePost,
     "Dashboard": Dashboard,
     "EmployerDashboard": EmployerDashboard,

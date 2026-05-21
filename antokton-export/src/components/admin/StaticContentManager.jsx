@@ -11,6 +11,7 @@ const STATIC_PAGES = [
   { id: "about", title: "Rreth Nesh", description: "Përmbajtja e faqes Rreth Nesh" },
   { id: "privacy", title: "Politika e Privatësisë", description: "Përmbajtja e politikës" },
   { id: "terms", title: "Termat e Përdorimit", description: "Përmbajtja e termave" },
+  { id: "cookies", title: "Politika e Cookies", description: "Përmbajtja e politikës së cookies" },
   { id: "contact", title: "Kontakto", description: "Informacioni i kontaktit" }
 ];
 
@@ -39,19 +40,17 @@ export default function StaticContentManager() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       const pageData = {
-        title: title || STATIC_PAGES.find(p => p.id === selectedPage)?.title,
+        title: title || STATIC_PAGES.find((p) => p.id === selectedPage)?.title,
         content
       };
       localStorage.setItem(`static_page_${selectedPage}`, JSON.stringify(pageData));
-      
-      // Try to sync with backend (if you have a backend storage)
+
       try {
         await base44.functions.invoke("savePage", {
           pageId: selectedPage,
           data: pageData
         });
       } catch (e) {
-        // Function may not exist, that's ok - local storage works
         console.log("Backend sync not available");
       }
     },
@@ -69,7 +68,7 @@ export default function StaticContentManager() {
       setTitle(savedPages[selectedPage].title);
       setContent(savedPages[selectedPage].content);
     } else {
-      const page = STATIC_PAGES.find(p => p.id === selectedPage);
+      const page = STATIC_PAGES.find((p) => p.id === selectedPage);
       setTitle(page?.title || "");
       setContent("");
     }
@@ -86,7 +85,7 @@ export default function StaticContentManager() {
   return (
     <div className="space-y-4">
       <div className="flex gap-2 flex-wrap">
-        {STATIC_PAGES.map(page => (
+        {STATIC_PAGES.map((page) => (
           <button
             key={page.id}
             onClick={() => setSelectedPage(page.id)}
@@ -101,7 +100,7 @@ export default function StaticContentManager() {
         ))}
       </div>
 
-      <div className="rounded-xl border border-white/10 p-6" style={{ background: 'rgba(255, 255, 255, 0.06)' }}>
+      <div className="rounded-xl border border-white/10 p-6" style={{ background: "rgba(255, 255, 255, 0.06)" }}>
         <div className="space-y-4">
           <div>
             <label className="text-white/70 text-sm font-medium block mb-2">Titulli</label>
