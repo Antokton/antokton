@@ -10,6 +10,7 @@ import {
   ExternalLink, Loader2, Tag, ArrowLeft,
   AlertCircle, CheckCircle
 } from "lucide-react";
+import AuthRequiredState from "@/components/AuthRequiredState";
 
 /* ─── KATEGORITE ─── */
 const CATEGORIES = [
@@ -332,6 +333,7 @@ export default function Pazar() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [search, setSearch] = useState("");
   const [showImport, setShowImport] = useState(false);
+  const [showAuthRequired, setShowAuthRequired] = useState(false);
   const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
 
@@ -383,6 +385,15 @@ export default function Pazar() {
     });
   }, [jobs, activeCategory, search]);
 
+  const requestImport = () => {
+    if (!user) {
+      setShowAuthRequired(true);
+      return;
+    }
+    setShowAuthRequired(false);
+    setShowImport(true);
+  };
+
   return (
     <div className="min-h-screen bg-[#0b1020]">
       {/* Header */}
@@ -392,7 +403,7 @@ export default function Pazar() {
             <ShoppingBag className="w-6 h-6 text-[#8ab4ff]" /> Pazar
           </h1>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowImport(true)}
+            <button onClick={requestImport}
               className="flex items-center gap-1.5 bg-[#8ab4ff]/15 border border-[#8ab4ff]/30 text-[#8ab4ff] text-xs font-semibold px-3 py-2 rounded-lg hover:bg-[#8ab4ff]/25 transition-all">
               <Upload className="w-3.5 h-3.5" /> Importo
             </button>
@@ -426,7 +437,7 @@ export default function Pazar() {
           ))}
           <div className="mt-6 pt-4 border-t border-white/8">
             <p className="text-white/40 text-xs font-bold uppercase tracking-wider mb-3">Veprimet</p>
-            <button onClick={() => setShowImport(true)}
+            <button onClick={requestImport}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:bg-white/5 hover:text-white transition-all w-full">
               <Upload className="w-5 h-5" /> Importo Njoftim
             </button>
@@ -454,7 +465,14 @@ export default function Pazar() {
 
           {/* Grid */}
           <div className="p-3">
-            {isLoading ? (
+            {showAuthRequired ? (
+              <AuthRequiredState
+                icon={Upload}
+                title="Duhet të hysh në llogari"
+                message="Importimi dhe postimi i njoftimeve kërkon llogari. Mund të hysh, të regjistrohesh ose të vazhdosh pa hyrë."
+                className="min-h-[45vh]"
+              />
+            ) : isLoading ? (
               <div className="flex justify-center py-20">
                 <div className="text-center">
                   <Loader2 className="w-8 h-8 text-[#8ab4ff] animate-spin mx-auto mb-3" />
@@ -478,7 +496,7 @@ export default function Pazar() {
                 <ShoppingBag className="w-12 h-12 text-white/20 mx-auto mb-4" />
                 <p className="text-white/60 font-medium">Nuk ka njoftime në Pazar</p>
                 <p className="text-white/30 text-sm mt-1">Bëhu i pari që poston!</p>
-                <button onClick={() => setShowImport(true)}
+                <button onClick={requestImport}
                   className="mt-4 px-6 py-2.5 rounded-xl text-sm font-bold text-[#0b1020]"
                   style={{ background: 'linear-gradient(to right, #8ab4ff, #9bffd6)' }}>
                   Importo nga faqe tjetër

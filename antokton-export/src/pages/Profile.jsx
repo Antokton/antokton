@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { User, Save, Loader2, Flag, CheckCircle, AlertCircle, Plus, Trash2, Star, Award, Shield, Download, Upload, Sparkles, BarChart3, Eye, FileText, Briefcase, Crown, CreditCard, Bookmark, MessageCircle, Calendar, AlertTriangle } from "lucide-react";
+import { User, Save, Loader2, CheckCircle, Plus, Trash2, Star, Download, Upload, BarChart3, Eye, FileText, Briefcase, Crown, CreditCard, Bookmark, MessageCircle, Calendar, AlertTriangle } from "lucide-react";
 import moment from "moment";
 import { motion } from "framer-motion";
 import UserRatingDisplay from "../components/user/UserRatingDisplay";
@@ -20,6 +20,7 @@ import UserReferences from "../components/profile/UserReferences";
 import HijriCalendar from "../components/calendar/HijriCalendar";
 import ProfileTabs from "../components/profile/ProfileTabs";
 import AkademiaProfileSummary from "../components/akademia/AkademiaProfileSummary";
+import AuthRequiredState from "@/components/AuthRequiredState";
 
 function MyApplications({ userEmail }) {
   const { data: myApplications = [] } = useQuery({
@@ -131,7 +132,7 @@ export default function Profile() {
 
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
 
-  const { data: currentUser, isLoading: isLoadingUser } = useQuery({
+  const { data: currentUser, isLoading: isLoadingUser, isError: isUserError, error: userError } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
     staleTime: 300000, // Cache for 5 minutes
@@ -546,11 +547,21 @@ export default function Profile() {
     }
   };
 
-  if (isLoadingUser || !user) {
+  if (isLoadingUser) {
     return (
       <div className="flex justify-center py-20">
         <Loader2 className="w-6 h-6 text-white/70 animate-spin" />
       </div>
+    );
+  }
+
+  if (!user || isUserError) {
+    return (
+      <AuthRequiredState
+        icon={User}
+        title="Duhet të hysh në llogari"
+        message={userError?.status === 408 ? userError.message : "Profili është privat. Hyr ose regjistrohu për ta hapur, ose vazhdo pa hyrë."}
+      />
     );
   }
 

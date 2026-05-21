@@ -8,7 +8,8 @@ import { Lock, Mail, UserPlus, LogIn, AlertCircle, Eye, EyeOff, KeyRound, X } fr
 
 export default function Login() {
   const [searchParams] = useSearchParams();
-  const [mode, setMode] = useState("login");
+  const initialMode = searchParams.get("mode") === "register" ? "register" : "login";
+  const [mode, setMode] = useState(initialMode);
   const [form, setForm] = useState({ email: "", password: "", full_name: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -19,7 +20,7 @@ export default function Login() {
 
   const fromUrl = searchParams.get("from_url") || "/Home";
   const redirectTarget = fromUrl.includes("/Login") ? "/Home" : fromUrl;
-  const closeTarget = redirectTarget && !redirectTarget.includes("/Login") ? redirectTarget : "/Home";
+  const closeTarget = redirectTarget && !redirectTarget.includes("/Login") ? redirectTarget : "/";
 
   const getPostLoginUrl = (target, accessToken) => {
     let url;
@@ -80,22 +81,41 @@ export default function Login() {
     setMode(nextMode);
   };
 
+  const closeLogin = () => {
+    try {
+      const target = new URL(closeTarget || "/", window.location.origin);
+      sessionStorage.setItem(`antokton_login_dismissed:${target.pathname}`, "1");
+      window.location.assign(target.toString());
+    } catch {
+      sessionStorage.setItem("antokton_login_dismissed:/", "1");
+      window.location.assign("/");
+    }
+  };
+
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4 bg-[#07101f]"
-      style={{ paddingTop: "calc(48px + var(--app-safe-top))", paddingBottom: "calc(48px + var(--app-safe-bottom))" }}
+      className="min-h-screen flex items-center justify-center overflow-y-auto px-4 bg-[#07101f]"
+      style={{ paddingTop: "calc(16px + var(--app-safe-top))", paddingBottom: "calc(16px + var(--app-safe-bottom))" }}
     >
-      <button
-        type="button"
-        onClick={() => window.location.assign(closeTarget)}
-        className="fixed right-4 z-20 rounded-full bg-white/10 p-3 text-white shadow-lg backdrop-blur hover:bg-white/20"
-        style={{ top: "calc(12px + var(--app-safe-top))" }}
-        aria-label="Mbyll hyrjen"
-      >
-        <X className="h-5 w-5" />
-      </button>
+      <div className="w-full max-w-md max-h-[calc(100dvh-var(--app-safe-top)-var(--app-safe-bottom)-2rem)] overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.06] p-5 shadow-2xl sm:p-7">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={closeLogin}
+            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white/80 hover:bg-white/10"
+          >
+            Vazhdo pa hyrë
+          </button>
+          <button
+            type="button"
+            onClick={closeLogin}
+            className="rounded-full bg-white/10 p-2.5 text-white shadow-lg hover:bg-white/20"
+            aria-label="Mbyll hyrjen"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.06] p-7 shadow-2xl">
         <div className="w-14 h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center mx-auto mb-5">
           {mode === "register" ? (
             <UserPlus className="w-7 h-7 text-blue-300" />

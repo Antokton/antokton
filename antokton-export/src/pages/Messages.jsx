@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageCircle, Send, Loader2, Search, User, RotateCcw, Trash2, Shield, Copy, Paperclip, Archive, ArchiveRestore, CheckCircle, Crown, AlertCircle, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
+import AuthRequiredState from "@/components/AuthRequiredState";
 
 export default function Messages() {
   const [user, setUser] = useState(null);
@@ -38,7 +39,7 @@ export default function Messages() {
       try {
         const authenticated = await base44.auth.isAuthenticated();
         if (!authenticated) {
-          base44.auth.redirectToLogin();
+          if (!cancelled) setAuthError("");
           return;
         }
         const me = await base44.auth.me();
@@ -191,6 +192,16 @@ export default function Messages() {
     });
   }, [selectedConversation, messages.length]);
 
+  if (!user && !authLoading) {
+    return (
+      <AuthRequiredState
+        icon={MessageCircle}
+        title="Duhet të hysh në llogari"
+        message={authError || "Mesazhet janë private. Hyr ose regjistrohu për të vazhduar, ose vazhdo pa hyrë."}
+      />
+    );
+  }
+
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen px-6 text-center">
@@ -216,7 +227,7 @@ export default function Messages() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => base44.auth.redirectToLogin()}
+                  onClick={() => window.location.assign(`/Login?from_url=${encodeURIComponent('/Messages')}`)}
                   className="rounded-lg border border-[#8ab4ff]/40 bg-[#8ab4ff]/15 px-3 py-2 text-sm font-semibold text-[#8ab4ff]"
                 >
                   Hyr përsëri

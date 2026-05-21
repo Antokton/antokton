@@ -25,6 +25,7 @@ import Login from './pages/Login';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import VisualEditMode from '@/components/admin/VisualEditMode';
+import AuthRequiredState from '@/components/AuthRequiredState';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -35,7 +36,7 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   : <>{children}</>;
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, checkAppState } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, checkAppState } = useAuth();
   const [showSlowLoadRecovery, setShowSlowLoadRecovery] = useState(false);
   const isLoginRoute = window.location.pathname.toLowerCase() === "/login";
 
@@ -97,9 +98,11 @@ const AuthenticatedApp = () => {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
+      return (
+        <LayoutWrapper currentPageName={mainPageKey}>
+          <AuthRequiredState message="Hyr ose regjistrohu për të hapur këtë pjesë të Antokton." />
+        </LayoutWrapper>
+      );
     }
   }
 
