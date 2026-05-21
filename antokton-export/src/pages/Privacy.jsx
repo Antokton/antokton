@@ -21,7 +21,7 @@ export default function Privacy() {
             <section>
               <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-wide">1. Të dhënat që mbledhim</h2>
               <p className="leading-relaxed">
-                Antokton mbledh informacione personale që ju na jepni vullnetarisht, përfshirë emrin, email-in, 
+                Antokton mbledh informacione personale që ju na jepni vullnetarisht, përfshirë emrin, email-in,
                 numrin e telefonit, vendndodhjen, dhe informacione profesionale si eksperienca e punës dhe aftësitë.
               </p>
             </section>
@@ -39,15 +39,15 @@ export default function Privacy() {
             <section>
               <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-wide">3. Ndarja e të dhënave</h2>
               <p className="leading-relaxed">
-                Ne nuk ndajmë informacionet tuaja personale me palë të treta pa lejen tuaj, përveç rasteve 
-                kur kërkohet nga ligji ose për të ofruar shërbime të kërkuara (si procesorët e pagesave).
+                Ne nuk ndajmë informacionet tuaja personale me palë të treta pa lejen tuaj, përveç rasteve
+                kur kërkohet nga ligji ose për të ofruar shërbime të kërkuara, si procesorët e pagesave.
               </p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-wide">4. Siguría e të dhënave</h2>
+              <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-wide">4. Siguria e të dhënave</h2>
               <p className="leading-relaxed">
-                Ne përdorim masa të sigurta teknike dhe organizative për të mbrojtur të dhënat tuaja nga aksesi 
+                Ne përdorim masa të sigurta teknike dhe organizative për të mbrojtur të dhënat tuaja nga aksesi
                 i paautorizuar, humbja ose keqpërdorimi.
               </p>
             </section>
@@ -66,7 +66,7 @@ export default function Privacy() {
             <section>
               <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-wide">6. Cookies dhe teknologji të ngjashme</h2>
               <p className="leading-relaxed">
-                Ne përdorim cookies për të përmirësuar përvojën tuaj në platformë, për analitikë dhe për të 
+                Ne përdorim cookies për të përmirësuar përvojën tuaj në platformë, për analitikë dhe për të
                 ruajtur preferencat tuaja.
               </p>
             </section>
@@ -74,7 +74,7 @@ export default function Privacy() {
             <section>
               <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-wide">7. Ndryshimet në politikë</h2>
               <p className="leading-relaxed">
-                Ne rezervojmë të drejtën për të përditësuar këtë politikë privatësie. Do t'ju njoftojmë për 
+                Ne rezervojmë të drejtën për të përditësuar këtë politikë privatësie. Do t'ju njoftojmë për
                 çdo ndryshim të rëndësishëm përmes email-it ose njoftimeve në platformë.
               </p>
             </section>
@@ -82,7 +82,7 @@ export default function Privacy() {
             <section>
               <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-wide">8. Na kontaktoni</h2>
               <p className="leading-relaxed">
-                Për pyetje rreth kësaj politike privatësie, na kontaktoni në: 
+                Për pyetje rreth kësaj politike privatësie, na kontaktoni në:
                 <a href="mailto:privacy@antokton.com" className="text-[#8ab4ff] hover:underline ml-1">
                   privacy@antokton.com
                 </a>

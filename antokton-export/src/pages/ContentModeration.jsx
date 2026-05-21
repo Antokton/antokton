@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, CheckCircle2, Zap, Loader2, Shield } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AlertCircle, CheckCircle2, Zap, Loader2, Shield, Briefcase, Star } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function ContentModeration() {
   const [user, setUser] = useState(null);
@@ -20,12 +20,12 @@ export default function ContentModeration() {
       const authenticated = await base44.auth.isAuthenticated();
       if (authenticated) {
         const me = await base44.auth.me();
-        if (me?.role !== 'admin' && me?.role !== 'moderator') {
-          window.location.href = '/';
+        if (me?.role !== "admin" && me?.role !== "moderator") {
+          window.location.href = "/";
         }
         setUser(me);
       } else {
-        window.location.href = '/';
+        window.location.href = "/";
       }
     };
     checkAuth();
@@ -62,24 +62,42 @@ export default function ContentModeration() {
     }
   };
 
-  const pendingModerations = moderations.filter(m => m.admin_decision === 'pending');
-  const flaggedModerations = moderations.filter(m => m.ai_flag_status === 'flagged');
-  const rejectedModerations = moderations.filter(m => m.ai_flag_status === 'rejected');
+  const pendingModerations = moderations.filter((m) => m.admin_decision === "pending");
+  const flaggedModerations = moderations.filter((m) => m.ai_flag_status === "flagged");
+  const rejectedModerations = moderations.filter((m) => m.ai_flag_status === "rejected");
 
   const getSeverityColor = (severity) => {
     switch (severity) {
-      case 'high':
-        return 'bg-red-500/20 text-red-400';
-      case 'medium':
-        return 'bg-yellow-500/20 text-yellow-400';
-      case 'low':
-        return 'bg-blue-500/20 text-blue-400';
+      case "high":
+        return "bg-red-500/20 text-red-400";
+      case "medium":
+        return "bg-yellow-500/20 text-yellow-400";
+      case "low":
+        return "bg-blue-500/20 text-blue-400";
       default:
-        return 'bg-green-500/20 text-green-400';
+        return "bg-green-500/20 text-green-400";
     }
   };
 
-  if (!user?.role?.includes('admin') && user?.role !== 'moderator') {
+  const contentTypeLabel = (type) => {
+    if (type === "job_posting") {
+      return (
+        <span className="inline-flex items-center gap-1">
+          <Briefcase className="w-4 h-4" />
+          Njoftim Pune
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex items-center gap-1">
+        <Star className="w-4 h-4" />
+        Rishikim
+      </span>
+    );
+  };
+
+  if (!user?.role?.includes("admin") && user?.role !== "moderator") {
     return <div className="text-center py-20 text-white">Nuk keni akses</div>;
   }
 
@@ -110,7 +128,6 @@ export default function ContentModeration() {
         </TabsList>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Moderation List */}
           <div className="lg:col-span-1">
             <Card className="bg-white/5 border-white/10 h-[600px] overflow-y-auto">
               <CardHeader>
@@ -118,18 +135,18 @@ export default function ContentModeration() {
               </CardHeader>
               <CardContent className="space-y-2">
                 <TabsContent value="pending" className="space-y-2 m-0">
-                  {pendingModerations.map(m => (
+                  {pendingModerations.map((m) => (
                     <motion.button
                       key={m.id}
                       onClick={() => setSelectedModeration(m)}
                       className={`w-full text-left p-3 rounded-lg transition-all border ${
                         selectedModeration?.id === m.id
-                          ? 'bg-white/10 border-white/20'
-                          : 'hover:bg-white/5 border-white/10'
+                          ? "bg-white/10 border-white/20"
+                          : "hover:bg-white/5 border-white/10"
                       }`}
                     >
                       <div className="text-white/80 text-sm font-medium truncate">
-                        {m.content_type === 'job_posting' ? '💼 Njoftim Pune' : '⭐ Rishikim'}
+                        {contentTypeLabel(m.content_type)}
                       </div>
                       <Badge className="mt-1 text-xs bg-yellow-500/20 text-yellow-400">
                         Në pritje
@@ -139,18 +156,18 @@ export default function ContentModeration() {
                 </TabsContent>
 
                 <TabsContent value="flagged" className="space-y-2 m-0">
-                  {flaggedModerations.map(m => (
+                  {flaggedModerations.map((m) => (
                     <motion.button
                       key={m.id}
                       onClick={() => setSelectedModeration(m)}
                       className={`w-full text-left p-3 rounded-lg transition-all border ${
                         selectedModeration?.id === m.id
-                          ? 'bg-white/10 border-white/20'
-                          : 'hover:bg-white/5 border-white/10'
+                          ? "bg-white/10 border-white/20"
+                          : "hover:bg-white/5 border-white/10"
                       }`}
                     >
                       <div className="text-white/80 text-sm font-medium truncate">
-                        {m.content_type === 'job_posting' ? '💼 Njoftim Pune' : '⭐ Rishikim'}
+                        {contentTypeLabel(m.content_type)}
                       </div>
                       <Badge className="mt-1 text-xs bg-orange-500/20 text-orange-400">
                         Flamurisur
@@ -160,18 +177,18 @@ export default function ContentModeration() {
                 </TabsContent>
 
                 <TabsContent value="rejected" className="space-y-2 m-0">
-                  {rejectedModerations.map(m => (
+                  {rejectedModerations.map((m) => (
                     <motion.button
                       key={m.id}
                       onClick={() => setSelectedModeration(m)}
                       className={`w-full text-left p-3 rounded-lg transition-all border ${
                         selectedModeration?.id === m.id
-                          ? 'bg-white/10 border-white/20'
-                          : 'hover:bg-white/5 border-white/10'
+                          ? "bg-white/10 border-white/20"
+                          : "hover:bg-white/5 border-white/10"
                       }`}
                     >
                       <div className="text-white/80 text-sm font-medium truncate">
-                        {m.content_type === 'job_posting' ? '💼 Njoftim Pune' : '⭐ Rishikim'}
+                        {contentTypeLabel(m.content_type)}
                       </div>
                       <Badge className="mt-1 text-xs bg-red-500/20 text-red-400">
                         Refuzuar
@@ -183,14 +200,13 @@ export default function ContentModeration() {
             </Card>
           </div>
 
-          {/* Moderation Details */}
           {selectedModeration && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-2 space-y-6">
               <Card className="bg-white/5 border-white/10">
                 <CardHeader>
                   <CardTitle className="text-white flex justify-between items-center">
                     <span>Përmbajtja</span>
-                    <Badge className={getSeverityColor(selectedModeration.ai_violation_reasons?.length > 0 ? 'high' : 'low')}>
+                    <Badge className={getSeverityColor(selectedModeration.ai_violation_reasons?.length > 0 ? "high" : "low")}>
                       AI Flagged
                     </Badge>
                   </CardTitle>
@@ -199,7 +215,7 @@ export default function ContentModeration() {
                   <div>
                     <label className="text-white/40 text-xs">Lloji</label>
                     <div className="text-white mt-1">
-                      {selectedModeration.content_type === 'job_posting' ? 'Njoftim Pune' : 'Rishikim Kompanie'}
+                      {selectedModeration.content_type === "job_posting" ? "Njoftim Pune" : "Rishikim Kompanie"}
                     </div>
                   </div>
 
@@ -214,7 +230,7 @@ export default function ContentModeration() {
                     <h4 className="text-white font-semibold mb-3">Analiza e AI</h4>
                     <div className="space-y-3">
                       <div>
-                        <label className="text-white/40 text-xs">Shkaku i Flamurit</label>
+                        <label className="text-white/40 text-xs">Shkaku i flamurit</label>
                         <div className="flex flex-wrap gap-2 mt-1">
                           {selectedModeration.ai_violation_reasons?.length > 0 ? (
                             selectedModeration.ai_violation_reasons.map((reason, i) => (
@@ -229,7 +245,7 @@ export default function ContentModeration() {
                       </div>
 
                       <div>
-                        <label className="text-white/40 text-xs">Sigurimi i AI</label>
+                        <label className="text-white/40 text-xs">Siguria e AI</label>
                         <div className="text-white mt-1 font-semibold">
                           {selectedModeration.ai_confidence}%
                         </div>
@@ -238,9 +254,9 @@ export default function ContentModeration() {
                       <div>
                         <label className="text-white/40 text-xs">Statusi i AI</label>
                         <Badge className={`mt-1 ${
-                          selectedModeration.ai_flag_status === 'approved' ? 'bg-green-500/20 text-green-400' :
-                          selectedModeration.ai_flag_status === 'flagged' ? 'bg-yellow-500/20 text-yellow-400' :
-                          'bg-red-500/20 text-red-400'
+                          selectedModeration.ai_flag_status === "approved" ? "bg-green-500/20 text-green-400" :
+                          selectedModeration.ai_flag_status === "flagged" ? "bg-yellow-500/20 text-yellow-400" :
+                          "bg-red-500/20 text-red-400"
                         }`}>
                           {selectedModeration.ai_flag_status}
                         </Badge>
@@ -250,7 +266,7 @@ export default function ContentModeration() {
                 </CardContent>
               </Card>
 
-              {selectedModeration.admin_decision === 'pending' && (
+              {selectedModeration.admin_decision === "pending" && (
                 <Card className="bg-white/5 border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">Vendimi i Adminit</CardTitle>
@@ -261,14 +277,14 @@ export default function ContentModeration() {
                       <Textarea
                         value={adminNotes}
                         onChange={(e) => setAdminNotes(e.target.value)}
-                        placeholder="Shkruani shënimet e juaja..."
+                        placeholder="Shkruani shënimet tuaja..."
                         className="bg-white/5 border-white/10 text-white"
                       />
                     </div>
 
                     <div className="flex gap-3">
                       <Button
-                        onClick={() => handleReview('approved')}
+                        onClick={() => handleReview("approved")}
                         disabled={reviewMutation.isPending}
                         className="flex-1 bg-green-500/20 text-green-400 hover:bg-green-500/30"
                       >
@@ -276,7 +292,7 @@ export default function ContentModeration() {
                         Aprovo
                       </Button>
                       <Button
-                        onClick={() => handleReview('rejected')}
+                        onClick={() => handleReview("rejected")}
                         disabled={reviewMutation.isPending}
                         className="flex-1 bg-red-500/20 text-red-400 hover:bg-red-500/30"
                       >
@@ -284,7 +300,7 @@ export default function ContentModeration() {
                         Refuzo
                       </Button>
                       <Button
-                        onClick={() => handleReview('override_approved')}
+                        onClick={() => handleReview("override_approved")}
                         disabled={reviewMutation.isPending}
                         className="flex-1 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
                       >

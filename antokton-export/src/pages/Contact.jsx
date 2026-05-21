@@ -16,7 +16,7 @@ export default function Contact() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       await base44.entities.ContactMessage.create({
         name: form.name,
@@ -25,14 +25,14 @@ export default function Contact() {
         message: form.message,
         status: "new"
       });
-      
+
       setSuccess(true);
       setForm({ name: "", email: "", subject: "", message: "" });
       setTimeout(() => setSuccess(false), 5000);
     } catch (error) {
       alert("Gabim në dërgim: " + error.message);
     }
-    
+
     setLoading(false);
   };
 
@@ -48,7 +48,7 @@ export default function Contact() {
             <Mail className="w-8 h-8 text-[#0b1020]" />
           </div>
           <h1 className="text-4xl font-black text-white mb-3 uppercase tracking-wide">Na kontaktoni</h1>
-          <p className="text-white">Kemi pyetje? Na dërgoni një mesazh dhe do t'ju përgjigjemi sa më shpejt.</p>
+          <p className="text-white">Keni pyetje? Na dërgoni një mesazh dhe do t'ju përgjigjemi sa më shpejt.</p>
         </motion.div>
 
         {success && (
