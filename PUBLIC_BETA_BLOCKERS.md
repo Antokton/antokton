@@ -70,9 +70,21 @@ Owner decision needed:
 
 Risk: beta users can create real data before restore procedures are proven.
 
+Completed baseline:
+
+- Backup strategy document exists.
+- Restore drill runbook exists.
+- Restore verification script exists: `backend/scripts/verify-postgres-restore.js`.
+- Automated logical backup template exists: `backend/scripts/postgres-logical-backup.js`.
+- Full automation plan exists: `AUTOMATED_POSTGRESQL_BACKUPS_RUNBOOK.md`.
+
 Minimum requirement:
 
 - Provider-native PostgreSQL backups enabled and retention confirmed.
+- Render Cron Job or equivalent scheduled backup job configured.
+- S3 or Cloudflare R2 private backup bucket configured.
+- Failed backup run alerts configured.
+- At least one automated `pg_dump` artifact and `.sha256` checksum stored outside git.
 - At least one restore drill completed using `POSTGRESQL_RESTORE_DRILL_RUNBOOK.md`.
 - Restore validator `backend/scripts/verify-postgres-restore.js` returns `ok: true`.
 - Integrity verifier returns `fails: 0` on the restored throwaway database.

@@ -122,9 +122,20 @@ Required:
 
 ### 7. Configure PostgreSQL backup automation and restore drill
 
+Completed baseline:
+
+- Backup strategy document exists.
+- Restore drill runbook exists.
+- Restore validation script exists.
+- Automated `pg_dump` backup template exists at `backend/scripts/postgres-logical-backup.js`.
+- Full external setup checklist exists at `AUTOMATED_POSTGRESQL_BACKUPS_RUNBOOK.md`.
+
 Required:
 
 - Provider-native backups enabled.
+- Render Cron Job or equivalent scheduled backup job configured.
+- S3 or Cloudflare R2 private bucket configured with lifecycle retention.
+- Failed backup alerting configured.
 - At least one logical dump captured after cutover.
 - Restore into a throwaway database tested using `POSTGRESQL_RESTORE_DRILL_RUNBOOK.md`.
 - `backend/scripts/verify-postgres-restore.js` returns `ok: true` against the restored database.

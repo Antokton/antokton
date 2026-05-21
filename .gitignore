@@ -6,6 +6,7 @@
 antokton-export/.npm-cache/
 .migration-artifacts/
 validation-runs/
+.backup-artifacts/
 
 # Local/reference downloads and previous import archive.
 antokton.html
