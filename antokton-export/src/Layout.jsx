@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "./utils";
 import { base44 } from "@/api/antoktonClient";
-import { Menu, X, Home, Briefcase, PlusCircle, Shield, Info, LogIn, LogOut, User, ChevronDown, ChevronUp, Users, Search, Calendar, Building2, Sparkles, Bell, MessageCircle, ArrowUp, GraduationCap, Wrench, Radio, Gift, Plane, Tv, Heart, Settings, ShoppingBag, Award } from "lucide-react";
+import { Menu, X, Home, Briefcase, PlusCircle, Shield, LogIn, LogOut, User, ChevronDown, ChevronUp, Users, Search, Calendar, Building2, Bell, MessageCircle, ArrowUp, GraduationCap, Wrench, Radio, Plane, Tv, Heart, ShoppingBag, Award } from "lucide-react";
 import ChatButton from "./components/ChatButton";
 import NotificationBell from "./components/NotificationBell";
 import ChatNotificationSystem from "./components/notifications/ChatNotificationSystem";
 import MobileBottomNav from "./components/mobile/MobileBottomNav";
 import MobileHeader from "./components/mobile/MobileHeader";
 import { MobileNavProvider } from "./components/mobile/MobileNavContext";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useSiteConfig } from "./lib/useSiteConfig";
 import { t, getLanguage, setLanguage } from "./lib/translations";
@@ -439,7 +439,7 @@ export default function Layout({ children, currentPageName }) {
       )}
 
       {/* Navbar */}
-      <nav className="nav-glass fixed left-0 right-0 border-b border-white/10 top-0" style={{ overflow: 'visible', pointerEvents: 'auto', zIndex: 99999, position: 'fixed' }}>
+      <nav className="nav-glass fixed left-0 right-0 border-b border-white/10 top-0" style={{ overflow: 'visible', pointerEvents: 'auto', zIndex: 99999, position: 'fixed', paddingTop: 'var(--app-safe-top)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -790,8 +790,8 @@ export default function Layout({ children, currentPageName }) {
             ref={menuRef}
             className="md:hidden fixed left-0 right-0 border-t border-white/10"
             style={{
-              top: '64px',
-              bottom: '64px',
+              top: 'var(--app-header-height)',
+              bottom: 'calc(64px + var(--app-safe-bottom))',
               zIndex: 9998,
               display: 'flex',
               flexDirection: 'column',
@@ -1044,7 +1044,7 @@ export default function Layout({ children, currentPageName }) {
         <MobileHeader />
 
       {/* Main Content */}
-      <main className="min-h-screen pt-16" style={{ position: 'relative', zIndex: 10, paddingBottom: 'calc(100px + env(safe-area-inset-bottom))' }}>
+      <main className="min-h-screen" style={{ position: 'relative', zIndex: 10, paddingTop: 'var(--app-header-height)', paddingBottom: 'calc(100px + var(--app-safe-bottom))' }}>
         {children}
       </main>
 
@@ -1065,7 +1065,7 @@ export default function Layout({ children, currentPageName }) {
           exit={{ opacity: 0, scale: 0.8 }}
           onClick={scrollToTop}
           className="fixed bottom-20 right-6 z-40 w-12 h-12 rounded-full text-[#0b1020] flex items-center justify-center shadow-lg hover:opacity-90 transition-all hover:scale-110 scroll-top-btn"
-          style={{ bottom: '80px', right: '24px', border: 'none', background: 'linear-gradient(to right, #8ab4ff, #9bffd6)', color: '#0b1020' }}
+          style={{ bottom: 'calc(80px + var(--app-safe-bottom))', right: '24px', border: 'none', background: 'linear-gradient(to right, #8ab4ff, #9bffd6)', color: '#0b1020' }}
           aria-label="Scroll to top"
         >
           <ArrowUp className="w-6 h-6" style={{ color: '#ffffff', strokeWidth: 3 }} />

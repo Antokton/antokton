@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageCircle, Send, Loader2, Search, User, RotateCcw, Trash2, Shield, Copy, Paperclip, Archive, ArchiveRestore, CheckCircle, Crown } from "lucide-react";
+import { MessageCircle, Send, Loader2, Search, User, RotateCcw, Trash2, Shield, Copy, Paperclip, Archive, ArchiveRestore, CheckCircle, Crown, AlertCircle, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 
@@ -20,6 +20,8 @@ export default function Messages() {
   const [archivedConversations, setArchivedConversations] = useState([]);
   const [showArchived, setShowArchived] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState("");
   const [activeTab, setActiveTab] = useState("conversations");
   const [staffMessage, setStaffMessage] = useState("");
   const [autocorrectEnabled, setAutocorrectEnabled] = useState(true);
@@ -29,19 +31,37 @@ export default function Messages() {
   const toEmail = urlParams.get("to");
 
   useEffect(() => {
+    let cancelled = false;
     const loadUser = async () => {
-      const authenticated = await base44.auth.isAuthenticated();
-      if (!authenticated) {
-        base44.auth.redirectToLogin();
-        return;
+      setAuthLoading(true);
+      setAuthError("");
+      try {
+        const authenticated = await base44.auth.isAuthenticated();
+        if (!authenticated) {
+          base44.auth.redirectToLogin();
+          return;
+        }
+        const me = await base44.auth.me();
+        if (!cancelled) setUser(me);
+      } catch (error) {
+        console.warn("Messages auth restore failed", error);
+        if (!cancelled) setAuthError(error.message || "Nuk u hap sesioni i mesazheve.");
+      } finally {
+        if (!cancelled) setAuthLoading(false);
       }
-      const me = await base44.auth.me();
-      setUser(me);
     };
     loadUser();
+    return () => { cancelled = true; };
   }, []);
 
-  const { data: messages = [] } = useQuery({
+  const {
+    data: messages = [],
+    isLoading: messagesLoading,
+    isError: messagesError,
+    error: messagesLoadError,
+    refetch: refetchMessages,
+    isFetching: messagesFetching
+  } = useQuery({
     queryKey: ["messages", user?.email],
     queryFn: async () => {
       const sent = await base44.entities.ChatMessage.filter({ sender_email: user.email }, "-created_date", 500);
@@ -53,7 +73,7 @@ export default function Messages() {
     staleTime: 3000,
   });
 
-  const { data: allUsers = [] } = useQuery({
+  const { data: allUsers = [], isError: usersError } = useQuery({
     queryKey: ["allUsers"],
     queryFn: () => base44.entities.User.list(),
     enabled: !!user
@@ -71,7 +91,7 @@ export default function Messages() {
 
   const isStaff = user?.role === 'admin' || user?.role === 'moderator';
 
-  const { data: staffMessages = [] } = useQuery({
+  const { data: staffMessages = [], isError: staffMessagesError, refetch: refetchStaffMessages } = useQuery({
     queryKey: ['staffMessages', user?.email],
     queryFn: () => {
       if (isStaff) {
@@ -173,8 +193,38 @@ export default function Messages() {
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 text-white/30 animate-spin" />
+      <div className="flex items-center justify-center min-h-screen px-6 text-center">
+        <div className="max-w-xs">
+          {authLoading ? (
+            <>
+              <Loader2 className="w-8 h-8 text-[#8ab4ff] animate-spin mx-auto mb-3" />
+              <p className="text-white font-semibold">Duke hapur mesazhet...</p>
+              <p className="text-white/50 text-sm mt-1">Po rikthejmë sesionin në pajisje.</p>
+            </>
+          ) : (
+            <>
+              <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
+              <p className="text-white font-semibold">Mesazhet nuk u hapën.</p>
+              <p className="text-white/50 text-sm mt-1">{authError || "Ju lutemi provoni përsëri."}</p>
+              <div className="mt-4 flex justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold text-white"
+                >
+                  Rifresko
+                </button>
+                <button
+                  type="button"
+                  onClick={() => base44.auth.redirectToLogin()}
+                  className="rounded-lg border border-[#8ab4ff]/40 bg-[#8ab4ff]/15 px-3 py-2 text-sm font-semibold text-[#8ab4ff]"
+                >
+                  Hyr përsëri
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     );
   }
@@ -329,6 +379,26 @@ export default function Messages() {
 
         <TabsContent value="conversations" className="mt-6">
 
+      {(messagesError || usersError) && (
+        <div className="mb-4 rounded-xl border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-200">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-semibold">Mesazhet nuk u ngarkuan plotësisht.</p>
+              <p className="text-red-100/75">{messagesLoadError?.message || "Kontrolloni lidhjen dhe provoni përsëri."}</p>
+              <button
+                type="button"
+                onClick={() => refetchMessages()}
+                disabled={messagesFetching}
+                className="mt-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+              >
+                {messagesFetching ? "Duke provuar..." : "Provo përsëri"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="bg-white/5 border-white/10">
           <CardContent className="p-4">
@@ -364,7 +434,12 @@ export default function Messages() {
             </div>
 
             <div className="space-y-2 max-h-[600px] overflow-y-auto">
-              {filteredConversations.length === 0 ? (
+              {messagesLoading ? (
+                <div className="text-center py-8">
+                  <Loader2 className="w-8 h-8 text-[#8ab4ff] animate-spin mx-auto mb-3" />
+                  <p className="text-white/50 text-sm">Duke ngarkuar bisedat...</p>
+                </div>
+              ) : filteredConversations.length === 0 ? (
                 <div className="text-center py-8">
                   <MessageCircle className="w-12 h-12 text-white/20 mx-auto mb-3" />
                   <p className="text-white/40 text-sm">No messages</p>
@@ -439,7 +514,7 @@ export default function Messages() {
         </Card>
 
         <Card className="lg:col-span-2 bg-white/5 border-white/10">
-          <CardContent className="p-4 flex flex-col h-[700px]">
+          <CardContent className="p-4 flex flex-col h-[min(700px,calc(100dvh-var(--app-header-height)-120px))] min-h-[480px]">
             {!selectedConversation ? (
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
@@ -451,9 +526,19 @@ export default function Messages() {
               <>
                 <div className="pb-4 border-b border-white/10 mb-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedConversation(null)}
+                        className="lg:hidden text-white/70 hover:text-white px-2"
+                      >
+                        <ArrowLeft className="w-4 h-4 mr-1" />
+                        Bisedat
+                      </Button>
                       <User className="w-5 h-5 text-white/60" />
-                      <span className="text-white font-medium">{selectedConversation.split('@')[0]}</span>
+                      <span className="text-white font-medium truncate">{selectedConversation.split('@')[0]}</span>
                     </div>
                     <div className="flex gap-2">
                       {archivedConversations.includes(selectedConversation) ? (
@@ -681,7 +766,15 @@ export default function Messages() {
           )}
 
           <div className="space-y-4">
-            {staffMessages?.length === 0 ? (
+            {staffMessagesError ? (
+              <div className="text-center py-8">
+                <AlertCircle className="w-12 h-12 text-red-400/70 mx-auto mb-3" />
+                <p className="text-white/70">Mesazhet e stafit nuk u ngarkuan.</p>
+                <Button onClick={() => refetchStaffMessages()} className="mt-3 bg-white/10 text-white">
+                  Provo përsëri
+                </Button>
+              </div>
+            ) : staffMessages?.length === 0 ? (
               <div className="text-center py-8">
                 <MessageCircle className="w-12 h-12 text-white/40 mx-auto mb-3" />
                 <p className="text-white/60">Nuk ka mesazhe ende</p>

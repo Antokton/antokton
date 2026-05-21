@@ -7,6 +7,13 @@ html {
   height: -webkit-fill-available;
 }
 
+:root {
+  --app-safe-top: env(safe-area-inset-top, 0px);
+  --app-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --app-header-base-height: 64px;
+  --app-header-height: calc(var(--app-header-base-height) + var(--app-safe-top));
+}
+
 body {
   min-height: -webkit-fill-available;
   min-height: 100dvh;

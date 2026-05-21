@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/toaster"
+import { useEffect, useState } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
@@ -34,8 +35,19 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   : <>{children}</>;
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, checkAppState } = useAuth();
+  const [showSlowLoadRecovery, setShowSlowLoadRecovery] = useState(false);
   const isLoginRoute = window.location.pathname.toLowerCase() === "/login";
+
+  useEffect(() => {
+    if (!isLoadingPublicSettings && !isLoadingAuth) {
+      setShowSlowLoadRecovery(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => setShowSlowLoadRecovery(true), 5500);
+    return () => window.clearTimeout(timer);
+  }, [isLoadingPublicSettings, isLoadingAuth]);
 
   if (isLoginRoute) {
     return (
@@ -48,8 +60,34 @@ const AuthenticatedApp = () => {
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      <div className="fixed inset-0 flex items-center justify-center bg-[#0b1020] px-6 text-center" style={{ paddingTop: 'var(--app-safe-top)', paddingBottom: 'var(--app-safe-bottom)' }}>
+        <div className="max-w-xs">
+          <div className="mx-auto mb-4 w-8 h-8 border-4 border-white/25 border-t-[#8ab4ff] rounded-full animate-spin"></div>
+          <p className="text-white font-semibold">Duke hapur Antokton...</p>
+          {showSlowLoadRecovery && (
+            <div className="mt-4 space-y-3">
+              <p className="text-white/60 text-sm">
+                Lidhja po zgjat më shumë se zakonisht. Nëse je në iPhone PWA, provo rifreskim të lehtë.
+              </p>
+              <div className="flex gap-2 justify-center">
+                <button
+                  type="button"
+                  onClick={() => checkAppState()}
+                  className="rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold text-white"
+                >
+                  Provo përsëri
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.location.assign('/')}
+                  className="rounded-lg border border-[#8ab4ff]/40 bg-[#8ab4ff]/15 px-3 py-2 text-sm font-semibold text-[#8ab4ff]"
+                >
+                  Kryefaqja
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   }

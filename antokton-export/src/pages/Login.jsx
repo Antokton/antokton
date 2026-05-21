@@ -4,7 +4,7 @@ import { base44 } from "@/api/antoktonClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Lock, Mail, UserPlus, LogIn, AlertCircle, Eye, EyeOff, KeyRound } from "lucide-react";
+import { Lock, Mail, UserPlus, LogIn, AlertCircle, Eye, EyeOff, KeyRound, X } from "lucide-react";
 
 export default function Login() {
   const [searchParams] = useSearchParams();
@@ -19,6 +19,7 @@ export default function Login() {
 
   const fromUrl = searchParams.get("from_url") || "/Home";
   const redirectTarget = fromUrl.includes("/Login") ? "/Home" : fromUrl;
+  const closeTarget = redirectTarget && !redirectTarget.includes("/Login") ? redirectTarget : "/Home";
 
   const getPostLoginUrl = (target, accessToken) => {
     let url;
@@ -80,7 +81,20 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-[#07101f]">
+    <div
+      className="min-h-screen flex items-center justify-center px-4 bg-[#07101f]"
+      style={{ paddingTop: "calc(48px + var(--app-safe-top))", paddingBottom: "calc(48px + var(--app-safe-bottom))" }}
+    >
+      <button
+        type="button"
+        onClick={() => window.location.assign(closeTarget)}
+        className="fixed right-4 z-20 rounded-full bg-white/10 p-3 text-white shadow-lg backdrop-blur hover:bg-white/20"
+        style={{ top: "calc(12px + var(--app-safe-top))" }}
+        aria-label="Mbyll hyrjen"
+      >
+        <X className="h-5 w-5" />
+      </button>
+
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.06] p-7 shadow-2xl">
         <div className="w-14 h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center mx-auto mb-5">
           {mode === "register" ? (

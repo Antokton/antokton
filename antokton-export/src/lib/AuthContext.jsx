@@ -3,6 +3,25 @@ import { base44 } from '@/api/antoktonClient';
 import { appParams } from '@/lib/app-params';
 
 const AuthContext = createContext();
+const APP_STATE_TIMEOUT_MS = 18000;
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = APP_STATE_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      const timeoutError = new Error('Kërkesa zgjati shumë. Kontrolloni lidhjen dhe provoni përsëri.');
+      timeoutError.status = 408;
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -29,7 +48,7 @@ export const AuthProvider = ({ children }) => {
       
       // First, check app public settings (with token if available)
       // This will tell us if auth is required, user not registered, etc.
-      const publicSettingsResponse = await fetch(`/api/apps/public/prod/public-settings/by-id/${appParams.appId}`, {
+      const publicSettingsResponse = await fetchWithTimeout(`/api/apps/public/prod/public-settings/by-id/${appParams.appId}`, {
         headers: {
           'X-App-Id': appParams.appId,
           ...(appParams.token ? { Authorization: `Bearer ${appParams.token}` } : {})

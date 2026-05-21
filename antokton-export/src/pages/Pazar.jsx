@@ -1,14 +1,13 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { base44 } from "@/api/antoktonClient";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { createPageUrl } from "../utils";
 import {
   ShoppingBag, Home, Car, Sofa, Shirt, Smartphone, Bike,
-  Baby, Wrench, Leaf, BookOpen, Palette, Gift, Search,
-  Plus, MapPin, Clock, Heart, Filter, X, Upload,
-  ExternalLink, Loader2, ChevronRight, Tag, ArrowLeft,
+  Wrench, Leaf, BookOpen, Palette, Gift, Search,
+  Plus, MapPin, Clock, Heart, X, Upload,
+  ExternalLink, Loader2, Tag, ArrowLeft,
   AlertCircle, CheckCircle
 } from "lucide-react";
 
@@ -103,7 +102,7 @@ function ImportModal({ onClose, onImported }) {
   const [category, setCategory] = useState("makina");
   const [jobType, setJobType] = useState("ofroj");
 
-  // Force body scroll when modal open (override any layout overflow:hidden)
+  // Keep iPhone standalone drawers recoverable and prevent background scroll bleed.
   useEffect(() => {
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
@@ -152,12 +151,12 @@ function ImportModal({ onClose, onImported }) {
   };
 
   const modal = (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(0,0,0,0.75)' }} onClick={onClose}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', paddingTop: 'var(--app-safe-top)' }} onClick={onClose}>
       <div
-        style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: '520px', maxHeight: '88vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+        style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: '520px', maxHeight: 'calc(100dvh - var(--app-safe-top) - 0.5rem)', paddingBottom: 'var(--app-safe-bottom)', overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
         onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-white/10">
+        <div className="sticky top-0 z-10 flex items-center justify-between p-5 border-b border-white/10 bg-[#0f172a]/95 backdrop-blur">
           <div className="flex items-center gap-2">
             {step === "preview" && (
               <button onClick={() => setStep("input")} className="text-white/50 hover:text-white mr-1">
@@ -167,7 +166,9 @@ function ImportModal({ onClose, onImported }) {
             <Upload className="w-5 h-5 text-[#8ab4ff]" />
             <h2 className="text-white font-bold text-base">Importo Njoftim</h2>
           </div>
-          <button onClick={onClose} className="text-white/40 hover:text-white"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20" aria-label="Mbyll importin">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         <div className="p-5 space-y-4">
@@ -335,14 +336,24 @@ export default function Pazar() {
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
-    base44.auth.isAuthenticated().then(async auth => {
-      if (auth) setUser(await base44.auth.me());
-    });
+    let cancelled = false;
+    base44.auth.isAuthenticated()
+      .then(async auth => {
+        if (!auth || cancelled) return;
+        const me = await base44.auth.me();
+        if (!cancelled) setUser(me);
+      })
+      .catch((error) => {
+        console.warn("Pazar auth restore failed", error);
+      });
+    return () => { cancelled = true; };
   }, []);
 
-  const { data: jobs = [], isLoading, refetch } = useQuery({
+  const { data: jobs = [], isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["pazarJobs"],
     queryFn: () => base44.entities.Job.filter({ status: "approved" }, "-created_date", 200),
+    retry: 1,
+    staleTime: 15000,
   });
 
   const filtered = useMemo(() => {
@@ -375,7 +386,7 @@ export default function Pazar() {
   return (
     <div className="min-h-screen bg-[#0b1020]">
       {/* Header */}
-      <div className="bg-[#0b1020] border-b border-white/10 px-4 py-3 sticky top-16 z-20">
+      <div className="bg-[#0b1020] border-b border-white/10 px-4 py-3 sticky z-20" style={{ top: 'var(--app-header-height)' }}>
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-white font-black text-xl flex items-center gap-2">
             <ShoppingBag className="w-6 h-6 text-[#8ab4ff]" /> Pazar
@@ -403,7 +414,7 @@ export default function Pazar() {
 
       <div className="flex">
         {/* Left sidebar - categories (desktop) */}
-        <div className="hidden md:flex flex-col w-64 shrink-0 p-4 border-r border-white/8 sticky top-32 h-screen overflow-y-auto">
+        <div className="hidden md:flex flex-col w-64 shrink-0 p-4 border-r border-white/8 sticky h-screen overflow-y-auto" style={{ top: 'calc(var(--app-header-height) + 64px)' }}>
           <p className="text-white/40 text-xs font-bold uppercase tracking-wider mb-3">Kategoritë</p>
           {CATEGORIES.map(cat => (
             <button key={cat.key} onClick={() => setActiveCategory(cat.key)}
@@ -445,7 +456,22 @@ export default function Pazar() {
           <div className="p-3">
             {isLoading ? (
               <div className="flex justify-center py-20">
-                <Loader2 className="w-8 h-8 text-[#8ab4ff] animate-spin" />
+                <div className="text-center">
+                  <Loader2 className="w-8 h-8 text-[#8ab4ff] animate-spin mx-auto mb-3" />
+                  <p className="text-white/50 text-sm">Duke ngarkuar Pazarin...</p>
+                </div>
+              </div>
+            ) : isError ? (
+              <div className="text-center py-20 px-4">
+                <AlertCircle className="w-12 h-12 text-red-400/70 mx-auto mb-4" />
+                <p className="text-white font-semibold">Pazari nuk u ngarkua.</p>
+                <p className="text-white/40 text-sm mt-1">{error?.message || "Kontrolloni lidhjen dhe provoni përsëri."}</p>
+                <button onClick={() => refetch()}
+                  className="mt-4 px-5 py-2.5 rounded-xl text-sm font-bold text-[#0b1020] disabled:opacity-50"
+                  disabled={isFetching}
+                  style={{ background: 'linear-gradient(to right, #8ab4ff, #9bffd6)' }}>
+                  {isFetching ? "Duke provuar..." : "Provo përsëri"}
+                </button>
               </div>
             ) : filtered.length === 0 ? (
               <div className="text-center py-20">

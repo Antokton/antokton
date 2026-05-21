@@ -1,6 +1,7 @@
 import { appParams } from '@/lib/app-params';
 
 const appId = appParams.appId || import.meta.env.VITE_ANTOKTON_APP_ID || '6991d40eddf82cc25ec834a7';
+const DEFAULT_REQUEST_TIMEOUT_MS = 18000;
 
 function getToken() {
   const storedToken = localStorage.getItem('antokton_access_token') ||
@@ -32,6 +33,9 @@ function hasToken() {
 async function request(path, options = {}) {
   const headers = new Headers(options.headers || {});
   const body = options.body;
+  const controller = new AbortController();
+  const timeoutMs = options.timeoutMs || DEFAULT_REQUEST_TIMEOUT_MS;
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
   if (!(body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
@@ -41,12 +45,25 @@ async function request(path, options = {}) {
   const token = getToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
-  const response = await fetch(path, {
-    ...options,
-    headers,
-    credentials: 'same-origin',
-    body: body instanceof FormData || typeof body === 'string' ? body : body ? JSON.stringify(body) : undefined
-  });
+  let response;
+  try {
+    response = await fetch(path, {
+      ...options,
+      headers,
+      credentials: 'same-origin',
+      body: body instanceof FormData || typeof body === 'string' ? body : body ? JSON.stringify(body) : undefined,
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      const timeoutError = new Error('Kërkesa zgjati shumë. Kontrolloni lidhjen dhe provoni përsëri.');
+      timeoutError.status = 408;
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 
   const contentType = response.headers.get('content-type') || '';
   const payload = contentType.includes('application/json')
