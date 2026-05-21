@@ -6,6 +6,26 @@ Status: required before broad public beta.
 
 Scope: real-device validation for ANTOKTON web, mobile browser behavior, installability, service worker behavior, login, uploads, and core flows.
 
+## Automated Polish Completed
+
+Completed on 2026-05-21:
+
+- App HTML language set to Albanian with mobile safe-area viewport support.
+- Manifest language, description, and start URL aligned with the routed app shell.
+- Offline page copy corrected and safe-area viewport support added.
+- Service worker cache version bumped for the next release.
+- Service worker update handling now asks the new worker to activate and refreshes the app once after controller change.
+- Local preview keeps service worker cleanup behavior, so development and preview sessions do not get stuck on stale caches.
+
+Automated checks completed:
+
+- `node --check antokton-export\public\sw.js`
+- `node --check antokton-export\src\lib\registerServiceWorker.js`
+- Manifest JSON parse check
+- `npm --prefix antokton-export run build`
+- `npm --prefix antokton-export audit`
+- Local preview HTTP 200 checks for `/`, `/manifest.json`, `/sw.js`, `/offline.html`, and `/CookiePolicy`
+
 ## Devices
 
 Minimum device matrix:
@@ -113,4 +133,3 @@ Use this table when the test is executed:
 | Date | Device | Browser | Tester | Result | Notes |
 | --- | --- | --- | --- | --- | --- |
 | TBD | TBD | TBD | TBD | Pending |  |
-

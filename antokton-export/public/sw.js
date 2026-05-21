@@ -1,4 +1,4 @@
-const VERSION = "antokton-pwa-2026-05-14-2";
+const VERSION = "antokton-pwa-2026-05-21-1";
 const PRECACHE = `${VERSION}-precache`;
 const RUNTIME = `${VERSION}-runtime`;
 const API_CACHE = `${VERSION}-api`;
@@ -40,6 +40,12 @@ const CORE_ASSETS = [
 
 const DEV_ONLY_PREFIXES = ["/@vite", "/src/", "/node_modules/"];
 const CACHE_FIRST_PREFIXES = ["/assets/", "/icons/", "/local-assets/", "/uploads/"];
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "ANTOKTON_SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
 
 if (DISABLE_LOCAL_PREVIEW_SW) {
   self.addEventListener("install", (event) => {
