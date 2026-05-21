@@ -4,9 +4,11 @@ Date: 2026-05-21
 
 Scope: public beta readiness review after PostgreSQL migration phase moved into post-merge stabilization.
 
-Status: not ready for broad public beta until the blockers below are closed.
+Status: not ready for broad public beta until the remaining blockers below are closed.
 
 Update 2026-05-21: production PostgreSQL cutover is complete and production smoke is passing with `dbMode=postgres`. Public beta work can continue, but broad beta remains blocked until the first 24h post-cutover monitoring window is complete and the new P0 items below are closed.
+
+Update 2026-05-21 later: frontend dependency audit blockers and legal/support encoding issues were fixed and merged to `main` in commit `7cb3ebd`. Cookie Policy now exists as a routed page and is linked from the footer.
 
 ## P0 Blockers
 
@@ -32,21 +34,15 @@ Minimum requirement:
 - Confirm backup/retention policy on that service.
 - Rename or document the service/database name if needed.
 
-### 0c. Frontend dependency audit has public-beta blockers
+### 0c. Frontend dependency audit has public-beta blockers - resolved
 
-Risk: user-facing frontend dependencies include known vulnerabilities.
+Result: resolved in `main`.
 
-Observed:
+Completed:
 
-- `npm --prefix antokton-export audit --omit=dev` reported 20 vulnerabilities.
-- Severity mix: 1 critical, 10 high, 9 moderate.
-- Notable packages: `jspdf`, `react-router`, `vite`, `rollup`, `dompurify`, `lodash`, `react-quill`/`quill`.
-
-Minimum requirement:
-
-- Controlled dependency update branch.
-- No blind forced audit fix without review.
-- Build, smoke, and affected-flow QA after updates.
+- `npm --prefix antokton-export audit` reports `0 vulnerabilities`.
+- `react-quill` was removed because it was unused in `src` and pulled vulnerable `quill`.
+- Frontend build passed after the dependency cleanup.
 
 ### 1. Monitoring and alerting are not yet operational
 
@@ -54,7 +50,7 @@ Risk: production incidents may go unnoticed during beta traffic.
 
 Minimum requirement:
 
-- Uptime monitor for `/health`.
+- Uptime monitor for `/health`, following `PUBLIC_BETA_MONITORING_ALERTING_RUNBOOK.md`.
 - Alert if `/health` fails twice in a row.
 - Alert if production reports an unexpected `dbMode`.
 - Alert on 5xx spikes, auth failures, upload failures, and PostgreSQL diagnostics after cutover.
@@ -70,29 +66,29 @@ Risk: beta users can create real data before restore procedures are proven.
 
 Minimum requirement:
 
-- Daily production SQLite snapshot while production remains SQLite.
-- Snapshot checksum.
-- Off-repo/off-machine retention.
-- Restore drill documented.
-- PostgreSQL backup and restore drill before the production DB switch.
+- Provider-native PostgreSQL backups enabled and retention confirmed.
+- At least one restore drill completed using `POSTGRESQL_RESTORE_DRILL_RUNBOOK.md`.
+- Integrity verifier returns `fails: 0` on the restored throwaway database.
+- Diagnostics pass on the restored throwaway database.
+- Restore result documented without secrets.
 
-### 3. Legal copy has visible encoding issues and needs review
+### 3. Legal copy has visible encoding issues and needs review - partially resolved
 
-Observed files:
+Result: encoding and Cookie Policy page are fixed in `main`.
+
+Completed files:
 
 - `antokton-export/src/pages/Privacy.jsx`
 - `antokton-export/src/pages/Terms.jsx`
 - `antokton-export/src/pages/Contact.jsx`
 - `antokton-export/src/pages/ContentModeration.jsx`
+- `antokton-export/src/pages/CookiePolicy.jsx`
 
-Risk: Albanian text appears mojibake-encoded in several pages, which undermines trust and may create legal ambiguity.
+Remaining requirement:
 
-Minimum requirement:
-
-- Correct encoding for Privacy, Terms, Contact, and moderation pages.
 - Legal review of Privacy and Terms before broad beta.
-- Add clear data deletion/contact process.
 - Confirm cookie/analytics language matches actual tracking behavior.
+- Confirm data deletion/contact process owner.
 
 ### 4. Abuse and moderation operations need an assigned process
 
@@ -109,7 +105,7 @@ Risk: the UI and entities exist, but public beta needs response ownership, SLA, 
 
 Minimum requirement:
 
-- Assign moderation owners.
+- Assign moderation owners using `PUBLIC_BETA_OPERATIONS_RUNBOOK.md`.
 - Define response SLA for reports.
 - Define block/ban/escalation policy.
 - Define appeal path.
@@ -173,8 +169,8 @@ Risks:
 
 Minimum requirement:
 
-- iOS Safari install test.
-- Android Chrome install test.
+- iOS Safari install test using `MOBILE_PWA_QA_CHECKLIST.md`.
+- Android Chrome install test using `MOBILE_PWA_QA_CHECKLIST.md`.
 - Logout/login after service worker update.
 - Upload flow on mobile.
 - Push/notification behavior explicitly scoped.

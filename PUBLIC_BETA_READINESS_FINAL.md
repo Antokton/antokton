@@ -6,6 +6,8 @@ Status: NOT READY for broad public beta yet.
 
 Assessment: public beta readiness can continue in parallel with PostgreSQL post-cutover monitoring, but broad public launch should wait until the P0 blockers below are closed.
 
+Update 2026-05-21: frontend dependency audit, legal/support encoding cleanup, and Cookie Policy routing are complete in `main` at `7cb3ebd`. Remaining work is operational: monitoring/alerting, restore drill, service identity confirmation, support/moderation ownership, and real-device PWA QA.
+
 ## Current Production Baseline
 
 - Production runtime: PostgreSQL
@@ -58,51 +60,29 @@ Required before broad beta:
 - Rename or document the database/service if the staging name is intentional.
 - Do not run broad beta against an accidentally shared staging database.
 
-### 3. Fix frontend dependency vulnerabilities
+### 3. Fix frontend dependency vulnerabilities - complete
 
 Result:
 
-- `npm --prefix antokton-export audit --omit=dev` reported 20 vulnerabilities:
-  - 1 critical
-  - 10 high
-  - 9 moderate
+- `npm --prefix antokton-export audit` reports `0 vulnerabilities`.
+- Frontend build passed after cleanup.
+- Unused `react-quill` dependency was removed.
 
-Notable affected packages include:
+### 4. Fix legal/support Albanian encoding and complete legal review - partially complete
 
-- `jspdf`
-- `react-router` / `@remix-run/router`
-- `vite`
-- `rollup`
-- `dompurify`
-- `lodash`
-- `react-quill` / `quill`
-
-Required before broad beta:
-
-- Run a controlled dependency update branch.
-- Avoid blind `npm audit fix --force` without review because it may introduce breaking changes.
-- Rebuild, smoke, and manually verify affected editor/PDF/router flows.
-
-### 4. Fix legal/support Albanian encoding and complete legal review
-
-Observed affected files:
+Completed:
 
 - `antokton-export/src/pages/Privacy.jsx`
 - `antokton-export/src/pages/Terms.jsx`
 - `antokton-export/src/pages/Contact.jsx`
 - `antokton-export/src/pages/ContentModeration.jsx`
+- `antokton-export/src/pages/CookiePolicy.jsx`
 
-Examples still visible in source:
+Remaining before broad beta:
 
-- Mis-encoded Albanian accented characters in page titles and body copy.
-- Broken symbols in moderation labels.
-
-Required before broad beta:
-
-- Correct Albanian characters.
-- Add explicit account/data deletion contact process.
 - Confirm cookie/analytics wording matches actual behavior.
 - Legal/privacy owner approves final text.
+- Confirm account/data deletion contact process owner.
 
 ### 5. Make support and moderation operations real, not only present in UI
 
@@ -117,8 +97,8 @@ Existing pieces:
 
 Required before broad beta:
 
-- Assign report review owners.
-- Define response SLA.
+- Assign report review owners using `PUBLIC_BETA_OPERATIONS_RUNBOOK.md`.
+- Define response SLA using `PUBLIC_BETA_OPERATIONS_RUNBOOK.md`.
 - Confirm admin/moderator production access.
 - Confirm contact/support queue is checked daily.
 - Define block/ban/appeal policy.
@@ -129,7 +109,7 @@ Required before broad beta:
 
 Required:
 
-- Uptime monitor for `/health` every minute.
+- Uptime monitor for `/health` every minute using `PUBLIC_BETA_MONITORING_ALERTING_RUNBOOK.md`.
 - Alert if `dbMode` is not `postgres`.
 - Alert on two consecutive failures.
 - Alert on 5xx spikes, upload failures, auth failures, and PostgreSQL diagnostic failures.
@@ -140,15 +120,15 @@ Required:
 
 - Provider-native backups enabled.
 - At least one logical dump captured after cutover.
-- Restore into a throwaway database tested.
+- Restore into a throwaway database tested using `POSTGRESQL_RESTORE_DRILL_RUNBOOK.md`.
 - Integrity/smoke/diagnostics run against restored database.
 
 ### 8. Mobile/PWA real-device QA
 
 Required:
 
-- iOS Safari login/upload/install test.
-- Android Chrome login/upload/install test.
+- iOS Safari login/upload/install test using `MOBILE_PWA_QA_CHECKLIST.md`.
+- Android Chrome login/upload/install test using `MOBILE_PWA_QA_CHECKLIST.md`.
 - PWA update behavior after deploy.
 - Logout/login after service worker update.
 
@@ -179,7 +159,7 @@ Public Beta Readiness Sprint 1:
 
 1. Complete PostgreSQL 24h monitoring window.
 2. Confirm production PostgreSQL service identity/backup policy.
-3. Fix frontend dependency vulnerabilities in a controlled branch.
-4. Fix legal/support text encoding and approval.
-5. Document and assign support/moderation operations.
+3. Enable monitoring/alert routing.
+4. Complete PostgreSQL restore drill.
+5. Assign support/moderation operations.
 6. Run real-device mobile/PWA QA.
