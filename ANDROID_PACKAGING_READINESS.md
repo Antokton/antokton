@@ -6,6 +6,8 @@ Status: preparation only. Do not build APK/AAB until the blockers below are clos
 
 Scope: Android packaging path for ANTOKTON after production is live on PostgreSQL and the PWA polish is deployed. This document does not change production, database, Render env vars, schema, or frontend code.
 
+Update 2026-05-21: Android TWA scaffold templates were added under `android/twa/`. They prepare Bubblewrap configuration, Digital Asset Links, and Windows build instructions without generating a release key or build artifact.
+
 ## Recommendation
 
 Chosen route: Trusted Web Activity (TWA) using Bubblewrap or PWABuilder.
@@ -249,6 +251,14 @@ P0 before public Android listing:
 ## First Build Plan Later
 
 Do not run this yet. Use this only after the blockers are closed.
+
+Prepared scaffold:
+
+- `android/twa/README.md`
+- `android/twa/twa-manifest.template.json`
+- `android/twa/assetlinks.template.json`
+- `android/twa/build.windows.ps1`
+- `android/twa/.gitignore`
 
 Suggested TWA path:
 

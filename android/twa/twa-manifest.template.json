@@ -1,0 +1,57 @@
+{
+  "packageId": "com.antokton.app",
+  "host": "antokton.com",
+  "name": "Antokton",
+  "launcherName": "Antokton",
+  "display": "standalone",
+  "themeColor": "#0b1020",
+  "themeColorDark": "#0b1020",
+  "navigationColor": "#0b1020",
+  "navigationColorDark": "#0b1020",
+  "navigationDividerColor": "#0b1020",
+  "navigationDividerColorDark": "#0b1020",
+  "backgroundColor": "#0b1020",
+  "enableNotifications": false,
+  "startUrl": "https://antokton.com/",
+  "iconUrl": "https://antokton.com/icons/antokton-512.png",
+  "maskableIconUrl": "https://antokton.com/icons/antokton-512.png",
+  "monochromeIconUrl": "https://antokton.com/icons/antokton-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "C:/ABSOLUTE/PATH/OUTSIDE/REPO/android-upload-key.jks",
+    "alias": "antokton"
+  },
+  "appVersionName": "0.1.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Statuset",
+      "short_name": "Statuset",
+      "url": "https://antokton.com/Statuset"
+    },
+    {
+      "name": "Pazari",
+      "short_name": "Pazari",
+      "url": "https://antokton.com/Pazar"
+    },
+    {
+      "name": "Profili",
+      "short_name": "Profili",
+      "url": "https://antokton.com/Profile"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://antokton.com/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://antokton.com/",
+  "minSdkVersion": 23,
+  "orientation": "portrait-primary",
+  "fingerprints": []
+}
