@@ -2,9 +2,58 @@
 
 Date: 2026-05-20
 
-Assessment: GO for controlled production cutover technical readiness.
+Assessment: PRODUCTION CUTOVER COMPLETE.
 
-Reason: staging SQLite to PostgreSQL migration rehearsal completed successfully with `fails: 0`, PostgreSQL diagnostics passed, smoke tests passed, and the rollback drill was validated. This does not authorize a production deploy or production database switch by itself; it means the technical cutover gate is no longer blocked.
+Reason: staging SQLite to PostgreSQL migration rehearsal completed successfully with `fails: 0`, PostgreSQL diagnostics passed, smoke tests passed, and the rollback drill was validated. The controlled production cutover was then executed on 2026-05-21 with a final Render SQLite snapshot, production PostgreSQL dry-run, live migration, integrity verification, PostgreSQL diagnostics, Render env switch, manual deploy, and production smoke validation.
+
+## Production Cutover Execution
+
+Date: 2026-05-21
+
+Final status: production is running on PostgreSQL.
+
+Final `/health` result:
+
+```json
+{"ok":true,"appId":"6991d40eddf82cc25ec834a7","db":"postgres","dbMode":"postgres","schemas":60}
+```
+
+Final production SQLite backup:
+
+- Backup directory: `/data/backups/prod-cutover-20260521T105929Z`
+- SQLite snapshot: `/data/backups/prod-cutover-20260521T105929Z/antokton.sqlite`
+- `antokton.sqlite`: `14e338bb364333bc9cd457109668d7c1519c9381f02593d53dd6922a9d466c3d`
+- `antokton.sqlite-wal`: `bb53e4bbcde67d37c2e70f776a99ad7ebb7cb465126e45cf4d637be7e62609ba`
+- `antokton.sqlite-shm`: `6215952135cccda820585c528c077f7514cece8ea7d522a561aa4c8be1be472f`
+- `uploads.tar.gz`: `a3d02f271ef9c5c0c5729703d43f5b470b9ebf9e84bdcf5fbbcd5d6d77adfedd`
+
+Production migration gates:
+
+- Pre-cutover production `/health`: passed with `dbMode=sqlite`, `schemas=60`.
+- Render build command updated to install backend dependencies before frontend build.
+- Production dry-run: passed with `DRY_RUN_EXIT=0`.
+- Live production migration: passed with `LIVE_MIGRATION_EXIT=0`.
+- Integrity verifier: passed with `FAIL: 0`, `WARN: 2`.
+- Required production counts after migration:
+  - `auth_accounts`: 3
+  - `auth_audit_logs`: 40
+  - `auth_sessions`: 31
+  - `entity_records`: 212
+  - `uploaded_files`: 12
+  - `function_logs`: 2
+  - `entity_schemas`: 60
+- PostgreSQL diagnostics before switch: passed with `DIAGNOSTICS_EXIT=0`.
+- Render production env switch: applied with `DATABASE_PROVIDER=postgres`, `NODE_ENV=production`, `ALLOW_DEV_AUTH=false`, secure session cookies, and exact production CORS origin.
+- Controlled manual deploy: passed; Render logs showed `Using PostgreSQL database`.
+- Post-switch diagnostics: passed with `POST_SWITCH_DIAGNOSTICS_EXIT=0`.
+- Production smoke test: passed `17/17`.
+- Rollback: not required.
+
+Post-cutover monitoring requirements:
+
+- Keep the final SQLite backup and rollback log on the Render disk until the post-cutover monitoring window closes.
+- Monitor `/health`, auth, entity CRUD, uploads, Render logs, PostgreSQL diagnostics, and error volume for 24 hours.
+- Do not delete the SQLite disk data or backup artifacts during the monitoring window.
 
 ## Branch Audit
 

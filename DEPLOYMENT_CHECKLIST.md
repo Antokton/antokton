@@ -60,7 +60,7 @@ Deployment source:
 Build command:
 
 ```bash
-npm --prefix antokton-export ci && npm --prefix antokton-export run build
+npm --prefix backend ci && npm --prefix antokton-export ci && npm --prefix antokton-export run build
 ```
 
 Start command:
@@ -177,6 +177,7 @@ Before deploying:
 - Set the service start command:
   - `node backend/server.js`
 - Set the build command:
+  - `npm --prefix backend ci`
   - `npm --prefix antokton-export ci`
   - `npm --prefix antokton-export run build`
 - Confirm `antokton-export/dist/index.html` exists after build.
