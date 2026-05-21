@@ -72,6 +72,21 @@ NO-GO if restore reports schema, permission, encoding, or connection failures.
 
 ## Gate 4 - Validate Restored Database
 
+Run the restore validator first. It is read-only and does not print the database URL:
+
+```powershell
+node backend\scripts\verify-postgres-restore.js --pg $env:RESTORE_DATABASE_URL --expect-schemas 60 --json
+```
+
+Required:
+
+- `ok: true`
+- `entity_schemas: 60`
+- Required runtime tables exist.
+- Blocked queries: `0`
+- Idle-in-transaction sessions: `0`
+- Long-running queries: `0`
+
 Run integrity against the restored database URL:
 
 ```powershell
@@ -86,6 +101,7 @@ psql "$env:RESTORE_DATABASE_URL" -f backend\scripts\pg-diagnostics.sql
 
 Required results:
 
+- Restore validator `ok: true`.
 - Integrity `fails: 0`.
 - No blocked queries.
 - No idle-in-transaction sessions.
@@ -99,6 +115,7 @@ Record:
 - Date and time.
 - Backup timestamp.
 - Restore target.
+- Restore validator result.
 - Integrity result.
 - Diagnostics result.
 - Any errors and follow-up actions.
@@ -117,6 +134,7 @@ Never include full database URLs, passwords, or Render internal credentials.
 The restore drill passes only if:
 
 - Backup can be restored into throwaway PostgreSQL.
+- Restore validator returns `ok: true`.
 - Integrity returns `fails: 0`.
 - Diagnostics are clean.
 - Production remains unchanged and healthy.

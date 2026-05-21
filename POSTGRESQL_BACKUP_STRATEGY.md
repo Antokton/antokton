@@ -1,6 +1,6 @@
 # PostgreSQL Backup Strategy
 
-Scope: Antokton PostgreSQL staging and future production databases. This does not switch production from SQLite.
+Scope: Antokton PostgreSQL staging and production databases. This does not change production runtime configuration.
 
 ## Objectives
 
@@ -21,14 +21,22 @@ Scope: Antokton PostgreSQL staging and future production databases. This does no
    ```
 3. Run the integrity verifier against the restored database before accepting the backup as usable.
 
-## Production Cutover Backup Gate
+## Production Backup Gate
 
-Before any production PostgreSQL switch:
+After production PostgreSQL cutover and before broad beta:
 
-- Capture a final SQLite snapshot and keep it immutable.
-- Capture a PostgreSQL dump immediately after migration.
-- Confirm restore from the dump into a throwaway database.
-- Run smoke, integrity, and diagnostics against the restored database.
+- Confirm Render provider-native backups are enabled on the production PostgreSQL service.
+- Confirm retention policy and latest successful backup timestamp.
+- Capture at least one logical dump or provider-native manual backup after cutover.
+- Restore into a throwaway PostgreSQL database.
+- Run restore validation, integrity, and diagnostics against the restored database.
+- Keep the final SQLite snapshot and rollback artifacts immutable until restore drill passes.
+
+Restore validation command:
+
+```powershell
+node backend\scripts\verify-postgres-restore.js --pg $env:RESTORE_DATABASE_URL --expect-schemas 60 --json
+```
 
 ## Retention
 
@@ -42,3 +50,4 @@ Before any production PostgreSQL switch:
 - Store backup files outside the repo.
 - Prefer provider-native backups for recovery point objectives and logical dumps for migration verification.
 - A backup is not considered valid until a restore drill has passed.
+- Do not store production backup dumps in GitHub Actions artifacts unless they are encrypted and access-controlled outside the repository workflow.

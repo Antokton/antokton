@@ -74,6 +74,7 @@ Minimum requirement:
 
 - Provider-native PostgreSQL backups enabled and retention confirmed.
 - At least one restore drill completed using `POSTGRESQL_RESTORE_DRILL_RUNBOOK.md`.
+- Restore validator `backend/scripts/verify-postgres-restore.js` returns `ok: true`.
 - Integrity verifier returns `fails: 0` on the restored throwaway database.
 - Diagnostics pass on the restored throwaway database.
 - Restore result documented without secrets.

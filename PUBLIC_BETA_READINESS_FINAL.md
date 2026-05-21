@@ -127,6 +127,7 @@ Required:
 - Provider-native backups enabled.
 - At least one logical dump captured after cutover.
 - Restore into a throwaway database tested using `POSTGRESQL_RESTORE_DRILL_RUNBOOK.md`.
+- `backend/scripts/verify-postgres-restore.js` returns `ok: true` against the restored database.
 - Integrity/smoke/diagnostics run against restored database.
 
 ### 8. Mobile/PWA real-device QA
