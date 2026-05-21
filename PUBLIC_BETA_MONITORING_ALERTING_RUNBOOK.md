@@ -8,6 +8,38 @@ Scope: uptime, application health, database health, logs, alert routing, and fir
 
 ## Required Monitors
 
+### 0. GitHub Scheduled Health Monitor
+
+Repository automation:
+
+```text
+.github/workflows/production-health-monitor.yml
+```
+
+Manual command:
+
+```powershell
+node backend\scripts\monitor-production-health.js --base https://antokton.com --expect-db-mode postgres --expect-schemas 60
+```
+
+Schedule:
+
+- Every 15 minutes through GitHub Actions.
+- Manual dispatch after every production deploy.
+
+Alert behavior:
+
+- The workflow fails if `/health` is not HTTP 200.
+- The workflow fails if `ok=true` is missing.
+- The workflow fails if `dbMode` is not `postgres`.
+- The workflow fails if `schemas` is not `60`.
+
+Important:
+
+- This GitHub monitor is a baseline production guard, not the only P0 alert path.
+- Keep the 1-minute external uptime monitor below for faster paging during public beta.
+- Do not add database URLs, Render tokens, or secrets to this workflow.
+
 ### 1. Public Health
 
 Target:

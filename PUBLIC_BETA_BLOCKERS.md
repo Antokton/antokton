@@ -44,16 +44,22 @@ Completed:
 - `react-quill` was removed because it was unused in `src` and pulled vulnerable `quill`.
 - Frontend build passed after the dependency cleanup.
 
-### 1. Monitoring and alerting are not yet operational
+### 1. Monitoring and alerting are partially operational
 
 Risk: production incidents may go unnoticed during beta traffic.
 
+Completed baseline:
+
+- GitHub Actions scheduled health monitor added in `.github/workflows/production-health-monitor.yml`.
+- `backend/scripts/monitor-production-health.js` verifies `/health`, `dbMode=postgres`, and `schemas=60`.
+- Manual production monitor command passed on 2026-05-21.
+
 Minimum requirement:
 
-- Uptime monitor for `/health`, following `PUBLIC_BETA_MONITORING_ALERTING_RUNBOOK.md`.
-- Alert if `/health` fails twice in a row.
-- Alert if production reports an unexpected `dbMode`.
-- Alert on 5xx spikes, auth failures, upload failures, and PostgreSQL diagnostics after cutover.
+- External 1-minute uptime monitor for `/health`, following `PUBLIC_BETA_MONITORING_ALERTING_RUNBOOK.md`.
+- External alert if `/health` fails twice in a row.
+- External alert if production reports an unexpected `dbMode`.
+- Alert routing for 5xx spikes, auth failures, upload failures, and PostgreSQL diagnostics after cutover.
 
 Owner decision needed:
 

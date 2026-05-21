@@ -107,12 +107,18 @@ Required before broad beta:
 
 ### 6. Configure monitoring and alerting
 
+Completed baseline:
+
+- GitHub scheduled health monitor added to check production every 15 minutes.
+- Manual health monitor command passed against `https://antokton.com`.
+- The monitor fails if `/health` is not HTTP 200, `ok=true` is missing, `dbMode` is not `postgres`, or `schemas` is not `60`.
+
 Required:
 
-- Uptime monitor for `/health` every minute using `PUBLIC_BETA_MONITORING_ALERTING_RUNBOOK.md`.
-- Alert if `dbMode` is not `postgres`.
-- Alert on two consecutive failures.
-- Alert on 5xx spikes, upload failures, auth failures, and PostgreSQL diagnostic failures.
+- External uptime monitor for `/health` every minute using `PUBLIC_BETA_MONITORING_ALERTING_RUNBOOK.md`.
+- External alert if `dbMode` is not `postgres`.
+- External alert on two consecutive failures.
+- Alert routing for 5xx spikes, upload failures, auth failures, and PostgreSQL diagnostic failures.
 
 ### 7. Configure PostgreSQL backup automation and restore drill
 
