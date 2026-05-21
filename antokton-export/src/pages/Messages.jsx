@@ -196,8 +196,9 @@ export default function Messages() {
     return (
       <AuthRequiredState
         icon={MessageCircle}
-        title="Duhet të hysh në llogari"
-        message={authError || "Mesazhet janë private. Hyr ose regjistrohu për të vazhduar, ose vazhdo pa hyrë."}
+        title="Mesazhet janë private"
+        message={authError || "Hyr ose regjistrohu për t'i hapur. Mund të vazhdosh në pjesët publike pa u bllokuar."}
+        compact
       />
     );
   }
