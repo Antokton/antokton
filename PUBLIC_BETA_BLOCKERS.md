@@ -6,7 +6,47 @@ Scope: public beta readiness review after PostgreSQL migration phase moved into 
 
 Status: not ready for broad public beta until the blockers below are closed.
 
+Update 2026-05-21: production PostgreSQL cutover is complete and production smoke is passing with `dbMode=postgres`. Public beta work can continue, but broad beta remains blocked until the first 24h post-cutover monitoring window is complete and the new P0 items below are closed.
+
 ## P0 Blockers
+
+### 0. PostgreSQL 24h post-cutover monitoring is not complete
+
+Risk: production has just switched to PostgreSQL and needs a full first-day stability window before broad public traffic.
+
+Minimum requirement:
+
+- `/health` stays healthy.
+- `dbMode=postgres` remains stable.
+- Production smoke remains `17/17`.
+- PostgreSQL diagnostics remain clean.
+- No recurring Render 5xx, auth, upload, or connection-pool errors.
+
+### 0b. Production PostgreSQL service identity needs confirmation
+
+Risk: safe health metadata shows a PostgreSQL database name containing `antokton_staging`. This may be historical naming, but it must be confirmed before broad beta.
+
+Minimum requirement:
+
+- Confirm this is the intended production PostgreSQL service.
+- Confirm backup/retention policy on that service.
+- Rename or document the service/database name if needed.
+
+### 0c. Frontend dependency audit has public-beta blockers
+
+Risk: user-facing frontend dependencies include known vulnerabilities.
+
+Observed:
+
+- `npm --prefix antokton-export audit --omit=dev` reported 20 vulnerabilities.
+- Severity mix: 1 critical, 10 high, 9 moderate.
+- Notable packages: `jspdf`, `react-router`, `vite`, `rollup`, `dompurify`, `lodash`, `react-quill`/`quill`.
+
+Minimum requirement:
+
+- Controlled dependency update branch.
+- No blind forced audit fix without review.
+- Build, smoke, and affected-flow QA after updates.
 
 ### 1. Monitoring and alerting are not yet operational
 

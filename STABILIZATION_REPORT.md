@@ -4,15 +4,15 @@ Date: 2026-05-21
 
 Scope: post-merge stabilization after PostgreSQL hardening and cutover readiness tooling were merged into `main`.
 
-Status: stable for continued SQLite production operation; production PostgreSQL cutover remains a separate maintenance-window operation.
+Status: stable after production PostgreSQL cutover; first 24h post-cutover monitoring remains active.
 
 ## Current Baseline
 
 - Branch audited: `main`
 - Head: `17a7a9d docs: add production PostgreSQL cutover runbook`
-- Production deploy: not executed by this audit
-- Production database switch: not executed by this audit
-- Current production health check: `ok: true`, `dbMode: sqlite`, `schemas: 60`
+- Production deploy: executed during controlled PostgreSQL cutover
+- Production database switch: complete
+- Current production health check: `ok: true`, `dbMode: postgres`, `schemas: 60`
 - Render Auto-Deploy: reported OFF before merge
 
 ## Verification Results
@@ -133,15 +133,15 @@ Logging retention:
 ## Stabilization Findings
 
 - The merged hardening branch is stable from local syntax and fallback checks.
-- Production remains safely on SQLite.
-- PostgreSQL cutover is technically ready but intentionally not executed.
-- The next stabilization risk is not database runtime; it is beta operations: alerting, moderation workflow, legal copy quality, contact triage, and backup automation.
+- Production is now running on PostgreSQL.
+- PostgreSQL cutover completed successfully and rollback was not required.
+- The next stabilization risk is beta operations: post-cutover monitoring, alerting, moderation workflow, legal copy quality, contact triage, frontend dependency security, and backup automation.
 
 ## Recommended Next Milestone
 
 Milestone: Public Beta Readiness Sprint 1.
 
-Objective: close public beta blockers without changing database schema or launching production PostgreSQL.
+Objective: close public beta blockers without changing database schema or broad-launching public beta before the post-cutover monitoring window closes.
 
 Exit criteria:
 

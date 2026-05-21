@@ -17,20 +17,20 @@ Acceptance:
 - Alert when `dbMode` does not match expected mode.
 - Alert destination tested.
 
-### TD-002: Automate production SQLite backups while SQLite remains active
+### TD-002: Preserve cutover SQLite backups until monitoring closes
 
-Why: production is still SQLite and real beta data must be recoverable.
+Why: production has moved to PostgreSQL, but rollback confidence depends on keeping the final SQLite snapshot and migration rollback artifacts intact through the monitoring window.
 
 Acceptance:
 
-- Daily snapshot.
-- SHA256 checksum.
-- Off-repo retention.
-- Restore drill completed and documented.
+- Final cutover snapshot remains on Render disk.
+- Rollback log remains available.
+- No cleanup of `/data/backups/prod-cutover-*` until monitoring is closed.
+- Off-Render copy is created for long-term retention.
 
-### TD-003: Formalize PostgreSQL backup restore drill before cutover
+### TD-003: Formalize PostgreSQL backup restore drill after cutover
 
-Why: PostgreSQL cutover is technically ready, but restore confidence is still required before production switch.
+Why: production is now PostgreSQL and broad beta needs restore confidence.
 
 Acceptance:
 
@@ -201,18 +201,28 @@ Acceptance:
 
 ## Priority 4: Future Scaling
 
-### TD-018: PostgreSQL production cutover execution
+### TD-018: PostgreSQL post-cutover monitoring closeout
 
-Why: technical readiness is complete, but execution is intentionally separate.
+Why: production cutover is complete, but broad beta should wait until the first 24h monitoring window closes cleanly.
 
 Acceptance:
 
-- Maintenance window approved.
-- Final SQLite snapshot/checksum captured.
-- Production dry-run passes.
-- Live migration passes.
-- Integrity `fails: 0`.
 - 24h monitoring completed.
+- Final `/health` still reports `dbMode=postgres`.
+- Smoke still passes `17/17`.
+- Diagnostics remain clean.
+- Rollback artifacts are retained or archived.
+
+### TD-021: Resolve frontend dependency vulnerabilities before public beta
+
+Why: `npm --prefix antokton-export audit --omit=dev` reports public-beta security debt.
+
+Acceptance:
+
+- Critical/high frontend advisories are resolved or explicitly risk-accepted.
+- Build passes.
+- Production smoke passes after dependency update.
+- Router/editor/PDF/export flows are manually checked.
 
 ### TD-019: Rate limit persistence strategy
 
