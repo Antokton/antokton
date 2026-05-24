@@ -59,8 +59,8 @@
   "orientation": "portrait-primary",
   "fingerprints": [
     {
-      "name": "replace-with-real-signing-cert",
-      "value": "<SHA-256-SIGNING-CERT-FINGERPRINT>"
+      "name": "local-upload-key",
+      "value": "A0:FA:98:A2:2B:89:AD:73:81:5D:9D:C6:CE:9E:B9:8B:B8:4C:DE:E7:22:0C:73:1D:FE:E3:1C:AF:BF:B6:79:9F"
     }
   ],
   "additionalTrustedOrigins": [],

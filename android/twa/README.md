@@ -16,7 +16,8 @@ App identity:
 ## Folder Contents
 
 - `twa-manifest.template.json`: Bubblewrap/TWA configuration template for ANTOKTON.
-- `assetlinks.template.json`: Digital Asset Links template. Do not publish until the final SHA-256 signing fingerprint is known.
+- `twa-manifest.json`: Bubblewrap/TWA configuration for `com.antokton.app`.
+- `assetlinks.template.json`: Digital Asset Links file generated for the current local upload key fingerprint.
 - `build.windows.ps1`: local helper that checks prerequisites and runs Bubblewrap commands.
 - `.gitignore`: excludes Android outputs, release artifacts, keystores, and local signing config.
 
@@ -70,13 +71,26 @@ Background color: #0b1020
 Orientation: portrait-primary
 ```
 
-When Bubblewrap asks for signing key details, do not place the keystore inside the repo. Use a private location such as:
+The current local upload key is expected outside the repo:
 
 ```text
-C:\Users\<you>\Documents\Antokton private keys\android-upload-key.jks
+C:\AntoktonAndroidKeys\antokton-upload-key.jks
 ```
 
-After init, copy only non-secret Android project files into this folder. Do not copy `.jks`, `.keystore`, passwords, generated release APKs, or generated AABs.
+The password note is also outside the repo:
+
+```text
+C:\AntoktonAndroidKeys\antokton-upload-key-password.txt
+```
+
+Do not copy `.jks`, `.keystore`, passwords, generated release APKs, or generated AABs into git.
+
+To check the active fingerprint:
+
+```powershell
+cd android\twa
+.\build.windows.ps1 -Mode Fingerprint
+```
 
 ## Debug Build
 
@@ -91,7 +105,7 @@ Equivalent manual flow after a real Bubblewrap project exists:
 
 ```powershell
 cd android\twa
-bubblewrap build
+bubblewrap build --manifest .\twa-manifest.json --signingKeyPath "C:\AntoktonAndroidKeys\antokton-upload-key.jks" --signingKeyAlias antokton
 adb install -r .\app-release-signed.apk
 ```
 
@@ -122,16 +136,24 @@ TWA full-screen mode requires:
 https://antokton.com/.well-known/assetlinks.json
 ```
 
-Use `assetlinks.template.json` only after replacing:
+The current committed frontend file is:
 
-- `<SHA-256-SIGNING-CERT-FINGERPRINT>`
+```text
+antokton-export/public/.well-known/assetlinks.json
+```
 
-The fingerprint must match the certificate used for the app users install. With Google Play App Signing, confirm the Play app signing certificate fingerprint in Play Console before publishing `assetlinks.json`.
+It currently uses this local upload-key fingerprint:
+
+```text
+A0:FA:98:A2:2B:89:AD:73:81:5D:9D:C6:CE:9E:B9:8B:B8:4C:DE:E7:22:0C:73:1D:FE:E3:1C:AF:BF:B6:79:9F
+```
+
+The fingerprint must match the certificate used for the app users install. With Google Play App Signing, replace the web file with the Play app signing certificate fingerprint from Play Console before public/closed testing.
 
 Useful command for a local upload key:
 
 ```powershell
-keytool -list -v -keystore "C:\path\outside\repo\android-upload-key.jks" -alias antokton
+keytool -list -v -keystore "C:\AntoktonAndroidKeys\antokton-upload-key.jks" -alias antokton
 ```
 
 ## Play Console Internal Testing Path
@@ -171,8 +193,9 @@ keytool -list -v -keystore "C:\path\outside\repo\android-upload-key.jks" -alias 
 - Bubblewrap init still needs interactive confirmation.
 - Final upload key must be generated and stored outside repo.
 - Play Console app/package availability must be confirmed.
-- SHA-256 signing fingerprint is not known yet.
-- `assetlinks.json` must not be published until fingerprint is known.
+- SHA-256 signing fingerprint is known for the local upload key.
+- `assetlinks.json` must be deployed to production before the signed local build opens as verified full-screen TWA.
+- If Google Play App Signing changes the installed signing certificate, update `assetlinks.json` with the Play app signing fingerprint.
 - Store graphics and screenshots are still needed.
 - Android real-device QA is still needed after internal test install.
 
