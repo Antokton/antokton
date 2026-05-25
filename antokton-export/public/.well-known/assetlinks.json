@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.antokton.app",
+      "sha256_cert_fingerprints": [
+        "0E:36:5A:67:42:BD:2A:5D:C9:7E:AF:69:BF:3A:C1:A5:47:AA:58:E6:D0:21:32:A3:38:78:54:12:D1:B8:93:98"
+      ]
+    }
+  }
+]
