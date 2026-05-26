@@ -1,7 +1,6 @@
-import React, { useMemo, useEffect, useState } from "react";
+import React from "react";
 import CategoryCards from "../components/home/CategoryCards";
 import EventNotifications from "../components/EventNotifications";
-import FeaturedEvents from "../components/home/FeaturedEvents";
 import { base44 } from "@/api/antoktonClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import JobCard from "../components/feed/JobCard";
@@ -396,35 +395,31 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
         background-image: linear-gradient(
           100deg,
           transparent 0%,
-          transparent 25%,
-          rgba(255,255,255,0.08) 36%,
-          rgba(255,236,180,0.30) 44%,
-          rgba(255,255,255,0.98) 50%,
-          rgba(255,218,126,0.38) 56%,
-          rgba(255,255,255,0.08) 64%,
-          transparent 75%,
+          transparent 42%,
+          rgba(255,255,255,0.92) 49%,
+          rgba(255,255,255,1) 50%,
+          rgba(255,255,255,0.92) 51%,
+          transparent 58%,
           transparent 100%
         );
-        background-size: 360% 180%;
+        background-size: 260% 160%;
         background-position: 240% 50%;
         -webkit-background-clip: text;
         background-clip: text;
-        filter:
-          drop-shadow(0 0 5px rgba(255,255,255,0.18))
-          drop-shadow(0 0 14px rgba(255,210,110,0.18));
-        animation: antoktonHeroLightSweep 15s linear infinite;
+        filter: none;
+        animation: antoktonHeroLightSweep 7.5s linear infinite;
         transition: color 0.2s ease, filter 0.2s ease, text-shadow 0.2s ease;
       }
 
-      .antokton-hero-light-title:hover .antokton-hero-light-text {
+      .antokton-hero-light-title:hover .antokton-hero-light-text,
+      .antokton-mobile-hero-slogan:hover .antokton-hero-light-text {
         animation-play-state: paused;
         background-image: none;
         color: rgba(255,255,255,0.96);
         -webkit-text-fill-color: rgba(255,255,255,0.96);
         text-shadow:
           0 4px 18px rgba(0,0,0,0.9),
-          0 0 14px rgba(255,255,255,0.22),
-          0 0 22px rgba(255,214,130,0.22);
+          0 0 12px rgba(255,255,255,0.22);
         filter: none;
       }
 
@@ -445,9 +440,8 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
         align-items: center;
         gap: clamp(5px, 1vh, 8px);
         text-transform: uppercase;
-        text-shadow:
-          0 3px 12px rgba(0,0,0,0.95),
-          0 0 20px rgba(255,185,82,0.26);
+        pointer-events: auto;
+        text-shadow: none;
       }
 
       .antokton-mobile-hero-line {
@@ -456,23 +450,11 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
         font-size: clamp(18px, 5.9vw, 29px);
         line-height: 1.02;
         letter-spacing: 0;
-        text-shadow:
-          0 2px 10px rgba(0,0,0,0.95),
-          0 0 12px rgba(255,255,255,0.20);
       }
 
       .antokton-mobile-hero-line-secondary {
         font-size: clamp(12px, 3.9vw, 19px);
         line-height: 1.12;
-      }
-
-      .antokton-mobile-hero-slogan::before {
-        content: "";
-        position: absolute;
-        inset: -16px -10px;
-        z-index: -1;
-        background: radial-gradient(ellipse at center, rgba(0,0,0,0.50), rgba(0,0,0,0.18) 48%, transparent 72%);
-        filter: blur(1px);
       }
 
       @keyframes antoktonHeroLightSweep {
@@ -520,7 +502,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
 
       @media (prefers-reduced-motion: reduce) {
         .antokton-hero-light-text {
-          animation-duration: 20s;
+          animation-duration: 12s;
         }
       }
     `}</style>
@@ -595,7 +577,6 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
             className={`antokton-mobile-hero-slogan${editMode ? ' antokton-admin-edit-target' : ''}`}
             data-edit-label="Teksti"
             onClick={editMode ? (event) => { event.stopPropagation(); startEditing('text'); } : undefined}
-            style={{ pointerEvents: editMode ? 'auto' : 'none' }}
           >
             <div className="antokton-hero-light-title" aria-label={`${MOBILE_HERO_LINE_1}. ${MOBILE_HERO_LINE_2}`}>
               <div className="antokton-hero-light-text antokton-mobile-hero-line" data-text={MOBILE_HERO_LINE_1}>{MOBILE_HERO_LINE_1}</div>
