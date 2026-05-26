@@ -212,6 +212,8 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
   const BTN_EDUKIM_IMG = getHomeConfig(siteConfigMap, 'home_btn_edukim_img');
   const HERO_LINE_1 = getHomeConfig(siteConfigMap, 'home_hero_text_line1');
   const HERO_LINE_2 = getHomeConfig(siteConfigMap, 'home_hero_text_line2');
+  const MOBILE_HERO_LINE_1 = 'PLATFORMA E SHQIPTARËVE';
+  const MOBILE_HERO_LINE_2 = 'KOMUNITETI DHE MUNDËSITË NË EUROPË';
   const logoTopDesktop = getHomeConfigNumber(siteConfigMap, 'home_logo_top_desktop');
   const logoWidthDesktop = getHomeConfigNumber(siteConfigMap, 'home_logo_width_desktop');
   const textTopDesktop = getHomeConfigNumber(siteConfigMap, 'home_text_top_desktop');
@@ -380,6 +382,182 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
     </div>
   );
 
+  const heroSloganStyles = (
+    <style>{`
+      .antokton-hero-light-text {
+        display: block;
+        color: transparent;
+        -webkit-text-fill-color: transparent;
+        font-weight: 900;
+        font-size: 38px;
+        line-height: 1.14;
+        letter-spacing: 0;
+        text-align: center;
+        background-image: linear-gradient(
+          100deg,
+          transparent 0%,
+          transparent 25%,
+          rgba(255,255,255,0.08) 36%,
+          rgba(255,236,180,0.30) 44%,
+          rgba(255,255,255,0.98) 50%,
+          rgba(255,218,126,0.38) 56%,
+          rgba(255,255,255,0.08) 64%,
+          transparent 75%,
+          transparent 100%
+        );
+        background-size: 360% 180%;
+        background-position: 240% 50%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        filter:
+          drop-shadow(0 0 5px rgba(255,255,255,0.18))
+          drop-shadow(0 0 14px rgba(255,210,110,0.18));
+        animation: antoktonHeroLightSweep 15s linear infinite;
+        transition: color 0.2s ease, filter 0.2s ease, text-shadow 0.2s ease;
+      }
+
+      .antokton-hero-light-title:hover .antokton-hero-light-text {
+        animation-play-state: paused;
+        background-image: none;
+        color: rgba(255,255,255,0.96);
+        -webkit-text-fill-color: rgba(255,255,255,0.96);
+        text-shadow:
+          0 4px 18px rgba(0,0,0,0.9),
+          0 0 14px rgba(255,255,255,0.22),
+          0 0 22px rgba(255,214,130,0.22);
+        filter: none;
+      }
+
+      .antokton-mobile-hero-slogan {
+        position: absolute;
+        top: clamp(238px, 43%, 380px);
+        left: 7%;
+        right: 7%;
+        z-index: 2;
+        transform: translateY(-50%);
+        text-align: center;
+        pointer-events: none;
+      }
+
+      .antokton-mobile-hero-slogan .antokton-hero-light-title {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: clamp(5px, 1vh, 8px);
+        font-family: Georgia, "Times New Roman", serif;
+        text-transform: uppercase;
+        text-shadow:
+          0 3px 12px rgba(0,0,0,0.95),
+          0 0 20px rgba(255,185,82,0.26);
+      }
+
+      .antokton-mobile-hero-line {
+        position: relative;
+        max-width: 100%;
+        white-space: nowrap;
+        font-size: clamp(18px, 5.9vw, 29px);
+        line-height: 1.02;
+        letter-spacing: 0;
+        color: rgba(255,255,255,0.97);
+        -webkit-text-fill-color: rgba(255,255,255,0.97);
+        background-image: none;
+        text-shadow:
+          0 2px 10px rgba(0,0,0,0.95),
+          0 0 12px rgba(255,255,255,0.20);
+        filter: drop-shadow(0 2px 8px rgba(0,0,0,0.72));
+        animation: none;
+      }
+
+      .antokton-mobile-hero-line::after {
+        content: attr(data-text);
+        position: absolute;
+        inset: 0;
+        color: transparent;
+        -webkit-text-fill-color: transparent;
+        background-image: linear-gradient(
+          100deg,
+          transparent 0%,
+          transparent 34%,
+          rgba(255,255,255,0.12) 42%,
+          rgba(255,255,255,1) 48%,
+          rgba(255,255,255,0.18) 56%,
+          transparent 66%,
+          transparent 100%
+        );
+        background-size: 320% 160%;
+        background-position: 240% 50%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        animation: antoktonHeroLightSweep 15s linear infinite;
+        filter: drop-shadow(0 0 10px rgba(255,255,255,0.24));
+        pointer-events: none;
+      }
+
+      .antokton-mobile-hero-line-secondary {
+        font-size: clamp(12px, 3.9vw, 19px);
+        line-height: 1.12;
+      }
+
+      .antokton-mobile-hero-slogan::before {
+        content: "";
+        position: absolute;
+        inset: -16px -10px;
+        z-index: -1;
+        background: radial-gradient(ellipse at center, rgba(0,0,0,0.50), rgba(0,0,0,0.18) 48%, transparent 72%);
+        filter: blur(1px);
+      }
+
+      @keyframes antoktonHeroLightSweep {
+        0% {
+          background-position: 240% 50%;
+        }
+        6% {
+          background-position: 240% 50%;
+        }
+        72% {
+          background-position: -240% 50%;
+        }
+        100% {
+          background-position: -240% 50%;
+        }
+      }
+
+      @media (max-width: 380px) {
+        .antokton-mobile-hero-slogan {
+          left: 5%;
+          right: 5%;
+          top: clamp(228px, 42%, 350px);
+        }
+
+        .antokton-mobile-hero-line {
+          font-size: clamp(17px, 5.9vw, 23px);
+        }
+
+        .antokton-mobile-hero-line-secondary {
+          font-size: clamp(11px, 3.7vw, 15px);
+        }
+      }
+
+      @media (max-height: 700px) {
+        .antokton-mobile-hero-slogan {
+          top: 41%;
+        }
+      }
+
+      @media (max-width: 1100px) and (min-width: 768px) {
+        .antokton-hero-light-text {
+          font-size: 32px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .antokton-hero-light-text {
+          animation-duration: 20s;
+        }
+      }
+    `}</style>
+  );
+
   const adminEditStyles = canEdit && (
     <style>{`
       .antokton-admin-edit-target {
@@ -416,6 +594,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
     return (
       <div style={{ width: '100%', height: 'calc(100vh - 64px)', background: '#000', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
         {adminEditStyles}
+        {heroSloganStyles}
         {adminEditToggle}
         {adminEditPanel}
         {editHint}
@@ -443,6 +622,17 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
               alt="AnTOKëtonë"
               style={{ width: '80%', maxWidth: 420, height: 'auto', display: 'block', filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.55)) drop-shadow(0 6px 18px rgba(255,80,40,0.25))' }}
             />
+          </div>
+          <div
+            className={`antokton-mobile-hero-slogan${editMode ? ' antokton-admin-edit-target' : ''}`}
+            data-edit-label="Teksti"
+            onClick={editMode ? (event) => { event.stopPropagation(); startEditing('text'); } : undefined}
+            style={{ pointerEvents: editMode ? 'auto' : 'none' }}
+          >
+            <div className="antokton-hero-light-title" aria-label={`${MOBILE_HERO_LINE_1}. ${MOBILE_HERO_LINE_2}`}>
+              <div className="antokton-hero-light-text antokton-mobile-hero-line" data-text={MOBILE_HERO_LINE_1}>{MOBILE_HERO_LINE_1}</div>
+              <div className="antokton-hero-light-text antokton-mobile-hero-line antokton-mobile-hero-line-secondary" data-text={MOBILE_HERO_LINE_2}>{MOBILE_HERO_LINE_2}</div>
+            </div>
           </div>
           {/* Butonat + Banner absolute brenda hartës */}
           <div
@@ -507,81 +697,10 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '38px' }}>
         <div style={{ position: 'relative', width: '100%', aspectRatio: '1024 / 649', minHeight: 520, maxHeight: 'calc(100vh - 64px)', overflow: 'hidden' }}>
           {adminEditStyles}
+          {heroSloganStyles}
           {adminEditToggle}
           {adminEditPanel}
           {editHint}
-          <style>{`
-            .antokton-hero-light-text {
-              display: block;
-              color: transparent;
-              -webkit-text-fill-color: transparent;
-              font-weight: 900;
-              font-size: 38px;
-              line-height: 1.14;
-              letter-spacing: 0;
-              text-align: center;
-              background-image: linear-gradient(
-                100deg,
-                transparent 0%,
-                transparent 25%,
-                rgba(255,255,255,0.08) 36%,
-                rgba(255,236,180,0.30) 44%,
-                rgba(255,255,255,0.98) 50%,
-                rgba(255,218,126,0.38) 56%,
-                rgba(255,255,255,0.08) 64%,
-                transparent 75%,
-                transparent 100%
-              );
-              background-size: 360% 180%;
-              background-position: 240% 50%;
-              -webkit-background-clip: text;
-              background-clip: text;
-              filter:
-                drop-shadow(0 0 5px rgba(255,255,255,0.18))
-                drop-shadow(0 0 14px rgba(255,210,110,0.18));
-              animation: antoktonHeroLightSweep 15s linear infinite;
-              transition: color 0.2s ease, filter 0.2s ease, text-shadow 0.2s ease;
-            }
-
-            .antokton-hero-light-title:hover .antokton-hero-light-text {
-              animation-play-state: paused;
-              background-image: none;
-              color: rgba(255,255,255,0.96);
-              -webkit-text-fill-color: rgba(255,255,255,0.96);
-              text-shadow:
-                0 4px 18px rgba(0,0,0,0.9),
-                0 0 14px rgba(255,255,255,0.22),
-                0 0 22px rgba(255,214,130,0.22);
-              filter: none;
-            }
-
-            @keyframes antoktonHeroLightSweep {
-              0% {
-                background-position: 240% 50%;
-              }
-              6% {
-                background-position: 240% 50%;
-              }
-              72% {
-                background-position: -240% 50%;
-              }
-              100% {
-                background-position: -240% 50%;
-              }
-            }
-
-            @media (max-width: 1100px) {
-              .antokton-hero-light-text {
-                font-size: 32px;
-              }
-            }
-
-            @media (prefers-reduced-motion: reduce) {
-              .antokton-hero-light-text {
-                animation-duration: 20s;
-              }
-            }
-          `}</style>
           <img
             src={MASTER_IMG_URL}
             alt=""
