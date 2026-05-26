@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageCircle, Send, Loader2, Search, User, RotateCcw, Trash2, Shield, Copy, Paperclip, Archive, ArchiveRestore, CheckCircle, Crown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
+import AuthAccessBanner from "@/components/AuthAccessBanner";
 
 export default function Messages() {
   const [user, setUser] = useState(null);
@@ -23,6 +24,7 @@ export default function Messages() {
   const [activeTab, setActiveTab] = useState("conversations");
   const [staffMessage, setStaffMessage] = useState("");
   const [autocorrectEnabled, setAutocorrectEnabled] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
   const queryClient = useQueryClient();
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -30,13 +32,25 @@ export default function Messages() {
 
   useEffect(() => {
     const loadUser = async () => {
-      const authenticated = await base44.auth.isAuthenticated();
-      if (!authenticated) {
-        base44.auth.redirectToLogin();
-        return;
+      try {
+        const authenticated = await Promise.race([
+          base44.auth.isAuthenticated(),
+          new Promise((resolve) => setTimeout(() => resolve(false), 2500))
+        ]);
+        if (!authenticated) {
+          setUser(null);
+          return;
+        }
+        const me = await Promise.race([
+          base44.auth.me(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Auth check timed out")), 2500))
+        ]);
+        setUser(me);
+      } catch {
+        setUser(null);
+      } finally {
+        setAuthChecked(true);
       }
-      const me = await base44.auth.me();
-      setUser(me);
     };
     loadUser();
   }, []);
@@ -171,10 +185,18 @@ export default function Messages() {
     });
   }, [selectedConversation, messages.length]);
 
+  if (!authChecked) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 pb-24">
+        <Loader2 className="w-6 h-6 animate-spin text-[#8ab4ff]" />
+      </div>
+    );
+  }
+
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 text-white/30 animate-spin" />
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 pb-28 pt-8">
+        <AuthAccessBanner type="messages" className="w-full max-w-md" />
       </div>
     );
   }

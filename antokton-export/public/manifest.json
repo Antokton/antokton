@@ -1,10 +1,11 @@
 {
   "name": "Antokton",
   "short_name": "Antokton",
-  "description": "Antokton community platform",
+  "description": "Platformë komunitare dhe punësimi për diasporën shqiptare.",
   "id": "/",
-  "start_url": "/Home",
+  "start_url": "/",
   "scope": "/",
+  "lang": "sq",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
   "orientation": "portrait-primary",

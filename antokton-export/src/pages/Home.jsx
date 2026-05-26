@@ -444,7 +444,6 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
         flex-direction: column;
         align-items: center;
         gap: clamp(5px, 1vh, 8px);
-        font-family: Georgia, "Times New Roman", serif;
         text-transform: uppercase;
         text-shadow:
           0 3px 12px rgba(0,0,0,0.95),
@@ -452,45 +451,14 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
       }
 
       .antokton-mobile-hero-line {
-        position: relative;
         max-width: 100%;
         white-space: nowrap;
         font-size: clamp(18px, 5.9vw, 29px);
         line-height: 1.02;
         letter-spacing: 0;
-        color: rgba(255,255,255,0.97);
-        -webkit-text-fill-color: rgba(255,255,255,0.97);
-        background-image: none;
         text-shadow:
           0 2px 10px rgba(0,0,0,0.95),
           0 0 12px rgba(255,255,255,0.20);
-        filter: drop-shadow(0 2px 8px rgba(0,0,0,0.72));
-        animation: none;
-      }
-
-      .antokton-mobile-hero-line::after {
-        content: attr(data-text);
-        position: absolute;
-        inset: 0;
-        color: transparent;
-        -webkit-text-fill-color: transparent;
-        background-image: linear-gradient(
-          100deg,
-          transparent 0%,
-          transparent 34%,
-          rgba(255,255,255,0.12) 42%,
-          rgba(255,255,255,1) 48%,
-          rgba(255,255,255,0.18) 56%,
-          transparent 66%,
-          transparent 100%
-        );
-        background-size: 320% 160%;
-        background-position: 240% 50%;
-        -webkit-background-clip: text;
-        background-clip: text;
-        animation: antoktonHeroLightSweep 15s linear infinite;
-        filter: drop-shadow(0 0 10px rgba(255,255,255,0.24));
-        pointer-events: none;
       }
 
       .antokton-mobile-hero-line-secondary {
@@ -590,7 +558,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
 
   // ---- TABLET + MOBILE: gjithçka fit në ekran pa scroll ----
   if (isTablet || isMobile) {
-    const topOffset = realNotifHeight > 0 ? realNotifHeight + mobileLogoOffset : mobileLogoOffset;
+    const topOffset = realNotifHeight > 0 ? realNotifHeight + mobileLogoOffset + 18 : mobileLogoOffset;
     return (
       <div style={{ width: '100%', height: 'calc(100vh - 64px)', background: '#000', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
         {adminEditStyles}

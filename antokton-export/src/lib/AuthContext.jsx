@@ -4,6 +4,12 @@ import { appParams } from '@/lib/app-params';
 
 const AuthContext = createContext();
 
+const withTimeout = (promise, timeoutMs, fallback) =>
+  Promise.race([
+    promise,
+    new Promise((resolve) => setTimeout(() => resolve(fallback), timeoutMs))
+  ]);
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -29,14 +35,22 @@ export const AuthProvider = ({ children }) => {
       
       // First, check app public settings (with token if available)
       // This will tell us if auth is required, user not registered, etc.
-      const publicSettingsResponse = await fetch(`/api/apps/public/prod/public-settings/by-id/${appParams.appId}`, {
-        headers: {
-          'X-App-Id': appParams.appId,
-          ...(appParams.token ? { Authorization: `Bearer ${appParams.token}` } : {})
-        }
-      });
+      const publicSettingsResponse = await withTimeout(
+        fetch(`/api/apps/public/prod/public-settings/by-id/${appParams.appId}`, {
+          headers: {
+            'X-App-Id': appParams.appId,
+            ...(appParams.token ? { Authorization: `Bearer ${appParams.token}` } : {})
+          }
+        }),
+        6000,
+        null
+      );
 
       try {
+        if (!publicSettingsResponse) {
+          throw new Error('App settings request timed out');
+        }
+
         if (!publicSettingsResponse.ok) {
           const errorPayload = await publicSettingsResponse.json().catch(() => ({}));
           const error = new Error(errorPayload.message || 'Failed to load app');
@@ -97,7 +111,14 @@ export const AuthProvider = ({ children }) => {
     try {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
-      const currentUser = await base44.auth.me();
+      const currentUser = await withTimeout(
+        base44.auth.me(),
+        5000,
+        null
+      );
+      if (!currentUser) {
+        throw new Error('User auth check timed out');
+      }
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);

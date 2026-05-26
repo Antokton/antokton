@@ -37,7 +37,13 @@ export default function MobileBottomNav() {
 
   useEffect(() => {
     base44.auth.isAuthenticated().then(auth => {
-      if (auth) base44.auth.me().then(setUser);
+      if (auth) {
+        base44.auth.me().then(setUser);
+      } else {
+        setUser(null);
+      }
+    }).catch(() => {
+      setUser(null);
     });
   }, []);
 
@@ -83,8 +89,6 @@ export default function MobileBottomNav() {
     if (path === '/') return location.pathname === '/';
     return location.pathname.toLowerCase().startsWith(path.toLowerCase());
   };
-
-
 
   return (
     <>

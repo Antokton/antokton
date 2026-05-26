@@ -20,6 +20,7 @@ import UserReferences from "../components/profile/UserReferences";
 import HijriCalendar from "../components/calendar/HijriCalendar";
 import ProfileTabs from "../components/profile/ProfileTabs";
 import AkademiaProfileSummary from "../components/akademia/AkademiaProfileSummary";
+import AuthAccessBanner from "@/components/AuthAccessBanner";
 
 function MyApplications({ userEmail }) {
   const { data: myApplications = [] } = useQuery({
@@ -131,7 +132,7 @@ export default function Profile() {
 
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
 
-  const { data: currentUser, isLoading: isLoadingUser } = useQuery({
+  const { data: currentUser, isLoading: isLoadingUser, isError: isUserError } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
     staleTime: 300000, // Cache for 5 minutes
@@ -546,10 +547,18 @@ export default function Profile() {
     }
   };
 
-  if (isLoadingUser || !user) {
+  if (isLoadingUser) {
     return (
       <div className="flex justify-center py-20">
         <Loader2 className="w-6 h-6 text-white/70 animate-spin" />
+      </div>
+    );
+  }
+
+  if (isUserError || !currentUser || !user) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 pb-28 pt-8">
+        <AuthAccessBanner type="profile" className="w-full max-w-md" />
       </div>
     );
   }
