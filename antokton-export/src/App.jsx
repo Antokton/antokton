@@ -24,6 +24,7 @@ import Login from './pages/Login';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import VisualEditMode from '@/components/admin/VisualEditMode';
+import SEOHead from '@/components/SEOHead';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -112,6 +113,7 @@ function App() {
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
+          <SEOHead />
           <NavigationTracker />
           <AuthenticatedApp />
           <VisualEditMode />

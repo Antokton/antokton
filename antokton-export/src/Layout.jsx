@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "./utils";
 import { base44 } from "@/api/antoktonClient";
-import { Menu, X, Home, Briefcase, PlusCircle, Shield, Info, LogIn, LogOut, User, ChevronDown, ChevronUp, Users, Search, Calendar, Building2, Sparkles, Bell, MessageCircle, ArrowUp, GraduationCap, Wrench, Radio, Gift, Plane, Tv, Heart, Settings, ShoppingBag, Award } from "lucide-react";
+import { Menu, X, Home, Briefcase, PlusCircle, Shield, LogIn, LogOut, User, ChevronDown, ChevronUp, Users, Search, Calendar, Building2, Bell, MessageCircle, ArrowUp, GraduationCap, Wrench, Radio, Plane, Tv, Heart, ShoppingBag, Award } from "lucide-react";
 import ChatButton from "./components/ChatButton";
 import NotificationBell from "./components/NotificationBell";
 import ChatNotificationSystem from "./components/notifications/ChatNotificationSystem";
 import MobileBottomNav from "./components/mobile/MobileBottomNav";
 import MobileHeader from "./components/mobile/MobileHeader";
 import { MobileNavProvider } from "./components/mobile/MobileNavContext";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useSiteConfig } from "./lib/useSiteConfig";
 import { t, getLanguage, setLanguage } from "./lib/translations";
@@ -124,8 +124,8 @@ export default function Layout({ children, currentPageName }) {
     };
     checkAuth();
     
-    const savedLang = localStorage.getItem('language') || 'sq';
-    setLanguage(savedLang);
+    setLanguageState('sq');
+    setLanguage('sq');
     localStorage.setItem('theme', 'dark');
     document.documentElement.setAttribute('data-theme', 'dark');
     document.body.className = 'theme-dark';
@@ -136,12 +136,6 @@ export default function Layout({ children, currentPageName }) {
   };
 
   const getThemeIcon = () => '🌙';
-
-  const toggleLanguage = () => {
-    const newLang = language === 'sq' ? 'en' : 'sq';
-    setLanguageState(newLang);
-    setLanguage(newLang);
-  };
 
   const getDisplayName = (user) => {
     if (!user) return "";
@@ -658,14 +652,6 @@ export default function Layout({ children, currentPageName }) {
 
               {isAuth ? (
                 <div className="hidden md:flex items-center gap-1">
-                  {/* Language Toggle */}
-                  <button
-                    onClick={toggleLanguage}
-                    className="p-2 rounded-lg transition-all duration-200 flex items-center justify-center text-white hover:text-white/60 hover:bg-white/5"
-                    title={language === 'sq' ? 'Switch to English' : 'Kal në Shqip'}
-                  >
-                    <span className="text-xs font-bold">{language === 'sq' ? 'EN' : 'SQ'}</span>
-                  </button>
                   {/* Cilësimet */}
                   <Link to={createPageUrl("NotificationSettings")}
                     className={`p-2 rounded-lg transition-all duration-200 flex items-center justify-center ${currentPageName==="NotificationSettings"?"text-white bg-white/10":"text-white hover:text-white/60 hover:bg-white/5"}`}
@@ -748,14 +734,6 @@ export default function Layout({ children, currentPageName }) {
                 </div>
               ) : (
                 <div className="hidden md:flex items-center gap-1">
-                  {/* Language Toggle */}
-                  <button
-                    onClick={toggleLanguage}
-                    className="p-2 rounded-lg transition-all duration-200 flex items-center justify-center text-white hover:text-white/60 hover:bg-white/5"
-                    title={language === 'sq' ? 'Switch to English' : 'Kal në Shqip'}
-                  >
-                    <span className="text-xs font-bold">{language === 'sq' ? 'EN' : 'SQ'}</span>
-                  </button>
                   <Button
                     onClick={() => base44.auth.redirectToLogin()}
                     className="bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] font-semibold text-xs h-8 px-4 hover:opacity-90 border-0"
@@ -1012,17 +990,6 @@ export default function Layout({ children, currentPageName }) {
                   </button>
                 </div>
               )}
-
-              {/* Language Toggle - Mobile */}
-              <div className="px-4 py-2 border-t border-white/10 shrink-0">
-                <button
-                  onClick={() => { toggleLanguage(); }}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white hover:bg-white/5 w-full"
-                >
-                  <span className="text-xs font-bold">{language === 'sq' ? '🇦🇱 Shqip' : '🇬🇧 English'}</span>
-                  <ChevronDown className={`w-3.5 h-3.5 ml-auto transition-transform ${language !== 'sq' ? 'rotate-180' : ''}`} />
-                </button>
-              </div>
 
               {/* User Menu */}
               <div className="px-4 pt-1.5 pb-3 border-t border-white/10 mt-0 shrink-0">

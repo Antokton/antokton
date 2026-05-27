@@ -10,10 +10,70 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Antokton" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta
+      name="description"
+      content="Antokton është platformë shqiptare për komunitet, punë, treg, edukim dhe mundësi në Europë."
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://antokton.com/" />
     <link rel="manifest" href="/manifest.json" />
-    <title>Antokton</title>
+    <meta property="og:site_name" content="Antokton" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://antokton.com/" />
+    <meta property="og:title" content="Antokton | Platforma e Shqiptarëve në Europë" />
+    <meta
+      property="og:description"
+      content="Komunitet, punë, treg, edukim dhe mundësi për shqiptarët në Europë."
+    />
+    <meta property="og:image" content="https://antokton.com/icons/antokton-512.png" />
+    <meta property="og:locale" content="sq_AL" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Antokton | Platforma e Shqiptarëve në Europë" />
+    <meta
+      name="twitter:description"
+      content="Komunitet, punë, treg, edukim dhe mundësi për shqiptarët në Europë."
+    />
+    <meta name="twitter:image" content="https://antokton.com/icons/antokton-512.png" />
+    <script id="antokton-website-schema" type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Antokton",
+        "alternateName": "Platforma e Shqiptarëve në Europë",
+        "url": "https://antokton.com/",
+        "inLanguage": "sq",
+        "description": "Antokton është platformë shqiptare për komunitet, punë, treg, edukim dhe mundësi në Europë.",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://antokton.com/Search?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Antokton",
+          "url": "https://antokton.com/",
+          "logo": "https://antokton.com/icons/antokton-512.png"
+        }
+      }
+    </script>
+    <title>Antokton | Platforma e Shqiptarëve në Europë</title>
   </head>
   <body>
+    <noscript>
+      <main>
+        <h1>Antokton - Platforma e Shqiptarëve në Europë</h1>
+        <p>Komunitet, punë, treg, edukim dhe mundësi për shqiptarët në Europë.</p>
+        <nav aria-label="Lidhje kryesore">
+          <a href="/Home">Kryefaqja</a>
+          <a href="/Feed">Punë në Europë</a>
+          <a href="/Pazar">Pazar</a>
+          <a href="/Statuset">Komunitet</a>
+          <a href="/Contact">Kontakt</a>
+          <a href="/Privacy">Privatësia</a>
+          <a href="/Terms">Kushtet</a>
+        </nav>
+      </main>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

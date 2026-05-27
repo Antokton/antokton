@@ -1302,6 +1302,8 @@ function serveStatic(req, res, pathname) {
         ext === ".html" ? "text/html; charset=utf-8" :
         ext === ".js" ? "text/javascript; charset=utf-8" :
         ext === ".css" ? "text/css; charset=utf-8" :
+        ext === ".txt" ? "text/plain; charset=utf-8" :
+        ext === ".xml" ? "application/xml; charset=utf-8" :
         ext === ".json" ? "application/json; charset=utf-8" :
         ext === ".svg" ? "image/svg+xml" :
         ext === ".png" ? "image/png" :

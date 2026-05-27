@@ -395,19 +395,17 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
         background-image: linear-gradient(
           100deg,
           transparent 0%,
-          transparent 42%,
-          rgba(255,255,255,0.92) 49%,
-          rgba(255,255,255,1) 50%,
-          rgba(255,255,255,0.92) 51%,
-          transparent 58%,
+          transparent 46%,
+          rgba(255,255,255,0.96) 50%,
+          transparent 54%,
           transparent 100%
         );
-        background-size: 260% 160%;
+        background-size: 220% 140%;
         background-position: 240% 50%;
         -webkit-background-clip: text;
         background-clip: text;
         filter: none;
-        animation: antoktonHeroLightSweep 7.5s linear infinite;
+        animation: antoktonHeroLightSweep 15s linear infinite;
         transition: color 0.2s ease, filter 0.2s ease, text-shadow 0.2s ease;
       }
 
@@ -439,6 +437,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
         flex-direction: column;
         align-items: center;
         gap: clamp(5px, 1vh, 8px);
+        margin: 0;
         text-transform: uppercase;
         pointer-events: auto;
         text-shadow: none;
@@ -502,7 +501,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
 
       @media (prefers-reduced-motion: reduce) {
         .antokton-hero-light-text {
-          animation-duration: 12s;
+          animation-duration: 22s;
         }
       }
     `}</style>
@@ -578,10 +577,10 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
             data-edit-label="Teksti"
             onClick={editMode ? (event) => { event.stopPropagation(); startEditing('text'); } : undefined}
           >
-            <div className="antokton-hero-light-title" aria-label={`${MOBILE_HERO_LINE_1}. ${MOBILE_HERO_LINE_2}`}>
+            <h1 className="antokton-hero-light-title" aria-label={`${MOBILE_HERO_LINE_1}. ${MOBILE_HERO_LINE_2}`}>
               <div className="antokton-hero-light-text antokton-mobile-hero-line" data-text={MOBILE_HERO_LINE_1}>{MOBILE_HERO_LINE_1}</div>
               <div className="antokton-hero-light-text antokton-mobile-hero-line antokton-mobile-hero-line-secondary" data-text={MOBILE_HERO_LINE_2}>{MOBILE_HERO_LINE_2}</div>
-            </div>
+            </h1>
           </div>
           {/* Butonat + Banner absolute brenda hartës */}
           <div
@@ -694,10 +693,10 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
             pointerEvents: 'auto',
             zIndex: 3
           }}>
-            <div className="antokton-hero-light-title" title="Mbaje mouse-in sipër për ta shfaqur tekstin komplet">
+            <h1 className="antokton-hero-light-title" title="Mbaje mouse-in sipër për ta shfaqur tekstin komplet" style={{ margin: 0 }}>
               <div className="antokton-hero-light-text">{HERO_LINE_1}</div>
               <div className="antokton-hero-light-text">{HERO_LINE_2}</div>
-            </div>
+            </h1>
           </div>
 
           <div
@@ -833,14 +832,14 @@ export default function Home() {
   const shouldShowBanner = showBanner && !isAuth;
 
   React.useEffect(() => {
-    document.title = 'Antokton Jobs - Platformë Kryesore e Punësimit Shqiptar';
+    document.title = 'Antokton | Platforma e Shqiptarëve në Europë';
     const metaDescription = document.querySelector('meta[name="description"]');
     if (metaDescription) {
-      metaDescription.setAttribute('content', 'Gjej punën perfekte ose rekruto talent shqiptar. Njoftimet më të mira të punës, ngjarjet dhe komunitetin Antokton.');
+      metaDescription.setAttribute('content', 'Antokton është platformë shqiptare për komunitet, punë, treg, edukim dhe mundësi në Europë.');
     } else {
       const meta = document.createElement('meta');
       meta.name = 'description';
-      meta.content = 'Gjej punën perfekte ose rekruto talent shqiptar. Njoftimet më të mira të punës, ngjarjet dhe komunitetin Antokton.';
+      meta.content = 'Antokton është platformë shqiptare për komunitet, punë, treg, edukim dhe mundësi në Europë.';
       document.head.appendChild(meta);
     }
   }, []);
