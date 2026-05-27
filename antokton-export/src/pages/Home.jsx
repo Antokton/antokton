@@ -395,9 +395,9 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
         background-image: linear-gradient(
           100deg,
           transparent 0%,
-          transparent 46%,
+          transparent 42%,
           rgba(255,255,255,0.96) 50%,
-          transparent 54%,
+          transparent 58%,
           transparent 100%
         );
         background-size: 220% 140%;

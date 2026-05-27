@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Check, X, Clock, Shield, Loader2, Inbox, Trash2, Share2, RotateCcw, BarChart3, Mail, Flag, Eye, Edit, ExternalLink, MousePointer2, Palette, Plus } from "lucide-react";
+import { Check, X, Clock, Shield, Loader2, Inbox, Trash2, Share2, RotateCcw, Flag, Eye, Edit, ExternalLink, MousePointer2, Palette, Plus, Upload } from "lucide-react";
 import { createPageUrl } from "../utils";
 import { motion, AnimatePresence } from "framer-motion";
 import moment from "moment";
@@ -75,6 +75,7 @@ export default function Admin() {
   const [selectedAction, setSelectedAction] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
   const [eventForm, setEventForm] = useState({});
+  const [uploadingEventImage, setUploadingEventImage] = useState(false);
   const [newDesignerPageTitle, setNewDesignerPageTitle] = useState("");
   const queryClient = useQueryClient();
 
@@ -618,6 +619,23 @@ export default function Admin() {
         featured_week_expires: eventForm.featured_week ? fromLocalDateTime(eventForm.featured_week_expires) : null
       }
     });
+  };
+
+  const uploadEventImage = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingEventImage(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setEventForm((current) => ({ ...current, image_url: file_url }));
+    } catch (error) {
+      console.error("Gabim gjatë ngarkimit të fotos së ngjarjes:", error);
+      toast.error("Nuk u ngarkua fotoja e ngjarjes");
+    } finally {
+      setUploadingEventImage(false);
+      event.target.value = "";
+    }
   };
 
   const toggleFeaturedEvent = (event, type) => {
@@ -1695,7 +1713,17 @@ export default function Admin() {
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label className="text-white/70">Foto / URL</Label>
-                  <Input value={eventForm.image_url || ""} onChange={(e) => setEventForm({ ...eventForm, image_url: e.target.value })} className="bg-white/5 border-white/10 text-white" />
+                  {eventForm.image_url && (
+                    <img src={eventForm.image_url} alt="Foto e ngjarjes" className="h-32 w-full rounded-lg object-cover border border-white/10" />
+                  )}
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Input value={eventForm.image_url || ""} onChange={(e) => setEventForm({ ...eventForm, image_url: e.target.value })} className="bg-white/5 border-white/10 text-white" />
+                    <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-[#8ab4ff]/30 bg-[#8ab4ff]/10 px-3 text-sm font-semibold text-[#8ab4ff] hover:bg-[#8ab4ff]/20">
+                      {uploadingEventImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      Ngarko foto
+                      <input type="file" accept="image/*" onChange={uploadEventImage} disabled={uploadingEventImage} className="hidden" />
+                    </label>
+                  </div>
                 </div>
               </div>
 

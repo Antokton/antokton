@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import FeedFilters from "../components/feed/FeedFilters";
 import JobCard from "../components/feed/JobCard";
 import PullToRefresh from "../components/PullToRefresh";
-import { Loader2, Inbox, Bookmark, Bell, Send } from "lucide-react";
+import { Loader2, Inbox, Bookmark, Bell, Send, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,6 +69,7 @@ export default function Feed() {
     property_subcategory: initialSub !== "all" && initialCategory === "prona" ? initialSub : "all",
     property_transaction: "all",
   });
+  const canImportPosts = user?.role === "admin" || user?.role === "moderator";
 
   const { data: jobs = [], isLoading, refetch } = useQuery({
     queryKey: ["jobs"],
@@ -261,13 +262,25 @@ export default function Feed() {
             <h1 className="text-lg sm:text-2xl font-black text-white tracking-wide uppercase">Njoftime</h1>
             <p className="text-white/65 text-xs sm:text-sm">Gjej mundësi pune, shërbime dhe më shumë</p>
           </div>
-          <Button
-            onClick={() => window.location.href = createPageUrl("CreatePost")}
-            className="bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] font-bold text-sm h-9 px-4 hover:opacity-90 border-0 shrink-0"
-          >
-            <Send className="w-3.5 h-3.5 mr-1.5" />
-            Njofto
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            {canImportPosts && (
+              <Button
+                onClick={() => window.location.href = createPageUrl("ImportPosts")}
+                variant="outline"
+                className="border-[#8ab4ff]/30 bg-[#8ab4ff]/10 text-[#8ab4ff] font-bold text-sm h-9 px-3 hover:bg-[#8ab4ff]/20"
+              >
+                <Download className="w-3.5 h-3.5 mr-1.5" />
+                Importo
+              </Button>
+            )}
+            <Button
+              onClick={() => window.location.href = createPageUrl("CreatePost")}
+              className="bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] font-bold text-sm h-9 px-4 hover:opacity-90 border-0"
+            >
+              <Send className="w-3.5 h-3.5 mr-1.5" />
+              Njofto
+            </Button>
+          </div>
         </div>
         
         {/* Saved Searches Tags */}

@@ -315,7 +315,6 @@ export default function CreatePost() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [customProfession, setCustomProfession] = useState("");
   const [customCountry, setCustomCountry] = useState("");
   const [form, setForm] = useState(emptyForm);
 
@@ -363,7 +362,7 @@ export default function CreatePost() {
     }
 
     // Validim Halal: i detyrueshëm për profesionet ushqim/pije
-    if ((form.category === "pune" || form.category === "sherbime") && isHalalRequired(form.profession || customProfession)) {
+    if ((form.category === "pune" || form.category === "sherbime") && isHalalRequired(form.profession)) {
       if (!form.halal_standard) {
         alert("⚠️ Ju lutem specifikoni nëse aplikoni standardin Halal. Kjo fushë është e detyrueshme për profesionet e ushqimit dhe pijeve.");
         return;
@@ -391,15 +390,18 @@ export default function CreatePost() {
       : user?.first_name || user?.full_name || user?.email?.split('@')[0] || "Anonim";
     const displayName = (isAdminOrMod && customPosterName.trim()) ? customPosterName.trim() : defaultName;
 
-    if (form.profession === "__other__" && customProfession.trim()) {
-      await base44.entities.ProfessionSuggestion.create({ suggested_name: customProfession.trim(), user_email: user.email });
+    const typedProfession = (form.profession || "").trim();
+    const isKnownProfession = ALL_PROFESSIONS.some((item) => item.toLowerCase() === typedProfession.toLowerCase());
+    if (typedProfession && !isKnownProfession) {
+      await base44.entities.ProfessionSuggestion.create({ suggested_name: typedProfession, user_email: user.email });
     }
     if (form.country === "__other__" && customCountry.trim()) {
       await base44.entities.CountrySuggestion.create({ suggested_name: customCountry.trim(), user_email: user.email });
     }
 
-    const finalProfession = form.profession === "__other__" ? (customProfession.trim() || "Tjetër") : form.profession;
+    const finalProfession = typedProfession || "Tjetër";
     const finalCountry = form.country === "__other__" ? (customCountry.trim() || "Tjetër") : form.country;
+    const publishStatus = isAdminOrMod ? "approved" : "pending";
 
     await base44.entities.Job.create({
       ...form,
@@ -408,8 +410,8 @@ export default function CreatePost() {
       zone: (form.zones || []).join(", "), // ruaj si string për retrokompatibilitet
       phone_number: form.phone_number || "",
       phone_app: form.phone_number ? (form.phone_app || "telefon") : "",
-      status: "pending",
-      moderation_status: "pending",
+      status: publishStatus,
+      moderation_status: publishStatus,
       is_halal_compliant: form.is_halal_compliant || false,
       poster_name: displayName,
       likes_count: 0, dislikes_count: 0, comments_count: 0,
@@ -417,7 +419,9 @@ export default function CreatePost() {
     });
 
     // Ruaj nëse është halal="po" për të treguar mesazh të veçantë
-    if (form.halal_standard === "po") {
+    if (isAdminOrMod) {
+      setSuccess("approved");
+    } else if (form.halal_standard === "po") {
       setSuccess("halal_yes");
     } else {
       setSuccess(true);
@@ -447,20 +451,23 @@ export default function CreatePost() {
 
   if (success) {
     const isHalalYes = success === "halal_yes";
+    const isApproved = success === "approved";
     return (
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-2xl mx-auto px-4 py-20 text-center">
         <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
           <CheckCircle className="w-8 h-8 text-green-600" />
         </div>
         <h2 className="text-2xl font-bold text-white mb-2">Njoftimi u dërgua!</h2>
-        {isHalalYes ? (
+        {isApproved ? (
+          <p className="text-white/60 mb-6">Njoftimi u publikua direkt.</p>
+        ) : isHalalYes ? (
           <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm">
             ✅ Faleminderit që aplikoni standardin Halal! Njoftimi juaj është <strong>në pritje për miratim</strong> nga moderatorët.
           </div>
         ) : (
           <p className="text-white/60 mb-6">Njoftimi juaj është në pritje për aprovim nga moderatorët.</p>
         )}
-        <Button onClick={() => { setSuccess(false); setCustomProfession(""); setCustomCountry(""); setForm(emptyForm); }}
+        <Button onClick={() => { setSuccess(false); setCustomCountry(""); setForm(emptyForm); }}
           className="bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] hover:opacity-90 border-0">
           Posto një tjetër
         </Button>
@@ -477,7 +484,7 @@ export default function CreatePost() {
   const selectedPazarCat = PAZAR_CATEGORIES.find(c => c.value === form.pazar_category);
   const pazarSubcategories = selectedPazarCat?.subcategories || [];
   const needsHalal = (form.category === "pune" || form.category === "sherbime") &&
-    isHalalRequired(form.profession === "__other__" ? customProfession : form.profession);
+    isHalalRequired(form.profession);
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
@@ -580,23 +587,20 @@ export default function CreatePost() {
         {showProfession && (
           <div className="space-y-1.5">
             <Label className="text-sm font-medium" style={{ color: 'var(--text)' }}>Profesioni</Label>
-            <Select value={form.profession} onValueChange={(v) => setForm({ ...form, profession: v })}>
-              <SelectTrigger className="h-11" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }}>
-                <SelectValue placeholder="Zgjidh profesionin" />
-              </SelectTrigger>
-              <SelectContent className="max-h-60">
-                {ALL_PROFESSIONS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                <SelectItem value="__other__">Tjetër — Specifiko</SelectItem>
-              </SelectContent>
-            </Select>
-            {form.profession === "__other__" && (
-              <div className="mt-2">
-                <Input value={customProfession} onChange={(e) => setCustomProfession(e.target.value)}
-                  placeholder="Shkruaj profesionin tënd..." className="h-10"
-                  style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }} />
-                <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>ℹ️ Profesioni do të shqyrtohet nga administratori.</p>
-              </div>
-            )}
+            <Input
+              list="profession-suggestions"
+              value={form.profession}
+              onChange={(e) => setForm({ ...form, profession: e.target.value })}
+              placeholder="Shkruaj profesionin, p.sh. Programues"
+              className="h-11"
+              style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }}
+            />
+            <datalist id="profession-suggestions">
+              {ALL_PROFESSIONS.map(p => <option key={p} value={p} />)}
+            </datalist>
+            <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+              Shkruaj nga shkronja e parë për sugjerime; nëse profesioni mungon, ruhet si sugjerim i ri.
+            </p>
           </div>
         )}
 
@@ -952,7 +956,7 @@ export default function CreatePost() {
                       {form.job_type === "ofroj" ? (form.category === "pune" ? "Ofroj punë" : "Ofroj shërbim") : (form.category === "pune" ? "Kërkoj punë" : "Kërkoj shërbim")}
                     </Badge>
                   )}
-                  {form.profession && form.profession !== "__other__" && (
+                  {form.profession && (
                     <Badge variant="outline" className="text-xs border-white/20 text-white/60">
                       <Briefcase className="w-3 h-3 mr-1" />{form.profession}
                     </Badge>
@@ -980,9 +984,11 @@ export default function CreatePost() {
             {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
             Dërgo Njoftimin
           </Button>
-          <p className="text-sm font-medium text-center mt-3 flex items-center justify-center gap-2" style={{ color: 'var(--accent)' }}>
-            <span>⚠️</span> Njoftimi do të shqyrtohet nga moderatorët para publikimit.
-          </p>
+          {!isAdminOrMod && (
+            <p className="text-sm font-medium text-center mt-3 flex items-center justify-center gap-2" style={{ color: 'var(--accent)' }}>
+              <span>⚠️</span> Njoftimi do të shqyrtohet nga moderatorët para publikimit.
+            </p>
+          )}
         </div>
       </motion.form>
     </div>
