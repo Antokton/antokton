@@ -1274,6 +1274,20 @@ async function cleanupKnownTestUsers() {
 }
 
 function serveStatic(req, res, pathname) {
+  const sendFile = (filePath, contentType, extraHeaders = {}) => {
+    const stat = fs.statSync(filePath);
+    res.writeHead(200, {
+      "Content-Type": contentType,
+      "Content-Length": stat.size,
+      ...extraHeaders
+    });
+    if (req.method === "HEAD") {
+      res.end();
+      return;
+    }
+    fs.createReadStream(filePath).pipe(res);
+  };
+
   if (pathname.startsWith("/uploads/")) {
     const uploadFile = getUploadFilePath(pathname.slice("/uploads/".length));
     if (!uploadFile) {
@@ -1284,12 +1298,9 @@ function serveStatic(req, res, pathname) {
       return sendError(res, 404, "File not found");
     }
 
-    res.writeHead(200, {
-      "Content-Type": mimeTypeForPath(uploadFile),
-      "Content-Length": fs.statSync(uploadFile).size,
+    return sendFile(uploadFile, mimeTypeForPath(uploadFile), {
       "Access-Control-Allow-Origin": "*"
     });
-    return fs.createReadStream(uploadFile).pipe(res);
   }
 
   const distDir = path.join(EXPORT_DIR, "dist");
@@ -1309,18 +1320,14 @@ function serveStatic(req, res, pathname) {
         ext === ".png" ? "image/png" :
         ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" :
         "application/octet-stream";
-      res.writeHead(200, { "Content-Type": type });
-      fs.createReadStream(distPath).pipe(res);
-      return;
+      return sendFile(distPath, type);
     }
     if (pathname.startsWith("/assets/")) {
       return sendError(res, 404, "Asset not found");
     }
     const indexPath = path.join(distDir, "index.html");
     if (fs.existsSync(indexPath)) {
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      fs.createReadStream(indexPath).pipe(res);
-      return;
+      return sendFile(indexPath, "text/html; charset=utf-8");
     }
   }
 
@@ -1342,8 +1349,7 @@ function serveStatic(req, res, pathname) {
     ext === ".json" ? "application/json; charset=utf-8" :
     "application/octet-stream";
 
-  res.writeHead(200, { "Content-Type": type });
-  fs.createReadStream(filePath).pipe(res);
+  sendFile(filePath, type);
 }
 
 const server = http.createServer(async (req, res) => {
