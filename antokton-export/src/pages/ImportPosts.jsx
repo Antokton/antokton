@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/antoktonClient";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import ImportForm from "../components/import/ImportForm";
 import ImportTable from "../components/import/ImportTable";
 import ImportJobForm from "../components/import/ImportJobForm";
@@ -64,19 +63,25 @@ export default function ImportPosts() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-black text-white uppercase tracking-wide">Importo në Antokton</h1>
-          <TabsList className="bg-white/5 border border-white/10">
-            <TabsTrigger value="table" className="text-white data-[state=active]:bg-white/10 text-xs gap-1.5">
-              <Table className="w-3.5 h-3.5" /> Lista
-            </TabsTrigger>
-            <TabsTrigger value="form" className="text-white data-[state=active]:bg-white/10 text-xs gap-1.5">
-              <PlusCircle className="w-3.5 h-3.5" /> {editingPost ? "Edito" : "Importo (tekst)"}
-            </TabsTrigger>
-            <TabsTrigger value="job" className="text-white data-[state=active]:bg-white/10 text-xs gap-1.5">
-              <Briefcase className="w-3.5 h-3.5" /> Importo Punë (URL)
-            </TabsTrigger>
-          </TabsList>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 min-w-0">
+          <h1 className="text-xl font-black text-white uppercase tracking-wide shrink-0">Importo në Antokton</h1>
+          <div
+            className="w-full sm:w-auto overflow-x-auto pb-1 -mx-1 px-1"
+            style={{ touchAction: "pan-x", WebkitOverflowScrolling: "touch" }}
+            data-swipe-back-ignore
+          >
+            <TabsList className="inline-flex min-w-max bg-white/5 border border-white/10">
+              <TabsTrigger value="table" className="text-white data-[state=active]:bg-white/10 text-xs gap-1.5 whitespace-nowrap">
+                <Table className="w-3.5 h-3.5" /> Lista
+              </TabsTrigger>
+              <TabsTrigger value="form" className="text-white data-[state=active]:bg-white/10 text-xs gap-1.5 whitespace-nowrap">
+                <PlusCircle className="w-3.5 h-3.5" /> {editingPost ? "Edito" : "Importo (tekst)"}
+              </TabsTrigger>
+              <TabsTrigger value="job" className="text-white data-[state=active]:bg-white/10 text-xs gap-1.5 whitespace-nowrap">
+                <Briefcase className="w-3.5 h-3.5" /> Importo Punë (URL)
+              </TabsTrigger>
+            </TabsList>
+          </div>
         </div>
 
         <TabsContent value="table">

@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/antoktonClient";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, Trash2, RotateCcw, Save, Send, Globe, Archive, X, Eye, EyeOff } from "lucide-react";
-import { COUNTRIES_DATA, CATEGORIES, LISTING_TYPES, SOURCES, STATUS_LABELS } from "./importConstants";
+import { Loader2, Sparkles, Trash2, RotateCcw, Save, Send, Globe, Archive, X } from "lucide-react";
+import { COUNTRIES_DATA, CATEGORIES, LISTING_TYPES, SOURCES } from "./importConstants";
 
 export default function ImportForm({ user, editingPost, onDone }) {
   const qc = useQueryClient();
@@ -135,6 +134,7 @@ Kthe JSON me këto fusha.`;
   };
 
   const isAdmin = user.role === "admin";
+  const isStaff = user.role === "admin" || user.role === "moderator";
 
   return (
     <div className="space-y-5 max-w-3xl">
@@ -330,28 +330,33 @@ Kthe JSON me këto fusha.`;
       </div>
 
       {/* Action Buttons */}
-      <div className="flex flex-wrap gap-2 pt-2">
-        <button onClick={() => save("draft")} disabled={loading} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-white border border-white/20 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 pt-2">
+        <button onClick={() => save("draft")} disabled={loading} className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm text-white border border-white/20 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40">
           <Save className="w-4 h-4" /> Ruaj si draft
         </button>
-        <button onClick={() => save("ne_pritje")} disabled={loading} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-[#8ab4ff] border border-[#8ab4ff]/30 bg-[#8ab4ff]/10 hover:bg-[#8ab4ff]/20 transition-colors disabled:opacity-40">
-          <Send className="w-4 h-4" /> Dërgo për miratim
-        </button>
+        {!isStaff && (
+          <button onClick={() => save("ne_pritje")} disabled={loading} className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm text-[#8ab4ff] border border-[#8ab4ff]/30 bg-[#8ab4ff]/10 hover:bg-[#8ab4ff]/20 transition-colors disabled:opacity-40">
+            <Send className="w-4 h-4" /> Dërgo për miratim
+          </button>
+        )}
+        {isStaff && (
+          <button onClick={() => save("publikuar")} disabled={loading} className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm text-[#0b1020] font-bold transition-colors disabled:opacity-40"
+            style={{ background: 'linear-gradient(to right, #8ab4ff, #9bffd6)' }}>
+            <Globe className="w-4 h-4" /> Publiko në Antokton
+          </button>
+        )}
         {isAdmin && (
           <>
-            <button onClick={() => save("publikuar")} disabled={loading} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-[#9bffd6] border border-[#9bffd6]/30 bg-[#9bffd6]/10 hover:bg-[#9bffd6]/20 transition-colors disabled:opacity-40">
-              <Globe className="w-4 h-4" /> Publiko në Antokton
-            </button>
-            <button onClick={() => save("refuzuar")} disabled={loading} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-red-400 border border-red-400/30 bg-red-400/10 hover:bg-red-400/20 transition-colors disabled:opacity-40">
+            <button onClick={() => save("refuzuar")} disabled={loading} className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm text-red-400 border border-red-400/30 bg-red-400/10 hover:bg-red-400/20 transition-colors disabled:opacity-40">
               <X className="w-4 h-4" /> Refuzo
             </button>
-            <button onClick={() => save("arkivuar")} disabled={loading} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-white/40 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40">
+            <button onClick={() => save("arkivuar")} disabled={loading} className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm text-white/40 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40">
               <Archive className="w-4 h-4" /> Arkivo
             </button>
           </>
         )}
         {editingPost && (
-          <button onClick={onDone} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-white/40 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors ml-auto">
+          <button onClick={onDone} className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm text-white/40 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors sm:ml-auto">
             Anulo
           </button>
         )}

@@ -1,14 +1,13 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { base44 } from "@/api/antoktonClient";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { createPageUrl } from "../utils";
 import {
   ShoppingBag, Home, Car, Sofa, Shirt, Smartphone, Bike,
-  Baby, Wrench, Leaf, BookOpen, Palette, Gift, Search,
-  Plus, MapPin, Clock, Heart, Filter, X, Upload,
-  ExternalLink, Loader2, ChevronRight, Tag, ArrowLeft,
+  Wrench, Leaf, BookOpen, Palette, Gift, Search,
+  Plus, MapPin, Clock, Heart, X, Upload,
+  ExternalLink, Loader2, Tag, ArrowLeft,
   AlertCircle, CheckCircle
 } from "lucide-react";
 
@@ -316,7 +315,7 @@ function ImportModal({ onClose, onImported }) {
             <div className="text-center py-8 space-y-3">
               <div className="text-5xl">✅</div>
               <p className="text-white font-bold text-lg">Njoftimi u importua!</p>
-              <p className="text-white/50 text-sm">Njoftimi juaj është dërguar për moderim dhe do të shfaqet së shpejti.</p>
+              <p className="text-white/50 text-sm">Njoftimi u publikua në Pazar.</p>
             </div>
           )}
         </div>
@@ -332,7 +331,7 @@ export default function Pazar() {
   const [search, setSearch] = useState("");
   const [showImport, setShowImport] = useState(false);
   const [user, setUser] = useState(null);
-  const queryClient = useQueryClient();
+  const canImportPosts = user?.role === "admin" || user?.role === "moderator";
 
   React.useEffect(() => {
     base44.auth.isAuthenticated().then(async auth => {
@@ -381,10 +380,12 @@ export default function Pazar() {
             <ShoppingBag className="w-6 h-6 text-[#8ab4ff]" /> Pazar
           </h1>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowImport(true)}
-              className="flex items-center gap-1.5 bg-[#8ab4ff]/15 border border-[#8ab4ff]/30 text-[#8ab4ff] text-xs font-semibold px-3 py-2 rounded-lg hover:bg-[#8ab4ff]/25 transition-all">
-              <Upload className="w-3.5 h-3.5" /> Importo
-            </button>
+            {canImportPosts && (
+              <button onClick={() => setShowImport(true)}
+                className="flex items-center gap-1.5 bg-[#8ab4ff]/15 border border-[#8ab4ff]/30 text-[#8ab4ff] text-xs font-semibold px-3 py-2 rounded-lg hover:bg-[#8ab4ff]/25 transition-all">
+                <Upload className="w-3.5 h-3.5" /> Importo
+              </button>
+            )}
             <Link to="/CreatePost"
               className="flex items-center gap-1.5 text-[#0b1020] text-xs font-bold px-3 py-2 rounded-lg"
               style={{ background: 'linear-gradient(to right, #8ab4ff, #9bffd6)' }}>
@@ -415,10 +416,12 @@ export default function Pazar() {
           ))}
           <div className="mt-6 pt-4 border-t border-white/8">
             <p className="text-white/40 text-xs font-bold uppercase tracking-wider mb-3">Veprimet</p>
-            <button onClick={() => setShowImport(true)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:bg-white/5 hover:text-white transition-all w-full">
-              <Upload className="w-5 h-5" /> Importo Njoftim
-            </button>
+            {canImportPosts && (
+              <button onClick={() => setShowImport(true)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:bg-white/5 hover:text-white transition-all w-full">
+                <Upload className="w-5 h-5" /> Importo Njoftim
+              </button>
+            )}
             <Link to="/CreatePost"
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:bg-white/5 hover:text-white transition-all">
               <Plus className="w-5 h-5" /> Posto Njoftim
@@ -452,11 +455,13 @@ export default function Pazar() {
                 <ShoppingBag className="w-12 h-12 text-white/20 mx-auto mb-4" />
                 <p className="text-white/60 font-medium">Nuk ka njoftime në Pazar</p>
                 <p className="text-white/30 text-sm mt-1">Bëhu i pari që poston!</p>
-                <button onClick={() => setShowImport(true)}
-                  className="mt-4 px-6 py-2.5 rounded-xl text-sm font-bold text-[#0b1020]"
-                  style={{ background: 'linear-gradient(to right, #8ab4ff, #9bffd6)' }}>
-                  Importo nga faqe tjetër
-                </button>
+                {canImportPosts && (
+                  <button onClick={() => setShowImport(true)}
+                    className="mt-4 px-6 py-2.5 rounded-xl text-sm font-bold text-[#0b1020]"
+                    style={{ background: 'linear-gradient(to right, #8ab4ff, #9bffd6)' }}>
+                    Importo nga faqe tjetër
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -468,7 +473,7 @@ export default function Pazar() {
       </div>
 
       {/* Import Modal */}
-      {showImport && (
+      {showImport && canImportPosts && (
         <ImportModal onClose={() => setShowImport(false)} onImported={() => refetch()} />
       )}
     </div>

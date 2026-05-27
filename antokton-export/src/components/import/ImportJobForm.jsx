@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/antoktonClient";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Link2, Sparkles, CheckCircle2, AlertCircle, Phone, MapPin, User, Briefcase, DollarSign, FileText, Image } from "lucide-react";
@@ -33,6 +32,7 @@ export default function ImportJobForm({ user, onDone }) {
   const [error, setError] = useState("");
   const [step, setStep] = useState("input"); // input | preview | done
   const [data, setData] = useState(null);
+  const isStaff = user?.role === "admin" || user?.role === "moderator";
 
   const handleImport = async () => {
     if (!url.trim()) return;
@@ -318,26 +318,28 @@ export default function ImportJobForm({ user, onDone }) {
           )}
 
           {/* Actions */}
-          <div className="flex flex-wrap gap-2 pt-1">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 pt-1">
             <button
               onClick={() => handlePublish("approved")}
               disabled={saving}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-[#0b1020] disabled:opacity-40"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-[#0b1020] disabled:opacity-40"
               style={{ background: 'linear-gradient(to right, #8ab4ff, #9bffd6)' }}
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-              Publiko direkt
+              {isStaff ? "Publiko njoftimin" : "Publiko direkt"}
             </button>
-            <button
-              onClick={() => handlePublish("pending")}
-              disabled={saving}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-[#8ab4ff] border border-[#8ab4ff]/30 bg-[#8ab4ff]/10 hover:bg-[#8ab4ff]/20 transition-colors disabled:opacity-40"
-            >
-              Dërgo për moderim
-            </button>
+            {!isStaff && (
+              <button
+                onClick={() => handlePublish("pending")}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-[#8ab4ff] border border-[#8ab4ff]/30 bg-[#8ab4ff]/10 hover:bg-[#8ab4ff]/20 transition-colors disabled:opacity-40"
+              >
+                Dërgo për moderim
+              </button>
+            )}
             <button
               onClick={() => { setStep("input"); setData(null); setError(""); }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-white/50 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors ml-auto"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm text-white/50 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors sm:ml-auto"
             >
               ← Importo tjetër
             </button>
