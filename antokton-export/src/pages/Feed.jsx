@@ -267,10 +267,13 @@ export default function Feed() {
               <Button
                 onClick={() => window.location.href = createPageUrl("ImportPosts")}
                 variant="outline"
+                title="Importo njoftim"
+                aria-label="Importo njoftim"
                 className="border-[#8ab4ff]/30 bg-[#8ab4ff]/10 text-[#8ab4ff] font-bold text-sm h-9 px-3 hover:bg-[#8ab4ff]/20"
               >
                 <Download className="w-3.5 h-3.5 mr-1.5" />
-                Importo
+                <span className="hidden sm:inline">Importo njoftim</span>
+                <span className="sm:hidden">Importo</span>
               </Button>
             )}
             <Button
