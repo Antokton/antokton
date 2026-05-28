@@ -553,7 +553,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
   // ---- TABLET + MOBILE: gjithçka fit në ekran pa scroll ----
   if (isTablet || isMobile) {
     const noticeBottom = realNotifHeight > 0 ? realNotifHeight : 86;
-    const topOffset = noticeBottom + mobileLogoOffset + 12;
+    const topOffset = noticeBottom + mobileLogoOffset + (isMobile ? 88 : 48);
     return (
       <div style={{ width: '100%', height: 'calc(100vh - 64px)', background: '#000', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
         {adminEditStyles}
