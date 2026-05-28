@@ -41,54 +41,60 @@ export default function ProfileTabs({ user, children }) {
   ].filter(t => t.show);
 
   return (
-    <div className="w-full">
-      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 mb-6">
-        {tabs.map(tab => (
-          <button
-            key={tab.value}
-            onClick={() => setActiveTab(tab.value)}
-            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-              activeTab === tab.value
-                ? "bg-white/20 text-white"
-                : "bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10"
-            }`}
-          >
-            {tab.icon} {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === "profile" && children}
-      {activeTab === "notifications" && <NotificationCenter />}
-      {activeTab === "notification_settings" && <div className="max-w-xl"><NotificationSettings /></div>}
-      {activeTab === "nav_editor" && (
-        <div className="max-w-2xl space-y-8">
-          {isAdmin && (
-            <div className="rounded-2xl border border-white/10 p-5 bg-white/3">
-              <BottomNavEditor isAdmin={true} userEmail={user?.email} />
-            </div>
-          )}
-          {(isAdmin || isPremium) && (
-            <div className="rounded-2xl border border-white/10 p-5 bg-white/3">
-              <BottomNavEditor isAdmin={false} userEmail={user?.email} />
-            </div>
-          )}
-        </div>
-      )}
-      {(isAdmin || isModerator) && activeTab === "admin" && <Admin />}
-      {isInspector && activeTab === "inspector" && <InspectorPanel />}
-      {(isAdmin || isModerator || isRecruiterUser) && activeTab === "tools" && <RecruiterTools />}
-      {activeTab === "deleted_posts" && (
-        <div className="rounded-2xl border border-white/10 p-5 bg-white/3">
-          <div className="flex items-center gap-2 mb-5">
-            <Trash2 className="w-4 h-4 text-red-400" />
-            <h3 className="text-white font-semibold text-sm">
-              {isAdmin || isModerator ? "Historiku i Fshirjeve (të gjitha)" : "Njoftimet e Mia të Fshira"}
-            </h3>
+    <div className="grid w-full gap-5 lg:grid-cols-[230px_minmax(0,1fr)]">
+      <aside className="lg:sticky lg:top-24 lg:self-start">
+        <div className="overflow-x-auto pb-2 lg:overflow-visible lg:pb-0" data-swipe-back-ignore>
+          <div className="flex min-w-max gap-2 lg:min-w-0 lg:flex-col lg:rounded-2xl lg:border lg:border-white/10 lg:bg-white/5 lg:p-2">
+            {tabs.map(tab => (
+              <button
+                key={tab.value}
+                onClick={() => setActiveTab(tab.value)}
+                className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-all lg:justify-start ${
+                  activeTab === tab.value
+                    ? "bg-white/20 text-white"
+                    : "bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 lg:border-transparent lg:bg-transparent"
+                }`}
+              >
+                {tab.icon} <span className="whitespace-nowrap">{tab.label}</span>
+              </button>
+            ))}
           </div>
-          <DeletedPostsHistory userEmail={user?.email} isAdmin={isAdmin || isModerator} />
         </div>
-      )}
+      </aside>
+
+      <div className="min-w-0">
+        {activeTab === "profile" && children}
+        {activeTab === "notifications" && <NotificationCenter />}
+        {activeTab === "notification_settings" && <div className="max-w-xl"><NotificationSettings /></div>}
+        {activeTab === "nav_editor" && (
+          <div className="max-w-2xl space-y-8">
+            {isAdmin && (
+              <div className="rounded-2xl border border-white/10 p-5 bg-white/3">
+                <BottomNavEditor isAdmin={true} userEmail={user?.email} />
+              </div>
+            )}
+            {(isAdmin || isPremium) && (
+              <div className="rounded-2xl border border-white/10 p-5 bg-white/3">
+                <BottomNavEditor isAdmin={false} userEmail={user?.email} />
+              </div>
+            )}
+          </div>
+        )}
+        {(isAdmin || isModerator) && activeTab === "admin" && <Admin />}
+        {isInspector && activeTab === "inspector" && <InspectorPanel />}
+        {(isAdmin || isModerator || isRecruiterUser) && activeTab === "tools" && <RecruiterTools />}
+        {activeTab === "deleted_posts" && (
+          <div className="rounded-2xl border border-white/10 p-5 bg-white/3">
+            <div className="flex items-center gap-2 mb-5">
+              <Trash2 className="w-4 h-4 text-red-400" />
+              <h3 className="text-white font-semibold text-sm">
+                {isAdmin || isModerator ? "Historiku i Fshirjeve (të gjitha)" : "Njoftimet e Mia të Fshira"}
+              </h3>
+            </div>
+            <DeletedPostsHistory userEmail={user?.email} isAdmin={isAdmin || isModerator} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

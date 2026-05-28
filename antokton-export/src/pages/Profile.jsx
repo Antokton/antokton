@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { User, Save, Loader2, Flag, CheckCircle, AlertCircle, Plus, Trash2, Star, Award, Shield, Download, Upload, Sparkles, BarChart3, Eye, FileText, Briefcase, Crown, CreditCard, Bookmark, MessageCircle, Calendar, AlertTriangle } from "lucide-react";
+import { Save, Loader2, CheckCircle, Plus, Trash2, Star, Download, Upload, BarChart3, Eye, FileText, Briefcase, Crown, CreditCard, Bookmark, MessageCircle, Calendar, AlertTriangle } from "lucide-react";
 import moment from "moment";
 import { motion } from "framer-motion";
 import UserRatingDisplay from "../components/user/UserRatingDisplay";
@@ -82,6 +82,28 @@ function MyApplications({ userEmail }) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function ProfilePanel({ title, description, children, defaultOpen = false, danger = false }) {
+  return (
+    <details
+      open={defaultOpen}
+      className={`group rounded-2xl border ${
+        danger ? "border-red-500/20 bg-red-500/10" : "border-white/10 bg-white/5"
+      }`}
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-white">
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold sm:text-base">{title}</span>
+          {description && <span className="mt-0.5 block text-xs leading-relaxed text-white/50">{description}</span>}
+        </span>
+        <span className="shrink-0 text-lg text-white/45 transition-transform group-open:rotate-45">+</span>
+      </summary>
+      <div className="border-t border-white/10 p-0">
+        {children}
+      </div>
+    </details>
   );
 }
 
@@ -581,7 +603,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <ProfileTabs user={user}>
       <div className="flex items-center gap-3 mb-8">
         <div className="flex-1">
@@ -649,6 +671,12 @@ export default function Profile() {
       {/* Spacer */}
       <div className="mb-2" />
 
+      <ProfilePanel
+        title="Përmbledhje"
+        description="Aktiviteti, reputacioni, Akademia dhe shkarkimet e profilit."
+        defaultOpen
+      >
+      <div className="space-y-6 p-0">
       {/* Statistics - Aktiviteti Im */}
       {statistics && (
         <Card className="bg-white/5 border-white/10 mb-6">
@@ -765,6 +793,8 @@ export default function Profile() {
           </div>
         </CardContent>
       </Card>
+      </div>
+      </ProfilePanel>
 
       {/* Profile Form */}
       <motion.form
@@ -774,6 +804,11 @@ export default function Profile() {
         className="space-y-6"
       >
         {/* Basic Info */}
+        <ProfilePanel
+          title="Të dhënat bazë"
+          description="Foto, emër, kontakt, vendndodhje dhe lloji i përdoruesit."
+          defaultOpen
+        >
         <Card className="bg-white/5 border-white/10">
           <CardContent className="p-6 space-y-4">
             <div className="flex items-center justify-between mb-4">
@@ -1014,10 +1049,15 @@ export default function Profile() {
             </div>
           </CardContent>
         </Card>
+        </ProfilePanel>
 
         {/* Job Seeker Specific */}
         {!isRecruiterOrEmployer && (
-          <>
+          <ProfilePanel
+            title="Profesioni dhe CV"
+            description="Aftësitë, portfolio, certifikatat, gjuhët, përvoja dhe arsimi."
+          >
+          <div className="space-y-6">
             <Card className="bg-white/5 border-white/10">
               <CardContent className="p-6 space-y-4">
                 <h3 className="text-white font-semibold text-lg mb-4">Informacion profesional</h3>
@@ -1434,11 +1474,16 @@ export default function Profile() {
                 ))}
               </CardContent>
             </Card>
-          </>
+          </div>
+          </ProfilePanel>
         )}
 
         {/* Recruiter/Employer Specific */}
         {isRecruiterOrEmployer && (
+          <ProfilePanel
+            title="Kompania"
+            description="Të dhënat e kompanisë dhe specializimi i rekrutimit."
+          >
           <Card className="bg-white/5 border-white/10">
             <CardContent className="p-6 space-y-4">
               <h3 className="text-white font-semibold text-lg mb-4">Informacion për kompani</h3>
@@ -1493,9 +1538,14 @@ export default function Profile() {
               </div>
             </CardContent>
           </Card>
+          </ProfilePanel>
         )}
 
         {/* Profili fetar dhe edukativ */}
+        <ProfilePanel
+          title="Besimi dhe edukimi"
+          description="Preferenca personale për orientim dhe personalizim të përmbajtjes."
+        >
         <Card className="bg-white/5 border-white/10">
           <CardContent className="p-6 space-y-5">
             <div>
@@ -1566,8 +1616,13 @@ export default function Profile() {
             </div>
           </CardContent>
         </Card>
+        </ProfilePanel>
 
         {/* Social Links */}
+        <ProfilePanel
+          title="Lidhjet publike"
+          description="LinkedIn, Facebook dhe website personal ose profesional."
+        >
         <Card className="bg-white/5 border-white/10">
           <CardContent className="p-6 space-y-4">
             <h3 className="text-white font-semibold text-lg mb-4">Rrjetet sociale</h3>
@@ -1603,6 +1658,7 @@ export default function Profile() {
             </div>
           </CardContent>
         </Card>
+        </ProfilePanel>
 
         <Button
           type="submit"
@@ -1623,6 +1679,11 @@ export default function Profile() {
         )}
 
         {/* Account Deletion */}
+        <ProfilePanel
+          title="Siguria e llogarisë"
+          description="Veprime të rralla dhe të ndjeshme për llogarinë."
+          danger
+        >
         <Card className="bg-red-500/10 border-red-500/20 mt-8">
           <CardContent className="p-6">
             <div className="flex items-start justify-between gap-4">
@@ -1669,7 +1730,13 @@ export default function Profile() {
             </div>
           </CardContent>
         </Card>
+        </ProfilePanel>
 
+        <ProfilePanel
+          title="Aktiviteti, aplikimet dhe pagesat"
+          description="Kërkimet e ruajtura, aplikimet dhe historiku i pagesave."
+        >
+        <div className="space-y-6">
         {/* Saved Searches */}
         {savedSearches.length > 0 && (
           <Card className="bg-white/5 border-white/10 mt-6">
@@ -1759,6 +1826,13 @@ export default function Profile() {
             </CardContent>
           </Card>
         )}
+        {savedSearches.length === 0 && paymentHistory.length === 0 && (
+          <div className="rounded-xl border border-white/10 bg-white/5 p-5 text-sm text-white/55">
+            Nuk ka ende kërkime të ruajtura ose pagesa për t'u shfaqur.
+          </div>
+        )}
+        </div>
+        </ProfilePanel>
       </motion.form>
 
       {/* Onboarding Tour */}
