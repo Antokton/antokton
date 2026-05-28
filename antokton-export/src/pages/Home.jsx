@@ -187,10 +187,23 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
         setRealNotifHeight(0);
       }
     };
+
+    const scheduleMeasure = () => window.requestAnimationFrame(measure);
     measure();
     const t1 = setTimeout(measure, 300);
     const t2 = setTimeout(measure, 800);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    const t3 = setTimeout(measure, 1600);
+    const observer = new MutationObserver(scheduleMeasure);
+    observer.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('resize', measure);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
   }, [isMobile, isTablet, notifHeight]);
   const theme = themeProp || (document.body.className.includes('theme-light') ? 'light' : 'dark');
 
@@ -539,7 +552,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
 
   // ---- TABLET + MOBILE: gjithçka fit në ekran pa scroll ----
   if (isTablet || isMobile) {
-    const topOffset = realNotifHeight > 0 ? realNotifHeight + mobileLogoOffset + 36 : mobileLogoOffset;
+    const topOffset = realNotifHeight > 0 ? realNotifHeight + mobileLogoOffset + 72 : mobileLogoOffset;
     return (
       <div style={{ width: '100%', height: 'calc(100vh - 64px)', background: '#000', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
         {adminEditStyles}

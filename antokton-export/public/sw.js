@@ -1,4 +1,4 @@
-const VERSION = "antokton-pwa-2026-05-28-1";
+const VERSION = "antokton-pwa-2026-05-28-2";
 const PRECACHE = `${VERSION}-precache`;
 const RUNTIME = `${VERSION}-runtime`;
 const API_CACHE = `${VERSION}-api`;
