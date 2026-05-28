@@ -33,6 +33,7 @@ export default function MobileBottomNav() {
   const location = useLocation();
   const [user, setUser] = useState(null);
   const [bellOpen, setBellOpen] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -85,10 +86,61 @@ export default function MobileBottomNav() {
 
   const unreadMsgCount = unreadMessages.length;
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const isEditable = (element) => {
+      if (!(element instanceof Element)) return false;
+      return Boolean(element.closest("input, textarea, select, [contenteditable='true']"));
+    };
+
+    const isMobileViewport = () => window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 768;
+    const viewport = window.visualViewport;
+    const baselineHeight = viewport?.height || window.innerHeight;
+
+    let focusTimer;
+
+    const updateKeyboardState = () => {
+      const focusedEditable = isEditable(document.activeElement);
+      const visualHeight = viewport?.height || window.innerHeight;
+      const keyboardByViewport = isMobileViewport() && baselineHeight - visualHeight > 120;
+      const open = isMobileViewport() && (focusedEditable || keyboardByViewport);
+      setKeyboardOpen(open);
+      document.body.classList.toggle("keyboard-open", open);
+    };
+
+    const handleFocusIn = () => {
+      window.clearTimeout(focusTimer);
+      updateKeyboardState();
+    };
+
+    const handleFocusOut = () => {
+      window.clearTimeout(focusTimer);
+      focusTimer = window.setTimeout(updateKeyboardState, 120);
+    };
+
+    document.addEventListener("focusin", handleFocusIn);
+    document.addEventListener("focusout", handleFocusOut);
+    viewport?.addEventListener("resize", updateKeyboardState);
+    window.addEventListener("resize", updateKeyboardState);
+    updateKeyboardState();
+
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener("focusin", handleFocusIn);
+      document.removeEventListener("focusout", handleFocusOut);
+      viewport?.removeEventListener("resize", updateKeyboardState);
+      window.removeEventListener("resize", updateKeyboardState);
+      document.body.classList.remove("keyboard-open");
+    };
+  }, []);
+
   const isActive = (path) => {
     if (path === '/') return location.pathname === '/';
     return location.pathname.toLowerCase().startsWith(path.toLowerCase());
   };
+
+  if (keyboardOpen) return null;
 
   return (
     <>
@@ -151,7 +203,7 @@ export default function MobileBottomNav() {
         )}
       </AnimatePresence>
 
-      <nav data-swipe-back-ignore className="fixed left-0 right-0 z-40 flex items-start justify-between overflow-hidden bg-[#0b1020] border-t border-white/10 px-1 md:hidden"
+      <nav data-swipe-back-ignore data-mobile-bottom-nav className="bottom-nav fixed left-0 right-0 z-40 flex items-start justify-between overflow-hidden bg-[#0b1020] border-t border-white/10 px-1 md:hidden"
         style={{ bottom: 0, height: 'calc(58px + env(safe-area-inset-bottom))', paddingBottom: 'env(safe-area-inset-bottom)', paddingTop: 4, transform: 'translateZ(0)', willChange: 'transform', WebkitTransform: 'translateZ(0)' }}>
         {activeTabs.map(tab => {
           const Icon = ICON_MAP[tab.icon] || Star;
