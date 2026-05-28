@@ -150,7 +150,10 @@ export default function EventNotifications() {
   return (
     <>
       <style>{styles}</style>
-      <div className="fixed top-[4rem] md:top-[4rem] left-0 right-0 z-40 max-w-5xl mx-auto px-4 sm:px-6 space-y-0.5">
+      <div
+        className="fixed left-0 right-0 z-40 max-w-5xl mx-auto px-4 sm:px-6 space-y-0.5"
+        style={{ top: 'calc(64px + env(safe-area-inset-top))' }}
+      >
         <AnimatePresence>
           {!dismissed.daily && featuredDayEvent && (
             <motion.div

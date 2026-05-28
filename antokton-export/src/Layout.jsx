@@ -433,7 +433,17 @@ export default function Layout({ children, currentPageName }) {
       )}
 
       {/* Navbar */}
-      <nav className="nav-glass fixed left-0 right-0 border-b border-white/10 top-0" style={{ overflow: 'visible', pointerEvents: 'auto', zIndex: 99999, position: 'fixed' }}>
+      <nav
+        className="nav-glass fixed left-0 right-0 border-b border-white/10 top-0"
+        style={{
+          overflow: 'visible',
+          pointerEvents: 'auto',
+          zIndex: 99999,
+          position: 'fixed',
+          paddingTop: 'env(safe-area-inset-top)',
+          minHeight: 'calc(64px + env(safe-area-inset-top))'
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -769,7 +779,7 @@ export default function Layout({ children, currentPageName }) {
             data-swipe-back-ignore
             className="md:hidden fixed left-0 right-0 border-t border-white/10"
             style={{
-              top: '64px',
+              top: 'calc(64px + env(safe-area-inset-top))',
               bottom: '64px',
               zIndex: 9998,
               display: 'flex',
@@ -1012,7 +1022,15 @@ export default function Layout({ children, currentPageName }) {
         <MobileHeader />
 
       {/* Main Content */}
-      <main className="min-h-screen pt-16" style={{ position: 'relative', zIndex: 10, paddingBottom: 'calc(100px + env(safe-area-inset-bottom))' }}>
+      <main
+        className="min-h-screen"
+        style={{
+          position: 'relative',
+          zIndex: 10,
+          paddingTop: 'calc(64px + env(safe-area-inset-top))',
+          paddingBottom: 'calc(100px + env(safe-area-inset-bottom))'
+        }}
+      >
         {children}
       </main>
 
