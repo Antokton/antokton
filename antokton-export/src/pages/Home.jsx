@@ -180,7 +180,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
   React.useEffect(() => {
     if (!(isMobile || isTablet)) return;
     const measure = () => {
-      const el = document.querySelector('.fixed.top-\\[4rem\\]');
+      const el = document.querySelector('[data-event-notifications]');
       if (el) {
         setRealNotifHeight(el.getBoundingClientRect().height);
       } else {
@@ -539,7 +539,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
 
   // ---- TABLET + MOBILE: gjithçka fit në ekran pa scroll ----
   if (isTablet || isMobile) {
-    const topOffset = realNotifHeight > 0 ? realNotifHeight + mobileLogoOffset + 18 : mobileLogoOffset;
+    const topOffset = realNotifHeight > 0 ? realNotifHeight + mobileLogoOffset + 36 : mobileLogoOffset;
     return (
       <div style={{ width: '100%', height: 'calc(100vh - 64px)', background: '#000', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
         {adminEditStyles}

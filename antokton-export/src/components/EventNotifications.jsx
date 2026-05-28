@@ -151,6 +151,7 @@ export default function EventNotifications() {
     <>
       <style>{styles}</style>
       <div
+        data-event-notifications
         className="fixed left-0 right-0 z-40 max-w-5xl mx-auto px-4 sm:px-6 space-y-0.5"
         style={{ top: 'calc(64px + env(safe-area-inset-top))' }}
       >
