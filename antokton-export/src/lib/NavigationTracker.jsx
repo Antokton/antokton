@@ -111,19 +111,69 @@ export default function NavigationTracker() {
         let currentX = 0;
         let tracking = false;
         let dragging = false;
+        let navigating = false;
 
-        const clearLegacyRootTransform = () => {
-            const root = document.getElementById("root");
-            if (!root) return;
-            root.style.transition = "";
-            root.style.transform = "";
-            root.style.opacity = "";
-            root.style.boxShadow = "";
-            root.style.willChange = "";
+        const shield = document.createElement("div");
+        shield.setAttribute("data-swipe-back-ignore", "true");
+        Object.assign(shield.style, {
+            position: "fixed",
+            inset: "0",
+            zIndex: "0",
+            opacity: "0",
+            pointerEvents: "none",
+            background: "#050914",
+            transition: "opacity 160ms ease-out",
+        });
+
+        const root = () => document.getElementById("root");
+
+        const ensureShield = () => {
+            if (!shield.isConnected) document.body.prepend(shield);
         };
 
-        const resetSwipePreview = () => {
-            clearLegacyRootTransform();
+        const clearLegacyRootTransform = () => {
+            const rootEl = root();
+            if (!rootEl) return;
+            rootEl.style.transition = "";
+            rootEl.style.transform = "";
+            rootEl.style.opacity = "";
+            rootEl.style.boxShadow = "";
+            rootEl.style.willChange = "";
+            rootEl.style.position = "";
+            rootEl.style.zIndex = "";
+        };
+
+        const resetSwipePreview = (animate = true) => {
+            const rootEl = root();
+            if (!rootEl) return;
+            rootEl.style.transition = animate ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease-out" : "";
+            rootEl.style.transform = "";
+            rootEl.style.boxShadow = "";
+            shield.style.transition = animate ? "opacity 220ms ease-out" : "none";
+            shield.style.opacity = "0";
+            window.setTimeout(() => {
+                if (!tracking && !navigating) {
+                    clearLegacyRootTransform();
+                    if (shield.isConnected) shield.remove();
+                }
+            }, animate ? 230 : 0);
+        };
+
+        const setDragProgress = (distance) => {
+            const rootEl = root();
+            if (!rootEl) return;
+            const width = viewportWidth();
+            const safeDistance = Math.max(0, Math.min(distance, width));
+            const progress = Math.max(0, Math.min(safeDistance / width, 1));
+            ensureShield();
+            shield.style.transition = "none";
+            shield.style.opacity = `${Math.min(0.72, 0.18 + progress * 0.54)}`;
+            rootEl.style.position = "relative";
+            rootEl.style.zIndex = "1";
+            rootEl.style.transition = "none";
+            rootEl.style.willChange = "transform, box-shadow";
+            rootEl.style.transform = `translate3d(${safeDistance}px, 0, 0)`;
+            rootEl.style.boxShadow = "-18px 0 42px rgba(0,0,0,0.38)";
         };
 
         const isInteractiveTarget = (target) => {
@@ -143,6 +193,7 @@ export default function NavigationTracker() {
             currentX = startX;
             tracking = true;
             dragging = false;
+            navigating = false;
             clearLegacyRootTransform();
             if (event.cancelable) event.preventDefault();
         };
@@ -168,6 +219,7 @@ export default function NavigationTracker() {
 
             if (dragging) {
                 if (event.cancelable) event.preventDefault();
+                setDragProgress(deltaX);
                 return;
             }
 
@@ -196,32 +248,50 @@ export default function NavigationTracker() {
             const fastIntent = dragging && deltaX >= 140 && velocity > 0.75 && deltaX > deltaY * 2;
 
             if (!shouldNavigate && !fastIntent) {
-                resetSwipePreview();
+                dragging = false;
+                resetSwipePreview(true);
                 return;
             }
 
-            resetSwipePreview();
-            navigate(parentPath);
+            const rootEl = root();
+            navigating = true;
+            if (rootEl) {
+                ensureShield();
+                shield.style.transition = "opacity 160ms ease-out";
+                shield.style.opacity = "0.78";
+                rootEl.style.position = "relative";
+                rootEl.style.zIndex = "1";
+                rootEl.style.transition = "transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms ease-out";
+                rootEl.style.transform = `translate3d(${viewportWidth()}px, 0, 0)`;
+                rootEl.style.boxShadow = "-18px 0 42px rgba(0,0,0,0.38)";
+            }
+            window.setTimeout(() => {
+                clearLegacyRootTransform();
+                if (shield.isConnected) shield.remove();
+                navigate(parentPath);
+                navigating = false;
+            }, 170);
         };
 
         const handleTouchCancel = () => {
             tracking = false;
             dragging = false;
-            resetSwipePreview();
+            resetSwipePreview(true);
         };
 
-        window.addEventListener("touchstart", handleTouchStart, { passive: false });
-        window.addEventListener("touchmove", handleTouchMove, { passive: false });
-        window.addEventListener("touchend", handleTouchEnd, { passive: true });
-        window.addEventListener("touchcancel", handleTouchCancel, { passive: true });
+        document.addEventListener("touchstart", handleTouchStart, { passive: false, capture: true });
+        document.addEventListener("touchmove", handleTouchMove, { passive: false, capture: true });
+        document.addEventListener("touchend", handleTouchEnd, { passive: true, capture: true });
+        document.addEventListener("touchcancel", handleTouchCancel, { passive: true, capture: true });
 
         return () => {
-            window.removeEventListener("touchstart", handleTouchStart);
-            window.removeEventListener("touchmove", handleTouchMove);
-            window.removeEventListener("touchend", handleTouchEnd);
-            window.removeEventListener("touchcancel", handleTouchCancel);
-            resetSwipePreview();
+            document.removeEventListener("touchstart", handleTouchStart, { capture: true });
+            document.removeEventListener("touchmove", handleTouchMove, { capture: true });
+            document.removeEventListener("touchend", handleTouchEnd, { capture: true });
+            document.removeEventListener("touchcancel", handleTouchCancel, { capture: true });
+            resetSwipePreview(false);
             clearLegacyRootTransform();
+            if (shield.isConnected) shield.remove();
         };
     }, [location.pathname, mainPageKey, navigate]);
 
