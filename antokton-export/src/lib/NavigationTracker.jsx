@@ -104,9 +104,8 @@ export default function NavigationTracker() {
         if (!parentPath) return undefined;
         if (!window.matchMedia("(pointer: coarse)").matches && window.innerWidth > 900) return undefined;
 
-        const root = document.getElementById("root");
         const viewportWidth = () => Math.max(window.innerWidth || 0, 320);
-        const maxPreviewOffset = () => Math.min(viewportWidth() * 0.18, 64);
+        const maxPreviewOffset = () => Math.min(viewportWidth() * 0.18, 72);
         let startX = 0;
         let startY = 0;
         let startTime = 0;
@@ -114,29 +113,65 @@ export default function NavigationTracker() {
         let tracking = false;
         let dragging = false;
 
-        const resetRoot = (animate = true) => {
+        const indicator = document.createElement("div");
+        indicator.setAttribute("data-swipe-back-ignore", "true");
+        indicator.textContent = "Kthehu";
+        Object.assign(indicator.style, {
+            position: "fixed",
+            left: "10px",
+            top: "50%",
+            zIndex: "100000",
+            transform: "translate3d(-120%, -50%, 0)",
+            opacity: "0",
+            pointerEvents: "none",
+            padding: "10px 12px",
+            borderRadius: "999px",
+            border: "1px solid rgba(255,255,255,0.16)",
+            background: "rgba(11,16,32,0.92)",
+            color: "rgba(255,255,255,0.88)",
+            fontSize: "13px",
+            fontWeight: "700",
+            lineHeight: "1",
+            boxShadow: "0 12px 34px rgba(0,0,0,0.36)",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+            transition: "transform 180ms ease-out, opacity 180ms ease-out",
+            willChange: "transform, opacity",
+        });
+
+        const clearLegacyRootTransform = () => {
+            const root = document.getElementById("root");
             if (!root) return;
-            root.style.transition = animate ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease-out" : "";
+            root.style.transition = "";
             root.style.transform = "";
             root.style.opacity = "";
             root.style.boxShadow = "";
             root.style.willChange = "";
+        };
+
+        const ensureIndicator = () => {
+            if (!indicator.isConnected) document.body.appendChild(indicator);
+        };
+
+        const resetSwipePreview = (animate = true) => {
+            clearLegacyRootTransform();
+            indicator.style.transition = animate ? "transform 180ms ease-out, opacity 180ms ease-out" : "none";
+            indicator.style.transform = "translate3d(-120%, -50%, 0)";
+            indicator.style.opacity = "0";
             window.setTimeout(() => {
-                root.style.transition = "";
-            }, 240);
+                if (!tracking && indicator.isConnected) indicator.remove();
+            }, animate ? 190 : 0);
         };
 
         const setDragProgress = (distance) => {
-            if (!root) return;
             const width = viewportWidth();
             const safeDistance = Math.max(0, distance);
             const progress = Math.max(0, Math.min(safeDistance / width, 1));
             const easedDistance = Math.min(Math.sqrt(safeDistance) * 6, maxPreviewOffset());
-            root.style.transition = "none";
-            root.style.willChange = "transform, box-shadow";
-            root.style.transform = `translate3d(${easedDistance}px, 0, 0)`;
-            root.style.opacity = "";
-            root.style.boxShadow = progress > 0.08 ? "-18px 0 36px rgba(0,0,0,0.32)" : "";
+            ensureIndicator();
+            indicator.style.transition = "none";
+            indicator.style.transform = `translate3d(${easedDistance - 72}px, -50%, 0)`;
+            indicator.style.opacity = `${Math.min(1, progress * 4)}`;
         };
 
         const isInteractiveTarget = (target) => {
@@ -156,6 +191,7 @@ export default function NavigationTracker() {
             currentX = startX;
             tracking = true;
             dragging = false;
+            clearLegacyRootTransform();
         };
 
         const handleTouchMove = (event) => {
@@ -181,7 +217,7 @@ export default function NavigationTracker() {
 
             if (deltaY > 72) {
                 tracking = false;
-                resetRoot();
+                resetSwipePreview();
             }
         };
 
@@ -191,7 +227,7 @@ export default function NavigationTracker() {
 
             const touch = event.changedTouches?.[0];
             if (!touch) {
-                resetRoot();
+                resetSwipePreview();
                 return;
             }
 
@@ -204,26 +240,25 @@ export default function NavigationTracker() {
             const fastIntent = dragging && deltaX >= 140 && velocity > 0.75 && deltaX > deltaY * 2;
 
             if (!shouldNavigate && !fastIntent) {
-                resetRoot(true);
+                resetSwipePreview(true);
                 return;
             }
 
-            if (root) {
-                root.style.transition = "transform 120ms ease-out, box-shadow 120ms ease-out";
-                root.style.transform = `translate3d(${maxPreviewOffset()}px, 0, 0)`;
-                root.style.boxShadow = "-18px 0 36px rgba(0,0,0,0.32)";
-            }
+            ensureIndicator();
+            indicator.style.transition = "transform 90ms ease-out, opacity 90ms ease-out";
+            indicator.style.transform = `translate3d(${maxPreviewOffset() - 72}px, -50%, 0)`;
+            indicator.style.opacity = "0.9";
 
             window.setTimeout(() => {
-                resetRoot(false);
+                resetSwipePreview(false);
                 navigate(parentPath);
-            }, 80);
+            }, 70);
         };
 
         const handleTouchCancel = () => {
             tracking = false;
             dragging = false;
-            resetRoot(true);
+            resetSwipePreview(true);
         };
 
         window.addEventListener("touchstart", handleTouchStart, { passive: true });
@@ -236,7 +271,8 @@ export default function NavigationTracker() {
             window.removeEventListener("touchmove", handleTouchMove);
             window.removeEventListener("touchend", handleTouchEnd);
             window.removeEventListener("touchcancel", handleTouchCancel);
-            resetRoot(false);
+            resetSwipePreview(false);
+            clearLegacyRootTransform();
         };
     }, [location.pathname, mainPageKey, navigate]);
 
