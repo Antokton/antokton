@@ -62,7 +62,8 @@ export default function MobileBottomNav() {
     queryKey: ["notifications", user?.email],
     queryFn: () => base44.entities.Notification.filter({ user_email: user.email }, "-created_date", 10),
     enabled: !!user,
-    refetchInterval: 15000
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false
   });
 
   const markAsReadMutation = useMutation({
@@ -81,7 +82,8 @@ export default function MobileBottomNav() {
     queryKey: ["unreadMessages", user?.email],
     queryFn: () => base44.entities.ChatMessage.filter({ receiver_email: user.email, is_read: false }, "-created_date", 50),
     enabled: !!user,
-    refetchInterval: 10000
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false
   });
 
   const unreadMsgCount = unreadMessages.length;

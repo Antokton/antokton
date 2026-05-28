@@ -219,7 +219,10 @@ export default function Layout({ children, currentPageName }) {
   // Update last_seen when user is active
   useEffect(() => {
     if (isAuth && user) {
+      let inFlight = false;
       const updateLastSeen = async () => {
+        if (inFlight || document.visibilityState === 'hidden') return;
+        inFlight = true;
         try {
           await base44.auth.updateMe({ 
             last_seen: new Date().toISOString(),
@@ -227,10 +230,17 @@ export default function Layout({ children, currentPageName }) {
           });
         } catch (error) {
           // Silently ignore activity update failures.
+        } finally {
+          inFlight = false;
         }
       };
       updateLastSeen();
-      const interval = setInterval(updateLastSeen, 30000); // Every 30 seconds
+      const interval = setInterval(updateLastSeen, 300000); // Every 5 minutes
+
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') updateLastSeen();
+      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
       
       // Mark as offline when leaving
       const handleBeforeUnload = async () => {
@@ -244,6 +254,7 @@ export default function Layout({ children, currentPageName }) {
       
       return () => {
         clearInterval(interval);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
         window.removeEventListener('beforeunload', handleBeforeUnload);
       };
     }

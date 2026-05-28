@@ -1352,22 +1352,27 @@ function serveStatic(req, res, pathname) {
   sendFile(filePath, type);
 }
 
+const REQUEST_TIMEOUT_MS = Number(process.env.REQUEST_TIMEOUT_MS || 60000);
+const HEADERS_TIMEOUT_MS = Number(process.env.HEADERS_TIMEOUT_MS || REQUEST_TIMEOUT_MS + 5000);
+const KEEP_ALIVE_TIMEOUT_MS = Number(process.env.KEEP_ALIVE_TIMEOUT_MS || 5000);
+
 const server = http.createServer(async (req, res) => {
-  // Request timeout protection (30 seconds)
-  req.setTimeout(30000, () => {
+  let timedOut = false;
+  const requestTimeout = setTimeout(() => {
+    if (res.writableEnded || res.destroyed) return;
+    timedOut = true;
     logError(new Error("Request timeout"), req, 408);
     if (!res.headersSent) {
       sendError(res, 408, "Request timeout");
     }
     req.destroy();
-  });
+  }, REQUEST_TIMEOUT_MS);
 
-  // Socket timeout protection (35 seconds)
-  req.socket.setTimeout(35000, () => {
-    logError(new Error("Socket timeout"), req, 408);
-    req.socket.destroy();
-  });
+  const clearRequestTimeout = () => clearTimeout(requestTimeout);
+  res.on("finish", clearRequestTimeout);
+  res.on("close", clearRequestTimeout);
   try {
+    if (timedOut) return;
     const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
     const segments = url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
 
@@ -1457,11 +1462,16 @@ const server = http.createServer(async (req, res) => {
     if (segments[0] === "api") return sendError(res, 404, "API endpoint not found");
     return serveStatic(req, res, url.pathname);
   } catch (error) {
+    if (timedOut || res.destroyed || res.writableEnded) return;
     const status = Number.isInteger(error.status) && error.status >= 400 && error.status < 600 ? error.status : 500;
     logError(error, req, status);
     return sendError(res, status, error.message || "Internal server error");
   }
 });
+
+server.requestTimeout = REQUEST_TIMEOUT_MS;
+server.headersTimeout = Math.max(HEADERS_TIMEOUT_MS, REQUEST_TIMEOUT_MS + 5000);
+server.keepAliveTimeout = KEEP_ALIVE_TIMEOUT_MS;
 
 // Validate production environment requirements
 function validateProductionEnvironment() {

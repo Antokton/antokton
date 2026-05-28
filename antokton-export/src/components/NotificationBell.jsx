@@ -27,7 +27,8 @@ export default function NotificationBell() {
     queryKey: ["notifications", user?.email],
     queryFn: () => base44.entities.Notification.filter({ user_email: user.email }, "-created_date", 10),
     enabled: !!user,
-    refetchInterval: 10000
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false
   });
 
   const markAsReadMutation = useMutation({
