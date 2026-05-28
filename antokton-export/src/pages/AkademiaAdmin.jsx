@@ -367,7 +367,7 @@ export default function AkademiaAdmin() {
                           <div className="min-w-0">
                             <h3 className="text-white font-semibold">{app.user_name || app.user_email}</h3>
                             <p className="text-white/55 text-sm">{course?.title || app.course_id}</p>
-                            <p className="text-white/45 text-xs mt-1">{app.current_profession || "Pa profesion aktual"} -> {app.desired_profession || "Pa profesion te synuar"}</p>
+                            <p className="text-white/45 text-xs mt-1">{app.current_profession || "Pa profesion aktual"} &rarr; {app.desired_profession || "Pa profesion te synuar"}</p>
                             {app.motivation && <p className="text-white/60 text-sm mt-2 line-clamp-2">{app.motivation}</p>}
                           </div>
                           <div className="flex flex-wrap gap-2 lg:justify-end">

@@ -478,8 +478,7 @@ export default function PostDetail() {
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
       linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
       whatsapp: `https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`,
-      twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
-      instagram: `https://www.instagram.com/`
+      twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
     };
     
     if (platform === 'copy') {

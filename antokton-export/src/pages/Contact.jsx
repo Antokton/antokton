@@ -9,9 +9,16 @@ import { Mail, MessageCircle, Send, CheckCircle, Loader2, MapPin } from "lucide-
 import { motion } from "framer-motion";
 
 export default function Contact() {
-  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
+  const [form, setForm] = useState({ name: "", email: "", category: "support", subject: "", message: "" });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  const categoryLabels = {
+    support: "Ndihmë / pyetje",
+    abuse: "Raportim abuzimi ose sigurie",
+    privacy: "Privatësi / të dhëna personale",
+    legal: "Terma / çështje ligjore"
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,13 +28,13 @@ export default function Contact() {
       await base44.entities.ContactMessage.create({
         name: form.name,
         email: form.email,
-        subject: form.subject,
-        message: form.message,
+        subject: `[${categoryLabels[form.category]}] ${form.subject}`,
+        message: `Kategoria: ${categoryLabels[form.category]}\n\n${form.message}`,
         status: "new"
       });
       
       setSuccess(true);
-      setForm({ name: "", email: "", subject: "", message: "" });
+      setForm({ name: "", email: "", category: "support", subject: "", message: "" });
       setTimeout(() => setSuccess(false), 5000);
     } catch (error) {
       alert("Gabim në dërgim: " + error.message);
@@ -103,6 +110,25 @@ export default function Contact() {
                   placeholder="Si mund t'ju ndihmojmë?"
                   className="bg-white/5 border-white/10 text-white"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-white">Kategoria *</Label>
+                <select
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  required
+                  className="h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-white"
+                >
+                  {Object.entries(categoryLabels).map(([value, label]) => (
+                    <option key={value} value={value} className="bg-[#0b1020] text-white">
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-white/50">
+                  Për raportime urgjente zgjidhni abuzim/siguri që mesazhi të identifikohet qartë nga stafi.
+                </p>
               </div>
 
               <div className="space-y-2">

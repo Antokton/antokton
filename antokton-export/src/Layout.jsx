@@ -226,8 +226,7 @@ export default function Layout({ children, currentPageName }) {
             is_online: true 
           });
         } catch (error) {
-          // Silently ignore network errors for last_seen updates
-          console.log('Failed to update last_seen:', error.message);
+          // Silently ignore activity update failures.
         }
       };
       updateLastSeen();
@@ -1076,6 +1075,9 @@ export default function Layout({ children, currentPageName }) {
               </div>
               <p style={{ color: '#ffffff' }} className="text-sm leading-relaxed font-medium">
                 Platformë komunitare & punësimi për diasporën shqiptare. Punë + komunitet + besueshmëri.
+              </p>
+              <p className="mt-3 inline-flex rounded-full border border-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white/70">
+                Beta publike
               </p>
             </div>
 
