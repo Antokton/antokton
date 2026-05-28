@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Calendar, MapPin, Users, Video, Clock, ArrowLeft, CheckCircle, UserPlus, Mail, Loader2, MessageCircle, Share2, Copy, CalendarPlus, Download, Star, CalendarDays, Edit, X } from "lucide-react";
+import { MapPin, Users, Video, Clock, ArrowLeft, CheckCircle, UserPlus, Mail, Loader2, Copy, CalendarPlus, Download, Star, CalendarDays, Edit, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "../utils";
@@ -451,7 +451,7 @@ export default function EventDetail() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+    <div className="max-w-6xl mx-auto overflow-x-hidden px-4 sm:px-6 py-8">
       <Link to={createPageUrl("Events")} className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-6 transition-colors">
         <ArrowLeft className="w-4 h-4" />
         Kthehu te ngjarjet
@@ -473,20 +473,24 @@ export default function EventDetail() {
         <div className="lg:col-span-2 space-y-6">
           <Card className="bg-transparent border-white/10">
             <CardContent className="p-6">
-              <div className="flex items-start justify-between gap-4 mb-4">
-                <div className="flex-1">
+              <div className="flex min-w-0 flex-col gap-4 mb-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0 flex-1">
                   <Badge className={`border ${categoryColors[event.category]} mb-3`}>
                     {categoryLabels[event.category]}
                   </Badge>
                   
-                  <h1 className="text-3xl font-bold text-white">{event.title}</h1>
+                  <h1 className="break-words text-2xl font-bold text-white sm:text-3xl">{event.title}</h1>
                 </div>
-                <div className="flex gap-1">
+                <div
+                  data-swipe-back-ignore
+                  className="flex max-w-full gap-1 overflow-x-auto pb-1 sm:w-auto sm:justify-end"
+                  style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+                >
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => handleShare('facebook')}
-                    className="text-white/60 hover:text-blue-400 hover:bg-transparent w-8 h-8 p-0"
+                    className="h-8 w-8 shrink-0 p-0 text-white/60 hover:bg-transparent hover:text-blue-400"
                     title="Shpërndaj në Facebook"
                   >
                     <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -497,7 +501,7 @@ export default function EventDetail() {
                     size="sm"
                     variant="ghost"
                     onClick={() => handleShare('linkedin')}
-                    className="text-white/60 hover:text-blue-500 hover:bg-transparent w-8 h-8 p-0"
+                    className="h-8 w-8 shrink-0 p-0 text-white/60 hover:bg-transparent hover:text-blue-500"
                     title="Shpërndaj në LinkedIn"
                   >
                     <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -508,7 +512,7 @@ export default function EventDetail() {
                     size="sm"
                     variant="ghost"
                     onClick={() => handleShare('whatsapp')}
-                    className="text-white/60 hover:text-green-500 hover:bg-transparent w-8 h-8 p-0"
+                    className="h-8 w-8 shrink-0 p-0 text-white/60 hover:bg-transparent hover:text-green-500"
                     title="Shpërndaj në WhatsApp"
                   >
                     <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -519,7 +523,7 @@ export default function EventDetail() {
                     size="sm"
                     variant="ghost"
                     onClick={() => handleShare('twitter')}
-                    className="text-white/60 hover:text-sky-400 hover:bg-transparent w-8 h-8 p-0"
+                    className="h-8 w-8 shrink-0 p-0 text-white/60 hover:bg-transparent hover:text-sky-400"
                     title="Shpërndaj në Twitter/X"
                   >
                     <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -530,7 +534,7 @@ export default function EventDetail() {
                     size="sm"
                     variant="ghost"
                     onClick={() => handleShare('instagram')}
-                    className="text-white/60 hover:text-pink-400 hover:bg-transparent w-8 h-8 p-0"
+                    className="h-8 w-8 shrink-0 p-0 text-white/60 hover:bg-transparent hover:text-pink-400"
                     title="Shpërndaj në Instagram"
                   >
                     <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -541,7 +545,7 @@ export default function EventDetail() {
                     size="sm"
                     variant="ghost"
                     onClick={() => handleShare('copy')}
-                    className="text-white/60 hover:text-white hover:bg-transparent w-8 h-8 p-0"
+                    className="h-8 w-8 shrink-0 p-0 text-white/60 hover:bg-transparent hover:text-white"
                     title="Kopjo linkun"
                   >
                     <Copy className="w-4 h-4" />
@@ -580,10 +584,14 @@ export default function EventDetail() {
               </div>
 
               <div className="border-t border-white/10 pt-6">
-                <div className="flex gap-2 mb-4">
+                <div
+                  data-swipe-back-ignore
+                  className="flex max-w-full gap-2 overflow-x-auto pb-1 mb-4"
+                  style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+                >
                   <button
                     onClick={() => setActiveTab("details")}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       activeTab === "details" 
                         ? "bg-white/10 text-white" 
                         : "text-white/50 hover:text-white"
@@ -593,7 +601,7 @@ export default function EventDetail() {
                   </button>
                   <button
                     onClick={() => setActiveTab("networking")}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       activeTab === "networking" 
                         ? "bg-white/10 text-white" 
                         : "text-white/50 hover:text-white"

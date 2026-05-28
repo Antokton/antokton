@@ -106,6 +106,7 @@ export default function NavigationTracker() {
 
         const root = document.getElementById("root");
         const viewportWidth = () => Math.max(window.innerWidth || 0, 320);
+        const maxPreviewOffset = () => Math.min(viewportWidth() * 0.18, 64);
         let startX = 0;
         let startY = 0;
         let startTime = 0;
@@ -115,13 +116,14 @@ export default function NavigationTracker() {
 
         const resetRoot = (animate = true) => {
             if (!root) return;
-            root.style.transition = animate ? "transform 180ms ease-out, opacity 180ms ease-out" : "";
+            root.style.transition = animate ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease-out" : "";
             root.style.transform = "";
             root.style.opacity = "";
+            root.style.boxShadow = "";
             root.style.willChange = "";
             window.setTimeout(() => {
                 root.style.transition = "";
-            }, 200);
+            }, 240);
         };
 
         const setDragProgress = (distance) => {
@@ -129,11 +131,12 @@ export default function NavigationTracker() {
             const width = viewportWidth();
             const safeDistance = Math.max(0, distance);
             const progress = Math.max(0, Math.min(safeDistance / width, 1));
-            const easedDistance = Math.min(safeDistance, width * 0.82);
+            const easedDistance = Math.min(Math.sqrt(safeDistance) * 6, maxPreviewOffset());
             root.style.transition = "none";
-            root.style.willChange = "transform, opacity";
+            root.style.willChange = "transform, box-shadow";
             root.style.transform = `translate3d(${easedDistance}px, 0, 0)`;
-            root.style.opacity = `${1 - progress * 0.18}`;
+            root.style.opacity = "";
+            root.style.boxShadow = progress > 0.08 ? "-18px 0 36px rgba(0,0,0,0.32)" : "";
         };
 
         const isInteractiveTarget = (target) => {
@@ -206,15 +209,15 @@ export default function NavigationTracker() {
             }
 
             if (root) {
-                root.style.transition = "transform 180ms ease-in, opacity 180ms ease-in";
-                root.style.transform = `translate3d(${viewportWidth()}px, 0, 0)`;
-                root.style.opacity = "0.78";
+                root.style.transition = "transform 120ms ease-out, box-shadow 120ms ease-out";
+                root.style.transform = `translate3d(${maxPreviewOffset()}px, 0, 0)`;
+                root.style.boxShadow = "-18px 0 36px rgba(0,0,0,0.32)";
             }
 
             window.setTimeout(() => {
-                navigate(parentPath);
                 resetRoot(false);
-            }, 120);
+                navigate(parentPath);
+            }, 80);
         };
 
         const handleTouchCancel = () => {

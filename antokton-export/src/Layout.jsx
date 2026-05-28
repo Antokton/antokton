@@ -766,6 +766,7 @@ export default function Layout({ children, currentPageName }) {
         {menuOpen && (
           <div
             ref={menuRef}
+            data-swipe-back-ignore
             className="md:hidden fixed left-0 right-0 border-t border-white/10"
             style={{
               top: '64px',

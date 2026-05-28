@@ -151,7 +151,7 @@ export default function MobileBottomNav() {
         )}
       </AnimatePresence>
 
-      <nav className="fixed left-0 right-0 z-40 flex items-start justify-between overflow-hidden bg-[#0b1020] border-t border-white/10 px-1 md:hidden"
+      <nav data-swipe-back-ignore className="fixed left-0 right-0 z-40 flex items-start justify-between overflow-hidden bg-[#0b1020] border-t border-white/10 px-1 md:hidden"
         style={{ bottom: 0, height: 'calc(58px + env(safe-area-inset-bottom))', paddingBottom: 'env(safe-area-inset-bottom)', paddingTop: 4, transform: 'translateZ(0)', willChange: 'transform', WebkitTransform: 'translateZ(0)' }}>
         {activeTabs.map(tab => {
           const Icon = ICON_MAP[tab.icon] || Star;

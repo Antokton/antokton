@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Clock, ThumbsUp, ThumbsDown, MessageCircle, User, Send, ArrowLeft, Phone, Briefcase, Heart, Flag, Share2, Copy, Users as UsersIcon, X, Pencil, Check, MoreVertical, ExternalLink, Link2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { MapPin, Clock, MessageCircle, User, Send, ArrowLeft, Phone, Briefcase, Flag, Share2, Copy, Users as UsersIcon, X, Pencil, Check, MoreVertical, ExternalLink, Link2 } from "lucide-react";
 import LocationPicker from "../components/job/LocationPicker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
@@ -504,7 +504,7 @@ export default function PostDetail() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+    <div className="mx-auto max-w-3xl overflow-x-hidden px-4 py-8 sm:px-6">
       {/* Back */}
       <Link
         to={createPageUrl("Feed")}
@@ -518,12 +518,12 @@ export default function PostDetail() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl border border-white/10 overflow-hidden"
+        className="max-w-full overflow-hidden rounded-2xl border border-white/10"
         style={{ background: 'rgba(255, 255, 255, 0.06)' }}
       >
         <div className="p-6 sm:p-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center justify-between gap-3 mb-4">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Badge variant="secondary" className="bg-blue-500/20 text-blue-300 border-blue-500/30 text-xs">
                 {categoryLabels[job.category] || job.category}
               </Badge>
@@ -669,7 +669,7 @@ export default function PostDetail() {
             </div>
           )}
 
-          <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
+          <h1 className="break-words text-2xl sm:text-3xl font-bold text-white leading-tight">
             {isEditing ? editForm.title : job.title}
           </h1>
 
@@ -742,7 +742,11 @@ export default function PostDetail() {
               : job.image_url ? [job.image_url] : [];
             if (imgs.length === 0) return null;
             return (
-              <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+              <div
+                data-swipe-back-ignore
+                className="mt-5 flex max-w-full gap-2 overflow-x-auto pb-1"
+                style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+              >
                 {imgs.map((imgUrl, i) => (
                   <a key={i} href={imgUrl} target="_blank" rel="noopener noreferrer" className="shrink-0">
                     <img
@@ -757,7 +761,7 @@ export default function PostDetail() {
             );
           })()}
 
-          <div className="mt-6 text-white leading-relaxed whitespace-pre-wrap">
+          <div className="mt-6 break-words text-white leading-relaxed whitespace-pre-wrap">
             {String((isEditing ? editForm.description : job.description) || "").split(/(https?:\/\/[^\s]+)/g).map((part, i) => {
               if (part.match(/https?:\/\/[^\s]+/)) {
                 return (
@@ -909,7 +913,7 @@ export default function PostDetail() {
                 href={job.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-xs text-[#8ab4ff] hover:text-[#9bffd6] transition-colors"
+                className="flex min-w-0 max-w-full items-center gap-2 text-xs text-[#8ab4ff] hover:text-[#9bffd6] transition-colors"
               >
                 <Link2 className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="truncate underline underline-offset-2">{job.source_url}</span>
@@ -943,7 +947,7 @@ export default function PostDetail() {
             )}
 
             {/* Action buttons row */}
-            <div className="flex items-center border-t border-white/10 pt-1 gap-0">
+            <div className="flex max-w-full items-center overflow-hidden border-t border-white/10 pt-1 gap-0">
               {/* Emoji Reaction button */}
               <div className="relative flex-1 flex justify-center">
                 <button
@@ -1055,7 +1059,7 @@ export default function PostDetail() {
           ))}
 
           {isAuth && (hasActiveSubscription || user?.role === 'admin' || user?.role === 'moderator') ? (
-            <div className="flex items-center gap-2 mt-3 px-1">
+            <div className="flex max-w-full items-center gap-2 overflow-hidden mt-3 px-1">
               <div
                 className="flex-shrink-0 rounded-full flex items-center justify-center font-bold text-[#0b1020]"
                 style={{ width: 30, height: 30, fontSize: 11, background: 'linear-gradient(135deg, #8ab4ff, #9bffd6)' }}
@@ -1063,7 +1067,7 @@ export default function PostDetail() {
                 {(user?.first_name || user?.full_name || "A")[0].toUpperCase()}
               </div>
               <div
-                className="flex-1 flex items-center gap-2 rounded-full px-4 py-2"
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-full px-4 py-2"
                 style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
               >
                 <input
