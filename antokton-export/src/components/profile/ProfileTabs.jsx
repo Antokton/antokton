@@ -41,28 +41,29 @@ export default function ProfileTabs({ user, children }) {
   ].filter(t => t.show);
 
   return (
-    <div className="grid w-full gap-5 lg:grid-cols-[230px_minmax(0,1fr)]">
+    <div className="grid w-full max-w-full gap-5 overflow-hidden lg:grid-cols-[230px_minmax(0,1fr)]">
       <aside className="lg:sticky lg:top-24 lg:self-start">
-        <div className="overflow-x-auto pb-2 lg:overflow-visible lg:pb-0" data-swipe-back-ignore>
-          <div className="flex min-w-max gap-2 lg:min-w-0 lg:flex-col lg:rounded-2xl lg:border lg:border-white/10 lg:bg-white/5 lg:p-2">
+        <div className="w-full max-w-full pb-2 lg:pb-0" data-swipe-back-ignore>
+          <div className="grid w-full max-w-full grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-col lg:rounded-2xl lg:border lg:border-white/10 lg:bg-white/5 lg:p-2">
             {tabs.map(tab => (
               <button
                 key={tab.value}
                 onClick={() => setActiveTab(tab.value)}
-                className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-all lg:justify-start ${
+                className={`flex min-w-0 items-center justify-start gap-1.5 rounded-lg px-2.5 py-2 text-left text-xs font-medium leading-tight transition-all sm:px-3 ${
                   activeTab === tab.value
                     ? "bg-white/20 text-white"
                     : "bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 lg:border-transparent lg:bg-transparent"
                 }`}
               >
-                {tab.icon} <span className="whitespace-nowrap">{tab.label}</span>
+                <span className="shrink-0">{tab.icon}</span>
+                <span className="min-w-0 break-words">{tab.label}</span>
               </button>
             ))}
           </div>
         </div>
       </aside>
 
-      <div className="min-w-0">
+      <div className="min-w-0 max-w-full overflow-hidden">
         {activeTab === "profile" && children}
         {activeTab === "notifications" && <NotificationCenter />}
         {activeTab === "notification_settings" && <div className="max-w-xl"><NotificationSettings /></div>}

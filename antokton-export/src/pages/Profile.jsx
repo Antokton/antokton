@@ -603,10 +603,10 @@ export default function Profile() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <div className="mx-auto w-full max-w-7xl overflow-hidden px-4 py-8 sm:px-6">
       <ProfileTabs user={user}>
-      <div className="flex items-center gap-3 mb-8">
-        <div className="flex-1">
+      <div className="mb-8 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
@@ -650,7 +650,7 @@ export default function Profile() {
               </Badge>
             )}
           </div>
-          <p className="text-white mt-1 text-sm">
+          <p className="mt-1 break-words text-sm text-white">
             {user.role === 'admin' ? 'Administrator' :
              user.role === 'moderator' ? 'Moderator' :
              user.member_category === 'leader' ? 'Anëtar Udhëheqës' :
@@ -661,7 +661,7 @@ export default function Profile() {
           </p>
         </div>
         {hasActiveSubscription && (
-          <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-semibold">
+          <div className="flex w-fit shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 px-4 py-2 font-semibold text-white">
             <Crown className="w-4 h-4" />
             Premium
           </div>
@@ -775,17 +775,17 @@ export default function Profile() {
       {/* CV Download */}
       <Card className="bg-white/5 border-white/10 mb-6">
         <CardContent className="p-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <h3 className="text-white font-semibold text-lg mb-1">Dokumentet e profilit</h3>
               <p className="text-white text-sm">Shkarko CV ose profilin e zgjeruar në PDF</p>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={handleDownloadCV} variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/15 hover:text-white">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <Button onClick={handleDownloadCV} variant="outline" className="w-full bg-white/10 border-white/30 text-white hover:bg-white/15 hover:text-white sm:w-auto">
                 <Download className="w-4 h-4 mr-2" />
                 CV Standard
               </Button>
-              <Button onClick={handleDownloadEnhancedProfile} className="bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] hover:opacity-90">
+              <Button onClick={handleDownloadEnhancedProfile} className="w-full bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] hover:opacity-90 sm:w-auto">
                 <Download className="w-4 h-4 mr-2" />
                 Profil i plotë
               </Button>
@@ -811,7 +811,7 @@ export default function Profile() {
         >
         <Card className="bg-white/5 border-white/10">
           <CardContent className="p-6 space-y-4">
-            <div className="flex items-center justify-between mb-4">
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-white font-semibold text-lg">Informacion bazë</h3>
               {user.member_category && user.member_category !== 'standard' && (
                 <Badge className={
@@ -829,7 +829,7 @@ export default function Profile() {
             </div>
 
             {/* Profile Photo Upload */}
-            <div className="flex items-center gap-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
               <div className="relative group">
                 <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white/20 bg-gradient-to-br from-[#8ab4ff] to-[#9bffd6] flex items-center justify-center">
                   {form.profile_photo_url ? (
@@ -847,7 +847,7 @@ export default function Profile() {
                   </label>
                 </div>
               </div>
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <h4 className="text-white font-semibold mb-2">Foto e profilit</h4>
                 <div className="flex gap-2 flex-wrap">
                   <label className="cursor-pointer">
@@ -1136,22 +1136,22 @@ export default function Profile() {
 
                 {/* Portfolio Links */}
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <Label className="text-white">Portfolio</Label>
-                    <div className="flex gap-2">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                       <label className="cursor-pointer">
                         <input type="file" className="hidden" onChange={handleUploadPortfolioFile} accept="image/*,video/*,.pdf" />
-                        <span className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md border border-white/20 bg-white/10 text-white hover:bg-white/20">
+                        <span className="inline-flex w-full items-center justify-center px-3 py-1.5 text-sm font-medium rounded-md border border-white/20 bg-white/10 text-white hover:bg-white/20 sm:w-auto">
                           <Upload className="w-4 h-4 mr-1" /> Ngarko file
                         </span>
                       </label>
-                      <Button type="button" size="sm" onClick={addPortfolioLink} variant="outline" className="border-white/20 bg-white/10 text-white hover:bg-white/20">
+                      <Button type="button" size="sm" onClick={addPortfolioLink} variant="outline" className="w-full border-white/20 bg-white/10 text-white hover:bg-white/20 sm:w-auto">
                         <Plus className="w-4 h-4 mr-1" /> Shto link
                       </Button>
                     </div>
                   </div>
                   {(form.portfolio_links || []).map((link, i) => (
-                    <div key={i} className="flex gap-2">
+                    <div key={i} className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                       <Input
                         placeholder="Titulli"
                         value={link.title}
@@ -1250,15 +1250,15 @@ export default function Profile() {
 
                 {/* Online Courses */}
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <Label className="text-white">Kurse Online</Label>
-                    <Button type="button" size="sm" onClick={addOnlineCourse} variant="outline" className="border-white/20 bg-white/10 text-white hover:bg-white/20">
+                    <Button type="button" size="sm" onClick={addOnlineCourse} variant="outline" className="w-full border-white/20 bg-white/10 text-white hover:bg-white/20 sm:w-auto">
                       <Plus className="w-4 h-4 mr-1" /> Shto kurs
                     </Button>
                   </div>
                   {(form.online_courses || []).map((course, i) => (
                     <div key={i} className="p-3 bg-white/5 rounded-lg space-y-2 border border-white/10">
-                      <div className="flex gap-2">
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         <Input
                           placeholder="Emri i kursit"
                           value={course.course_name}
@@ -1272,7 +1272,7 @@ export default function Profile() {
                           className="bg-white/5 border-white/10 text-white flex-1"
                         />
                       </div>
-                      <div className="flex gap-2">
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_auto]">
                         <Input
                           type="date"
                           placeholder="Data e përfundimit"
@@ -1296,14 +1296,14 @@ export default function Profile() {
 
                 {/* Languages */}
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <Label className="text-white">Gjuhët</Label>
-                    <Button type="button" size="sm" onClick={addLanguage} variant="outline" className="border-white/20 bg-white/10 text-white hover:bg-white/20">
+                    <Button type="button" size="sm" onClick={addLanguage} variant="outline" className="w-full border-white/20 bg-white/10 text-white hover:bg-white/20 sm:w-auto">
                       <Plus className="w-4 h-4 mr-1" /> Shto
                     </Button>
                   </div>
                   {(form.languages || []).map((lang, i) => (
-                    <div key={i} className="flex gap-2">
+                    <div key={i} className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_auto]">
                       <Input
                         placeholder="Gjuha"
                         value={lang.language}
@@ -1311,7 +1311,7 @@ export default function Profile() {
                         className="bg-white/5 border-white/10 text-white flex-1"
                       />
                       <Select value={lang.level} onValueChange={(v) => updateLanguage(i, "level", v)}>
-                        <SelectTrigger className="bg-white/5 border-white/10 text-white w-40">
+                        <SelectTrigger className="w-full bg-white/5 border-white/10 text-white">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1336,9 +1336,9 @@ export default function Profile() {
             {/* Work Experience */}
             <Card className="bg-white/5 border-white/10">
               <CardContent className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h3 className="text-white font-semibold text-lg">Përvoja e punës</h3>
-                  <Button type="button" size="sm" onClick={addWorkExperience} variant="outline" className="border-white/20 bg-white/10 text-white hover:bg-white/20">
+                  <Button type="button" size="sm" onClick={addWorkExperience} variant="outline" className="w-full border-white/20 bg-white/10 text-white hover:bg-white/20 sm:w-auto">
                     <Plus className="w-4 h-4 mr-1" /> Shto përvojë
                   </Button>
                 </div>
@@ -1410,9 +1410,9 @@ export default function Profile() {
             {/* Education */}
             <Card className="bg-white/5 border-white/10">
               <CardContent className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h3 className="text-white font-semibold text-lg">Arsimi</h3>
-                  <Button type="button" size="sm" onClick={addEducation} variant="outline" className="border-white/20 bg-white/10 text-white hover:bg-white/20">
+                  <Button type="button" size="sm" onClick={addEducation} variant="outline" className="w-full border-white/20 bg-white/10 text-white hover:bg-white/20 sm:w-auto">
                     <Plus className="w-4 h-4 mr-1" /> Shto arsim
                   </Button>
                 </div>
@@ -1686,7 +1686,7 @@ export default function Profile() {
         >
         <Card className="bg-red-500/10 border-red-500/20 mt-8">
           <CardContent className="p-6">
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
                 <div>
@@ -1696,7 +1696,7 @@ export default function Profile() {
               </div>
               <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="bg-red-600 hover:bg-red-700 whitespace-nowrap">
+                  <Button variant="destructive" className="w-full bg-red-600 hover:bg-red-700 sm:w-auto sm:whitespace-nowrap">
                     <Trash2 className="w-4 h-4 mr-2" />
                     Fshi llogarinë
                   </Button>
@@ -1749,8 +1749,8 @@ export default function Profile() {
             <CardContent>
               <div className="space-y-3">
                 {savedSearches.map((search) => (
-                  <div key={search.id} className="flex items-center justify-between p-4 rounded-lg bg-white/10 border border-white/20">
-                    <div className="flex-1">
+                  <div key={search.id} className="flex flex-col gap-3 rounded-lg border border-white/20 bg-white/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0 flex-1">
                       <p className="text-white font-semibold">{search.search_name}</p>
                       <div className="flex gap-2 mt-1 flex-wrap">
                         {search.filters.category && (
@@ -1770,7 +1770,7 @@ export default function Profile() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Badge className={search.notification_enabled ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-white/10 text-white/70 border border-white/20'}>
                         {search.notification_enabled ? 'Njoftime aktive' : 'Njoftime joaktive'}
                       </Badge>
@@ -1805,8 +1805,8 @@ export default function Profile() {
             <CardContent>
               <div className="space-y-3">
                 {paymentHistory.map((payment) => (
-                  <div key={payment.id} className="flex items-center justify-between p-4 rounded-lg bg-white/10 border border-white/20">
-                    <div>
+                  <div key={payment.id} className="flex flex-col gap-3 rounded-lg border border-white/20 bg-white/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
                       <p className="text-white font-semibold">
                         {payment.plan_type === 'monthly' ? 'Premium Mujor' : 'Premium Vjetor'}
                       </p>
@@ -1814,7 +1814,7 @@ export default function Profile() {
                          {new Date(payment.created_date).toLocaleDateString('sq-AL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                        </p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-left sm:text-right">
                       <p className="text-white font-bold text-lg">{payment.amount_paid} EUR</p>
                       <p className={`text-sm font-medium ${payment.is_active ? 'text-green-400' : 'text-white'}`}>
                         {payment.is_active ? 'Aktiv' : 'Përfunduar'}
