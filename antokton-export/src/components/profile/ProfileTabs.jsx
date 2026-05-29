@@ -44,7 +44,7 @@ export default function ProfileTabs({ user, children }) {
     <div className="grid w-full max-w-full gap-5 overflow-hidden lg:grid-cols-[230px_minmax(0,1fr)]">
       <aside className="lg:sticky lg:top-24 lg:self-start">
         <div className="w-full max-w-full pb-2 lg:pb-0" data-swipe-back-ignore>
-          <div className="grid w-full max-w-full grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-col lg:rounded-2xl lg:border lg:border-white/10 lg:bg-white/5 lg:p-2">
+          <div className="grid w-full max-w-full grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:flex lg:flex-col lg:rounded-2xl lg:border lg:border-white/10 lg:bg-white/5 lg:p-2">
             {tabs.map(tab => (
               <button
                 key={tab.value}

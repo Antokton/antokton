@@ -39,6 +39,30 @@ body {
 }
 
 @media (max-width: 768px) {
+  *,
+  *::before,
+  *::after {
+    min-width: 0;
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    max-width: 100%;
+  }
+
+  button {
+    white-space: normal;
+  }
+
   input,
   textarea,
   select,

@@ -54,13 +54,13 @@ export default function OnboardingTour({ onComplete }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+        className="fixed inset-0 z-[100] flex w-[100dvw] max-w-[100dvw] items-center justify-center overflow-hidden bg-black/70 px-4 py-4 backdrop-blur-sm"
       >
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-[#0b1020] border border-white/10 rounded-2xl p-8 max-w-lg w-full relative"
+          className="relative w-full max-w-[320px] rounded-2xl border border-white/10 bg-[#0b1020] p-5 sm:max-w-lg sm:p-8"
         >
           <button
             onClick={handleSkip}
@@ -73,12 +73,12 @@ export default function OnboardingTour({ onComplete }) {
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#8ab4ff] to-[#9bffd6] flex items-center justify-center">
               <Icon className="w-8 h-8 text-[#0b1020]" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">{step.title}</h2>
-            <p className="text-white/70 leading-relaxed">{step.description}</p>
+            <h2 className="mb-2 break-words text-xl font-bold text-white sm:text-2xl">{step.title}</h2>
+            <p className="break-words text-sm leading-relaxed text-white/70 sm:text-base">{step.description}</p>
           </div>
 
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-6">
-            <p className="text-blue-300 text-sm font-medium">💡 {step.highlight}</p>
+          <div className="mb-6 rounded-lg border border-blue-500/30 bg-blue-500/10 p-4">
+            <p className="break-words text-sm font-medium leading-relaxed text-blue-300">💡 {step.highlight}</p>
           </div>
 
           <div className="flex items-center justify-center gap-2 mb-6">
@@ -94,16 +94,16 @@ export default function OnboardingTour({ onComplete }) {
             ))}
           </div>
 
-          <div className="flex gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Button
               onClick={handleSkip}
-              className="flex-1 bg-white/10 border border-white/20 text-white hover:bg-white/15"
+              className="w-full bg-white/10 border border-white/20 text-white hover:bg-white/15"
             >
               Kalo
             </Button>
             <Button
               onClick={handleNext}
-              className="flex-1 bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] hover:opacity-90 border-0"
+              className="w-full bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] hover:opacity-90 border-0"
             >
               {currentStep === steps.length - 1 ? 'Fillo' : 'Vazhdo'}
               <ArrowRight className="w-4 h-4 ml-2" />

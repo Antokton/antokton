@@ -201,6 +201,9 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
     const t3 = setTimeout(measure, 1600);
     const observer = new MutationObserver(scheduleMeasure);
     observer.observe(document.body, { childList: true, subtree: true });
+    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(scheduleMeasure) : null;
+    const notificationsEl = document.querySelector('[data-event-notifications]');
+    if (resizeObserver && notificationsEl) resizeObserver.observe(notificationsEl);
     window.addEventListener('resize', measure);
 
     return () => {
@@ -208,6 +211,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
       clearTimeout(t2);
       clearTimeout(t3);
       observer.disconnect();
+      resizeObserver?.disconnect();
       window.removeEventListener('resize', measure);
     };
   }, [isMobile, isTablet, notifHeight]);
@@ -560,7 +564,10 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
   if (isTablet || isMobile) {
     const noticeBottom = realNotifHeight > 0 ? realNotifHeight : 0;
     const safeMobileLogoOffset = Math.max(0, mobileLogoOffset);
-    const topOffset = noticeBottom + safeMobileLogoOffset + (isMobile ? 14 : 10);
+    const topOffset = Math.max(
+      noticeBottom + safeMobileLogoOffset + (isMobile ? 42 : 28),
+      isMobile ? 132 : 102
+    );
     return (
       <div style={{ width: '100%', height: 'calc(100vh - 64px)', background: '#000', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
         {adminEditStyles}
@@ -591,7 +598,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
             <img
               src={theme === 'light' ? LOGO_LIGHT : LOGO_DARK}
               alt="AnTOKëtonë"
-              style={{ width: '80%', maxWidth: 420, height: 'auto', display: 'block', filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.55)) drop-shadow(0 6px 18px rgba(255,80,40,0.25))' }}
+              style={{ width: isMobile ? 'min(54vw, 300px)' : '76%', maxWidth: 420, height: 'auto', display: 'block', filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.55)) drop-shadow(0 6px 18px rgba(255,80,40,0.25))' }}
             />
           </div>
           <div

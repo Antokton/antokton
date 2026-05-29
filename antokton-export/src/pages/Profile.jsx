@@ -687,41 +687,41 @@ export default function Profile() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-              <div className="bg-white/10 p-4 rounded-lg border border-white/20">
-                <div className="flex items-center gap-2 mb-2">
-                  <Eye className="w-4 h-4 text-[#8ab4ff]" />
-                  <p className="text-white text-xs font-medium">Shikime</p>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 sm:gap-4">
+              <div className="min-w-0 rounded-lg border border-white/20 bg-white/10 p-2.5 sm:p-4">
+                <div className="mb-1.5 flex min-w-0 items-center gap-1.5 sm:mb-2 sm:gap-2">
+                  <Eye className="h-3.5 w-3.5 shrink-0 text-[#8ab4ff] sm:h-4 sm:w-4" />
+                  <p className="min-w-0 break-words text-[10px] font-medium leading-tight text-white sm:text-xs">Shikime</p>
                 </div>
-                <p className="text-2xl font-bold text-white">{statistics.totalProfileViews}</p>
+                <p className="text-lg font-bold text-white sm:text-2xl">{statistics.totalProfileViews}</p>
               </div>
-              <div className="bg-white/10 p-4 rounded-lg border border-white/20">
-                <div className="flex items-center gap-2 mb-2">
-                  <FileText className="w-4 h-4 text-[#9bffd6]" />
-                  <p className="text-white text-xs font-medium">Aplikime</p>
+              <div className="min-w-0 rounded-lg border border-white/20 bg-white/10 p-2.5 sm:p-4">
+                <div className="mb-1.5 flex min-w-0 items-center gap-1.5 sm:mb-2 sm:gap-2">
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-[#9bffd6] sm:h-4 sm:w-4" />
+                  <p className="min-w-0 break-words text-[10px] font-medium leading-tight text-white sm:text-xs">Aplikime</p>
                 </div>
-                <p className="text-2xl font-bold text-white">{statistics.totalApplications}</p>
+                <p className="text-lg font-bold text-white sm:text-2xl">{statistics.totalApplications}</p>
               </div>
-              <div className="bg-white/10 p-4 rounded-lg border border-white/20">
-                <div className="flex items-center gap-2 mb-2">
-                  <MessageCircle className="w-4 h-4 text-[#8ab4ff]" />
-                  <p className="text-white text-xs font-medium">Mesazhe</p>
+              <div className="min-w-0 rounded-lg border border-white/20 bg-white/10 p-2.5 sm:p-4">
+                <div className="mb-1.5 flex min-w-0 items-center gap-1.5 sm:mb-2 sm:gap-2">
+                  <MessageCircle className="h-3.5 w-3.5 shrink-0 text-[#8ab4ff] sm:h-4 sm:w-4" />
+                  <p className="min-w-0 break-words text-[10px] font-medium leading-tight text-white sm:text-xs">Mesazhe</p>
                 </div>
-                <p className="text-2xl font-bold text-white">{statistics.totalMessagesSent}</p>
+                <p className="text-lg font-bold text-white sm:text-2xl">{statistics.totalMessagesSent}</p>
               </div>
-              <div className="bg-white/10 p-4 rounded-lg border border-white/20">
-                <div className="flex items-center gap-2 mb-2">
-                  <Calendar className="w-4 h-4 text-[#9bffd6]" />
-                  <p className="text-white text-xs font-medium">Ngjarje</p>
+              <div className="min-w-0 rounded-lg border border-white/20 bg-white/10 p-2.5 sm:p-4">
+                <div className="mb-1.5 flex min-w-0 items-center gap-1.5 sm:mb-2 sm:gap-2">
+                  <Calendar className="h-3.5 w-3.5 shrink-0 text-[#9bffd6] sm:h-4 sm:w-4" />
+                  <p className="min-w-0 break-words text-[10px] font-medium leading-tight text-white sm:text-xs">Ngjarje</p>
                 </div>
-                <p className="text-2xl font-bold text-white">{statistics.totalEventsJoined}</p>
+                <p className="text-lg font-bold text-white sm:text-2xl">{statistics.totalEventsJoined}</p>
               </div>
-              <div className="bg-white/10 p-4 rounded-lg border border-white/20">
-                <div className="flex items-center gap-2 mb-2">
-                  <Briefcase className="w-4 h-4 text-[#8ab4ff]" />
-                  <p className="text-white text-xs font-medium">Postime</p>
+              <div className="min-w-0 rounded-lg border border-white/20 bg-white/10 p-2.5 sm:p-4">
+                <div className="mb-1.5 flex min-w-0 items-center gap-1.5 sm:mb-2 sm:gap-2">
+                  <Briefcase className="h-3.5 w-3.5 shrink-0 text-[#8ab4ff] sm:h-4 sm:w-4" />
+                  <p className="min-w-0 break-words text-[10px] font-medium leading-tight text-white sm:text-xs">Postime</p>
                 </div>
-                <p className="text-2xl font-bold text-white">{statistics.totalJobsPosted}</p>
+                <p className="text-lg font-bold text-white sm:text-2xl">{statistics.totalJobsPosted}</p>
               </div>
             </div>
           </CardContent>
