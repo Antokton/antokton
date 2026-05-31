@@ -418,9 +418,9 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
         background-image: linear-gradient(
           100deg,
           transparent 0%,
-          transparent 42%,
+          transparent 46%,
           rgba(255,255,255,0.96) 50%,
-          transparent 58%,
+          transparent 54%,
           transparent 100%
         );
         background-size: 220% 140%;
@@ -433,7 +433,8 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
       }
 
       .antokton-hero-light-title:hover .antokton-hero-light-text,
-      .antokton-mobile-hero-slogan:hover .antokton-hero-light-text {
+      .antokton-mobile-hero-slogan:hover .antokton-hero-light-text,
+      .antokton-mobile-hero-slogan:focus-within .antokton-hero-light-text {
         animation-play-state: paused;
         background-image: none;
         color: rgba(255,255,255,0.96);
@@ -452,7 +453,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
         z-index: 2;
         transform: translateY(-50%);
         text-align: center;
-        pointer-events: none;
+        pointer-events: auto;
       }
 
       .antokton-mobile-hero-slogan .antokton-hero-light-title {
@@ -562,12 +563,8 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
 
   // ---- TABLET + MOBILE: gjithçka fit në ekran pa scroll ----
   if (isTablet || isMobile) {
-    const noticeBottom = realNotifHeight > 0 ? realNotifHeight : 0;
-    const safeMobileLogoOffset = Math.max(0, mobileLogoOffset);
-    const topOffset = Math.max(
-      noticeBottom + safeMobileLogoOffset + (isMobile ? 42 : 28),
-      isMobile ? 132 : 102
-    );
+    const noticeBottom = realNotifHeight > 0 ? realNotifHeight : 86;
+    const topOffset = noticeBottom + mobileLogoOffset + (isMobile ? 88 : 48);
     return (
       <div style={{ width: '100%', height: 'calc(100vh - 64px)', background: '#000', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
         {adminEditStyles}
@@ -598,7 +595,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
             <img
               src={theme === 'light' ? LOGO_LIGHT : LOGO_DARK}
               alt="AnTOKëtonë"
-              style={{ width: isMobile ? 'min(54vw, 300px)' : '76%', maxWidth: 420, height: 'auto', display: 'block', filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.55)) drop-shadow(0 6px 18px rgba(255,80,40,0.25))' }}
+              style={{ width: '80%', maxWidth: 420, height: 'auto', display: 'block', filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.55)) drop-shadow(0 6px 18px rgba(255,80,40,0.25))' }}
             />
           </div>
           <div
