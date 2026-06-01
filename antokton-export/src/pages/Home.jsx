@@ -171,7 +171,6 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
   const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
   const [isTablet, setIsTablet] = React.useState(window.innerWidth >= 768 && window.innerWidth < 1280);
   const [realNotifHeight, setRealNotifHeight] = React.useState(0);
-  const mobileHeroFrameRef = React.useRef(null);
   const [editMode, setEditMode] = React.useState(false);
   const [editingGroup, setEditingGroup] = React.useState(null);
   const [draft, setDraft] = React.useState({});
@@ -183,12 +182,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
     const measure = () => {
       const el = document.querySelector('[data-event-notifications]');
       if (el) {
-        const noticeRect = el.getBoundingClientRect();
-        const heroRect = mobileHeroFrameRef.current?.getBoundingClientRect();
-        const clearHeight = heroRect
-          ? Math.max(0, noticeRect.bottom - heroRect.top + 12)
-          : noticeRect.height;
-        setRealNotifHeight(clearHeight);
+        setRealNotifHeight(el.getBoundingClientRect().height);
       } else {
         setRealNotifHeight(0);
       }
@@ -564,7 +558,8 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
   // ---- TABLET + MOBILE: gjithçka fit në ekran pa scroll ----
   if (isTablet || isMobile) {
     const noticeBottom = realNotifHeight > 0 ? realNotifHeight : 86;
-    const topOffset = noticeBottom + mobileLogoOffset + (isMobile ? 88 : 48);
+    const mapLogoTop = (isMobile ? 98 : 84) + mobileLogoOffset;
+    const topOffset = Math.max(mapLogoTop, noticeBottom + (isMobile ? 20 : 16));
     return (
       <div style={{ width: '100%', height: 'calc(100vh - 64px)', background: '#000', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
         {adminEditStyles}
@@ -575,7 +570,6 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
 
         {/* Harta mban edhe logon siper, pa shirit sfondi */}
         <div
-          ref={mobileHeroFrameRef}
           className={editMode ? 'antokton-admin-edit-target' : ''}
           data-edit-label="Harta"
           onClick={editMode ? () => startEditing('background') : undefined}
