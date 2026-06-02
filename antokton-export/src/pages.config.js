@@ -116,6 +116,7 @@ export const PAGES = {
     "EmployerDashboard": EmployerDashboard,
     "EventDetail": EventDetail,
     "Events": Events,
+    "Ngjarje": Events,
     "EventsCalendar": EventsCalendar,
     "FacebookGroups": FacebookGroups,
     "Feed": Feed,

@@ -1,17 +1,20 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "../../utils";
-import { Briefcase, GraduationCap, Heart, Radio, ShieldCheck, Users, Wrench } from "lucide-react";
+import { Briefcase, CalendarDays, GraduationCap, Heart, Radio, ShieldCheck, ShoppingBag, Ticket, Users, Wrench } from "lucide-react";
 import { motion } from "framer-motion";
 
 const categories = [
   { key: "pune", label: "Punë", desc: "Njoftime punësimi", icon: Briefcase, color: "from-blue-500/20 to-blue-600/20", text: "text-blue-400" },
+  { key: "komunitet", label: "Komunitet", desc: "Statuse & bashkëpunim", icon: Users, color: "from-emerald-500/20 to-emerald-600/20", text: "text-emerald-400", url: "/Statuset" },
+  { key: "sherbime", label: "Shërbime", desc: "Shërbime të ndryshme", icon: Wrench, color: "from-orange-500/20 to-orange-600/20", text: "text-orange-400", url: "/Sherbime" },
+  { key: "pazar", label: "Pazar", desc: "Tregtim & dhurime", icon: ShoppingBag, color: "from-teal-500/20 to-teal-600/20", text: "text-teal-400", url: "/Pazar" },
+  { key: "bileta", label: "Bileta", desc: "Bileta & aktivitete", icon: Ticket, color: "from-violet-500/20 to-violet-600/20", text: "text-violet-400", url: "/Bileta" },
+  { key: "ngjarje", label: "Ngjarje", desc: "Evente & kalendar", icon: CalendarDays, color: "from-fuchsia-500/20 to-fuchsia-600/20", text: "text-fuchsia-400", url: "/Ngjarje" },
+  { key: "edukim", label: "Edukim", desc: "Kurse & trajnime", icon: GraduationCap, color: "from-amber-500/20 to-amber-600/20", text: "text-amber-400", url: "/Edukim" },
   { key: "media", label: "Media", desc: "Lajme & informacion", icon: Radio, color: "from-cyan-500/20 to-cyan-600/20", text: "text-cyan-400", url: "/Media" },
   { key: "bamiresi", label: "Bamirësi", desc: "Ndihma & solidaritet", icon: Heart, color: "from-rose-500/20 to-rose-600/20", text: "text-rose-400", url: "/Bamiresi" },
-  { key: "komunitet", label: "Komunitet", desc: "Statuse & bashkëpunim", icon: Users, color: "from-emerald-500/20 to-emerald-600/20", text: "text-emerald-400", url: "/Statuset" },
   { key: "certifikim", label: "Çertifikim Cilësie", desc: "Verifikim & besueshmëri", icon: ShieldCheck, color: "from-sky-500/20 to-sky-600/20", text: "text-sky-400", url: "/Certifikim" },
-  { key: "edukim", label: "Edukim", desc: "Kurse & trajnime", icon: GraduationCap, color: "from-amber-500/20 to-amber-600/20", text: "text-amber-400", url: "/Edukim" },
-  { key: "sherbime", label: "Shërbime", desc: "Shërbime të ndryshme", icon: Wrench, color: "from-orange-500/20 to-orange-600/20", text: "text-orange-400", url: "/Sherbime" },
 ];
 
 export default function CategoryCards() {
@@ -25,7 +28,7 @@ export default function CategoryCards() {
           <p className="text-white/70 mt-1.5 text-sm sm:text-base">Gjej atë që kërkon sipas kategorisë</p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-10 gap-2.5 sm:gap-4">
           {categories.map((cat, i) => (
             <motion.div
               key={cat.key}
