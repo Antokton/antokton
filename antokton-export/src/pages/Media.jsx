@@ -276,7 +276,7 @@ function FilterSelect({ label, value, options, onChange }) {
   );
 }
 
-export default function Media() {
+export function MediaSection() {
   const urlParams = new URLSearchParams(window.location.search);
   const [activeCategory, setActiveCategory] = useState(urlParams.get("sub") || "all");
   const [filterCredibility, setFilterCredibility] = useState("all");
@@ -326,7 +326,7 @@ export default function Media() {
   const otherDbPosts = dbPosts.filter(p => p.category !== "blog" && (activeCategory === "all" || p.category === activeCategory));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
 
       {/* ── Hero ── */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
@@ -533,6 +533,10 @@ export default function Media() {
       {/* ── Player Modal ── */}
       {playerItem && <MediaPlayerModal item={playerItem} onClose={() => setPlayerItem(null)} />}
 
-    </div>
+    </section>
   );
+}
+
+export default function Media() {
+  return <MediaSection />;
 }

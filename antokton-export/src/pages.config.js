@@ -51,6 +51,7 @@ import About from './pages/About';
 import Certifikim from './pages/Certifikim';
 import Media from './pages/Media';
 import Edukim from './pages/Edukim';
+import EdukiMeDija from './pages/EdukiMeDija';
 import Admin from './pages/Admin';
 import AdvancedRecruiterSearch from './pages/AdvancedRecruiterSearch';
 import ApplicationsDashboard from './pages/ApplicationsDashboard';
@@ -86,6 +87,7 @@ import RecruiterTools from './pages/RecruiterTools';
 import Referime from './pages/Referime';
 import Search from './pages/Search';
 import Setup from './pages/Setup';
+import Sherbime from './pages/Sherbime';
 import StaffChat from './pages/StaffChat';
 import StateAntokton from './pages/StateAntokton';
 import Subscriptions from './pages/Subscriptions';
@@ -100,6 +102,7 @@ export const PAGES = {
     "Certifikim": Certifikim,
     "Media": Media,
     "Edukim": Edukim,
+    "EdukiMeDija": EdukiMeDija,
     "Admin": Admin,
     "AdvancedRecruiterSearch": AdvancedRecruiterSearch,
     "ApplicationsDashboard": ApplicationsDashboard,
@@ -135,6 +138,7 @@ export const PAGES = {
     "Referime": Referime,
     "Search": Search,
     "Setup": Setup,
+    "Sherbime": Sherbime,
     "StaffChat": StaffChat,
     "StateAntokton": StateAntokton,
     "Subscriptions": Subscriptions,

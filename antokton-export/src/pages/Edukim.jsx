@@ -21,9 +21,9 @@ const plannedAreas = [
   },
 ];
 
-export default function Edukim() {
+export function EdukimSection() {
   return (
-    <div className="min-h-screen px-4 py-12 sm:px-6">
+    <section className="px-4 py-12 sm:px-6">
       <div className="mx-auto max-w-5xl">
         <div className="mb-10 text-center">
           <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-[#8ab4ff]/20 to-[#9bffd6]/20">
@@ -94,6 +94,14 @@ export default function Edukim() {
           </Link>
         </div>
       </div>
+    </section>
+  );
+}
+
+export default function Edukim() {
+  return (
+    <div className="min-h-screen">
+      <EdukimSection />
     </div>
   );
 }

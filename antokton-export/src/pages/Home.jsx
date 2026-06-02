@@ -623,7 +623,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
                 onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
                 <img src={BTN_KOMUNITET_IMG} alt="Komunitet" style={{ width: '100%', height: 'auto', display: 'block' }} />
               </Link>
-              <Link to={createPageUrl('About')}
+              <Link to={createPageUrl('EdukiMeDija')}
                 style={{ flex: 1, cursor: 'pointer', transition: 'opacity 0.3s', display: 'inline-block', lineHeight: 0 }}
                 onClick={(event) => stopEditNavigation(event, 'buttons')}
                 onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
@@ -738,7 +738,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
               <img src={BTN_KOMUNITET_IMG} alt="Komunitet" style={{ width: '100%', height: 'auto', display: 'block' }} />
             </Link>
 
-            <Link to={createPageUrl('About')}
+            <Link to={createPageUrl('EdukiMeDija')}
               style={{ flex: 1, cursor: 'pointer', transition: 'opacity 0.3s', display: 'inline-block', lineHeight: 0 }}
               onClick={(event) => stopEditNavigation(event, 'buttons')}
               onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
