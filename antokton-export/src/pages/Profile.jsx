@@ -21,6 +21,7 @@ import HijriCalendar from "../components/calendar/HijriCalendar";
 import ProfileTabs from "../components/profile/ProfileTabs";
 import AkademiaProfileSummary from "../components/akademia/AkademiaProfileSummary";
 import AuthAccessBanner from "@/components/AuthAccessBanner";
+import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 
 function MyApplications({ userEmail }) {
   const { data: myApplications = [] } = useQuery({
@@ -387,9 +388,13 @@ export default function Profile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isValidInternationalPhone(form.phone)) {
+      alert(getInternationalPhoneError("Telefoni"));
+      return;
+    }
     setLoading(true);
     try {
-      await base44.auth.updateMe(form);
+      await base44.auth.updateMe({ ...form, phone: normalizeInternationalPhone(form.phone) });
       const updated = await base44.auth.me();
       setUser(updated);
       setSuccess(true);
@@ -945,6 +950,7 @@ export default function Profile() {
                 <Input
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  placeholder={PHONE_PLACEHOLDER}
                   className="bg-white/5 border-white/10 text-white"
                 />
               </div>

@@ -13,6 +13,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "../utils";
 import moment from "moment";
 import HijriCalendar from "../components/calendar/HijriCalendar";
+import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 
 const categoryLabels = {
   conference: "Konferencë",
@@ -315,11 +316,15 @@ export default function EventDetail() {
 
   const handleGuestSubmit = (e) => {
     e.preventDefault();
+    if (!isValidInternationalPhone(guestForm.participant_phone)) {
+      alert(getInternationalPhoneError("Numri i telefonit"));
+      return;
+    }
     guestRegisterMutation.mutate({
       event_id: eventId,
       participant_name: guestForm.participant_name,
       participant_email: guestForm.participant_email,
-      participant_phone: guestForm.participant_phone || null,
+      participant_phone: normalizeInternationalPhone(guestForm.participant_phone) || null,
       is_member: false
     });
   };
@@ -965,7 +970,7 @@ export default function EventDetail() {
                   <Input
                     value={guestForm.participant_phone}
                     onChange={(e) => setGuestForm({ ...guestForm, participant_phone: e.target.value })}
-                    placeholder="+355..."
+                    placeholder={PHONE_PLACEHOLDER}
                     className=""
                   />
                 </div>

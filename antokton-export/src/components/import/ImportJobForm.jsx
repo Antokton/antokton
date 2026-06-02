@@ -3,6 +3,7 @@ import { base44 } from "@/api/antoktonClient";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Link2, Sparkles, CheckCircle2, AlertCircle, Phone, MapPin, User, Briefcase, DollarSign, FileText, Image } from "lucide-react";
+import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 
 const CONTRACT_TYPES = [
   { value: "full-time", label: "Full-time" },
@@ -55,10 +56,16 @@ export default function ImportJobForm({ user, onDone }) {
 
   const handlePublish = async (status) => {
     if (!data) return;
+    if (!isValidInternationalPhone(data.phone_number)) {
+      setError(getInternationalPhoneError("Numri i telefonit"));
+      return;
+    }
+    const phoneNumber = normalizeInternationalPhone(data.phone_number);
     setSaving(true);
     try {
       await base44.entities.Job.create({
         ...data,
+        phone_number: phoneNumber || "",
         status: status,
         moderation_status: status === "approved" ? "approved" : "pending",
         is_halal_compliant: true,
@@ -255,7 +262,7 @@ export default function ImportJobForm({ user, onDone }) {
                   {!data.phone_number && <span className="text-yellow-400/70 text-[10px]">(shtoje nëse mungon)</span>}
                 </label>
                 <Input value={data.phone_number || ""} onChange={e => set("phone_number", e.target.value)}
-                  placeholder="+38345526505"
+                  placeholder={PHONE_PLACEHOLDER}
                   className={`bg-white/5 border-white/10 text-white ${!data.phone_number ? "border-yellow-400/30" : ""}`}
                   style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }} />
               </div>

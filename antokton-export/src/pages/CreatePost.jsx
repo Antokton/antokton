@@ -10,6 +10,7 @@ import LocationPicker from "../components/job/LocationPicker";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import AIJobDescriptionGenerator from "../components/job/AIJobDescriptionGenerator";
+import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 
 const ALL_PROFESSIONS = [
   "3D Artist","Administrator","Agjent Shitjesh","Agjent Sigurimesh","Agjent Udhëtimesh",
@@ -383,6 +384,11 @@ export default function CreatePost() {
       );
       if (!proceed) return;
     }
+    if (!isValidInternationalPhone(form.phone_number)) {
+      alert(getInternationalPhoneError("Numri i telefonit"));
+      return;
+    }
+    const phoneNumber = normalizeInternationalPhone(form.phone_number);
 
     setLoading(true);
     const defaultName = user?.first_name && user?.surname
@@ -408,8 +414,8 @@ export default function CreatePost() {
       profession: finalProfession,
       country: finalCountry,
       zone: (form.zones || []).join(", "), // ruaj si string për retrokompatibilitet
-      phone_number: form.phone_number || "",
-      phone_app: form.phone_number ? (form.phone_app || "telefon") : "",
+      phone_number: phoneNumber || "",
+      phone_app: phoneNumber ? (form.phone_app || "telefon") : "",
       status: publishStatus,
       moderation_status: publishStatus,
       is_halal_compliant: form.is_halal_compliant || false,
@@ -853,7 +859,7 @@ export default function CreatePost() {
               <Input
                 value={form.phone_number}
                 onChange={(e) => setForm({ ...form, phone_number: e.target.value })}
-                placeholder="+XX XXX XXX XXX"
+                placeholder={PHONE_PLACEHOLDER}
                 className="h-11 min-w-0"
                 style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)', flex: '1 1 0' }}
               />

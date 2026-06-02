@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2, Upload, X } from "lucide-react";
 import { motion } from "framer-motion";
+import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 
 export default function ApplicationForm({ job, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
@@ -30,6 +31,10 @@ export default function ApplicationForm({ job, onClose, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isValidInternationalPhone(form.applicant_phone)) {
+      alert(getInternationalPhoneError("Telefoni"));
+      return;
+    }
     setLoading(true);
 
     try {
@@ -44,7 +49,7 @@ export default function ApplicationForm({ job, onClose, onSuccess }) {
         job_id: job.id,
         applicant_email: form.applicant_email,
         applicant_name: form.applicant_name,
-        applicant_phone: form.applicant_phone,
+        applicant_phone: normalizeInternationalPhone(form.applicant_phone),
         cover_letter: form.cover_letter,
         cv_url: cvUrl,
         status: "applied"
@@ -116,7 +121,7 @@ export default function ApplicationForm({ job, onClose, onSuccess }) {
             <Input
               value={form.applicant_phone}
               onChange={(e) => setForm({ ...form, applicant_phone: e.target.value })}
-              placeholder="+355 69 123 4567"
+              placeholder={PHONE_PLACEHOLDER}
               className="bg-white/5 border-white/10 text-white"
             />
           </div>

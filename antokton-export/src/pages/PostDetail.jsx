@@ -17,6 +17,7 @@ import moment from "moment";
 import { motion, AnimatePresence } from "framer-motion";
 import ApplicationForm from "../components/job/ApplicationForm";
 import CommentItem from "../components/job/CommentItem";
+import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 
 function SimilarPosts({ currentJobId, category }) {
   const { data: similarJobs = [] } = useQuery({
@@ -422,11 +423,15 @@ export default function PostDetail() {
 
   const editJobMutation = useMutation({
     mutationFn: async () => {
+      if (!isValidInternationalPhone(editForm.phone_number)) {
+        throw new Error(getInternationalPhoneError("Numri i telefonit"));
+      }
+      const phoneNumber = normalizeInternationalPhone(editForm.phone_number);
       await base44.entities.Job.update(jobId, {
         ...editForm,
         address: editForm.address || editForm.city || "",
-        phone_number: editForm.phone_number || "",
-        phone_app: editForm.phone_app || "telefon",
+        phone_number: phoneNumber || "",
+        phone_app: phoneNumber ? (editForm.phone_app || "telefon") : "",
         category: editForm.category,
         pazar_category: editForm.pazar_category || undefined,
         poster_name: editForm.poster_name || job.poster_name,
@@ -435,6 +440,9 @@ export default function PostDetail() {
     onSuccess: () => {
       setIsEditing(false);
       queryClient.invalidateQueries({ queryKey: ["job", jobId] });
+    },
+    onError: (error) => {
+      alert(error.message || "Gabim në ruajtje");
     }
   });
 
@@ -594,7 +602,7 @@ export default function PostDetail() {
               <div className="space-y-1">
               <Label className="text-white/60 text-xs">Numri i telefonit</Label>
                <div className="flex gap-2">
-                 <Input value={editForm.phone_number || ''} onChange={e => setEditForm({...editForm, phone_number: e.target.value})} placeholder="+XX XXX XXX XXX" className="bg-white/5 border-white/10 text-white flex-1 min-w-0" />
+                 <Input value={editForm.phone_number || ''} onChange={e => setEditForm({...editForm, phone_number: e.target.value})} placeholder={PHONE_PLACEHOLDER} className="bg-white/5 border-white/10 text-white flex-1 min-w-0" />
                  {(() => {
                    const editPhoneIcons = {
                      telefon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-white/70"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.73 9.5a19.79 19.79 0 01-3.07-8.67A2 2 0 012.64 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.59a16 16 0 006.29 6.29l.96-.96a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>,

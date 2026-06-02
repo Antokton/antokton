@@ -10,6 +10,7 @@ import {
   ExternalLink, Loader2, Tag, ArrowLeft,
   AlertCircle, CheckCircle
 } from "lucide-react";
+import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 
 /* ─── KATEGORITE ─── */
 const CATEGORIES = [
@@ -132,10 +133,16 @@ function ImportModal({ onClose, onImported }) {
 
   const handleSave = async () => {
     if (!extracted) return;
+    if (!isValidInternationalPhone(extracted.phone_number)) {
+      setError(getInternationalPhoneError("Numri i telefonit"));
+      return;
+    }
+    const phoneNumber = normalizeInternationalPhone(extracted.phone_number);
     setLoading(true);
     try {
       await base44.entities.Job.create({
         ...extracted,
+        phone_number: phoneNumber || "",
         status: "approved",
         category: "pazar",
         pazar_category: category,
@@ -279,7 +286,7 @@ function ImportModal({ onClose, onImported }) {
                   </label>
                   <input value={extracted.phone_number || ""} onChange={e => setExtracted({...extracted, phone_number: e.target.value})}
                     className={`w-full bg-[#1c2333] border rounded-xl px-3 py-2 text-white text-sm outline-none mt-1 ${!extracted.phone ? "border-yellow-400/30 focus:border-yellow-400/60" : "border-white/15 focus:border-[#8ab4ff]"}`}
-                    placeholder="+XXX XXX XXX XXX" />
+                    placeholder={PHONE_PLACEHOLDER} />
                 </div>
                 <div>
                   <label className="text-white/40 text-xs">Kontakt tjetër (email, website)</label>

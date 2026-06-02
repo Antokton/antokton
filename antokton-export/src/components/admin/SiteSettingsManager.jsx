@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Save, Loader2, Plus, Trash2, Upload, ExternalLink } from "lucide-react";
 import toast from "react-hot-toast";
+import { PHONE_PLACEHOLDER } from "@/lib/phone";
 
 // Auto-detect logo/favicon from known social platforms
 function getAutoLogo(url) {
@@ -33,8 +34,8 @@ const STATIC_GROUPS = [
     group: "contact", label: "📞 Kontakti",
     fields: [
       { key: "contact_email", label: "Email kontakti", placeholder: "info@antokton.com", type: "text" },
-      { key: "contact_phone", label: "Telefon", placeholder: "+383...", type: "text" },
-      { key: "contact_whatsapp", label: "WhatsApp", placeholder: "+383...", type: "text" },
+      { key: "contact_phone", label: "Telefon", placeholder: PHONE_PLACEHOLDER, type: "text" },
+      { key: "contact_whatsapp", label: "WhatsApp", placeholder: PHONE_PLACEHOLDER, type: "text" },
       { key: "contact_address", label: "Adresa", placeholder: "Prishtinë, Kosovë", type: "text" },
     ]
   },

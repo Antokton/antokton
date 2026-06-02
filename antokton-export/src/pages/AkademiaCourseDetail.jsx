@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { Award, Calendar, CheckCircle, Clock, FileText, Loader2, MapPin, Upload, User } from "lucide-react";
 import { applicationStatusClasses, applicationStatusLabels, displayName, formatDate, formatMoney, normalizeList } from "@/lib/akademia";
+import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 
 const initialForm = {
   motivation: "",
@@ -72,6 +73,9 @@ export default function AkademiaCourseDetail() {
         base44.auth.redirectToLogin(window.location.href);
         return null;
       }
+      if (!isValidInternationalPhone(form.phone, { required: true })) {
+        throw new Error(getInternationalPhoneError("Telefoni"));
+      }
 
       const documentUrls = [];
       for (const file of files) {
@@ -87,7 +91,7 @@ export default function AkademiaCourseDetail() {
         motivation: form.motivation,
         current_profession: form.current_profession,
         desired_profession: form.desired_profession,
-        phone: form.phone,
+        phone: normalizeInternationalPhone(form.phone),
         city: form.city,
         document_urls: documentUrls,
         status: "pending"
@@ -248,7 +252,7 @@ export default function AkademiaCourseDetail() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
                     <div>
                       <Label className="text-white/70">Telefoni</Label>
-                      <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required className="mt-1 bg-white/5 border-white/10 text-white" />
+                      <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required placeholder={PHONE_PLACEHOLDER} className="mt-1 bg-white/5 border-white/10 text-white" />
                     </div>
                     <div>
                       <Label className="text-white/70">Qyteti</Label>

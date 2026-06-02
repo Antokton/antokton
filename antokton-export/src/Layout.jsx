@@ -790,7 +790,7 @@ export default function Layout({ children, currentPageName }) {
             className="md:hidden fixed left-0 right-0 border-t border-white/10"
             style={{
               top: 'calc(64px + env(safe-area-inset-top))',
-              bottom: '64px',
+              bottom: 'calc(74px + env(safe-area-inset-bottom))',
               zIndex: 9998,
               display: 'flex',
               flexDirection: 'column',
@@ -1045,7 +1045,7 @@ export default function Layout({ children, currentPageName }) {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <MobileBottomNav currentPageName={currentPageName} />
+      {!menuOpen && <MobileBottomNav currentPageName={currentPageName} />}
 
       {/* Chat Button */}
       <ChatButton />

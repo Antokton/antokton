@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 import {
   Plane,
   Bus,
@@ -97,7 +98,17 @@ export default function Bileta() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isValidInternationalPhone(form.contact_phone)) {
+      alert(getInternationalPhoneError("Telefoni"));
+      return;
+    }
+    if (!isValidInternationalPhone(form.contact_whatsapp)) {
+      alert(getInternationalPhoneError("WhatsApp"));
+      return;
+    }
     setLoading(true);
+    const contactPhone = normalizeInternationalPhone(form.contact_phone);
+    const contactWhatsApp = normalizeInternationalPhone(form.contact_whatsapp);
 
     // Dërgo email me të dhënat
     try {
@@ -111,7 +122,7 @@ export default function Bileta() {
       await base44.integrations.Core.SendEmail({
         to: "info@antokton.com",
         subject: `Kërkesë Bilete - ${form.transport_type} ${form.from} → ${form.to}`,
-        body: `Kërkesë e re për biletë/transport:\n\nLloji: ${form.transport_type}\nNga: ${form.from}\nDeri: ${form.to}\nData nisjes: ${form.departure_date}\nData kthimit: ${form.return_date || "Vetëm vajtje"}\n\n${details}\n\nKontakt:\nEmri: ${form.contact_name}\nEmail: ${form.contact_email}\nTelefon: ${form.contact_phone}\nWhatsApp: ${form.contact_whatsapp || "N/A"}\nKontakt tjetër: ${form.contact_other || "N/A"}\n\nShënime: ${form.notes || "Asnjë"}\n\nPërdoruesi: ${user?.email || "Jo i regjistruar"}`,
+        body: `Kërkesë e re për biletë/transport:\n\nLloji: ${form.transport_type}\nNga: ${form.from}\nDeri: ${form.to}\nData nisjes: ${form.departure_date}\nData kthimit: ${form.return_date || "Vetëm vajtje"}\n\n${details}\n\nKontakt:\nEmri: ${form.contact_name}\nEmail: ${form.contact_email}\nTelefon: ${contactPhone || "N/A"}\nWhatsApp: ${contactWhatsApp || "N/A"}\nKontakt tjetër: ${form.contact_other || "N/A"}\n\nShënime: ${form.notes || "Asnjë"}\n\nPërdoruesi: ${user?.email || "Jo i regjistruar"}`,
       });
     } catch (err) {
       console.error("Email error:", err);
@@ -356,13 +367,13 @@ export default function Bileta() {
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-white">Telefon</Label>
               <Input value={form.contact_phone} onChange={(e) => setForm({ ...form, contact_phone: e.target.value })}
-                placeholder="+383..." className="h-11"
+                placeholder={PHONE_PLACEHOLDER} className="h-11"
                 style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-white">WhatsApp</Label>
               <Input value={form.contact_whatsapp} onChange={(e) => setForm({ ...form, contact_whatsapp: e.target.value })}
-                placeholder="+383... (WhatsApp)" className="h-11"
+                placeholder={`${PHONE_PLACEHOLDER} (WhatsApp)`} className="h-11"
                 style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }} />
             </div>
           </div>
