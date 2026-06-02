@@ -424,7 +424,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
         -webkit-background-clip: text;
         background-clip: text;
         filter: none;
-        animation: antoktonHeroLightSweep 21s linear infinite;
+        animation: antoktonHeroLightSweep 10.5s linear infinite;
         transition: color 0.2s ease, filter 0.2s ease, text-shadow 0.2s ease;
       }
 
