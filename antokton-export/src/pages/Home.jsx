@@ -420,11 +420,11 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
           transparent 100%
         );
         background-size: 220% 140%;
-        background-position: 240% 50%;
+        background-position: 128% 50%;
         -webkit-background-clip: text;
         background-clip: text;
         filter: none;
-        animation: antoktonHeroLightSweep 30s linear infinite;
+        animation: antoktonHeroLightSweep 21s linear infinite;
         transition: color 0.2s ease, filter 0.2s ease, text-shadow 0.2s ease;
       }
 
@@ -478,10 +478,13 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
 
       @keyframes antoktonHeroLightSweep {
         0% {
-          background-position: 240% 50%;
+          background-position: 128% 50%;
+        }
+        88% {
+          background-position: -32% 50%;
         }
         100% {
-          background-position: -240% 50%;
+          background-position: -32% 50%;
         }
       }
 
