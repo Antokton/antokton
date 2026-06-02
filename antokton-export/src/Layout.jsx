@@ -1045,7 +1045,7 @@ export default function Layout({ children, currentPageName }) {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      {!menuOpen && <MobileBottomNav currentPageName={currentPageName} />}
+      <MobileBottomNav currentPageName={currentPageName} />
 
       {/* Chat Button */}
       <ChatButton />
