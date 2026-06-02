@@ -16,6 +16,43 @@ import { useQuery } from "@tanstack/react-query";
 import { useSiteConfig } from "./lib/useSiteConfig";
 import { t, getLanguage, setLanguage } from "./lib/translations";
 
+const BILETA_NAV_SUBMENU = [
+  { id: "avion", label: "Avion", url: "/Bileta?type=avion#kerkese-bilete", visible: true },
+  { id: "tren", label: "Tren", url: "/Bileta?type=tren#kerkese-bilete", visible: true },
+  { id: "autobus", label: "Autobus", url: "/Bileta?type=autobus#kerkese-bilete", visible: true },
+  { id: "furgon", label: "Furgon", url: "/Bileta?type=furgon#kerkese-bilete", visible: true },
+  { id: "taksi", label: "Taksi", url: "/Bileta?type=taksi#kerkese-bilete", visible: true },
+  { id: "traget", label: "Traget", url: "/Bileta?type=traget#kerkese-bilete", visible: true },
+  { id: "paketa", label: "Paketa turistike", url: "/Bileta?type=paketa#kerkese-bilete", visible: true },
+  { id: "umre", label: "Umre", url: "/Bileta?type=umre#kerkese-bilete", visible: true },
+  { id: "agjenci", label: "Oferta agjencish", url: "/Bileta?type=agjenci#kerkese-bilete", visible: true },
+  { id: "mallra", label: "Transport mallrash", url: "/Bileta?type=mallra#kerkese-bilete", visible: true },
+  { id: "makina", label: "Transport makinash", url: "/Bileta?type=makina#kerkese-bilete", visible: true }
+];
+
+const EDUKIM_NAV_SUBMENU = [
+  { id: "trajnime", label: "Trajnime profesionale", url: "/Feed?category=edukim&sub=trajnime", visible: true },
+  { id: "shkolla", label: "Shkolla", url: "/Feed?category=edukim&sub=shkolla", visible: true },
+  { id: "shkolla-akademia", label: "Shkolla - Akademia Antokton", url: "/akademia", visible: true },
+  { id: "kurse", label: "Kurse online", url: "/Feed?category=edukim&sub=kurse", visible: true }
+];
+
+const normalizeAntoktonNav = (items) => {
+  if (!Array.isArray(items)) return null;
+  return items.map((item) => {
+    const label = String(item.label || "").toLowerCase();
+    const page = String(item.page || "").toLowerCase();
+    const id = String(item.id || "").toLowerCase();
+    if (id === "bileta" || page === "bileta" || label === "bileta") {
+      return { ...item, hasSubmenu: true, submenu: BILETA_NAV_SUBMENU };
+    }
+    if (id === "edukim" || page === "edukim" || label === "edukim") {
+      return { ...item, hasSubmenu: true, submenu: EDUKIM_NAV_SUBMENU };
+    }
+    return item;
+  });
+};
+
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -36,6 +73,7 @@ export default function Layout({ children, currentPageName }) {
     media: false,
     members: false,
     bileta: false,
+    shkolla: false,
     profili: false
   });
   const menuScrollRef = React.useRef(null);
@@ -180,7 +218,7 @@ export default function Layout({ children, currentPageName }) {
   const dynNavRaw = getSiteConfig("nav_config", "");
   const dynNav = React.useMemo(() => {
     if (!dynNavRaw) return null;
-    try { return JSON.parse(dynNavRaw); } catch { return null; }
+    try { return normalizeAntoktonNav(JSON.parse(dynNavRaw)); } catch { return null; }
   }, [dynNavRaw]);
   const dynNavHasStatus = React.useMemo(() => {
     if (!Array.isArray(dynNav)) return false;
@@ -630,8 +668,20 @@ export default function Layout({ children, currentPageName }) {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-52 bg-[#0b1020] border-white/10">
-                          {[{key:"avion",label:"Avion"},{key:"autobus",label:"Autobus"},{key:"tren",label:"Tren"},{key:"furgon",label:"Furgon"},{key:"mallra",label:"Transport mallrash"}].map(b => (
-                            <DropdownMenuItem key={b.key} asChild><Link to={`/Bileta?type=${b.key}`} className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Plane className="w-4 h-4" /> {b.label}</Link></DropdownMenuItem>
+                          {[
+                            {key:"avion",label:"Avion"},
+                            {key:"tren",label:"Tren"},
+                            {key:"autobus",label:"Autobus"},
+                            {key:"furgon",label:"Furgon"},
+                            {key:"taksi",label:"Taksi"},
+                            {key:"traget",label:"Traget"},
+                            {key:"paketa",label:"Paketa turistike"},
+                            {key:"umre",label:"Umre"},
+                            {key:"agjenci",label:"Oferta agjencish"},
+                            {key:"mallra",label:"Transport mallrash"},
+                            {key:"makina",label:"Transport makinash"}
+                          ].map(b => (
+                            <DropdownMenuItem key={b.key} asChild><Link to={`/Bileta?type=${b.key}#kerkese-bilete`} className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Plane className="w-4 h-4" /> {b.label}</Link></DropdownMenuItem>
                           ))}
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -925,9 +975,21 @@ export default function Layout({ children, currentPageName }) {
                     </button>
                     {mobileSubmenuOpen.bileta && (
                       <div className="ml-5 mt-0.5 space-y-0.5">
-                        {["avion","autobus","tren","furgon","mallra"].map(type => (
-                          <Link key={type} to={`/Bileta?type=${type}`} onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white/60 hover:text-white capitalize">
-                            <Plane className="w-3 h-3" /> {type==="mallra"?"Transport mallrash":type.charAt(0).toUpperCase()+type.slice(1)}
+                        {[
+                          {key:"avion",label:"Avion"},
+                          {key:"tren",label:"Tren"},
+                          {key:"autobus",label:"Autobus"},
+                          {key:"furgon",label:"Furgon"},
+                          {key:"taksi",label:"Taksi"},
+                          {key:"traget",label:"Traget"},
+                          {key:"paketa",label:"Paketa turistike"},
+                          {key:"umre",label:"Umre"},
+                          {key:"agjenci",label:"Oferta agjencish"},
+                          {key:"mallra",label:"Transport mallrash"},
+                          {key:"makina",label:"Transport makinash"}
+                        ].map(type => (
+                          <Link key={type.key} to={`/Bileta?type=${type.key}#kerkese-bilete`} onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white/60 hover:text-white">
+                            <Plane className="w-3 h-3" /> {type.label}
                           </Link>
                         ))}
                       </div>
@@ -940,9 +1002,23 @@ export default function Layout({ children, currentPageName }) {
                     </button>
                     {mobileSubmenuOpen.edukim && (
                       <div className="ml-5 mt-0.5 space-y-0.5">
-                        <Link to="/akademia" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-[#9bffd6] hover:text-white"><Award className="w-3 h-3" /> Akademia Antokton</Link>
                         <Link to="/Feed?category=edukim&sub=trajnime" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:text-white/60"><GraduationCap className="w-3 h-3" /> Trajnime profesionale</Link>
-                        <Link to="/Feed?category=edukim&sub=shkolla" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:text-white/60"><GraduationCap className="w-3 h-3" /> Shkolla</Link>
+                        <button onClick={() => setMobileSubmenuOpen(p=>({...p,shkolla:!p.shkolla}))} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:text-white/60 w-full">
+                          <GraduationCap className="w-3 h-3" /> Shkolla
+                          <ChevronDown className={`w-3 h-3 ml-auto transition-transform ${mobileSubmenuOpen.shkolla?'rotate-180':''}`} />
+                        </button>
+                        {mobileSubmenuOpen.shkolla && (
+                          <div className="ml-4 space-y-0.5">
+                            <Link to="/Feed?category=edukim&sub=shkolla" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white/60 hover:text-white"><GraduationCap className="w-3 h-3" /> Shkolla</Link>
+                            <Link to="/akademia" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-[#9bffd6] hover:text-white"><Award className="w-3 h-3" /> Akademia Antokton</Link>
+                            {isAuth && (
+                              <Link to="/AkademiaMentor" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white/60 hover:text-white"><Award className="w-3 h-3" /> Paneli Akademia</Link>
+                            )}
+                            {isAuth && (user?.role === "admin" || user?.role === "moderator") && (
+                              <Link to="/AkademiaAdmin" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white/60 hover:text-white"><Shield className="w-3 h-3" /> Admin Akademia</Link>
+                            )}
+                          </div>
+                        )}
                         <Link to="/Feed?category=edukim&sub=kurse" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:text-white/60"><GraduationCap className="w-3 h-3" /> Kurse online</Link>
                       </div>
                     )}
@@ -982,14 +1058,6 @@ export default function Layout({ children, currentPageName }) {
                             </div>
                           )}
                         </div>
-                      )}
-                      <Link to="/AkademiaMentor" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white hover:text-white/60 hover:bg-white/5 transition-all">
-                        <Award className="w-3.5 h-3.5" /><span className="text-sm font-medium">Paneli Akademia</span>
-                      </Link>
-                      {(user?.role === "admin" || user?.role === "moderator") && (
-                        <Link to="/AkademiaAdmin" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white hover:text-white/60 hover:bg-white/5 transition-all">
-                          <Shield className="w-3.5 h-3.5" /><span className="text-sm font-medium">Admin Akademia</span>
-                        </Link>
                       )}
                     </>
                   )}

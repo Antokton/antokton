@@ -43,17 +43,24 @@ const DEFAULT_NAV = [
     submenu: [
       { id: "trajnime", label: "Trajnime profesionale", url: "/Feed?category=edukim&sub=trajnime", visible: true },
       { id: "shkolla", label: "Shkolla", url: "/Feed?category=edukim&sub=shkolla", visible: true },
+      { id: "shkolla-akademia", label: "Shkolla - Akademia Antokton", url: "/akademia", visible: true },
       { id: "kurse", label: "Kurse online", url: "/Feed?category=edukim&sub=kurse", visible: true },
     ]
   },
   {
     id: "bileta", label: "Bileta", page: "Bileta", hasSubmenu: true, visible: true,
     submenu: [
-      { id: "avion", label: "Avion", url: "/Bileta?type=avion", visible: true },
-      { id: "autobus", label: "Autobus", url: "/Bileta?type=autobus", visible: true },
-      { id: "tren", label: "Tren", url: "/Bileta?type=tren", visible: true },
-      { id: "furgon", label: "Furgon", url: "/Bileta?type=furgon", visible: true },
-      { id: "mallra", label: "Transport mallrash", url: "/Bileta?type=mallra", visible: true },
+      { id: "avion", label: "Avion", url: "/Bileta?type=avion#kerkese-bilete", visible: true },
+      { id: "tren", label: "Tren", url: "/Bileta?type=tren#kerkese-bilete", visible: true },
+      { id: "autobus", label: "Autobus", url: "/Bileta?type=autobus#kerkese-bilete", visible: true },
+      { id: "furgon", label: "Furgon", url: "/Bileta?type=furgon#kerkese-bilete", visible: true },
+      { id: "taksi", label: "Taksi", url: "/Bileta?type=taksi#kerkese-bilete", visible: true },
+      { id: "traget", label: "Traget", url: "/Bileta?type=traget#kerkese-bilete", visible: true },
+      { id: "paketa", label: "Paketa turistike", url: "/Bileta?type=paketa#kerkese-bilete", visible: true },
+      { id: "umre", label: "Umre", url: "/Bileta?type=umre#kerkese-bilete", visible: true },
+      { id: "agjenci", label: "Oferta agjencish", url: "/Bileta?type=agjenci#kerkese-bilete", visible: true },
+      { id: "mallra", label: "Transport mallrash", url: "/Bileta?type=mallra#kerkese-bilete", visible: true },
+      { id: "makina", label: "Transport makinash", url: "/Bileta?type=makina#kerkese-bilete", visible: true },
     ]
   },
   { id: "messages", label: "Mesazhet", page: "Messages", hasSubmenu: false, visible: true, authOnly: true, submenu: [] },

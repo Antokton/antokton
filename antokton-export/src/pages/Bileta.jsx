@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/antoktonClient";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,8 @@ import {
   Building2,
   Package,
   Info,
-  FileText
+  FileText,
+  ChevronDown
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -83,6 +84,7 @@ const emptyForm = {
   transport_type: "", request_type: "udhetar",
   from: "", to: "", departure_date: "", return_date: "",
   passengers: "1", ages: "", preferred_vehicle: "",
+  service_interest: "",
   // mallra
   cargo_type: "", cargo_weight: "", cargo_size: "",
   // kontakt
@@ -91,10 +93,73 @@ const emptyForm = {
   notes: ""
 };
 
+const requestByType = {
+  avion: { label: "Avion", transport_type: "avion", interest: "Bileta Udhëtimi - Avion", request_type: "udhetar" },
+  autobus: { label: "Autobus", transport_type: "autobus", interest: "Bileta Udhëtimi - Autobus", request_type: "udhetar" },
+  tren: { label: "Tren", transport_type: "tren", interest: "Bileta Udhëtimi - Tren", request_type: "udhetar" },
+  furgon: { label: "Furgon", transport_type: "furgon", interest: "Bileta Udhëtimi - Furgon", request_type: "udhetar" },
+  taksi: { label: "Taksi", transport_type: "taksi", interest: "Bileta Udhëtimi - Taksi", request_type: "udhetar" },
+  traget: { label: "Traget", transport_type: "traget", interest: "Bileta Udhëtimi - Traget", request_type: "udhetar" },
+  paketa: { label: "Paketa turistike", interest: "Paketa turistike", request_type: "udhetar" },
+  umre: { label: "Umre", interest: "Pelegrinazh - Umre", request_type: "udhetar" },
+  agjenci: { label: "Oferta nga agjenci partnere", interest: "Oferta nga agjenci partnere", request_type: "udhetar" },
+  mallra: { label: "Transport mallrash", transport_type: "transport_mallrash", interest: "Transport mallrash - Transport mallrash", request_type: "mall" },
+  makina: { label: "Transport makinash", transport_type: "transport_makinash", interest: "Transport mallrash - Transport makinash", request_type: "mall" }
+};
+
 export default function Bileta() {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [openSections, setOpenSections] = useState({ "Bileta Udhëtimi": true });
+
+  const transportValueByItem = {
+    Avion: "avion",
+    Tren: "tren",
+    Autobus: "autobus",
+    Furgon: "furgon",
+    Taksi: "taksi",
+    Traget: "traget",
+    "Transport mallrash": "transport_mallrash",
+    "Transport makinash": "transport_makinash"
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const type = params.get("type");
+    const request = requestByType[type];
+    if (request) {
+      setForm((prev) => ({
+        ...prev,
+        transport_type: request.transport_type || prev.transport_type,
+        request_type: request.request_type || prev.request_type,
+        preferred_vehicle: request.label,
+        service_interest: request.interest,
+        notes: prev.notes || `Interesim për: ${request.interest}`
+      }));
+    }
+    if (window.location.hash === "#kerkese-bilete") {
+      window.setTimeout(() => {
+        document.getElementById("kerkese-bilete")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+  }, []);
+
+  const handleServicePick = (sectionTitle, item) => {
+    const transportValue = transportValueByItem[item];
+    const interest = `${sectionTitle} - ${item}`;
+    setForm((prev) => ({
+      ...prev,
+      transport_type: transportValue || prev.transport_type,
+      request_type: sectionTitle === "Transport mallrash" ? "mall" : "udhetar",
+      preferred_vehicle: item,
+      service_interest: interest,
+      notes: prev.notes || `Interesim për: ${interest}`
+    }));
+    window.setTimeout(() => {
+      document.getElementById("kerkese-bilete")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -121,8 +186,8 @@ export default function Bileta() {
 
       await base44.integrations.Core.SendEmail({
         to: "info@antokton.com",
-        subject: `Kërkesë Bilete - ${form.transport_type} ${form.from} → ${form.to}`,
-        body: `Kërkesë e re për biletë/transport:\n\nLloji: ${form.transport_type}\nNga: ${form.from}\nDeri: ${form.to}\nData nisjes: ${form.departure_date}\nData kthimit: ${form.return_date || "Vetëm vajtje"}\n\n${details}\n\nKontakt:\nEmri: ${form.contact_name}\nEmail: ${form.contact_email}\nTelefon: ${contactPhone || "N/A"}\nWhatsApp: ${contactWhatsApp || "N/A"}\nKontakt tjetër: ${form.contact_other || "N/A"}\n\nShënime: ${form.notes || "Asnjë"}\n\nPërdoruesi: ${user?.email || "Jo i regjistruar"}`,
+        subject: `Kërkesë Bilete - ${form.service_interest || form.transport_type} ${form.from} → ${form.to}`,
+        body: `Kërkesë e re për biletë/transport:\n\nInteresi: ${form.service_interest || "N/A"}\nLloji/Mjeti: ${form.transport_type || form.preferred_vehicle || "N/A"}\nNga: ${form.from}\nDeri: ${form.to}\nData nisjes: ${form.departure_date}\nData kthimit: ${form.return_date || "Vetëm vajtje"}\n\n${details}\n\nKontakt:\nEmri: ${form.contact_name}\nEmail: ${form.contact_email}\nTelefon: ${contactPhone || "N/A"}\nWhatsApp: ${contactWhatsApp || "N/A"}\nKontakt tjetër: ${form.contact_other || "N/A"}\n\nShënime: ${form.notes || "Asnjë"}\n\nPërdoruesi: ${user?.email || "Jo i regjistruar"}`,
       });
     } catch (err) {
       console.error("Email error:", err);
@@ -158,32 +223,49 @@ export default function Bileta() {
         <p className="mt-3 text-sm sm:text-base text-white/65">
           Moduli do të mundësojë shfaqjen e ofertave dhe kërkesave për bileta, paketa udhëtimi dhe oferta nga partnerë të verifikuar.
         </p>
+        <a href="#kerkese-bilete" className="mt-5 inline-flex rounded-xl border border-[#8ab4ff]/25 bg-[#8ab4ff]/10 px-4 py-3 text-sm font-semibold text-[#cfe0ff] hover:bg-[#8ab4ff]/15 transition-colors">
+          Kërko biletë ose paketë
+        </a>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 mb-6">
         {serviceSections.map((section) => {
           const Icon = section.icon;
+          const isOpen = openSections[section.title];
           return (
             <motion.section
               key={section.title}
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] p-5"
+              className="rounded-2xl border border-white/10 bg-white/[0.04] overflow-hidden"
             >
-              <div className="flex items-center gap-3 mb-4">
+              <button
+                type="button"
+                onClick={() => setOpenSections((prev) => ({ ...prev, [section.title]: !prev[section.title] }))}
+                className="w-full flex items-center gap-3 p-4 text-left hover:bg-white/[0.03] transition-colors"
+              >
                 <div className="w-11 h-11 rounded-xl bg-[#8ab4ff]/10 border border-[#8ab4ff]/20 flex items-center justify-center">
                   <Icon className="w-5 h-5 text-[#8ab4ff]" />
                 </div>
-                <h2 className="text-base font-bold text-white leading-tight">{section.title}</h2>
-              </div>
-              <ul className="space-y-2">
-                {section.items.map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-sm text-white/70">
-                    <CheckCircle className="w-4 h-4 mt-0.5 text-[#9bffd6] shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
+                <h2 className="text-base font-bold text-white leading-tight flex-1">{section.title}</h2>
+                <ChevronDown className={`w-4 h-4 text-white/55 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+              </button>
+              {isOpen && (
+                <ul className="px-4 pb-4 space-y-2">
+                  {section.items.map((item) => (
+                    <li key={item}>
+                      <button
+                        type="button"
+                        onClick={() => handleServicePick(section.title, item)}
+                        className="w-full flex items-start gap-2 rounded-lg px-2 py-2 text-left text-sm text-white/70 hover:bg-white/5 hover:text-white transition-colors"
+                      >
+                        <CheckCircle className="w-4 h-4 mt-0.5 text-[#9bffd6] shrink-0" />
+                        <span>{item}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </motion.section>
           );
         })}
@@ -200,15 +282,9 @@ export default function Bileta() {
               </p>
             </div>
           </div>
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="mt-5 grid grid-cols-1 gap-3">
             <a href="#kerkese-bilete" className="rounded-xl border border-[#8ab4ff]/25 bg-[#8ab4ff]/10 px-4 py-3 text-sm font-semibold text-[#cfe0ff] hover:bg-[#8ab4ff]/15 transition-colors">
               Kërko biletë ose paketë udhëtimi
-            </a>
-            <a href="mailto:info@antokton.com?subject=Ofert%C3%AB%20udh%C3%ABtimi%20si%20agjenci%20partnere" className="rounded-xl border border-[#9bffd6]/25 bg-[#9bffd6]/10 px-4 py-3 text-sm font-semibold text-[#d8ffef] hover:bg-[#9bffd6]/15 transition-colors">
-              Ofro paketë si agjenci partnere
-            </a>
-            <a href="mailto:info@antokton.com?subject=Bashk%C3%ABpunim%20p%C3%ABr%20Bileta%20dhe%20Udh%C3%ABtime" className="rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors">
-              Kontakto për bashkëpunim
             </a>
           </div>
         </section>
@@ -237,13 +313,18 @@ export default function Bileta() {
 
         {/* Lloji i transportit */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-white">Mjeti i transportit *</Label>
+          <Label className="text-sm font-medium text-white">Mjeti ose shërbimi i preferuar *</Label>
+          {form.service_interest && (
+            <p className="rounded-lg border border-[#9bffd6]/20 bg-[#9bffd6]/10 px-3 py-2 text-xs text-[#d8ffef]">
+              Zgjedhur: {form.service_interest}
+            </p>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {transportTypes.map(t => {
               const Icon = t.icon;
               return (
                 <button key={t.value} type="button"
-                  onClick={() => setForm({ ...form, transport_type: t.value })}
+                  onClick={() => setForm({ ...form, transport_type: t.value, preferred_vehicle: t.label, service_interest: `Bileta Udhëtimi - ${t.label}` })}
                   className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all text-xs font-medium ${
                     form.transport_type === t.value
                       ? "border-[#8ab4ff] bg-[#8ab4ff]/10 text-[#8ab4ff]"
@@ -397,8 +478,8 @@ export default function Bileta() {
           <p className="text-xs text-blue-300">ℹ️ Po gjenerojmë çmimin bazuar në të dhënat tuaja. Nëse nuk doni të prisni, dërgojini kërkesën dhe ne do t'ju kontaktojmë me ofertën sapo të jetë gati.</p>
         </div>
 
-        <Button type="submit" disabled={loading || !form.transport_type} className="w-full h-12 text-sm font-semibold"
-          style={{ backgroundImage: 'linear-gradient(135deg, #8ab4ff 0%, #9bffd6 100%)', color: '#0b1020', opacity: (loading || !form.transport_type) ? 0.7 : 1 }}>
+        <Button type="submit" disabled={loading || (!form.transport_type && !form.service_interest)} className="w-full h-12 text-sm font-semibold"
+          style={{ backgroundImage: 'linear-gradient(135deg, #8ab4ff 0%, #9bffd6 100%)', color: '#0b1020', opacity: (loading || (!form.transport_type && !form.service_interest)) ? 0.7 : 1 }}>
           {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
           Dërgo Kërkesën
         </Button>
