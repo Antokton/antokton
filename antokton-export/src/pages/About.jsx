@@ -53,12 +53,22 @@ export default function About() {
 
   const isExternal = (project) => project.link_type === "external";
 
+  const projectLinkOverrides = {
+    "Antokton TV & Radio": createPageUrl("Media"),
+    "Fitra Antokton": createPageUrl("Bamiresi"),
+    "Komunitet": createPageUrl("Statuset"),
+    "Çertifikim Cilësie": createPageUrl("Certifikim"),
+    "Certifikim Cilesie": createPageUrl("Certifikim"),
+    "Moderim & Besim": createPageUrl("Certifikim"),
+  };
+
   const defaultProjects = [
     { icon: "Briefcase", title: "Punë në Europë", desc: "Portal njoftimesh pune për diasporën shqiptare në Europë dhe më gjerë.", color: "bg-blue-50 text-blue-500", link: createPageUrl("Feed") + "?category=pune" },
-    { icon: "Radio", title: "Antokton TV & Radio", desc: "Përmbajtje mediatike komunitare — lajme, intervista dhe programe.", color: "bg-purple-50 text-purple-500", link: createPageUrl("Feed") + "?category=media" },
-    { icon: "Heart", title: "Fitra Antokton", desc: "Bamirësi dhe solidaritet — mbështetje për ata që kanë nevojë.", color: "bg-rose-50 text-rose-500", link: createPageUrl("Feed") + "?category=bamiresi" },
-    { icon: "Users", title: "Komunitet", desc: "Ndërveprim social, komente, diskutime dhe bashkëpunim.", color: "bg-amber-50 text-amber-500", link: createPageUrl("Feed") },
-    { icon: "Shield", title: "Moderim & Besim", desc: "Sistem verifikimi, role të qarta dhe transparencë.", color: "bg-cyan-50 text-cyan-500", link: createPageUrl("About") },
+    { icon: "Radio", title: "Antokton TV & Radio", desc: "Përmbajtje mediatike komunitare — lajme, intervista dhe programe.", color: "bg-purple-50 text-purple-500", link: createPageUrl("Media") },
+    { icon: "Heart", title: "Fitra Antokton", desc: "Bamirësi dhe solidaritet — mbështetje për ata që kanë nevojë.", color: "bg-rose-50 text-rose-500", link: createPageUrl("Bamiresi") },
+    { icon: "Users", title: "Komunitet", desc: "Ndërveprim social, komente, diskutime dhe bashkëpunim.", color: "bg-amber-50 text-amber-500", link: createPageUrl("Statuset") },
+    { icon: "Shield", title: "Çertifikim Cilësie", desc: "Modul i planifikuar për verifikim, transparencë dhe besueshmëri.", color: "bg-cyan-50 text-cyan-500", link: createPageUrl("Certifikim") },
+    { icon: "GraduationCap", title: "Edukim", desc: "Hapësirë për kurse, qendra edukimi, shkolla, trajnime dhe materiale formuese që mund të ofrohen nga Antokton ose bashkëpunëtorë të verifikuar.", color: "bg-indigo-50 text-indigo-500", link: createPageUrl("Edukim") },
     { icon: "Globe", title: "Shërbime", desc: "Shërbime juridike, edukative dhe profesionale.", color: "bg-emerald-50 text-emerald-500", link: createPageUrl("Feed") + "?category=sherbime" },
   ];
 
@@ -176,7 +186,7 @@ export default function About() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {displayProjects.map((project, i) => {
               const IconComponent = iconMap[project.icon || project.icon_name] || Briefcase;
-              const projectLink = project.link ? project.link : getProjectLink(project);
+              const projectLink = projectLinkOverrides[project.title] || (project.link ? project.link : getProjectLink(project));
               const isExternalLink = project.link ? false : isExternal(project);
               
               const content = (
