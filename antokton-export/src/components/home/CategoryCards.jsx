@@ -9,7 +9,7 @@ const categories = [
   { key: "komunitet", label: "Komunitet", desc: "Statuse & bashkëpunim", icon: Users, color: "from-emerald-500/20 to-emerald-600/20", text: "text-emerald-400", url: "/Statuset" },
   { key: "sherbime", label: "Shërbime", desc: "Shërbime të ndryshme", icon: Wrench, color: "from-orange-500/20 to-orange-600/20", text: "text-orange-400", url: "/Sherbime" },
   { key: "pazar", label: "Pazar", desc: "Tregtim & dhurime", icon: ShoppingBag, color: "from-teal-500/20 to-teal-600/20", text: "text-teal-400", url: "/Pazar" },
-  { key: "bileta", label: "Bileta", desc: "Bileta & aktivitete", icon: Ticket, color: "from-violet-500/20 to-violet-600/20", text: "text-violet-400", url: "/Bileta" },
+  { key: "bileta", label: "Bileta", desc: "Udhëtime, Umre, agjenci, mallra & makina", icon: Ticket, color: "from-violet-500/20 to-violet-600/20", text: "text-violet-400", url: "/Bileta" },
   { key: "ngjarje", label: "Ngjarje", desc: "Evente & kalendar", icon: CalendarDays, color: "from-fuchsia-500/20 to-fuchsia-600/20", text: "text-fuchsia-400", url: "/Ngjarje" },
   { key: "edukim", label: "Edukim", desc: "Kurse & trajnime", icon: GraduationCap, color: "from-amber-500/20 to-amber-600/20", text: "text-amber-400", url: "/Edukim" },
   { key: "media", label: "Media", desc: "Lajme & informacion", icon: Radio, color: "from-cyan-500/20 to-cyan-600/20", text: "text-cyan-400", url: "/Media" },

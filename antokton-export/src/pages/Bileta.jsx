@@ -5,7 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plane, Bus, Train, Truck, Send, Loader2, CheckCircle } from "lucide-react";
+import {
+  Plane,
+  Bus,
+  Train,
+  Truck,
+  Send,
+  Loader2,
+  CheckCircle,
+  Car,
+  Ship,
+  Map,
+  Compass,
+  Building2,
+  Package,
+  Info,
+  FileText
+} from "lucide-react";
 import { motion } from "framer-motion";
 
 const transportTypes = [
@@ -13,7 +29,53 @@ const transportTypes = [
   { value: "autobus", label: "Autobus", icon: Bus },
   { value: "tren", label: "Tren", icon: Train },
   { value: "furgon", label: "Furgon", icon: Truck },
+  { value: "taksi", label: "Taksi", icon: Car },
+  { value: "traget", label: "Traget", icon: Ship },
   { value: "transport_mallrash", label: "Transport Mallrash", icon: Truck },
+  { value: "transport_makinash", label: "Transport Makinash", icon: Car },
+];
+
+const serviceSections = [
+  {
+    title: "Bileta Udhëtimi",
+    icon: Plane,
+    items: ["Avion", "Tren", "Autobus", "Furgon", "Taksi", "Traget"],
+  },
+  {
+    title: "Paketa turistike",
+    icon: Map,
+    items: ["Udhëtime të organizuara", "Fundjava turistike", "Pushime familjare", "Guida dhe ture"],
+  },
+  {
+    title: "Pelegrinazh",
+    icon: Compass,
+    items: ["Umre", "Vizita fetare/edukative"],
+  },
+  {
+    title: "Oferta nga agjenci partnere",
+    icon: Building2,
+    items: ["Agjenci turistike", "Operatorë transporti", "Guida lokale", "Organizatorë udhëtimesh"],
+  },
+  {
+    title: "Transport mallrash",
+    icon: Package,
+    items: ["Transport mallrash", "Transport makinash"],
+  },
+];
+
+const futureFields = [
+  "lloji",
+  "nisja",
+  "destinacioni",
+  "data e nisjes",
+  "data e kthimit",
+  "numri i personave",
+  "çmimi",
+  "agjencia/ofruesi",
+  "kontakt",
+  "status verifikimi",
+  "përshkrim",
+  "dokumente/foto opsionale",
 ];
 
 const emptyForm = {
@@ -78,20 +140,94 @@ export default function Bileta() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Bileta & Transport</h1>
-        <p className="mt-1 text-sm text-white/60">Plotëso të dhënat dhe ne do të gjenerojmë çmimin për ju</p>
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      <div className="mb-8 max-w-3xl">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8ab4ff]">Transport & Udhëtime</p>
+        <h1 className="mt-2 text-2xl sm:text-4xl font-bold tracking-tight text-white">Bileta - Transport & Udhëtime</h1>
+        <p className="mt-3 text-sm sm:text-base text-white/65">
+          Moduli do të mundësojë shfaqjen e ofertave dhe kërkesave për bileta, paketa udhëtimi dhe oferta nga partnerë të verifikuar.
+        </p>
       </div>
 
-      <motion.form initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} onSubmit={handleSubmit}
-        className="rounded-2xl p-6 sm:p-8 space-y-5"
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
+        {serviceSections.map((section) => {
+          const Icon = section.icon;
+          return (
+            <motion.section
+              key={section.title}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl border border-white/10 bg-white/[0.04] p-5"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-11 h-11 rounded-xl bg-[#8ab4ff]/10 border border-[#8ab4ff]/20 flex items-center justify-center">
+                  <Icon className="w-5 h-5 text-[#8ab4ff]" />
+                </div>
+                <h2 className="text-base font-bold text-white leading-tight">{section.title}</h2>
+              </div>
+              <ul className="space-y-2">
+                {section.items.map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-white/70">
+                    <CheckCircle className="w-4 h-4 mt-0.5 text-[#9bffd6] shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </motion.section>
+          );
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-4 mb-8">
+        <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-[#9bffd6] mt-1 shrink-0" />
+            <div>
+              <h2 className="text-lg font-bold text-white">Si do të zgjerohet moduli</h2>
+              <p className="mt-2 text-sm text-white/65">
+                Rezervimi dhe pagesa direkte nuk premtohen derisa backend-i për këtë modul të jetë gati. Formulari ekzistues më poshtë mund të përdoret për kërkesa fillestare.
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <a href="#kerkese-bilete" className="rounded-xl border border-[#8ab4ff]/25 bg-[#8ab4ff]/10 px-4 py-3 text-sm font-semibold text-[#cfe0ff] hover:bg-[#8ab4ff]/15 transition-colors">
+              Kërko biletë ose paketë udhëtimi
+            </a>
+            <a href="mailto:info@antokton.com?subject=Ofert%C3%AB%20udh%C3%ABtimi%20si%20agjenci%20partnere" className="rounded-xl border border-[#9bffd6]/25 bg-[#9bffd6]/10 px-4 py-3 text-sm font-semibold text-[#d8ffef] hover:bg-[#9bffd6]/15 transition-colors">
+              Ofro paketë si agjenci partnere
+            </a>
+            <a href="mailto:info@antokton.com?subject=Bashk%C3%ABpunim%20p%C3%ABr%20Bileta%20dhe%20Udh%C3%ABtime" className="rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors">
+              Kontakto për bashkëpunim
+            </a>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <FileText className="w-5 h-5 text-[#8ab4ff]" />
+            <h2 className="text-lg font-bold text-white">Fushat e planifikuara</h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {futureFields.map((field) => (
+              <span key={field} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/70">
+                {field}
+              </span>
+            ))}
+          </div>
+          <p className="mt-4 text-xs text-white/45">
+            Formulari i plotë për kërkesa dhe oferta udhëtimi do të aktivizohet së shpejti.
+          </p>
+        </section>
+      </div>
+
+      <motion.form id="kerkese-bilete" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} onSubmit={handleSubmit}
+        className="max-w-2xl mx-auto rounded-2xl p-6 sm:p-8 space-y-5"
         style={{ backgroundColor: 'var(--bg2)', borderColor: 'var(--line)', borderWidth: '1px' }}>
 
         {/* Lloji i transportit */}
         <div className="space-y-2">
           <Label className="text-sm font-medium text-white">Mjeti i transportit *</Label>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {transportTypes.map(t => {
               const Icon = t.icon;
               return (
