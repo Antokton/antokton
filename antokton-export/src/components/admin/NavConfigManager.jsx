@@ -43,7 +43,6 @@ const DEFAULT_NAV = [
     submenu: [
       { id: "trajnime", label: "Trajnime profesionale", url: "/Feed?category=edukim&sub=trajnime", visible: true },
       { id: "shkolla", label: "Shkolla", url: "/Feed?category=edukim&sub=shkolla", visible: true },
-      { id: "shkolla-akademia", label: "Shkolla - Akademia Antokton", url: "/akademia", visible: true },
       { id: "kurse", label: "Kurse online", url: "/Feed?category=edukim&sub=kurse", visible: true },
     ]
   },

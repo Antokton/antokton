@@ -31,16 +31,25 @@ const VISUAL_EDITOR_TOGGLE_EVENT = "antokton:visual-editor-toggle";
 const DESIGNER_PAGES_KEY = "visual_designer_pages";
 
 const DESIGN_PAGES = [
-  { key: "Home", label: "Kryefaqja", description: "Hero, butonat, kategorite dhe seksionet kryesore" },
-  { key: "Feed", label: "Njoftime", description: "Lista e njoftimeve dhe kartat e punes" },
-  { key: "Statuset", label: "Statuset", description: "Postimet, pyetjet dhe rishperndarjet e komunitetit" },
+  { key: "Home", label: "Kryefaqja", description: "Hero, kategorite ne kryefaqe, butonat kryesore, CTA-te dhe tekstet kryesore" },
+  { key: "Profile", label: "Profili", description: "Faqja e profilit te perdoruesit dhe organizimi i paneleve" },
+  { key: "About", label: "About / Rreth Nesh", description: "Faqja prezantuese dhe projektet brenda Antokton" },
+  { key: "Edukim", label: "Edukim", description: "Faqja e edukimit, shkollat, qendrat edukative dhe kurset" },
+  { key: "Media", label: "Media", description: "Faqja e mediave, kanalet dhe renditja e tyre" },
+  { key: "EdukiMeDija", label: "EdukiMeDija", description: "Faqja e kombinuar Edukim dhe Media" },
+  { key: "Bamiresi", label: "Bamiresi", description: "Organizatat, projektet bamirese, CTA-te dhe kartat publike" },
+  { key: "Certifikim", label: "Certifikim", description: "Moduli i certifikimit dhe standardet e besueshmerise" },
+  { key: "Bileta", label: "Bileta & Udhetime", description: "Bileta, paketa udhetimi, Umre, agjenci dhe transport mallrash/makinash" },
   { key: "Events", label: "Ngjarje", description: "Faqja e ngjarjeve dhe kartat publike" },
-  { key: "Pazar", label: "Pazar", description: "Postimet e pazarit dhe listimet" },
+  { key: "Pazar", label: "Pazar", description: "Postimet e pazarit, kategorite dhe listimet" },
+  { key: "Sherbime", label: "Sherbime", description: "Sherbimet, kategorite dhe CTA-te per ofrues/kerkues" },
+  { key: "Contact", label: "Kontakt", description: "Faqja e kontaktit dhe hyrja ne chat-in e brendshem" },
+  { key: "Feed", label: "Njoftime", description: "Lista e njoftimeve dhe kartat e punes" },
+  { key: "Statuset", label: "Komunitet / Statuset", description: "Postimet, pyetjet dhe rishperndarjet e komunitetit" },
   { key: "Members", label: "Anetaret", description: "Lista dhe shfaqja e anetareve" },
-  { key: "Profile", label: "Profili", description: "Faqja e profilit te perdoruesit" },
   { key: "Admin", label: "Paneli Admin", description: "Paneli ku je tani" },
-  { url: "/akademia", label: "Akademia", description: "Faqja publike e Akademia Antokton" },
-  { url: "/AkademiaAdmin", label: "Akademia Admin", description: "Menaxhimi i kurseve dhe aplikimeve" },
+  { url: "/Admin?section=settings", label: "Menu hamburger", description: "Konfigurimi i menuve, renditjes dhe shfaqjes/fshehjes se moduleve" },
+  { url: "/Admin?section=homepage", label: "Kategorite ne kryefaqe", description: "Renditja e kategorive, butonat kryesore dhe tekstet e kryefaqes" },
 ];
 
 function parseDesignerPages(value) {
@@ -113,7 +122,7 @@ export default function Admin() {
       await base44.entities.SiteConfig.create({
         key: DESIGNER_PAGES_KEY,
         value,
-        label: "Visual designer pages",
+        label: "Faqet e editorit vizual",
         group: "visual_editor",
       });
     }
@@ -911,7 +920,7 @@ export default function Admin() {
                 <h3 className="text-base font-bold text-white">Hap nje faqe per editim</h3>
                 <p className="text-xs text-white/45">Editorin mund ta ndezesh nga ketu dhe pastaj te zgjedhesh elementet direkt ne faqe.</p>
               </div>
-              <Badge className="border-[#8ab4ff]/30 bg-[#8ab4ff]/15 text-[#8ab4ff]">Admin only</Badge>
+              <Badge className="border-[#8ab4ff]/30 bg-[#8ab4ff]/15 text-[#8ab4ff]">Vetëm admin</Badge>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">

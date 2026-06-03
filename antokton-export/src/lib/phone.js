@@ -1,4 +1,4 @@
-export const PHONE_PLACEHOLDER = "+XXX XX XXX XX XX";
+export const PHONE_PLACEHOLDER = "+00 00 000 000 000";
 
 export function normalizeInternationalPhone(value = "") {
   return String(value).trim().replace(/[\s().-]/g, "");
@@ -11,5 +11,5 @@ export function isValidInternationalPhone(value = "", { required = false } = {})
 }
 
 export function getInternationalPhoneError(label = "Numri i telefonit") {
-  return `${label} duhet të jetë në format ndërkombëtar dhe të fillojë me prefiksin +. Shembull: ${PHONE_PLACEHOLDER}`;
+  return `${label} duhet të jetë në format ndërkombëtar E.164 dhe të fillojë me prefiksin +.`;
 }

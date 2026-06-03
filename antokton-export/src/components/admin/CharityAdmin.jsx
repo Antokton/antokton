@@ -196,7 +196,7 @@ export default function CharityAdmin() {
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form.is_featured} onChange={(e) => setForm({ ...form, is_featured: e.target.checked })}
                 className="w-4 h-4 accent-[#9bffd6]" />
-              <span className="text-white/70 text-sm">I veçuar (featured)</span>
+              <span className="text-white/70 text-sm">I veçuar</span>
             </label>
           </div>
         </div>
@@ -249,22 +249,29 @@ export default function CharityAdmin() {
               </div>
               {project.organizer && <p className="text-white/40 text-xs mt-0.5">{project.organizer}</p>}
             </div>
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex flex-wrap items-center justify-end gap-1 shrink-0">
+              <span className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-white/45">
+                Renditja: {project.order ?? 0}
+              </span>
               <button onClick={() => toggleField(project, "is_featured")} title={project.is_featured ? "Hiq nga featured" : "Bëj featured"}
-                className="p-1.5 rounded-lg text-white/40 hover:text-[#9bffd6] hover:bg-white/5 transition-all">
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] text-white/50 hover:text-[#9bffd6] hover:bg-white/5 transition-all">
                 {project.is_featured ? <StarOff className="w-4 h-4" /> : <Star className="w-4 h-4" />}
+                {project.is_featured ? "Mos shfaq" : "Shfaq"}
               </button>
               <button onClick={() => toggleField(project, "is_active")} title={project.is_active ? "Çaktivizo" : "Aktivizo"}
-                className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all">
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] text-white/50 hover:text-white hover:bg-white/5 transition-all">
                 {project.is_active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {project.is_active ? "Fshihe" : "Shfaq"}
               </button>
               <button onClick={() => handleEdit(project)}
-                className="p-1.5 rounded-lg text-white/40 hover:text-[#8ab4ff] hover:bg-white/5 transition-all">
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] text-white/50 hover:text-[#8ab4ff] hover:bg-white/5 transition-all">
                 <Pencil className="w-4 h-4" />
+                Përpuno
               </button>
               <button onClick={() => { if (confirm("Fshi projektin?")) deleteMutation.mutate(project.id); }}
-                className="p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-white/5 transition-all">
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] text-white/50 hover:text-red-400 hover:bg-white/5 transition-all">
                 <Trash2 className="w-4 h-4" />
+                Fshi
               </button>
             </div>
           </div>

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Tv, Radio, ExternalLink, Loader2, Save, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Tv, Radio, Loader2, Save, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 const CRED_OPTIONS = ["e panjohur","e ulet","mesatare","e larte"];
@@ -46,17 +46,22 @@ function ChannelRow({ ch, onEdit, onToggle, onDelete, onQuickUpdate }) {
       <Badge className={`ml-auto text-[9px] px-1.5 ${ch.is_active ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-gray-500/20 text-gray-400 border-gray-500/30"}`}>
         {ch.is_active ? "✓" : "–"}
       </Badge>
-      <div className="flex gap-1 flex-shrink-0">
+      <div className="flex flex-wrap justify-end gap-1 flex-shrink-0">
+        <span className="rounded border border-white/10 bg-white/5 px-1.5 py-1 text-[9px] text-white/40">
+          Rendit
+        </span>
         <button onClick={() => onToggle.mutate({ id: ch.id, is_active: !ch.is_active })}
-          className="text-white/35 hover:text-white p-1 rounded transition-colors text-[9px]">
-          {ch.is_active ? "Çaktivo" : "Aktivo"}
+          className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-[9px] text-white/45 hover:text-white hover:bg-white/5 transition-colors">
+          {ch.is_active ? "Fshihe" : "Shfaq"}
         </button>
-        <button onClick={() => onEdit(ch)} className="text-[#8ab4ff]/60 hover:text-[#8ab4ff] p-1 rounded transition-colors">
+        <button onClick={() => onEdit(ch)} className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-[9px] text-[#8ab4ff]/70 hover:text-[#8ab4ff] hover:bg-white/5 transition-colors">
           <Pencil className="w-3 h-3" />
+          Përpuno
         </button>
         <button onClick={() => { if (confirm('Fshi këtë kanal?')) onDelete.mutate(ch.id); }}
-          className="text-red-400/60 hover:text-red-400 p-1 rounded transition-colors">
+          className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-[9px] text-red-400/70 hover:text-red-400 hover:bg-white/5 transition-colors">
           <Trash2 className="w-3 h-3" />
+          Fshi
         </button>
       </div>
     </div>
@@ -67,7 +72,7 @@ export default function MediaManager() {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const EMPTY_FORM = { name: "", type: "tv", flag: "", color: "#8ab4ff", logo_url: "", stream_url: "", website_url: "", description: "", credibility: "e panjohur", programming_type: [], target_age: "te_gjitha", religious_orientation: "laik", is_featured: false };
+  const EMPTY_FORM = { name: "", type: "tv", flag: "", color: "#8ab4ff", logo_url: "", stream_url: "", website_url: "", description: "", credibility: "e panjohur", programming_type: [], target_age: "te_gjitha", religious_orientation: "laik", order: 0, is_featured: false };
   const [form, setForm] = useState({ ...EMPTY_FORM });
 
   const { data: channels = [], isLoading } = useQuery({
@@ -117,7 +122,7 @@ export default function MediaManager() {
       logo_url: ch.logo_url || "", stream_url: ch.stream_url || "", website_url: ch.website_url || "",
       description: ch.description || "", credibility: ch.credibility || "e panjohur",
       programming_type: ch.programming_type || [], target_age: ch.target_age || "te_gjitha",
-      religious_orientation: ch.religious_orientation || "laik", is_featured: ch.is_featured || false,
+      religious_orientation: ch.religious_orientation || "laik", order: ch.order || 0, is_featured: ch.is_featured || false,
     });
     setEditingId(ch.id);
     setShowForm(true);
@@ -132,7 +137,7 @@ export default function MediaManager() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-white font-semibold">Menaxho Media Channels</h3>
+        <h3 className="text-white font-semibold">Menaxho Mediat</h3>
         <Button onClick={() => { setShowForm(true); setEditingId(null); setForm({ ...EMPTY_FORM }); }}
           className="bg-[#8ab4ff]/20 text-[#8ab4ff] border border-[#8ab4ff]/30 hover:bg-[#8ab4ff]/30 h-8 text-xs">
           <Plus className="w-3.5 h-3.5 mr-1" /> Shto Kanal
@@ -207,6 +212,10 @@ export default function MediaManager() {
               </div>
             </div>
             <div>
+              <label className="text-white/60 text-xs mb-1 block">Renditja (0 = i pari)</label>
+              <Input type="number" value={form.order} onChange={e => setForm({...form, order: Number(e.target.value) || 0})} className="h-8 text-xs bg-white/5 border-white/10 text-white" />
+            </div>
+            <div>
               <label className="text-white/60 text-xs mb-1 block">Programacioni (zgjidhni)</label>
               <div className="flex flex-wrap gap-1.5">
                 {PROG_OPTIONS.map(opt => (
@@ -233,7 +242,7 @@ export default function MediaManager() {
             </div>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form.is_featured} onChange={e => setForm({...form, is_featured: e.target.checked})} className="w-4 h-4 rounded border-white/20" />
-              <span className="text-white/60 text-xs">I veçuar (featured)</span>
+              <span className="text-white/60 text-xs">I veçuar</span>
             </label>
           </div>
           <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !form.name}

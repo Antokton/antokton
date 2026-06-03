@@ -85,13 +85,13 @@ export default function UserRatingDisplay({ user, ratings }) {
         </CardContent>
       </Card>
 
-      {/* Halal Compliance */}
+      {/* Standardi Hallall */}
       <Card className="bg-white/5 border-white/10">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-green-400" />
-              <h3 className="text-white font-semibold text-sm">Halal Compliance</h3>
+              <h3 className="text-white font-semibold text-sm">Standardi Hallall</h3>
             </div>
             {user.halal_verified ? (
               <Badge className="bg-green-500/20 text-green-400 border-green-500/30">

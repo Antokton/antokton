@@ -15,7 +15,7 @@ const STATIC_ORGS = [
 ];
 
 const HOW_TO_HELP = [
-  { icon: "💰", title: "Dono Online", desc: "Kontributo direkt tek organizatat e listuara sipas mundësisë tënde." },
+  { icon: "💰", title: "Dhuro Online", desc: "Kontributo direkt tek organizatat e listuara sipas mundësisë tënde." },
   { icon: "🤝", title: "Vullnetar", desc: "Ofro kohën dhe aftësitë tua duke u bashkuar si vullnetar tek organizatat lokale." },
   { icon: "📢", title: "Ndaj", desc: "Ndaj projektet bamirëse në rrjetet sociale dhe fto miqtë të kontribuojnë." },
   { icon: "🏢", title: "Partnerizo", desc: "Kompania jote mund të bëhet partner bamirësie — na kontakto në info@antokton.com." },

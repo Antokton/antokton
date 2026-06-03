@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "./utils";
 import { base44 } from "@/api/antoktonClient";
-import { Menu, X, Home, Briefcase, PlusCircle, Shield, LogIn, LogOut, User, ChevronDown, ChevronUp, Users, Search, Calendar, Building2, Bell, MessageCircle, ArrowUp, GraduationCap, Wrench, Radio, Plane, Tv, Heart, ShoppingBag, Award } from "lucide-react";
+import { Menu, X, Home, Briefcase, PlusCircle, Shield, LogIn, LogOut, User, ChevronDown, ChevronUp, Users, Search, Calendar, Building2, Bell, MessageCircle, ArrowUp, GraduationCap, Wrench, Radio, Plane, Tv, Heart, ShoppingBag } from "lucide-react";
 import ChatButton from "./components/ChatButton";
 import NotificationBell from "./components/NotificationBell";
 import ChatNotificationSystem from "./components/notifications/ChatNotificationSystem";
@@ -33,13 +33,91 @@ const BILETA_NAV_SUBMENU = [
 const EDUKIM_NAV_SUBMENU = [
   { id: "trajnime", label: "Trajnime profesionale", url: "/Feed?category=edukim&sub=trajnime", visible: true },
   { id: "shkolla", label: "Shkolla", url: "/Feed?category=edukim&sub=shkolla", visible: true },
-  { id: "shkolla-akademia", label: "Shkolla - Akademia Antokton", url: "/akademia", visible: true },
   { id: "kurse", label: "Kurse online", url: "/Feed?category=edukim&sub=kurse", visible: true }
+];
+
+const PAZAR_NAV_GROUPS = [
+  {
+    id: "prona",
+    label: "Prona",
+    url: "/Pazar?category=prona",
+    children: [
+      ["shtepi", "Shtëpi"],
+      ["banesa", "Banesa"],
+      ["dyqane", "Dyqane"],
+      ["restorante", "Restorante"],
+      ["hotele", "Hotele"],
+      ["magazina", "Magazina"],
+      ["toka", "Toka"],
+      ["troje", "Troje"],
+      ["ara", "Ara"],
+      ["pemishte", "Pemishte"],
+      ["pyje", "Pyje"],
+    ],
+  },
+  {
+    id: "rroba",
+    label: "Rroba dhe Tesha",
+    url: "/Pazar?category=veshje",
+    children: [["burra", "Burra"], ["gra", "Gra"], ["femije", "Fëmijë"], ["stoli", "Stoli"]],
+  },
+  {
+    id: "mjete",
+    label: "Mjete",
+    url: "/Pazar?category=mjete",
+    children: [["makina", "Makina"], ["traktore", "Traktorë"], ["mjete_bujqesore", "Mjete bujqësore"]],
+  },
+  {
+    id: "pajisje_shtepiake",
+    label: "Pajisje shtëpiake",
+    url: "/Pazar?category=shtepi",
+    children: [
+      ["kuzine", "Kuzinë"],
+      ["furre", "Furrë"],
+      ["lavatesha", "Lavatesha"],
+      ["lavene", "Lavenë"],
+      ["lavambane", "Lavambanë"],
+      ["ngrires", "Ngrirës"],
+      ["divane", "Divanë"],
+      ["tryeze", "Tryezë"],
+      ["krevate", "Krevate"],
+      ["karrike", "Karrike"],
+      ["rrobavarese", "Rrobavarëse"],
+      ["sinarke", "Sinarkë"],
+    ],
+  },
+  { id: "pajisje_sporti", label: "Pajisje Sporti", url: "/Pazar?category=bicikleta" },
+  {
+    id: "libra",
+    label: "Libra",
+    url: "/Pazar?category=libra",
+    children: [["shkence", "Shkencë"], ["histori", "Histori"], ["besim", "Besim"], ["sport", "Sport"]],
+  },
+  {
+    id: "art",
+    label: "Art",
+    url: "/Pazar?category=art",
+    children: [["koleksione", "Koleksione"], ["piktura", "Piktura"], ["skulptura", "Skulptura"], ["ze_figure", "Zë dhe Figurë"]],
+  },
 ];
 
 const normalizeAntoktonNav = (items) => {
   if (!Array.isArray(items)) return null;
-  return items.map((item) => {
+  return items.filter((item) => {
+    const label = String(item.label || "").toLowerCase();
+    const page = String(item.page || "").toLowerCase();
+    const url = String(item.url || "").toLowerCase();
+    return !(
+      label.includes("akademia antokton") ||
+      label.includes("paneli akademia") ||
+      label.includes("admin akademia") ||
+      page.includes("akademiaadmin") ||
+      page.includes("akademiamentor") ||
+      url.includes("/akademiaadmin") ||
+      url.includes("/akademiamentor") ||
+      url === "/akademia"
+    );
+  }).map((item) => {
     const label = String(item.label || "").toLowerCase();
     const page = String(item.page || "").toLowerCase();
     const id = String(item.id || "").toLowerCase();
@@ -602,7 +680,7 @@ export default function Layout({ children, currentPageName }) {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-52 bg-[#0b1020] border-white/10">
-                          <DropdownMenuItem asChild><Link to="/Pazar" className="flex items-center gap-2 cursor-pointer text-[#8ab4ff] hover:text-white font-semibold"><ShoppingBag className="w-4 h-4" /> Pazar (Marketplace)</Link></DropdownMenuItem>
+                          <DropdownMenuItem asChild><Link to="/Pazar" className="flex items-center gap-2 cursor-pointer text-[#8ab4ff] hover:text-white font-semibold"><ShoppingBag className="w-4 h-4" /> Pazar</Link></DropdownMenuItem>
                           <DropdownMenuSeparator className="bg-white/10" />
                           <DropdownMenuItem asChild><Link to="/Feed?category=sherbime&job_type=ofroj" className="cursor-pointer text-white/80 hover:text-white">Ofroj shërbim</Link></DropdownMenuItem>
                           <DropdownMenuItem asChild><Link to="/Feed?category=sherbime&job_type=kerkoj" className="cursor-pointer text-white/80 hover:text-white">Kërkoj shërbim</Link></DropdownMenuItem>
@@ -639,8 +717,6 @@ export default function Layout({ children, currentPageName }) {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-52 bg-[#0b1020] border-white/10">
-                          <DropdownMenuItem asChild><Link to="/akademia" className="flex items-center gap-2 cursor-pointer text-[#9bffd6] hover:text-white font-semibold"><Award className="w-4 h-4" /> Akademia Antokton</Link></DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-white/10" />
                           <DropdownMenuItem asChild><Link to="/Feed?category=edukim&sub=trajnime" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><GraduationCap className="w-4 h-4" /> Trajnime profesionale</Link></DropdownMenuItem>
                           <DropdownMenuItem asChild><Link to="/Feed?category=edukim&sub=shkolla" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><GraduationCap className="w-4 h-4" /> Shkolla</Link></DropdownMenuItem>
                           <DropdownMenuItem asChild><Link to="/Feed?category=edukim&sub=kurse" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><GraduationCap className="w-4 h-4" /> Kurse online</Link></DropdownMenuItem>
@@ -776,18 +852,6 @@ export default function Layout({ children, currentPageName }) {
                           <MessageCircle className="w-4 h-4" /> Mesazhet
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/AkademiaMentor" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white">
-                          <Award className="w-4 h-4" /> Paneli Akademia
-                        </Link>
-                      </DropdownMenuItem>
-                      {(user?.role === "admin" || user?.role === "moderator") && (
-                        <DropdownMenuItem asChild>
-                          <Link to="/AkademiaAdmin" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white">
-                            <Shield className="w-4 h-4" /> Admin Akademia
-                          </Link>
-                        </DropdownMenuItem>
-                      )}
                       {(user?.user_type === 'employer' || user?.user_type === 'recruiter') && (
                         <DropdownMenuItem asChild>
                           <Link to={createPageUrl("EmployerDashboard")} className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white">
@@ -895,13 +959,27 @@ export default function Layout({ children, currentPageName }) {
                     );
                   }
                   const isOpen = mobileSubmenuOpen[item.id];
+                  const itemUrl = item.url || (item.page ? `/${item.page}` : '/');
                   return (
                     <div key={item.id}>
-                      <button onClick={() => setMobileSubmenuOpen(p => ({ ...p, [item.id]: !p[item.id] }))}
-                        className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-white hover:text-white/60 hover:bg-white/5 transition-all w-full">
-                        <span className="text-xs font-medium">{item.label}</span>
-                        <ChevronDown className={`w-3 h-3 ml-auto transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                      </button>
+                      <div className="flex items-center rounded-lg text-white hover:bg-white/5 transition-all">
+                        <Link to={itemUrl} onClick={() => setMenuOpen(false)}
+                          className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2">
+                          <span className="truncate text-xs font-medium">{item.label}</span>
+                        </Link>
+                        <button
+                          type="button"
+                          aria-label={`Hap nënmenutë për ${item.label}`}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setMobileSubmenuOpen(p => ({ ...p, [item.id]: !p[item.id] }));
+                          }}
+                          className="shrink-0 px-3 py-2 text-white/80 hover:text-white"
+                        >
+                          <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                      </div>
                       {isOpen && (
                         <div className="ml-5 mt-0.5 space-y-0.5">
                           {visibleSubs.map(sub => (
@@ -919,10 +997,14 @@ export default function Layout({ children, currentPageName }) {
                 // ── Static fallback mobile nav ──
                 <>
                   <div>
-                    <button onClick={() => setMobileSubmenuOpen(p=>({...p,jobs:!p.jobs}))} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white hover:text-white/60 hover:bg-white/5 transition-all w-full">
-                     <Briefcase className="w-3.5 h-3.5" /><span className="text-sm font-medium">{t("Punë","Jobs")}</span>
-                     <ChevronDown className={`w-3.5 h-3.5 ml-auto transition-transform ${mobileSubmenuOpen.jobs?'rotate-180':''}`} />
-                    </button>
+                    <div className="flex items-center rounded-lg text-white hover:bg-white/5 transition-all">
+                      <Link to="/Feed?category=pune" onClick={()=>setMenuOpen(false)} className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5">
+                        <Briefcase className="w-3.5 h-3.5" /><span className="text-sm font-medium">{t("Punë","Jobs")}</span>
+                      </Link>
+                      <button type="button" aria-label="Hap nënmenutë për Punë" onClick={(event) => { event.preventDefault(); event.stopPropagation(); setMobileSubmenuOpen(p=>({...p,jobs:!p.jobs})); }} className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white">
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${mobileSubmenuOpen.jobs?'rotate-180':''}`} />
+                      </button>
+                    </div>
                     {mobileSubmenuOpen.jobs && (
                       <div className="ml-5 mt-0.5 space-y-0.5">
                         <Link to="/Feed?category=pune&job_type=ofroj" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm text-white hover:text-white/60"><Briefcase className="w-3.5 h-3.5" /> Oferta pune</Link>
@@ -932,10 +1014,14 @@ export default function Layout({ children, currentPageName }) {
                     )}
                   </div>
                   <div>
-                    <button onClick={() => setMobileSubmenuOpen(p=>({...p,sherbime:!p.sherbime}))} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white hover:text-white/60 hover:bg-white/5 transition-all w-full">
-                     <Wrench className="w-3.5 h-3.5" /><span className="text-sm font-medium">Shërbime</span>
-                     <ChevronDown className={`w-3.5 h-3.5 ml-auto transition-transform ${mobileSubmenuOpen.sherbime?'rotate-180':''}`} />
-                    </button>
+                    <div className="flex items-center rounded-lg text-white hover:bg-white/5 transition-all">
+                      <Link to="/Sherbime" onClick={()=>setMenuOpen(false)} className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5">
+                        <Wrench className="w-3.5 h-3.5" /><span className="text-sm font-medium">Shërbime</span>
+                      </Link>
+                      <button type="button" aria-label="Hap nënmenutë për Shërbime" onClick={(event) => { event.preventDefault(); event.stopPropagation(); setMobileSubmenuOpen(p=>({...p,sherbime:!p.sherbime})); }} className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white">
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${mobileSubmenuOpen.sherbime?'rotate-180':''}`} />
+                      </button>
+                    </div>
                     {mobileSubmenuOpen.sherbime && (
                       <div className="ml-5 mt-0.5 space-y-0.5">
                         <Link to="/Feed?category=sherbime&job_type=ofroj" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:text-white/60"><Wrench className="w-3 h-3" /> Ofroj shërbim</Link>
@@ -948,31 +1034,73 @@ export default function Layout({ children, currentPageName }) {
                   </div>
                   {/* Pazar - nënmenu i veçantë */}
                   <div>
-                    <button onClick={() => setMobileSubmenuOpen(p=>({...p,pazar:!p.pazar}))} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white hover:text-white/60 hover:bg-white/5 transition-all w-full">
-                     <ShoppingBag className="w-3.5 h-3.5" /><span className="text-sm font-medium">Pazar</span>
-                     <ChevronDown className={`w-3.5 h-3.5 ml-auto transition-transform ${mobileSubmenuOpen.pazar?'rotate-180':''}`} />
-                    </button>
+                    <div className="flex items-center rounded-lg text-white hover:bg-white/5 transition-all">
+                      <Link to="/Pazar" onClick={()=>setMenuOpen(false)} className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5">
+                        <ShoppingBag className="w-3.5 h-3.5" /><span className="text-sm font-medium">Pazar</span>
+                      </Link>
+                      <button
+                        type="button"
+                        aria-label="Hap nënmenutë për Pazar"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setMobileSubmenuOpen(p=>({...p,pazar:!p.pazar}));
+                        }}
+                        className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white"
+                      >
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${mobileSubmenuOpen.pazar?'rotate-180':''}`} />
+                      </button>
+                    </div>
                     {mobileSubmenuOpen.pazar && (
                       <div className="ml-5 mt-0.5 space-y-0.5">
                         <Link to="/Pazar" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-[#8ab4ff] font-semibold hover:text-white"><ShoppingBag className="w-3 h-3" /> Të gjitha</Link>
-                        {["shtepi","banesa","dyqane","restorante","hotele","magazina","toka","troje","ara","pemishte","pyje"].map(sub => (
-                          <Link key={sub} to={`/Pazar?category=prona&sub=${sub}`} onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white/60 hover:text-white capitalize">
-                            <Home className="w-3 h-3" /> {sub.charAt(0).toUpperCase()+sub.slice(1)}
-                          </Link>
-                        ))}
-                        {[{key:"makina",label:"Makina"},{key:"mobilje",label:"Mobilje"},{key:"shtepi",label:"Shtëpi & Kuzhinë"},{key:"elektronike",label:"Elektronikë"},{key:"veshje",label:"Veshje"},{key:"aksesore",label:"Aksesorë"},{key:"bicikleta",label:"Bicikleta & Sport"},{key:"mjete",label:"Mjete & Pajisje"},{key:"bujqesia",label:"Bujqësi"},{key:"libra",label:"Libra & Edukim"},{key:"art",label:"Art & Koleksione"},{key:"dhurime",label:"Dhurime falas"}].map(c => (
-                          <Link key={c.key} to={`/Pazar?category=${c.key}`} onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white/60 hover:text-white">
-                            <ShoppingBag className="w-3 h-3" /> {c.label}
-                          </Link>
-                        ))}
+                        {PAZAR_NAV_GROUPS.map((group) => {
+                          const groupOpen = mobileSubmenuOpen[`pazar_${group.id}`];
+                          return (
+                            <div key={group.id} className="rounded-lg">
+                              <div className="flex items-center">
+                                <Link to={group.url} onClick={()=>setMenuOpen(false)} className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-1.5 text-xs text-white/70 hover:text-white">
+                                  <ShoppingBag className="w-3 h-3" /> <span className="truncate">{group.label}</span>
+                                </Link>
+                                {group.children && (
+                                  <button
+                                    type="button"
+                                    aria-label={`Hap nënkategoritë për ${group.label}`}
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      setMobileSubmenuOpen(p=>({...p,[`pazar_${group.id}`]:!p[`pazar_${group.id}`]}));
+                                    }}
+                                    className="shrink-0 px-2.5 py-1.5 text-white/60 hover:text-white"
+                                  >
+                                    <ChevronDown className={`w-3 h-3 transition-transform ${groupOpen?'rotate-180':''}`} />
+                                  </button>
+                                )}
+                              </div>
+                              {group.children && groupOpen && (
+                                <div className="ml-5 space-y-0.5">
+                                  {group.children.map(([sub, label]) => (
+                                    <Link key={sub} to={`${group.url}&sub=${sub}`} onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white/55 hover:text-white">
+                                      <Home className="w-3 h-3" /> {label}
+                                    </Link>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
                   <div>
-                    <button onClick={() => setMobileSubmenuOpen(p=>({...p,bileta:!p.bileta}))} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white hover:text-white/60 hover:bg-white/5 transition-all w-full">
-                     <Plane className="w-3.5 h-3.5" /><span className="text-sm font-medium">Bileta</span>
-                     <ChevronDown className={`w-3.5 h-3.5 ml-auto transition-transform ${mobileSubmenuOpen.bileta?'rotate-180':''}`} />
-                    </button>
+                    <div className="flex items-center rounded-lg text-white hover:bg-white/5 transition-all">
+                      <Link to="/Bileta" onClick={()=>setMenuOpen(false)} className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5">
+                        <Plane className="w-3.5 h-3.5" /><span className="text-sm font-medium">Bileta</span>
+                      </Link>
+                      <button type="button" aria-label="Hap nënmenutë për Bileta" onClick={(event) => { event.preventDefault(); event.stopPropagation(); setMobileSubmenuOpen(p=>({...p,bileta:!p.bileta})); }} className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white">
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${mobileSubmenuOpen.bileta?'rotate-180':''}`} />
+                      </button>
+                    </div>
                     {mobileSubmenuOpen.bileta && (
                       <div className="ml-5 mt-0.5 space-y-0.5">
                         {[
@@ -996,10 +1124,14 @@ export default function Layout({ children, currentPageName }) {
                     )}
                   </div>
                   <div>
-                    <button onClick={() => setMobileSubmenuOpen(p=>({...p,edukim:!p.edukim}))} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white hover:text-white/60 hover:bg-white/5 transition-all w-full">
-                     <GraduationCap className="w-3.5 h-3.5" /><span className="text-sm font-medium">Edukim</span>
-                     <ChevronDown className={`w-3.5 h-3.5 ml-auto transition-transform ${mobileSubmenuOpen.edukim?'rotate-180':''}`} />
-                    </button>
+                    <div className="flex items-center rounded-lg text-white hover:bg-white/5 transition-all">
+                      <Link to="/Edukim" onClick={()=>setMenuOpen(false)} className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5">
+                        <GraduationCap className="w-3.5 h-3.5" /><span className="text-sm font-medium">Edukim</span>
+                      </Link>
+                      <button type="button" aria-label="Hap nënmenutë për Edukim" onClick={(event) => { event.preventDefault(); event.stopPropagation(); setMobileSubmenuOpen(p=>({...p,edukim:!p.edukim})); }} className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white">
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${mobileSubmenuOpen.edukim?'rotate-180':''}`} />
+                      </button>
+                    </div>
                     {mobileSubmenuOpen.edukim && (
                       <div className="ml-5 mt-0.5 space-y-0.5">
                         <Link to="/Feed?category=edukim&sub=trajnime" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:text-white/60"><GraduationCap className="w-3 h-3" /> Trajnime profesionale</Link>
@@ -1010,13 +1142,6 @@ export default function Layout({ children, currentPageName }) {
                         {mobileSubmenuOpen.shkolla && (
                           <div className="ml-4 space-y-0.5">
                             <Link to="/Feed?category=edukim&sub=shkolla" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white/60 hover:text-white"><GraduationCap className="w-3 h-3" /> Shkolla</Link>
-                            <Link to="/akademia" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-[#9bffd6] hover:text-white"><Award className="w-3 h-3" /> Akademia Antokton</Link>
-                            {isAuth && (
-                              <Link to="/AkademiaMentor" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white/60 hover:text-white"><Award className="w-3 h-3" /> Paneli Akademia</Link>
-                            )}
-                            {isAuth && (user?.role === "admin" || user?.role === "moderator") && (
-                              <Link to="/AkademiaAdmin" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white/60 hover:text-white"><Shield className="w-3 h-3" /> Admin Akademia</Link>
-                            )}
                           </div>
                         )}
                         <Link to="/Feed?category=edukim&sub=kurse" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:text-white/60"><GraduationCap className="w-3 h-3" /> Kurse online</Link>
@@ -1024,10 +1149,14 @@ export default function Layout({ children, currentPageName }) {
                     )}
                   </div>
                   <div>
-                    <button onClick={() => setMobileSubmenuOpen(p=>({...p,media:!p.media}))} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white hover:text-white/60 hover:bg-white/5 transition-all w-full">
-                     <Tv className="w-3.5 h-3.5" /><span className="text-sm font-medium">Media</span>
-                     <ChevronDown className={`w-3.5 h-3.5 ml-auto transition-transform ${mobileSubmenuOpen.media?'rotate-180':''}`} />
-                    </button>
+                    <div className="flex items-center rounded-lg text-white hover:bg-white/5 transition-all">
+                      <Link to="/Media" onClick={()=>setMenuOpen(false)} className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5">
+                        <Tv className="w-3.5 h-3.5" /><span className="text-sm font-medium">Media</span>
+                      </Link>
+                      <button type="button" aria-label="Hap nënmenutë për Media" onClick={(event) => { event.preventDefault(); event.stopPropagation(); setMobileSubmenuOpen(p=>({...p,media:!p.media})); }} className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white">
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${mobileSubmenuOpen.media?'rotate-180':''}`} />
+                      </button>
+                    </div>
                     {mobileSubmenuOpen.media && (
                       <div className="ml-5 mt-0.5 space-y-0.5">
                         {["tv","radio","revista","gazeta","shkrime"].map(sub => (

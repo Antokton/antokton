@@ -591,6 +591,53 @@ export default function Profile() {
   }
 
   const isRecruiterOrEmployer = form.user_type === "recruiter" || form.user_type === "employer";
+  const retiredProfessionalTitles = {
+    myezin: "Myezin",
+    pastor: "Pastor",
+    rabi: "Rabi",
+  };
+  const selectedFaith = String(form.religious_belief || "").toLowerCase();
+  const isIslamFaith = selectedFaith.includes("islam");
+  const isChristianFaith = ["katolik", "ortodoks", "krishter"].some((term) => selectedFaith.includes(term));
+  const faithQuestionSet = isIslamFaith
+    ? {
+        relation: "Si e përshkruan lidhjen tënde me Islamin?",
+        knowledge: "Sa njohuri ke për bazat e Islamit?",
+        content: "A dëshiron të të sugjerojmë materiale islame dhe edukative në Antokton?",
+        learning: "Sa dëshirë ke për të mësuar më shumë rreth Islamit?",
+        relations: [
+          "Jam musliman praktikues",
+          "Jam musliman dhe praktikoj pjesërisht",
+          "Jam musliman, por dua të mësoj më shumë",
+          "Jam i interesuar të mësoj më shumë për Islamin",
+          "Preferoj të mos përgjigjem",
+        ],
+      }
+    : isChristianFaith
+      ? {
+          relation: "Si e përshkruan lidhjen tënde me Krishtërimin?",
+          knowledge: "Sa njohuri ke për bazat e Krishtërimit?",
+          content: "A dëshiron të të sugjerojmë materiale të ndryshme fetare dhe edukative?",
+          learning: "Sa dëshirë ke për të mësuar më shumë rreth të vërtetës fetare dhe Zotit?",
+          relations: [
+            "Jam i krishterë praktikues",
+            "Kam lidhje kulturore ose familjare me Krishtërimin",
+            "Dua të mësoj më shumë për Krishtërimin",
+            "Preferoj të mos përgjigjem",
+          ],
+        }
+      : {
+          relation: "Si e përshkruan lidhjen tënde me besimet fetare?",
+          knowledge: "Sa njohuri ke për besimet fetare?",
+          content: "A dëshiron të të sugjerojmë materiale të ndryshme informative, fetare dhe edukative?",
+          learning: "Sa dëshirë ke për të mësuar më shumë rreth të vërtetës fetare dhe Zotit?",
+          relations: [
+            "Kam interes të përgjithshëm për besimet fetare",
+            "Jam kërkues dhe dua të mësoj më shumë",
+            "Nuk dua të përcaktohem",
+            "Preferoj të mos përgjigjem",
+          ],
+        };
 
   const faithCategoryFromRelation = (relation) => {
     const map = {
@@ -598,12 +645,18 @@ export default function Profile() {
       "Jam musliman dhe praktikoj pjesërisht": "Musliman në përmirësim",
       "Jam musliman, por dua të mësoj më shumë": "Musliman në fazë mësimi",
       "Jam i interesuar të mësoj më shumë për Islamin": "I interesuar për njohje islame",
+      "Jam i krishterë praktikues": "I krishterë praktikues",
+      "Kam lidhje kulturore ose familjare me Krishtërimin": "Lidhje kulturore me Krishtërimin",
+      "Dua të mësoj më shumë për Krishtërimin": "I interesuar për njohje të krishterë",
+      "Kam interes të përgjithshëm për besimet fetare": "Interes i përgjithshëm fetar",
+      "Jam kërkues dhe dua të mësoj më shumë": "Kërkues",
+      "Nuk dua të përcaktohem": "Pa përcaktim",
       "Preferoj të mos përgjigjem": "Pa përcaktim"
     };
     return map[relation] || "";
   };
 
-  const handleIslamRelationChange = (v) => {
+  const handleFaithRelationChange = (v) => {
     setForm({ ...form, islam_relation: v, member_faith_category: faithCategoryFromRelation(v) });
   };
 
@@ -879,7 +932,7 @@ export default function Profile() {
 
             <div className="space-y-1.5 mb-4">
               <Label className="text-white">Titulli Profesional</Label>
-              <Select value={user.professional_title || 'none'} onValueChange={(v) => setForm({ ...form, professional_title: v })}>
+              <Select value={form.professional_title || 'none'} onValueChange={(v) => setForm({ ...form, professional_title: v })}>
                 <SelectTrigger className="bg-white/5 border-white/10 text-white">
                   <SelectValue />
                 </SelectTrigger>
@@ -894,9 +947,11 @@ export default function Profile() {
                   <SelectItem value="imam">Imam</SelectItem>
                   <SelectItem value="hoxhe">Hoxhë</SelectItem>
                   <SelectItem value="prift">Prift</SelectItem>
-                  <SelectItem value="myezin">Myezin</SelectItem>
-                  <SelectItem value="pastor">Pastor</SelectItem>
-                  <SelectItem value="rabi">Rabi</SelectItem>
+                  {retiredProfessionalTitles[form.professional_title] && (
+                    <SelectItem value={form.professional_title}>
+                      {retiredProfessionalTitles[form.professional_title]} (historik)
+                    </SelectItem>
+                  )}
                   <SelectItem value="infermier">Infermier/e</SelectItem>
                   <SelectItem value="mjek">Mjek</SelectItem>
                   <SelectItem value="avokat">Avokat</SelectItem>
@@ -1012,7 +1067,15 @@ export default function Profile() {
                 <Label className="text-white">Besimi Fetar *</Label>
                 <Select 
                   value={form.religious_belief} 
-                  onValueChange={(v) => setForm({ ...form, religious_belief: v })} 
+                  onValueChange={(v) => setForm({
+                    ...form,
+                    religious_belief: v,
+                    islam_relation: "",
+                    islam_knowledge_level: "",
+                    islam_content_preference: "",
+                    islam_learning_interest: "",
+                    member_faith_category: "",
+                  })} 
                   required
                 >
                   <SelectTrigger className="bg-white/5 border-white/10 text-white">
@@ -1020,8 +1083,10 @@ export default function Profile() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Islam">Islam</SelectItem>
+                    <SelectItem value="Krishterim">Krishterim</SelectItem>
                     <SelectItem value="Krishterë Katolik">Krishterë Katolik</SelectItem>
                     <SelectItem value="Krishterë Ortodoks">Krishterë Ortodoks</SelectItem>
+                    <SelectItem value="Nuk dua të përgjigjem">Nuk dua të përgjigjem</SelectItem>
                     <SelectItem value="Tjetër (specifiko)">Tjetër (specifiko)</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1562,23 +1627,21 @@ export default function Profile() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-white">Si e përshkruan lidhjen tënde me Islamin?</Label>
-              <Select value={form.islam_relation} onValueChange={handleIslamRelationChange}>
+              <Label className="text-white">{faithQuestionSet.relation}</Label>
+              <Select value={form.islam_relation} onValueChange={handleFaithRelationChange}>
                 <SelectTrigger className="bg-white/5 border-white/10 text-white">
                   <SelectValue placeholder="Zgjidh një opsion..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Jam musliman praktikues">Jam musliman praktikues</SelectItem>
-                  <SelectItem value="Jam musliman dhe praktikoj pjesërisht">Jam musliman dhe praktikoj pjesërisht</SelectItem>
-                  <SelectItem value="Jam musliman, por dua të mësoj më shumë">Jam musliman, por dua të mësoj më shumë</SelectItem>
-                  <SelectItem value="Jam i interesuar të mësoj më shumë për Islamin">Jam i interesuar të mësoj më shumë për Islamin</SelectItem>
-                  <SelectItem value="Preferoj të mos përgjigjem">Preferoj të mos përgjigjem</SelectItem>
+                  {faithQuestionSet.relations.map((option) => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-white">Sa njohuri ke për bazat e Islamit?</Label>
+              <Label className="text-white">{faithQuestionSet.knowledge}</Label>
               <Select value={form.islam_knowledge_level} onValueChange={(v) => setForm({ ...form, islam_knowledge_level: v })}>
                 <SelectTrigger className="bg-white/5 border-white/10 text-white">
                   <SelectValue placeholder="Zgjidh një opsion..." />
@@ -1593,7 +1656,7 @@ export default function Profile() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-white">A dëshiron të të sugjerojmë materiale islame dhe edukative në Antokton?</Label>
+              <Label className="text-white">{faithQuestionSet.content}</Label>
               <Select value={form.islam_content_preference} onValueChange={(v) => setForm({ ...form, islam_content_preference: v })}>
                 <SelectTrigger className="bg-white/5 border-white/10 text-white">
                   <SelectValue placeholder="Zgjidh një opsion..." />
@@ -1607,7 +1670,7 @@ export default function Profile() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-white">Sa dëshirë ke për të mësuar më shumë rreth Islamit?</Label>
+              <Label className="text-white">{faithQuestionSet.learning}</Label>
               <Select value={form.islam_learning_interest} onValueChange={(v) => setForm({ ...form, islam_learning_interest: v })}>
                 <SelectTrigger className="bg-white/5 border-white/10 text-white">
                   <SelectValue placeholder="Zgjidh një opsion..." />
