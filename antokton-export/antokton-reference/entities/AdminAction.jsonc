@@ -11,7 +11,10 @@
         "restore",
         "feature",
         "unfeatured",
-        "permanent_delete"
+        "permanent_delete",
+        "temporary_block",
+        "permanent_block",
+        "registration_block"
       ],
       "description": "Lloji i veprimit"
     },

@@ -8,23 +8,27 @@
     },
     "parent_id": {
       "type": "string",
-      "description": "ID e komentit prind (p\u00ebr reply)"
-    },
-    "reply_to_name": {
-      "type": "string",
-      "description": "Emri i personit t\u00eb cilit i replikohet"
+      "description": "Koment prind per pergjigjet"
     },
     "author_email": {
       "type": "string",
-      "description": "Email i komentuesit"
+      "description": "Email i autorit"
     },
     "author_name": {
       "type": "string",
-      "description": "Emri i komentuesit"
+      "description": "Emri i autorit"
+    },
+    "author_photo_url": {
+      "type": "string",
+      "description": "Fotoja e profilit te autorit ne momentin e komentimit"
     },
     "text": {
       "type": "string",
       "description": "Teksti i komentit"
+    },
+    "reply_to_name": {
+      "type": "string",
+      "description": "Emri i personit qe po replikohet"
     }
   },
   "required": [

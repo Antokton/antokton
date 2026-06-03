@@ -327,6 +327,19 @@ async function requesterHasRole(req, roles = []) {
     allowed.has(String(user?.member_category || "").toLowerCase());
 }
 
+function hasActiveUserBlock(user) {
+  if (!user) return false;
+  const futureBlock = Number.isFinite(Date.parse(user.blocked_until)) && Date.parse(user.blocked_until) > Date.now();
+  return Boolean(
+    user.is_deleted ||
+    user.blocked_permanently ||
+    futureBlock ||
+    (user.is_blocked === true && String(user.status || "") !== "temporarily_blocked") ||
+    (String(user.status || "").includes("blocked") && String(user.status || "") !== "temporarily_blocked") ||
+    String(user.status || "") === "deleted"
+  );
+}
+
 function publicUserFields(body = {}) {
   const allowed = [
     "full_name",
@@ -355,6 +368,13 @@ function sanitizeSelfUserPatch(body = {}) {
     "collaborator_role",
     "is_active",
     "status",
+    "is_blocked",
+    "blocked_until",
+    "blocked_permanently",
+    "block_reason",
+    "registration_block_until",
+    "registration_block_reason",
+    "is_deleted",
     "password",
     "password_hash"
   ];
@@ -1027,6 +1047,10 @@ async function handleEntity(req, res, url, segments) {
   const entity = decodeURIComponent(segments[4] || "");
   const tail = segments.slice(5).map(decodeURIComponent);
   const userEmail = await getRequestUserEmail(req);
+  if (req.method !== "GET" && userEmail) {
+    const requester = await findUserByEmail(userEmail);
+    if (hasActiveUserBlock(requester)) return sendError(res, 403, "Llogaria juaj është e bllokuar dhe nuk mund të publikojë ose ndryshojë të dhëna.");
+  }
 
   if (entity === "User" && tail[0] === "me") {
     if (!userEmail) return sendError(res, 401, "Authentication required");

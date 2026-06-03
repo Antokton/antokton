@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Shield, User as UserIcon, Wrench, Search, Bell, Settings, Smartphone, Trash2 } from "lucide-react";
+import { Shield, User as UserIcon, Wrench, Search, Bell, Settings, Smartphone, Trash2, FileClock } from "lucide-react";
 import DeletedPostsHistory from "./DeletedPostsHistory";
 import Admin from "../../pages/Admin";
 import InspectorPanel from "../../pages/InspectorPanel";
@@ -7,6 +7,7 @@ import RecruiterTools from "../../pages/RecruiterTools";
 import NotificationCenter from "../../pages/NotificationCenter";
 import NotificationSettings from "../../components/notifications/NotificationSettings";
 import BottomNavEditor from "../../components/mobile/BottomNavEditor";
+import MyStatusHistory from "./MyStatusHistory";
 
 export default function ProfileTabs({ user, children }) {
   const [activeTab, setActiveTab] = useState("profile");
@@ -31,8 +32,9 @@ export default function ProfileTabs({ user, children }) {
 
   const tabs = [
     { value: "profile", label: "Profili im", icon: <UserIcon className="w-3.5 h-3.5" />, show: true },
+    { value: "my_statuses", label: "Statuset e mia", icon: <FileClock className="w-3.5 h-3.5" />, show: true },
     { value: "notifications", label: "Njoftimet", icon: <Bell className="w-3.5 h-3.5" />, show: true },
-    { value: "notification_settings", label: "Cilësimet", icon: <Settings className="w-3.5 h-3.5" />, show: true },
+    { value: "notification_settings", label: "Cilësimet e Njoftimeve", icon: <Settings className="w-3.5 h-3.5" />, show: true },
     { value: "nav_editor", label: "📱 Menu Fundore", icon: <Smartphone className="w-3.5 h-3.5" />, show: isAdmin || isPremium },
     { value: "admin", label: isAdmin ? "⚙️ Admin" : "🛡️ Moderator", icon: <Shield className="w-3.5 h-3.5" />, show: isAdmin || isModerator },
     { value: "inspector", label: "🔍 Inspektor", icon: <Search className="w-3.5 h-3.5" />, show: isInspector },
@@ -65,6 +67,7 @@ export default function ProfileTabs({ user, children }) {
 
       <div className="min-w-0 max-w-full overflow-hidden">
         {activeTab === "profile" && children}
+        {activeTab === "my_statuses" && <MyStatusHistory user={user} />}
         {activeTab === "notifications" && <NotificationCenter />}
         {activeTab === "notification_settings" && <div className="max-w-xl"><NotificationSettings /></div>}
         {activeTab === "nav_editor" && (

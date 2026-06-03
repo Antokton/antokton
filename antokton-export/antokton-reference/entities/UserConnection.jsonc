@@ -1,0 +1,40 @@
+{
+  "name": "UserConnection",
+  "type": "object",
+  "properties": {
+    "owner_email": {
+      "type": "string",
+      "description": "Anetari qe menaxhon rrethin"
+    },
+    "contact_email": {
+      "type": "string",
+      "description": "Anetari i shtuar ne rreth"
+    },
+    "contact_name": {
+      "type": "string",
+      "description": "Emri publik i kontaktit"
+    },
+    "contact_photo_url": {
+      "type": "string",
+      "description": "Foto publike e kontaktit"
+    },
+    "circle": {
+      "type": "string",
+      "enum": [
+        "close",
+        "wide"
+      ],
+      "default": "wide",
+      "description": "Rrethi i ngushte ose i gjere"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Shenime private te anetarit"
+    }
+  },
+  "required": [
+    "owner_email",
+    "contact_email",
+    "circle"
+  ]
+}

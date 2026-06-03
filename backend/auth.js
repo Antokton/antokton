@@ -168,6 +168,65 @@ async function getAuthAccountByEmail(email) {
   return (await statements.getAuthAccountByEmail.get(normalizeEmail(email))) || null;
 }
 
+function parseEntityRow(row) {
+  if (!row) return null;
+  try {
+    const data = typeof row.data === "string" ? JSON.parse(row.data) : row.data;
+    return { id: row.id, ...data };
+  } catch {
+    return null;
+  }
+}
+
+async function getUserRecordByEmail(email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+  const rows = await statements.listEntity.all(config.APP_ID, "User");
+  for (const row of rows) {
+    const user = parseEntityRow(row);
+    if (normalizeEmail(user?.email) === normalizedEmail) return user;
+  }
+  return null;
+}
+
+function futureDate(value) {
+  const time = Date.parse(value);
+  return Number.isFinite(time) && time > Date.now() ? new Date(time).toISOString() : "";
+}
+
+function assertUserCanAuthenticate(user) {
+  if (!user) return;
+  const blockedUntil = futureDate(user.blocked_until);
+  const registrationBlockedUntil = futureDate(user.registration_block_until);
+  const blocked =
+    user.is_deleted ||
+    user.blocked_permanently ||
+    (user.is_blocked === true && String(user.status || "") !== "temporarily_blocked") ||
+    (String(user.status || "").includes("blocked") && String(user.status || "") !== "temporarily_blocked") ||
+    String(user.status || "") === "deleted";
+
+  if (blocked || blockedUntil || registrationBlockedUntil) {
+    const until = blockedUntil || registrationBlockedUntil;
+    const error = new Error(
+      until
+        ? `Llogaria juaj është bllokuar/fshirë dhe nuk mund të përdoret deri më ${until.slice(0, 10)}.`
+        : "Llogaria juaj është bllokuar ose fshirë nga administrata."
+    );
+    error.status = 403;
+    throw error;
+  }
+}
+
+async function assertRegistrationAllowed(email) {
+  const user = await getUserRecordByEmail(email);
+  const until = futureDate(user?.registration_block_until);
+  if (until) {
+    const error = new Error(`Llogaria juaj është bllokuar/fshirë dhe nuk mund të regjistroheni përsëri deri më ${until.slice(0, 10)}.`);
+    error.status = 403;
+    throw error;
+  }
+}
+
 async function cleanupKnownTestAuthAccounts() {
   const result = {
     accountsDeleted: 0,
@@ -203,6 +262,7 @@ async function createPasswordAccount({ email, password, user, req, status = "act
     error.status = 409;
     throw error;
   }
+  await assertRegistrationAllowed(normalizedEmail);
 
   const timestamp = now();
   const account = {
@@ -271,6 +331,8 @@ async function authenticatePassword({ email, password, req }) {
     throw error;
   }
 
+  assertUserCanAuthenticate(await getUserRecordByEmail(normalizedEmail));
+
   await auditAuth("login_success", req, { email: normalizedEmail, accountId: account.id });
   return account;
 }
@@ -292,6 +354,11 @@ async function getSessionAuth(token) {
 
   const account = await statements.getAuthAccountById.get(session.account_id);
   if (!account || account.status !== "active") return null;
+  try {
+    assertUserCanAuthenticate(await getUserRecordByEmail(session.email));
+  } catch {
+    return null;
+  }
 
   return {
     mode: "password",

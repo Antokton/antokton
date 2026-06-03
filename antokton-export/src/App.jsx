@@ -21,6 +21,7 @@ import AkademiaMentor from './pages/AkademiaMentor';
 import DesignerPage from './pages/DesignerPage';
 import VerifyCertificate from './pages/VerifyCertificate';
 import Login from './pages/Login';
+import MemberProfile from './pages/MemberProfile';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import VisualEditMode from '@/components/admin/VisualEditMode';
@@ -101,6 +102,7 @@ const AuthenticatedApp = () => {
       <Route path="/ImportPosts" element={<LayoutWrapper currentPageName="ImportPosts"><ImportPosts /></LayoutWrapper>} />
       <Route path="/Media" element={<LayoutWrapper currentPageName="Media"><Media /></LayoutWrapper>} />
       <Route path="/Edukim" element={<LayoutWrapper currentPageName="Edukim"><Edukim /></LayoutWrapper>} />
+      <Route path="/Member/:email" element={<LayoutWrapper currentPageName="Members"><MemberProfile /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

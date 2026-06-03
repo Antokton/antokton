@@ -36,6 +36,22 @@
     "related_id": {
       "type": "string",
       "description": "ID e entitetit të lidhur"
+    },
+    "action_status": {
+      "type": "string",
+      "description": "Statusi i veprimit te moderimit per njoftimin"
+    },
+    "action_by": {
+      "type": "string",
+      "description": "Email i stafit qe kreu veprimin"
+    },
+    "action_at": {
+      "type": "string",
+      "description": "Koha kur u krye veprimi"
+    },
+    "feedback": {
+      "type": "string",
+      "description": "Pershtypje/arsye refuzimi per perdoruesin"
     }
   },
   "required": [

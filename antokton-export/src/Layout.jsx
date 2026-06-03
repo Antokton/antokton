@@ -904,6 +904,9 @@ export default function Layout({ children, currentPageName }) {
               <Link to="/Search" className="md:hidden text-white hover:text-white/60 flex items-center justify-center w-10 h-10 rounded-lg hover:bg-white/5 transition-all">
                 <Search className="w-5 h-5" />
               </Link>
+              <div className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg">
+                <NotificationBell />
+              </div>
               <button
                 ref={hamburgerRef}
                 onClick={() => setMenuOpen(!menuOpen)}

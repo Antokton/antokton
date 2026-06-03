@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { base44 } from "@/api/antoktonClient";
 import { createPortal } from "react-dom";
 import PullToRefresh from "@/components/PullToRefresh";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Image, Link2, Smile, MapPin, MessageCircle, Send, X,
@@ -171,13 +172,8 @@ const timeAgo = (dateStr) => {
 };
 
 /* ─── AVATAR ─── */
-function Avatar({ name, size = 40 }) {
-  return (
-    <div className="rounded-full flex items-center justify-center font-bold text-[#0b1020] shrink-0"
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.38), background: "linear-gradient(135deg, #8ab4ff, #9bffd6)", minWidth: size }}>
-      {(name || "?").charAt(0).toUpperCase()}
-    </div>
-  );
+function Avatar({ name, email, photoUrl, size = 40 }) {
+  return <UserAvatar name={name} email={email} photoUrl={photoUrl} size={size} />;
 }
 
 /* ─── REACTIONS CONFIG ─── */
@@ -460,6 +456,7 @@ function CreatePostModal({ currentUser, onClose, initialImportMode = false }) {
   const [uploading, setUploading] = useState(false);
   const [tab, setTab] = useState(null);
   const [importMode, setImportMode] = useState(initialImportMode);
+  const [visibility, setVisibility] = useState("public");
   const [externalUrl, setExternalUrl] = useState("");
   const [originalAuthorName, setOriginalAuthorName] = useState("");
   const [externalImageUrl, setExternalImageUrl] = useState("");
@@ -517,6 +514,8 @@ function CreatePostModal({ currentUser, onClose, initialImportMode = false }) {
       await base44.entities.Status.create({
         author_email: currentUserEmail,
         author_name: importerName,
+        author_photo_url: currentUser?.profile_photo_url || "",
+        visibility,
         text: text.trim(), image_url, feeling,
         checkin_location: checkin.trim(),
         likes: [], comments_count: 0, reactions: {},
@@ -538,13 +537,20 @@ function CreatePostModal({ currentUser, onClose, initialImportMode = false }) {
         </div>
         <div className="px-3 pt-2 pb-3 space-y-2 overflow-y-auto flex-1 min-h-0" style={{ WebkitOverflowScrolling: "touch" }}>
           <div className="flex items-center gap-2">
-            <Avatar name={importerName || currentUserEmail || "?"} size={28} />
+            <Avatar name={importerName || currentUserEmail || "?"} email={currentUserEmail} photoUrl={currentUser?.profile_photo_url} size={28} />
             <div className="flex items-center gap-2 flex-wrap">
               <p className="text-white font-bold text-sm">{importerName}</p>
               {(feeling || checkin) && <p className="text-white/50 text-xs">{feeling && `ndihet ${feeling}`}{checkin && ` 📍 ${checkin}`}</p>}
-              <div className="flex items-center gap-1 text-[10px] font-semibold text-white/60 bg-white/10 px-1.5 py-0.5 rounded">
-                <Globe className="w-3 h-3" /> Publik
-              </div>
+              <select
+                value={visibility}
+                onChange={(event) => setVisibility(event.target.value)}
+                className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-white/80 outline-none"
+                title="Dukshmëria e statusit"
+              >
+                <option value="public" className="bg-[#0b1020]">Publik</option>
+                <option value="wide_circle" className="bg-[#0b1020]">Rrethi i gjerë</option>
+                <option value="close_circle" className="bg-[#0b1020]">Rrethi i ngushtë</option>
+              </select>
             </div>
           </div>
           <textarea value={text} onChange={e => { setText(e.target.value); e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px"; }}
@@ -701,7 +707,7 @@ function CreatePostBox({ currentUser }) {
     <>
       <div className="px-3 py-2" style={{ background: "#1a2640", marginBottom: "8px" }}>
         <div className="flex items-center gap-2">
-          <Avatar name={currentUser?.first_name || currentUser?.email || "?"} size={28} />
+          <Avatar name={currentUser?.first_name || currentUser?.email || "?"} email={currentUser?.email} photoUrl={currentUser?.profile_photo_url} size={28} />
           <button onClick={() => openComposer(false)}
             className="flex-1 rounded-full px-3 py-1.5 text-white/40 text-[13px] text-left fb-action-btn"
             title="Shkruaj status"
@@ -737,7 +743,7 @@ function CommentItem({ c, onReply }) {
 
   return (
     <div className="flex gap-2 items-start">
-      <Avatar name={c.author_name} size={28} />
+      <Avatar name={c.author_name} email={c.author_email} photoUrl={c.author_photo_url} size={28} />
       <div className="flex-1 min-w-0">
          <div className="rounded-2xl rounded-tl-sm px-3 py-2 inline-block max-w-full" style={{ background: "#253347" }}>
            <p className="text-white text-xs font-bold">{c.author_name}</p>
@@ -817,6 +823,7 @@ function StatusDetailPage({ status, currentUser, onBack }) {
         status_id: status.id,
         author_email: currentUser.email,
         author_name: currentUser.first_name || currentUser.full_name || currentUser.email.split("@")[0],
+        author_photo_url: currentUser.profile_photo_url || "",
         text: commentText.trim(),
       });
       await base44.entities.Status.update(status.id, { comments_count: commentCount + 1 });
@@ -837,6 +844,7 @@ function StatusDetailPage({ status, currentUser, onBack }) {
         parent_id: parentComment.id,
         author_email: currentUser.email,
         author_name: currentUser.first_name || currentUser.full_name || currentUser.email.split("@")[0],
+        author_photo_url: currentUser.profile_photo_url || "",
         text: `@${parentComment.author_name} ${txt.trim()}`,
       });
       await base44.entities.Status.update(status.id, { comments_count: commentCount + 1 });
@@ -867,7 +875,7 @@ function StatusDetailPage({ status, currentUser, onBack }) {
   // Inline reply input for detail page
   const InlineReplyInputDetail = ({ targetItem }) => (
     <div className="flex items-start gap-2 mt-2">
-      <Avatar name={currentUser?.first_name || "?"} size={24} />
+      <Avatar name={currentUser?.first_name || "?"} email={currentUser?.email} photoUrl={currentUser?.profile_photo_url} size={24} />
       <div className="flex-1 flex items-start gap-2 rounded-2xl px-3 py-1.5" style={{ background: "#253347" }}>
         <textarea
           autoFocus
@@ -893,7 +901,7 @@ function StatusDetailPage({ status, currentUser, onBack }) {
         <button onClick={onBack} className="fb-action-btn p-1.5 text-white/70 shrink-0" style={{ color: "rgba(255,255,255,0.7)" }}>
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <Avatar name={authorName} size={36} />
+        <Avatar name={authorName} email={status.author_email} photoUrl={status.author_photo_url} size={36} />
         <div className="flex-1 min-w-0">
           <p className="text-white font-bold text-sm leading-tight">{authorName}</p>
           <p className="text-white/40 text-xs">{timeAgo(status.created_date)} · <Globe className="w-3 h-3 inline" /></p>
@@ -933,7 +941,7 @@ function StatusDetailPage({ status, currentUser, onBack }) {
         {/* Post content */}
         <div style={{ background: "#1a2640", marginBottom: "8px" }}>
           <div className="flex items-start gap-3 px-4 pt-3 pb-2">
-            <Avatar name={authorName} size={44} />
+            <Avatar name={authorName} email={status.author_email} photoUrl={status.author_photo_url} size={44} />
             <div>
               <p className="text-white font-bold text-[15px]">{authorName}</p>
               <p className="text-white/40 text-[12px] flex items-center gap-1">{timeAgo(status.created_date)} · <Globe className="w-3 h-3" /></p>
@@ -993,7 +1001,7 @@ function StatusDetailPage({ status, currentUser, onBack }) {
               <div key={c.id}>
                 {/* Main comment */}
                 <div className="flex gap-2 items-start">
-                  <Avatar name={c.author_name} size={32} />
+                  <Avatar name={c.author_name} email={c.author_email} photoUrl={c.author_photo_url} size={32} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-1">
                       <div className="rounded-2xl rounded-tl-sm px-3 py-2 inline-block max-w-full" style={{ background: "#253347" }}>
@@ -1014,7 +1022,7 @@ function StatusDetailPage({ status, currentUser, onBack }) {
                       <div className="ml-4 mt-2 space-y-2">
                         {replies.map(r => (
                           <div key={r.id} className="flex gap-2 items-start">
-                            <Avatar name={r.author_name} size={20} />
+                            <Avatar name={r.author_name} email={r.author_email} photoUrl={r.author_photo_url} size={20} />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-1">
                                 <div className="rounded-2xl rounded-tl-sm px-3 py-1.5 inline-block max-w-full" style={{ background: "#253347" }}>
@@ -1046,7 +1054,7 @@ function StatusDetailPage({ status, currentUser, onBack }) {
       {/* Fixed comment input at bottom */}
       <div className="shrink-0 px-4 pt-2 border-t border-white/10" style={{ background: "#1a2640", paddingBottom: "calc(env(safe-area-inset-bottom) + 72px)" }}>
         <div className="max-w-[600px] mx-auto flex items-start gap-2">
-          <Avatar name={currentUser?.first_name || currentUser?.email || "?"} size={36} />
+          <Avatar name={currentUser?.first_name || currentUser?.email || "?"} email={currentUser?.email} photoUrl={currentUser?.profile_photo_url} size={36} />
           <div className="flex-1 flex items-start gap-2 rounded-2xl px-3 py-1.5" style={{ background: "#253347" }}>
             <textarea
               ref={commentInputRef}
@@ -1089,7 +1097,7 @@ function StatusDetailPage({ status, currentUser, onBack }) {
 function CommentInput({ currentUser, commentText, setCommentText, replyingTo, setReplyingTo, commentInputRef, myName, onFocus, onSubmit, isPending }) {
   return (
     <div className="flex items-center gap-2">
-      <Avatar name={currentUser?.first_name || currentUser?.email || "?"} size={32} />
+      <Avatar name={currentUser?.first_name || currentUser?.email || "?"} email={currentUser?.email} photoUrl={currentUser?.profile_photo_url} size={32} />
       <div className="flex-1 flex items-center flex-wrap gap-1 rounded-full px-3 py-2" style={{ background: "#253347", minHeight: "36px" }}>
         {replyingTo && (
           <span className="flex items-center gap-1 text-[#8ab4ff] text-[13px] font-semibold shrink-0">
@@ -1300,6 +1308,7 @@ function StatusCard({ status, currentUser }) {
         status_id: status.id,
         author_email: currentUser.email,
         author_name: currentUser.first_name || currentUser.full_name || currentUser.email.split("@")[0],
+        author_photo_url: currentUser.profile_photo_url || "",
         text: commentText.trim(),
       };
       if (replyingTo) {
@@ -1362,10 +1371,10 @@ function StatusCard({ status, currentUser }) {
       {/* Header */}
       <div className="flex items-start justify-between px-4 pt-2 pb-1">
         <div className="flex items-center gap-3">
-          <Avatar name={authorName} size={40} />
+          <Avatar name={authorName} email={status.author_email} photoUrl={status.author_photo_url} size={40} />
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-white font-bold text-[14px] leading-snug">{authorName}</span>
+              <Link to={`/Member/${encodeURIComponent(status.author_email || "")}`} className="text-white font-bold text-[14px] leading-snug hover:text-[#8ab4ff]">{authorName}</Link>
               {currentUser && currentUser.email !== status.author_email && (
                 <button className="text-[#8ab4ff] font-bold text-[13px]">· Ndiq</button>
               )}
@@ -1494,7 +1503,7 @@ function StatusCard({ status, currentUser }) {
             // Inline reply input — renderohet brenda item-it që u klikua
             const InlineReplyInput = ({ targetName, targetItem }) => (
               <div className="flex gap-2 items-center mt-1">
-                <Avatar name={currentUser?.first_name || "?"} size={26} />
+                <Avatar name={currentUser?.first_name || "?"} email={currentUser?.email} photoUrl={currentUser?.profile_photo_url} size={26} />
                 <div className="flex-1 flex items-center flex-wrap gap-1 rounded-full px-3 py-1.5" style={{ background: "#253347", minHeight: "32px" }}>
                   <span className="flex items-center gap-1 text-[#8ab4ff] text-[12px] font-semibold shrink-0">
                     @{targetName}
@@ -1519,7 +1528,7 @@ function StatusCard({ status, currentUser }) {
                 {/* Main comment */}
                 <div className="flex gap-2 items-start">
                   <div className="flex flex-col items-center shrink-0" style={{ width: 36 }}>
-                    <Avatar name={c.author_name} size={36} />
+                    <Avatar name={c.author_name} email={c.author_email} photoUrl={c.author_photo_url} size={36} />
                     {replies.length > 0 && (
                       <div style={{ width: 2, flex: 1, minHeight: 8, marginTop: 4, background: "rgba(255,255,255,0.18)", borderRadius: 1 }} />
                     )}
@@ -1546,7 +1555,7 @@ function StatusCard({ status, currentUser }) {
                           <div key={r.id} className="mb-1">
                             <div className="flex gap-2 items-start">
                               <div className="shrink-0" style={{ width: 28 }}>
-                                <Avatar name={r.author_name} size={28} />
+                                <Avatar name={r.author_name} email={r.author_email} photoUrl={r.author_photo_url} size={28} />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-start gap-1">
@@ -1657,7 +1666,7 @@ function LeftSidebar({ currentUser }) {
     <div className="hidden lg:flex flex-col w-64 xl:w-72 shrink-0 py-4 space-y-1 sticky top-20 self-start">
       {currentUser && (
         <Link to={createPageUrl("Profile")} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 mb-2">
-          <Avatar name={currentUser.first_name || currentUser.email} size={36} />
+          <Avatar name={currentUser.first_name || currentUser.email} email={currentUser.email} photoUrl={currentUser.profile_photo_url} size={36} />
           <span className="text-white font-semibold text-sm">{currentUser.first_name || currentUser.email.split("@")[0]}</span>
         </Link>
       )}
@@ -1718,8 +1727,29 @@ export default function Statuset() {
     refetchOnWindowFocus: false,
   });
 
-  const statuses = allStatuses.slice(0, page * PAGE_SIZE);
-  const hasMore = allStatuses.length > page * PAGE_SIZE;
+  const { data: myConnections = [] } = useQuery({
+    queryKey: ["userConnections", currentUser?.email],
+    queryFn: () => base44.entities.UserConnection.filter({ owner_email: currentUser.email }, "-updated_date", 500),
+    enabled: !!currentUser?.email,
+    staleTime: 60000,
+  });
+
+  const visibleStatuses = useMemo(() => {
+    const connectionByEmail = new Map(myConnections.map((item) => [item.contact_email, item.circle]));
+    return allStatuses.filter((status) => {
+      const visibility = status.visibility || "public";
+      if (visibility === "public") return true;
+      if (!currentUser?.email) return false;
+      if (status.author_email === currentUser.email) return true;
+      const circle = connectionByEmail.get(status.author_email);
+      if (visibility === "wide_circle") return circle === "wide" || circle === "close";
+      if (visibility === "close_circle") return circle === "close";
+      return true;
+    });
+  }, [allStatuses, currentUser?.email, myConnections]);
+
+  const statuses = visibleStatuses.slice(0, page * PAGE_SIZE);
+  const hasMore = visibleStatuses.length > page * PAGE_SIZE;
 
   // Auto-refresh every 60 seconds
   useEffect(() => {

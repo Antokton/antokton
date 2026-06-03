@@ -3,7 +3,7 @@ import { base44 } from "@/api/antoktonClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, X, Check } from "lucide-react";
+import { Bell, X, Check, MoreHorizontal, CheckCircle2, ShieldCheck, MessageSquareX } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import moment from "moment";
 
@@ -25,7 +25,7 @@ export default function NotificationBell() {
 
   const { data: notifications = [] } = useQuery({
     queryKey: ["notifications", user?.email],
-    queryFn: () => base44.entities.Notification.filter({ user_email: user.email }, "-created_date", 10),
+    queryFn: () => base44.entities.Notification.filter({ user_email: user.email }, "-created_date", 120),
     enabled: !!user,
     refetchInterval: 60000,
     refetchIntervalInBackground: false
@@ -46,6 +46,28 @@ export default function NotificationBell() {
   });
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
+  const badgeLabel = unreadCount > 99 ? "99+" : String(unreadCount);
+  const isStaff = ["admin", "moderator"].includes(String(user?.role || user?.member_category || "").toLowerCase());
+
+  const actOnNotification = async (notif, action) => {
+    if (action === "delete") {
+      deleteNotificationMutation.mutate(notif.id);
+      return;
+    }
+    const patch = {
+      is_read: true,
+      action_status: action,
+      action_at: new Date().toISOString(),
+      action_by: user.email,
+    };
+    if (action === "rejected") {
+      const feedback = window.prompt("Shkruaj arsyen e refuzimit për përdoruesin:");
+      if (feedback === null) return;
+      patch.feedback = feedback.trim();
+    }
+    await base44.entities.Notification.update(notif.id, patch);
+    queryClient.invalidateQueries({ queryKey: ["notifications"] });
+  };
 
   if (!user) return null;
 
@@ -65,7 +87,7 @@ export default function NotificationBell() {
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-            {unreadCount > 9 ? "9+" : unreadCount}
+            {badgeLabel}
           </span>
         )}
       </button>
@@ -98,7 +120,9 @@ export default function NotificationBell() {
                     Nuk ka njoftime
                   </div>
                 ) : (
-                  notifications.map((notif) => (
+                  notifications.map((notif) => {
+                    const canModerate = isStaff && ["application", "moderation_request", "suggestion"].includes(notif.type);
+                    return (
                     <div
                       key={notif.id}
                       className={`p-4 border-b border-white/5 hover:bg-white/5 transition-colors border-l-4 ${typeColors[notif.type]} ${
@@ -135,10 +159,42 @@ export default function NotificationBell() {
                        >
                          <X className="w-4 h-4" />
                        </button>
+                       <div className="relative group">
+                         <button
+                           onClick={(e) => e.stopPropagation()}
+                           className="text-white/40 hover:text-white transition-colors p-1 flex-shrink-0"
+                           title="Veprime"
+                           aria-label="Veprime për njoftimin"
+                         >
+                           <MoreHorizontal className="w-4 h-4" />
+                         </button>
+                         <div className="hidden group-focus-within:block group-hover:block absolute right-0 top-7 z-50 w-64 rounded-lg border border-white/10 bg-[#0b1020] py-1 shadow-2xl">
+                           <button onClick={(e) => { e.stopPropagation(); actOnNotification(notif, "delete"); }}
+                             className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-red-300 hover:bg-white/5">
+                             <X className="w-3.5 h-3.5" /> Fshije këtë njoftim
+                           </button>
+                           {canModerate && (
+                             <>
+                               <button onClick={(e) => { e.stopPropagation(); actOnNotification(notif, "approved"); }}
+                                 className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-green-300 hover:bg-white/5">
+                                 <CheckCircle2 className="w-3.5 h-3.5" /> Mirato kërkesën
+                               </button>
+                               <button onClick={(e) => { e.stopPropagation(); actOnNotification(notif, "trusted_auto_approval"); }}
+                                 className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-[#9bffd6] hover:bg-white/5">
+                                 <ShieldCheck className="w-3.5 h-3.5" /> Klasifiko si person të sigurt
+                               </button>
+                               <button onClick={(e) => { e.stopPropagation(); actOnNotification(notif, "rejected"); }}
+                                 className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-orange-300 hover:bg-white/5">
+                                 <MessageSquareX className="w-3.5 h-3.5" /> Refuzo me feedback
+                               </button>
+                             </>
+                           )}
+                         </div>
+                       </div>
                       </div>
 
                     </div>
-                  ))
+                  )})
                 )}
               </div>
             </motion.div>

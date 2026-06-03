@@ -10,6 +10,20 @@
       "type": "string",
       "description": "Emri i autorit"
     },
+    "author_photo_url": {
+      "type": "string",
+      "description": "Fotoja e profilit te autorit ne momentin e publikimit"
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "public",
+        "wide_circle",
+        "close_circle"
+      ],
+      "default": "public",
+      "description": "Dukshmeria e statusit"
+    },
     "text": {
       "type": "string",
       "description": "Teksti i statusit"

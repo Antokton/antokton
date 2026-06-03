@@ -282,6 +282,37 @@
     "member_faith_category": {
       "type": "string",
       "description": "Kategoria e besimit t\u00eb an\u00ebtarit"
+    },
+    "is_blocked": {
+      "type": "boolean",
+      "default": false,
+      "description": "A eshte bllokuar anetari"
+    },
+    "blocked_until": {
+      "type": "string",
+      "description": "Afati ISO deri kur anetari eshte bllokuar perkohesisht"
+    },
+    "blocked_permanently": {
+      "type": "boolean",
+      "default": false,
+      "description": "Bllokim i perhershem nga administrata"
+    },
+    "block_reason": {
+      "type": "string",
+      "description": "Arsye e brendshme per bllokimin"
+    },
+    "registration_block_until": {
+      "type": "string",
+      "description": "Afati ISO deri kur nuk lejohet ri-regjistrimi"
+    },
+    "registration_block_reason": {
+      "type": "string",
+      "description": "Arsye e brendshme per bllokimin e ri-regjistrimit"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Soft-delete i anetarit per auditim"
     }
   }
 }
