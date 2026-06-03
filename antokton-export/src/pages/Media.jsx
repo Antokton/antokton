@@ -41,6 +41,17 @@ const STATIC_REVISTA = [
 ];
 
 const ALL_STATIC = [...STATIC_TV, ...STATIC_RADIO, ...STATIC_GAZETA, ...STATIC_REVISTA];
+const STATIC_MEDIA_CONFIG_KEY = "media_static_items";
+
+function parseStaticMedia(value) {
+  if (!value) return ALL_STATIC;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : ALL_STATIC;
+  } catch {
+    return ALL_STATIC;
+  }
+}
 
 // ─── Filter config ───────────────────────────────────────────────────────────
 const MEDIA_CATS = [
@@ -161,7 +172,7 @@ function ChannelCard({ ch, onPlay, isAdmin, onEdit, onHide, onDelete }) {
       whileHover={{ y: -2 }}
       className="group relative flex flex-col rounded-2xl overflow-hidden border border-white/10 hover:border-white/25 transition-all"
       style={{ background: "rgba(255,255,255,0.05)" }}>
-      {isAdmin && ch._fromDB && (
+      {isAdmin && (
         <div className="absolute right-2 top-2 z-20 flex gap-1">
           <button onClick={(event) => { event.stopPropagation(); onEdit(ch); }} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white/70 hover:text-white" title="Përpuno">
             <Edit2 className="h-3.5 w-3.5" />
@@ -213,13 +224,26 @@ function ChannelCard({ ch, onPlay, isAdmin, onEdit, onHide, onDelete }) {
 }
 
 // ─── Publication card (gazeta/revista) ───────────────────────────────────────
-function PubCard({ item, onPlay }) {
+function PubCard({ item, onPlay, isAdmin, onEdit, onHide, onDelete }) {
   const siteUrl = item.site || item.url;
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -2 }}
-      className="group flex flex-col p-5 rounded-2xl border border-white/10 hover:border-white/25 transition-all"
+      className="group relative flex flex-col p-5 rounded-2xl border border-white/10 hover:border-white/25 transition-all"
       style={{ background: "rgba(255,255,255,0.05)" }}>
+      {isAdmin && (
+        <div className="absolute right-2 top-2 z-20 flex gap-1">
+          <button onClick={(event) => { event.stopPropagation(); onEdit(item); }} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white/70 hover:text-white" title="Përpuno">
+            <Edit2 className="h-3.5 w-3.5" />
+          </button>
+          <button onClick={(event) => { event.stopPropagation(); onHide(item); }} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-yellow-300 hover:text-yellow-200" title="Fshihe">
+            <EyeOff className="h-3.5 w-3.5" />
+          </button>
+          <button onClick={(event) => { event.stopPropagation(); onDelete(item); }} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-red-400 hover:text-red-300" title="Fshi">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
       <div className="flex items-start gap-3 mb-3">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 bg-white/5 border border-white/10">
           {item.flag}
@@ -318,6 +342,14 @@ export function MediaSection() {
     queryFn: () => base44.entities.MediaPost.list("order", 100),
   });
 
+  const { data: siteConfigs = [] } = useQuery({
+    queryKey: ["siteConfig"],
+    queryFn: () => base44.entities.SiteConfig.list(),
+  });
+
+  const staticMediaConfig = siteConfigs.find((config) => config.key === STATIC_MEDIA_CONFIG_KEY);
+  const staticMediaItems = useMemo(() => parseStaticMedia(staticMediaConfig?.value), [staticMediaConfig?.value]);
+
   const updateChannelMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.MediaChannel.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mediaChannels"] }),
@@ -338,6 +370,22 @@ export function MediaSection() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mediaPosts"] }),
   });
 
+  const staticMediaMutation = useMutation({
+    mutationFn: async (nextItems) => {
+      const value = JSON.stringify(nextItems, null, 2);
+      if (staticMediaConfig) {
+        return base44.entities.SiteConfig.update(staticMediaConfig.id, { value });
+      }
+      return base44.entities.SiteConfig.create({
+        key: STATIC_MEDIA_CONFIG_KEY,
+        value,
+        label: "Mediat statike",
+        group: "media",
+      });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["siteConfig"] }),
+  });
+
   const visibleDbChannels = useMemo(
     () => (isAdmin ? dbChannels : dbChannels.filter((channel) => channel.is_active !== false)),
     [dbChannels, isAdmin]
@@ -351,23 +399,42 @@ export function MediaSection() {
   // Merge static + DB channels
   const allChannels = useMemo(() => {
     const dbMapped = visibleDbChannels.map(ch => ({ ...ch, _fromDB: true }));
-    return [...ALL_STATIC, ...dbMapped];
-  }, [visibleDbChannels]);
+    return [...staticMediaItems, ...dbMapped];
+  }, [staticMediaItems, visibleDbChannels]);
 
-  const handleEditChannel = (channel) => {
+  const saveStaticMediaItem = (item) => {
+    const nextItems = staticMediaItems.some((media) => media.id === item.id)
+      ? staticMediaItems.map((media) => (media.id === item.id ? item : media))
+      : staticMediaItems.concat(item);
+    staticMediaMutation.mutate(nextItems);
+  };
+
+  const handleEditMediaItem = (channel) => {
     const name = window.prompt("Emri i medias:", channel.name || "");
     if (!name || name.trim() === channel.name) return;
+    if (!channel._fromDB) {
+      saveStaticMediaItem({ ...channel, name: name.trim() });
+      return;
+    }
     updateChannelMutation.mutate({ id: channel.id, data: { name: name.trim() } });
   };
 
-  const handleHideChannel = (channel) => {
+  const handleHideMediaItem = (channel) => {
     if (confirm(`Fshihe "${channel.name}" nga Media?`)) {
+      if (!channel._fromDB) {
+        staticMediaMutation.mutate(staticMediaItems.filter((media) => media.id !== channel.id));
+        return;
+      }
       updateChannelMutation.mutate({ id: channel.id, data: { is_active: false } });
     }
   };
 
-  const handleDeleteChannel = (channel) => {
+  const handleDeleteMediaItem = (channel) => {
     if (confirm(`Fshi përgjithmonë "${channel.name}"?`)) {
+      if (!channel._fromDB) {
+        staticMediaMutation.mutate(staticMediaItems.filter((media) => media.id !== channel.id));
+        return;
+      }
       deleteChannelMutation.mutate(channel.id);
     }
   };
@@ -442,7 +509,7 @@ export function MediaSection() {
             </div>
             {isAdmin && (
               <p className="mt-4 text-xs text-white/35">
-                Admin: mediat dinamike nga databaza mund të përpunohen ose fshihen direkt në karta. Mediat statike redaktohen nga Webdizajn / konfigurimi i faqes.
+                Admin: përdor butonat mbi kartat për të përpunuar ose fshehur mediat.
               </p>
             )}
           </div>
@@ -485,7 +552,7 @@ export function MediaSection() {
           <section>
             <SectionHeader icon={Tv} title="Televizion" dot />
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {tvList.map(ch => <ChannelCard key={ch.id} ch={ch} onPlay={setPlayerItem} isAdmin={isAdmin} onEdit={handleEditChannel} onHide={handleHideChannel} onDelete={handleDeleteChannel} />)}
+              {tvList.map(ch => <ChannelCard key={ch.id} ch={ch} onPlay={setPlayerItem} isAdmin={isAdmin} onEdit={handleEditMediaItem} onHide={handleHideMediaItem} onDelete={handleDeleteMediaItem} />)}
             </div>
           </section>
         )}
@@ -495,7 +562,7 @@ export function MediaSection() {
           <section>
             <SectionHeader icon={Radio} title="Radio" dot />
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {radioList.map(ch => <ChannelCard key={ch.id} ch={ch} onPlay={setPlayerItem} isAdmin={isAdmin} onEdit={handleEditChannel} onHide={handleHideChannel} onDelete={handleDeleteChannel} />)}
+              {radioList.map(ch => <ChannelCard key={ch.id} ch={ch} onPlay={setPlayerItem} isAdmin={isAdmin} onEdit={handleEditMediaItem} onHide={handleHideMediaItem} onDelete={handleDeleteMediaItem} />)}
             </div>
           </section>
         )}
@@ -505,7 +572,7 @@ export function MediaSection() {
           <section>
             <SectionHeader icon={Newspaper} title="Gazeta" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {gazetaList.map(item => <PubCard key={item.id} item={item} onPlay={setPlayerItem} />)}
+              {gazetaList.map(item => <PubCard key={item.id} item={item} onPlay={setPlayerItem} isAdmin={isAdmin} onEdit={handleEditMediaItem} onHide={handleHideMediaItem} onDelete={handleDeleteMediaItem} />)}
             </div>
           </section>
         )}
@@ -515,7 +582,7 @@ export function MediaSection() {
           <section>
             <SectionHeader icon={BookOpen} title="Revista" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {revistaList.map(item => <PubCard key={item.id} item={item} onPlay={setPlayerItem} />)}
+              {revistaList.map(item => <PubCard key={item.id} item={item} onPlay={setPlayerItem} isAdmin={isAdmin} onEdit={handleEditMediaItem} onHide={handleHideMediaItem} onDelete={handleDeleteMediaItem} />)}
             </div>
           </section>
         )}
