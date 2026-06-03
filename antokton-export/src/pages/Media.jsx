@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { base44 } from "@/api/antoktonClient";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
-  Tv, Radio, BookOpen, Newspaper, Mic, ExternalLink, Play,
-  Shield, Users, Star, Filter, X, PenLine, Globe
+  Tv, Radio, BookOpen, Newspaper, Mic, Play,
+  Filter, X, PenLine, Globe, Edit2, EyeOff, Trash2
 } from "lucide-react";
 import MediaPlayerModal from "@/components/media/MediaPlayerModal";
 import BlogPostCard from "@/components/media/BlogPostCard";
@@ -153,14 +153,27 @@ function CredBadge({ level }) {
 }
 
 // ─── TV / Radio card ─────────────────────────────────────────────────────────
-function ChannelCard({ ch, onPlay }) {
+function ChannelCard({ ch, onPlay, isAdmin, onEdit, onHide, onDelete }) {
   const isRadio = ch.type === "radio";
   const siteUrl = ch.site || ch.website_url;
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -2 }}
-      className="group flex flex-col rounded-2xl overflow-hidden border border-white/10 hover:border-white/25 transition-all"
+      className="group relative flex flex-col rounded-2xl overflow-hidden border border-white/10 hover:border-white/25 transition-all"
       style={{ background: "rgba(255,255,255,0.05)" }}>
+      {isAdmin && ch._fromDB && (
+        <div className="absolute right-2 top-2 z-20 flex gap-1">
+          <button onClick={(event) => { event.stopPropagation(); onEdit(ch); }} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white/70 hover:text-white" title="Përpuno">
+            <Edit2 className="h-3.5 w-3.5" />
+          </button>
+          <button onClick={(event) => { event.stopPropagation(); onHide(ch); }} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-yellow-300 hover:text-yellow-200" title="Fshihe">
+            <EyeOff className="h-3.5 w-3.5" />
+          </button>
+          <button onClick={(event) => { event.stopPropagation(); onDelete(ch); }} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-red-400 hover:text-red-300" title="Fshi">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
       {/* Banner */}
       <div className="h-20 flex items-center justify-center relative overflow-hidden"
         style={{ background: `linear-gradient(135deg, ${ch.color || "#8ab4ff"}33, ${ch.color || "#8ab4ff"}55)` }}>
@@ -277,7 +290,9 @@ function FilterSelect({ label, value, options, onChange }) {
 }
 
 export function MediaSection() {
+  const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
+  const [user, setUser] = useState(null);
   const [activeCategory, setActiveCategory] = useState(urlParams.get("sub") || "all");
   const [filterCredibility, setFilterCredibility] = useState("all");
   const [filterAge, setFilterAge] = useState("all");
@@ -286,20 +301,94 @@ export function MediaSection() {
   const [showFilters, setShowFilters] = useState(false);
   const [playerItem, setPlayerItem] = useState(null);
 
+  useEffect(() => {
+    base44.auth.isAuthenticated().then(async (authenticated) => {
+      if (authenticated) setUser(await base44.auth.me());
+    });
+  }, []);
+
+  const isAdmin = user?.role === "admin" || user?.role === "moderator";
+
   const { data: dbChannels = [] } = useQuery({
     queryKey: ["mediaChannels"],
-    queryFn: () => base44.entities.MediaChannel.filter({ is_active: true }, "order", 100),
+    queryFn: () => base44.entities.MediaChannel.list("order", 100),
   });
   const { data: dbPosts = [] } = useQuery({
     queryKey: ["mediaPosts"],
-    queryFn: () => base44.entities.MediaPost.filter({ is_active: true }, "order", 100),
+    queryFn: () => base44.entities.MediaPost.list("order", 100),
   });
+
+  const updateChannelMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.MediaChannel.update(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mediaChannels"] }),
+  });
+
+  const deleteChannelMutation = useMutation({
+    mutationFn: (id) => base44.entities.MediaChannel.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mediaChannels"] }),
+  });
+
+  const updatePostMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.MediaPost.update(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mediaPosts"] }),
+  });
+
+  const deletePostMutation = useMutation({
+    mutationFn: (id) => base44.entities.MediaPost.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mediaPosts"] }),
+  });
+
+  const visibleDbChannels = useMemo(
+    () => (isAdmin ? dbChannels : dbChannels.filter((channel) => channel.is_active !== false)),
+    [dbChannels, isAdmin]
+  );
+
+  const visibleDbPosts = useMemo(
+    () => (isAdmin ? dbPosts : dbPosts.filter((post) => post.is_active !== false)),
+    [dbPosts, isAdmin]
+  );
 
   // Merge static + DB channels
   const allChannels = useMemo(() => {
-    const dbMapped = dbChannels.map(ch => ({ ...ch, _fromDB: true }));
+    const dbMapped = visibleDbChannels.map(ch => ({ ...ch, _fromDB: true }));
     return [...ALL_STATIC, ...dbMapped];
-  }, [dbChannels]);
+  }, [visibleDbChannels]);
+
+  const handleEditChannel = (channel) => {
+    const name = window.prompt("Emri i medias:", channel.name || "");
+    if (!name || name.trim() === channel.name) return;
+    updateChannelMutation.mutate({ id: channel.id, data: { name: name.trim() } });
+  };
+
+  const handleHideChannel = (channel) => {
+    if (confirm(`Fshihe "${channel.name}" nga Media?`)) {
+      updateChannelMutation.mutate({ id: channel.id, data: { is_active: false } });
+    }
+  };
+
+  const handleDeleteChannel = (channel) => {
+    if (confirm(`Fshi përgjithmonë "${channel.name}"?`)) {
+      deleteChannelMutation.mutate(channel.id);
+    }
+  };
+
+  const handleEditPost = (post) => {
+    const title = window.prompt("Titulli:", post.title || "");
+    if (!title || title.trim() === post.title) return;
+    updatePostMutation.mutate({ id: post.id, data: { title: title.trim() } });
+  };
+
+  const handleHidePost = (post) => {
+    if (confirm(`Fshihe "${post.title}" nga Media?`)) {
+      updatePostMutation.mutate({ id: post.id, data: { is_active: false } });
+    }
+  };
+
+  const handleDeletePost = (post) => {
+    if (confirm(`Fshi përgjithmonë "${post.title}"?`)) {
+      deletePostMutation.mutate(post.id);
+    }
+  };
 
   const hasActiveFilter = filterCredibility !== "all" || filterAge !== "all" || filterReligion !== "all" || filterProgram !== "all";
 
@@ -322,8 +411,8 @@ export function MediaSection() {
   const gazetaList = allChannels.filter(ch => ch.type === "gazeta" && filterChannel(ch));
   const revistaList= allChannels.filter(ch => ch.type === "revista"&& filterChannel(ch));
 
-  const blogPosts  = dbPosts.filter(p => p.category === "blog");
-  const otherDbPosts = dbPosts.filter(p => p.category !== "blog" && (activeCategory === "all" || p.category === activeCategory));
+  const blogPosts  = visibleDbPosts.filter(p => p.category === "blog");
+  const otherDbPosts = visibleDbPosts.filter(p => p.category !== "blog" && (activeCategory === "all" || p.category === activeCategory));
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
@@ -351,6 +440,11 @@ export function MediaSection() {
                 </button>
               ))}
             </div>
+            {isAdmin && (
+              <p className="mt-4 text-xs text-white/35">
+                Admin: mediat dinamike nga databaza mund të përpunohen ose fshihen direkt në karta. Mediat statike redaktohen nga Webdizajn / konfigurimi i faqes.
+              </p>
+            )}
           </div>
         </div>
       </motion.div>
@@ -391,7 +485,7 @@ export function MediaSection() {
           <section>
             <SectionHeader icon={Tv} title="Televizion" dot />
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {tvList.map(ch => <ChannelCard key={ch.id} ch={ch} onPlay={setPlayerItem} />)}
+              {tvList.map(ch => <ChannelCard key={ch.id} ch={ch} onPlay={setPlayerItem} isAdmin={isAdmin} onEdit={handleEditChannel} onHide={handleHideChannel} onDelete={handleDeleteChannel} />)}
             </div>
           </section>
         )}
@@ -401,7 +495,7 @@ export function MediaSection() {
           <section>
             <SectionHeader icon={Radio} title="Radio" dot />
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {radioList.map(ch => <ChannelCard key={ch.id} ch={ch} onPlay={setPlayerItem} />)}
+              {radioList.map(ch => <ChannelCard key={ch.id} ch={ch} onPlay={setPlayerItem} isAdmin={isAdmin} onEdit={handleEditChannel} onHide={handleHideChannel} onDelete={handleDeleteChannel} />)}
             </div>
           </section>
         )}
@@ -488,8 +582,21 @@ export function MediaSection() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {otherDbPosts.filter(p => p.category !== "podcast" && p.category !== "blog").map(p => (
                 <div key={p.id}
-                  className="rounded-2xl border border-white/10 overflow-hidden flex flex-col hover:border-white/20 transition-all"
+                  className="relative rounded-2xl border border-white/10 overflow-hidden flex flex-col hover:border-white/20 transition-all"
                   style={{ background: "rgba(255,255,255,0.05)" }}>
+                  {isAdmin && (
+                    <div className="absolute right-2 top-2 z-20 flex gap-1">
+                      <button onClick={() => handleEditPost(p)} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white/70 hover:text-white" title="Përpuno">
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => handleHidePost(p)} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-yellow-300 hover:text-yellow-200" title="Fshihe">
+                        <EyeOff className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => handleDeletePost(p)} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-red-400 hover:text-red-300" title="Fshi">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
                   {p.image_url && <img src={p.image_url} alt={p.title} className="w-full h-40 object-cover" />}
                   <div className="p-4 flex flex-col flex-1 gap-2">
                     {p.channel_name && <p className="text-white/35 text-xs">{p.channel_name}</p>}

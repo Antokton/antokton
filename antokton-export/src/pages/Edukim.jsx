@@ -1,23 +1,26 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, BookOpen, Building2, GraduationCap, Handshake, LibraryBig } from "lucide-react";
+import { ArrowRight, Building2, GraduationCap, Handshake, LibraryBig, MonitorPlay } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 const plannedAreas = [
   {
-    icon: BookOpen,
-    title: "Njohuri dhe materiale formuese",
-    text: "Hapësirë e planifikuar për materiale edukative dhe përmbajtje që ndihmon zhvillimin personal ose profesional.",
+    icon: Building2,
+    title: "Shkollat",
+    link: "/Feed?category=edukim&sub=shkolla",
+    text: "Hapësirë për shkolla, qendra edukimi dhe Akademinë Antokton, krahas institucioneve që mund të shtohen e verifikohen në të ardhmen.",
   },
   {
     icon: GraduationCap,
-    title: "Kurse dhe trajnime",
-    text: "Në të ardhmen mund të prezantohen kurse ose trajnime vetëm pasi ato të shtohen realisht në platformë.",
+    title: "Trajnimet profesionale",
+    link: "/Feed?category=edukim&sub=trajnime",
+    text: "Kategori e planifikuar për trajnime praktike dhe formim profesional, vetëm pasi ofertat të shtohen realisht në platformë.",
   },
   {
-    icon: Building2,
-    title: "Qendra dhe shkolla partnere",
-    text: "Platforma synon të mundësojë profile për shkolla, qendra edukimi ose bashkëpunëtorë të verifikuar.",
+    icon: MonitorPlay,
+    title: "Kurset online",
+    link: "/Feed?category=edukim&sub=kurse",
+    text: "Hapësirë për kurse online dhe materiale formuese që mund të publikohen nga Antokton ose bashkëpunëtorë të verifikuar.",
   },
 ];
 
@@ -51,11 +54,40 @@ export function EdukimSection() {
                   </div>
                   <h2 className="mb-2 text-lg font-bold text-white">{area.title}</h2>
                   <p className="text-sm leading-relaxed text-white/60">{area.text}</p>
+                  <Link
+                    to={area.link}
+                    className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#8ab4ff] hover:text-white"
+                  >
+                    Shiko njoftimet
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
                 </CardContent>
               </Card>
             );
           })}
         </div>
+
+        <Card className="mt-6 border-[#8ab4ff]/20 bg-[#8ab4ff]/5">
+          <CardContent className="p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">Akademia Antokton</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/60">
+                  Akademia Antokton trajtohet si pjesë e kategorisë “Shkollat”,
+                  bashkë me shkollat dhe qendrat edukative që mund të shtohen
+                  në të ardhmen pasi të jenë të verifikuara.
+                </p>
+              </div>
+              <Link
+                to="/Feed?category=edukim&sub=shkolla"
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-white/80 hover:border-white/25 hover:text-white"
+              >
+                Shkollat
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="mt-8 border-white/10 bg-white/[0.04]">
           <CardContent className="space-y-4 p-7 text-white/70">
@@ -90,6 +122,13 @@ export function EdukimSection() {
             className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] px-5 py-2.5 text-sm font-semibold text-[#0b1020] transition-opacity hover:opacity-90"
           >
             Na kontakto
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link
+            to="/Feed?category=edukim"
+            className="ml-0 mt-3 inline-flex items-center gap-2 rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-white/80 transition-colors hover:border-white/30 hover:text-white sm:ml-3"
+          >
+            Kërko kurse
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>

@@ -23,6 +23,17 @@ const HOW_TO_HELP = [
 
 const CATEGORY_LABELS = { arsim: "Arsim", shendetesi: "Shëndetësi", infrastrukture: "Infrastrukturë", emergjence: "Emergjencë", kulture: "Kulturë", tjeter: "Tjetër" };
 const CATEGORY_COLORS = { arsim: "#3a86ff", shendetesi: "#e63946", infrastrukture: "#f4a261", emergjence: "#ff6b35", kulture: "#9b5de5", tjeter: "#adb5bd" };
+const STATIC_ORGS_CONFIG_KEY = "bamiresi_static_orgs";
+
+function parseOrgConfig(value) {
+  if (!value) return STATIC_ORGS;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : STATIC_ORGS;
+  } catch {
+    return STATIC_ORGS;
+  }
+}
 
 function ProgressBar({ goal, raised }) {
   if (!goal) return null;
@@ -123,13 +134,13 @@ function ProjectModal({ project, onClose, onSave }) {
   } : EMPTY_FORM);
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.8)" }} onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl border border-white/10 overflow-hidden shadow-2xl max-h-[90vh] flex flex-col" style={{ background: "#1a2640" }} onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-[calc(env(safe-area-inset-top)+88px)] sm:items-center sm:p-4" style={{ background: "rgba(0,0,0,0.8)", WebkitOverflowScrolling: "touch" }} onClick={onClose}>
+      <div className="w-full max-w-lg rounded-2xl border border-white/10 overflow-hidden shadow-2xl max-h-[calc(100dvh-120px)] sm:max-h-[90vh] flex flex-col" style={{ background: "#1a2640" }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
           <h3 className="text-white font-bold">{project ? "Përpuno Projektin" : "Shto Projekt / Thirrje"}</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-white/50 hover:bg-white/10"><X className="w-4 h-4" /></button>
         </div>
-        <div className="overflow-y-auto flex-1 p-5 space-y-3">
+        <div className="overflow-y-auto flex-1 p-5 space-y-3" style={{ WebkitOverflowScrolling: "touch" }}>
           <label className="flex items-center gap-2 text-sm text-white cursor-pointer">
             <input type="checkbox" checked={!!form.is_charity_call} onChange={e => setForm(f => ({ ...f, is_charity_call: e.target.checked }))} className="w-4 h-4 rounded" />
             <Zap className="w-4 h-4 text-red-400" /> Thirrje Bamirësie (shfaqet në Njoftime)
@@ -186,10 +197,83 @@ function ProjectModal({ project, onClose, onSave }) {
   );
 }
 
+function OrgModal({ org, onClose, onSave }) {
+  const [form, setForm] = useState({
+    id: org?.id || `org_${Date.now()}`,
+    name: org?.name || "",
+    type: org?.type || "",
+    flag: org?.flag || "🤝",
+    color: org?.color || "#8ab4ff",
+    focusText: (org?.focus || []).join(", "),
+    desc: org?.desc || "",
+    url: org?.url || "",
+    domain: org?.domain || "",
+  });
+
+  const save = () => {
+    const next = {
+      ...form,
+      focus: form.focusText.split(",").map((item) => item.trim()).filter(Boolean),
+    };
+    delete next.focusText;
+    onSave(next);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-[calc(env(safe-area-inset-top)+88px)] sm:items-center sm:p-4" style={{ background: "rgba(0,0,0,0.8)", WebkitOverflowScrolling: "touch" }} onClick={onClose}>
+      <div className="flex max-h-[calc(100dvh-120px)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 shadow-2xl sm:max-h-[90vh]" style={{ background: "#1a2640" }} onClick={(event) => event.stopPropagation()}>
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-5 py-4">
+          <h3 className="font-bold text-white">Përpuno organizatën</h3>
+          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-white/50 hover:bg-white/10">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex-1 space-y-3 overflow-y-auto p-5" style={{ WebkitOverflowScrolling: "touch" }}>
+          {[
+            ["Emri*", "name", "text"],
+            ["Lloji", "type", "text"],
+            ["Simboli/flamuri", "flag", "text"],
+            ["Ngjyra", "color", "text"],
+            ["Fushat, të ndara me presje", "focusText", "text"],
+            ["URL", "url", "url"],
+            ["Domain", "domain", "text"],
+          ].map(([label, key, type]) => (
+            <div key={key}>
+              <label className="mb-1 block text-xs text-white/50">{label}</label>
+              <input
+                type={type}
+                value={form[key] || ""}
+                onChange={(event) => setForm((prev) => ({ ...prev, [key]: event.target.value }))}
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[#8ab4ff]/50"
+              />
+            </div>
+          ))}
+          <div>
+            <label className="mb-1 block text-xs text-white/50">Përshkrimi</label>
+            <textarea
+              rows={4}
+              value={form.desc || ""}
+              onChange={(event) => setForm((prev) => ({ ...prev, desc: event.target.value }))}
+              className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[#8ab4ff]/50"
+            />
+          </div>
+        </div>
+        <div className="flex shrink-0 justify-end gap-3 border-t border-white/10 px-5 py-4">
+          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-white/60 hover:bg-white/5">Anulo</button>
+          <button onClick={save} className="rounded-lg px-5 py-2 text-sm font-bold text-[#0b1020]" style={{ background: "linear-gradient(to right, #8ab4ff, #9bffd6)" }}>
+            <Check className="mr-1 inline h-4 w-4" /> Ruaj
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function BamiresiFull() {
   const [user, setUser] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
+  const [editingOrg, setEditingOrg] = useState(null);
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
@@ -204,6 +288,14 @@ export default function BamiresiFull() {
     queryKey: ["charityProjects"],
     queryFn: () => base44.entities.CharityProject.list("order", 100),
   });
+
+  const { data: siteConfigs = [] } = useQuery({
+    queryKey: ["siteConfig"],
+    queryFn: () => base44.entities.SiteConfig.list(),
+  });
+
+  const orgsConfig = siteConfigs.find((config) => config.key === STATIC_ORGS_CONFIG_KEY);
+  const staticOrgs = React.useMemo(() => parseOrgConfig(orgsConfig?.value), [orgsConfig?.value]);
 
   const visibleProjects = isAdmin ? projects : projects.filter(p => p.is_active);
   const calls = visibleProjects.filter(p => p.is_charity_call);
@@ -222,6 +314,25 @@ export default function BamiresiFull() {
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.CharityProject.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["charityProjects"] })
+  });
+
+  const staticOrgsMutation = useMutation({
+    mutationFn: async (nextOrgs) => {
+      const value = JSON.stringify(nextOrgs, null, 2);
+      if (orgsConfig) {
+        return base44.entities.SiteConfig.update(orgsConfig.id, { value });
+      }
+      return base44.entities.SiteConfig.create({
+        key: STATIC_ORGS_CONFIG_KEY,
+        value,
+        label: "Organizatat statike te Bamirësisë",
+        group: "bamiresi",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["siteConfig"] });
+      setEditingOrg(null);
+    },
   });
 
   const handleSave = (formData) => {
@@ -247,6 +358,19 @@ export default function BamiresiFull() {
         [`${field}_expires`]: !isCurrentlyOn ? expires.toISOString() : null,
       }
     });
+  };
+
+  const handleSaveOrg = (org) => {
+    const nextOrgs = staticOrgs.some((item) => item.id === org.id)
+      ? staticOrgs.map((item) => (item.id === org.id ? org : item))
+      : staticOrgs.concat(org);
+    staticOrgsMutation.mutate(nextOrgs);
+  };
+
+  const handleDeleteOrg = (orgId) => {
+    if (confirm("Fshihe këtë organizatë nga faqja Bamirësi?")) {
+      staticOrgsMutation.mutate(staticOrgs.filter((org) => org.id !== orgId));
+    }
   };
 
   return (
@@ -279,14 +403,14 @@ export default function BamiresiFull() {
       {/* Admin Panel */}
       {isAdmin && (
         <section>
-          <div className="flex items-center justify-between mb-5 p-4 rounded-2xl border border-yellow-500/20" style={{ background: "rgba(234,179,8,0.06)" }}>
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-5 p-4 rounded-2xl border border-yellow-500/20" style={{ background: "rgba(234,179,8,0.06)" }}>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Star className="w-5 h-5 text-yellow-400" />
               <span className="text-yellow-400 font-bold text-sm">Panel Administratori</span>
               <span className="text-white/40 text-xs">— {projects.length} projekte gjithsej</span>
             </div>
             <button onClick={() => { setEditingProject(null); setShowModal(true); }}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-[#0b1020]"
+              className="flex w-full items-center justify-center gap-2 whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold text-[#0b1020] sm:w-auto"
               style={{ background: "linear-gradient(to right,#8ab4ff,#9bffd6)" }}>
               <Plus className="w-4 h-4" /> Shto Projekt / Thirrje
             </button>
@@ -340,12 +464,22 @@ export default function BamiresiFull() {
           <div className="flex-1 h-px bg-white/8" />
         </div>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {STATIC_ORGS.map((org, i) => (
-            <motion.a key={org.id} href={org.url} target="_blank" rel="noopener noreferrer"
+          {staticOrgs.map((org, i) => (
+            <motion.div key={org.id}
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
               whileHover={{ y: -3 }}
-              className="group flex flex-col p-5 rounded-2xl border border-white/10 hover:border-white/25 transition-all"
+              className="group relative flex flex-col p-5 rounded-2xl border border-white/10 hover:border-white/25 transition-all"
               style={{ background: "rgba(255,255,255,0.05)" }}>
+              {isAdmin && (
+                <div className="absolute right-2 top-2 z-10 flex gap-1">
+                  <button onClick={() => setEditingOrg(org)} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white/70 hover:text-white" title="Përpuno">
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => handleDeleteOrg(org.id)} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-red-400 hover:text-red-300" title="Fshihe">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
               <div className="flex items-start gap-3 mb-3">
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 border border-white/10" style={{ background: `${org.color}18` }}>{org.flag}</div>
                 <div>
@@ -360,10 +494,10 @@ export default function BamiresiFull() {
                 ))}
               </div>
               <p className="text-white/50 text-xs leading-relaxed flex-1">{org.desc}</p>
-              <div className="mt-4 flex items-center gap-1 text-[#8ab4ff] text-xs font-medium group-hover:gap-2 transition-all">
+              <a href={org.url} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center gap-1 text-[#8ab4ff] text-xs font-medium group-hover:gap-2 transition-all">
                 <Globe className="w-3 h-3" /> {org.domain} <ChevronRight className="w-3 h-3" />
-              </div>
-            </motion.a>
+              </a>
+            </motion.div>
           ))}
         </div>
       </section>
@@ -404,6 +538,13 @@ export default function BamiresiFull() {
           project={editingProject}
           onClose={() => { setShowModal(false); setEditingProject(null); }}
           onSave={handleSave}
+        />
+      )}
+      {editingOrg && (
+        <OrgModal
+          org={editingOrg}
+          onClose={() => setEditingOrg(null)}
+          onSave={handleSaveOrg}
         />
       )}
     </div>

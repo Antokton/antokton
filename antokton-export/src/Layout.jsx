@@ -173,6 +173,22 @@ export default function Layout({ children, currentPageName }) {
     el.scrollBy({ top: amount, behavior: 'smooth' });
   };
 
+  const toggleMobileMainMenu = (key) => {
+    setMobileSubmenuOpen((prev) => {
+      const isOpening = !prev[key];
+      const next = {};
+      Object.keys(prev).forEach((openKey) => {
+        next[openKey] = openKey.startsWith("pazar_") ? key === "pazar" && isOpening && prev[openKey] : false;
+      });
+      next[key] = isOpening;
+      return next;
+    });
+  };
+
+  const toggleMobileNestedMenu = (key) => {
+    setMobileSubmenuOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
   React.useEffect(() => {
     const el = menuScrollRef.current;
     if (!el || !menuOpen) return;
@@ -592,7 +608,12 @@ export default function Layout({ children, currentPageName }) {
                 <>
                 {/* Dynamic nav from SiteConfig */}
                 {dynNav.filter(item => item.visible !== false && (!item.authOnly || isAuth)).map(item => {
-                  const visibleSubs = (item.submenu || []).filter(s => s.visible !== false);
+                  const visibleSubs = (item.submenu || []).filter((sub) => {
+                    if (sub.visible === false) return false;
+                    const itemLabel = String(item.label || item.id || "").toLowerCase();
+                    const subLabel = String(sub.label || "").toLowerCase();
+                    return !(itemLabel.includes("pazar") && (subLabel === "të gjitha" || subLabel === "te gjitha"));
+                  });
                   if (!item.hasSubmenu || visibleSubs.length === 0) {
                     return (
                       <Link key={item.id} to={item.url || (item.page ? `/${item.page}` : '/')}
@@ -962,7 +983,7 @@ export default function Layout({ children, currentPageName }) {
                   const itemUrl = item.url || (item.page ? `/${item.page}` : '/');
                   return (
                     <div key={item.id}>
-                      <div className="flex items-center rounded-lg text-white hover:bg-white/5 transition-all">
+                      <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.07] transition-all">
                         <Link to={itemUrl} onClick={() => setMenuOpen(false)}
                           className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2">
                           <span className="truncate text-xs font-medium">{item.label}</span>
@@ -973,7 +994,7 @@ export default function Layout({ children, currentPageName }) {
                           onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
-                            setMobileSubmenuOpen(p => ({ ...p, [item.id]: !p[item.id] }));
+                            toggleMobileMainMenu(item.id);
                           }}
                           className="shrink-0 px-3 py-2 text-white/80 hover:text-white"
                         >
@@ -997,11 +1018,11 @@ export default function Layout({ children, currentPageName }) {
                 // ── Static fallback mobile nav ──
                 <>
                   <div>
-                    <div className="flex items-center rounded-lg text-white hover:bg-white/5 transition-all">
+                    <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.07] transition-all">
                       <Link to="/Feed?category=pune" onClick={()=>setMenuOpen(false)} className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5">
                         <Briefcase className="w-3.5 h-3.5" /><span className="text-sm font-medium">{t("Punë","Jobs")}</span>
                       </Link>
-                      <button type="button" aria-label="Hap nënmenutë për Punë" onClick={(event) => { event.preventDefault(); event.stopPropagation(); setMobileSubmenuOpen(p=>({...p,jobs:!p.jobs})); }} className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white">
+                      <button type="button" aria-label="Hap nënmenutë për Punë" onClick={(event) => { event.preventDefault(); event.stopPropagation(); toggleMobileMainMenu("jobs"); }} className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white">
                         <ChevronDown className={`w-3.5 h-3.5 transition-transform ${mobileSubmenuOpen.jobs?'rotate-180':''}`} />
                       </button>
                     </div>
@@ -1014,11 +1035,11 @@ export default function Layout({ children, currentPageName }) {
                     )}
                   </div>
                   <div>
-                    <div className="flex items-center rounded-lg text-white hover:bg-white/5 transition-all">
+                    <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.07] transition-all">
                       <Link to="/Sherbime" onClick={()=>setMenuOpen(false)} className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5">
                         <Wrench className="w-3.5 h-3.5" /><span className="text-sm font-medium">Shërbime</span>
                       </Link>
-                      <button type="button" aria-label="Hap nënmenutë për Shërbime" onClick={(event) => { event.preventDefault(); event.stopPropagation(); setMobileSubmenuOpen(p=>({...p,sherbime:!p.sherbime})); }} className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white">
+                      <button type="button" aria-label="Hap nënmenutë për Shërbime" onClick={(event) => { event.preventDefault(); event.stopPropagation(); toggleMobileMainMenu("sherbime"); }} className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white">
                         <ChevronDown className={`w-3.5 h-3.5 transition-transform ${mobileSubmenuOpen.sherbime?'rotate-180':''}`} />
                       </button>
                     </div>
@@ -1034,7 +1055,7 @@ export default function Layout({ children, currentPageName }) {
                   </div>
                   {/* Pazar - nënmenu i veçantë */}
                   <div>
-                    <div className="flex items-center rounded-lg text-white hover:bg-white/5 transition-all">
+                    <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.07] transition-all">
                       <Link to="/Pazar" onClick={()=>setMenuOpen(false)} className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5">
                         <ShoppingBag className="w-3.5 h-3.5" /><span className="text-sm font-medium">Pazar</span>
                       </Link>
@@ -1044,7 +1065,7 @@ export default function Layout({ children, currentPageName }) {
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
-                          setMobileSubmenuOpen(p=>({...p,pazar:!p.pazar}));
+                          toggleMobileMainMenu("pazar");
                         }}
                         className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white"
                       >
@@ -1052,8 +1073,7 @@ export default function Layout({ children, currentPageName }) {
                       </button>
                     </div>
                     {mobileSubmenuOpen.pazar && (
-                      <div className="ml-5 mt-0.5 space-y-0.5">
-                        <Link to="/Pazar" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-[#8ab4ff] font-semibold hover:text-white"><ShoppingBag className="w-3 h-3" /> Të gjitha</Link>
+                      <div className="ml-5 mt-1 space-y-0.5 border-l border-white/10 pl-2">
                         {PAZAR_NAV_GROUPS.map((group) => {
                           const groupOpen = mobileSubmenuOpen[`pazar_${group.id}`];
                           return (
@@ -1069,7 +1089,7 @@ export default function Layout({ children, currentPageName }) {
                                     onClick={(event) => {
                                       event.preventDefault();
                                       event.stopPropagation();
-                                      setMobileSubmenuOpen(p=>({...p,[`pazar_${group.id}`]:!p[`pazar_${group.id}`]}));
+                                      toggleMobileNestedMenu(`pazar_${group.id}`);
                                     }}
                                     className="shrink-0 px-2.5 py-1.5 text-white/60 hover:text-white"
                                   >
@@ -1093,11 +1113,11 @@ export default function Layout({ children, currentPageName }) {
                     )}
                   </div>
                   <div>
-                    <div className="flex items-center rounded-lg text-white hover:bg-white/5 transition-all">
+                    <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.07] transition-all">
                       <Link to="/Bileta" onClick={()=>setMenuOpen(false)} className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5">
                         <Plane className="w-3.5 h-3.5" /><span className="text-sm font-medium">Bileta</span>
                       </Link>
-                      <button type="button" aria-label="Hap nënmenutë për Bileta" onClick={(event) => { event.preventDefault(); event.stopPropagation(); setMobileSubmenuOpen(p=>({...p,bileta:!p.bileta})); }} className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white">
+                      <button type="button" aria-label="Hap nënmenutë për Bileta" onClick={(event) => { event.preventDefault(); event.stopPropagation(); toggleMobileMainMenu("bileta"); }} className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white">
                         <ChevronDown className={`w-3.5 h-3.5 transition-transform ${mobileSubmenuOpen.bileta?'rotate-180':''}`} />
                       </button>
                     </div>
@@ -1124,36 +1144,28 @@ export default function Layout({ children, currentPageName }) {
                     )}
                   </div>
                   <div>
-                    <div className="flex items-center rounded-lg text-white hover:bg-white/5 transition-all">
+                    <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.07] transition-all">
                       <Link to="/Edukim" onClick={()=>setMenuOpen(false)} className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5">
                         <GraduationCap className="w-3.5 h-3.5" /><span className="text-sm font-medium">Edukim</span>
                       </Link>
-                      <button type="button" aria-label="Hap nënmenutë për Edukim" onClick={(event) => { event.preventDefault(); event.stopPropagation(); setMobileSubmenuOpen(p=>({...p,edukim:!p.edukim})); }} className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white">
+                      <button type="button" aria-label="Hap nënmenutë për Edukim" onClick={(event) => { event.preventDefault(); event.stopPropagation(); toggleMobileMainMenu("edukim"); }} className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white">
                         <ChevronDown className={`w-3.5 h-3.5 transition-transform ${mobileSubmenuOpen.edukim?'rotate-180':''}`} />
                       </button>
                     </div>
                     {mobileSubmenuOpen.edukim && (
                       <div className="ml-5 mt-0.5 space-y-0.5">
+                        <Link to="/Feed?category=edukim&sub=shkolla" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:text-white/60"><GraduationCap className="w-3 h-3" /> Shkolla</Link>
                         <Link to="/Feed?category=edukim&sub=trajnime" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:text-white/60"><GraduationCap className="w-3 h-3" /> Trajnime profesionale</Link>
-                        <button onClick={() => setMobileSubmenuOpen(p=>({...p,shkolla:!p.shkolla}))} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:text-white/60 w-full">
-                          <GraduationCap className="w-3 h-3" /> Shkolla
-                          <ChevronDown className={`w-3 h-3 ml-auto transition-transform ${mobileSubmenuOpen.shkolla?'rotate-180':''}`} />
-                        </button>
-                        {mobileSubmenuOpen.shkolla && (
-                          <div className="ml-4 space-y-0.5">
-                            <Link to="/Feed?category=edukim&sub=shkolla" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white/60 hover:text-white"><GraduationCap className="w-3 h-3" /> Shkolla</Link>
-                          </div>
-                        )}
                         <Link to="/Feed?category=edukim&sub=kurse" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:text-white/60"><GraduationCap className="w-3 h-3" /> Kurse online</Link>
                       </div>
                     )}
                   </div>
                   <div>
-                    <div className="flex items-center rounded-lg text-white hover:bg-white/5 transition-all">
+                    <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.07] transition-all">
                       <Link to="/Media" onClick={()=>setMenuOpen(false)} className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5">
                         <Tv className="w-3.5 h-3.5" /><span className="text-sm font-medium">Media</span>
                       </Link>
-                      <button type="button" aria-label="Hap nënmenutë për Media" onClick={(event) => { event.preventDefault(); event.stopPropagation(); setMobileSubmenuOpen(p=>({...p,media:!p.media})); }} className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white">
+                      <button type="button" aria-label="Hap nënmenutë për Media" onClick={(event) => { event.preventDefault(); event.stopPropagation(); toggleMobileMainMenu("media"); }} className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white">
                         <ChevronDown className={`w-3.5 h-3.5 transition-transform ${mobileSubmenuOpen.media?'rotate-180':''}`} />
                       </button>
                     </div>
@@ -1175,7 +1187,7 @@ export default function Layout({ children, currentPageName }) {
                       <div className="border-t border-white/10 my-1" />
                       {user?.role === "admin" && (
                         <div>
-                          <button onClick={() => setMobileSubmenuOpen(p=>({...p,members:!p.members}))} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white hover:text-white/60 hover:bg-white/5 transition-all w-full">
+                          <button onClick={() => toggleMobileMainMenu("members")} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-white/10 bg-white/[0.03] text-white hover:text-white/60 hover:bg-white/[0.07] transition-all w-full">
                             <Users className="w-3.5 h-3.5" /><span className="text-sm font-medium">Anëtarët</span>
                             <ChevronDown className={`w-3.5 h-3.5 ml-auto transition-transform ${mobileSubmenuOpen.members?'rotate-180':''}`} />
                           </button>
