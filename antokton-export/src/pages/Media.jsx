@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   Tv, Radio, BookOpen, Newspaper, Mic, Play,
-  Filter, X, PenLine, Globe, Edit2, EyeOff, Trash2
+  Filter, X, PenLine, Globe, Edit2, EyeOff, Trash2, Plus, Check
 } from "lucide-react";
 import MediaPlayerModal from "@/components/media/MediaPlayerModal";
 import BlogPostCard from "@/components/media/BlogPostCard";
@@ -172,19 +172,6 @@ function ChannelCard({ ch, onPlay, isAdmin, onEdit, onHide, onDelete }) {
       whileHover={{ y: -2 }}
       className="group relative flex flex-col rounded-2xl overflow-hidden border border-white/10 hover:border-white/25 transition-all"
       style={{ background: "rgba(255,255,255,0.05)" }}>
-      {isAdmin && (
-        <div className="absolute right-2 top-2 z-20 flex gap-1">
-          <button onClick={(event) => { event.stopPropagation(); onEdit(ch); }} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white/70 hover:text-white" title="Përpuno">
-            <Edit2 className="h-3.5 w-3.5" />
-          </button>
-          <button onClick={(event) => { event.stopPropagation(); onHide(ch); }} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-yellow-300 hover:text-yellow-200" title="Fshihe">
-            <EyeOff className="h-3.5 w-3.5" />
-          </button>
-          <button onClick={(event) => { event.stopPropagation(); onDelete(ch); }} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-red-400 hover:text-red-300" title="Fshi">
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
       {/* Banner */}
       <div className="h-20 flex items-center justify-center relative overflow-hidden"
         style={{ background: `linear-gradient(135deg, ${ch.color || "#8ab4ff"}33, ${ch.color || "#8ab4ff"}55)` }}>
@@ -196,6 +183,19 @@ function ChannelCard({ ch, onPlay, isAdmin, onEdit, onHide, onDelete }) {
         )}
         {ch.credibility && ch.credibility !== "e panjohur" && (
           <span className="absolute top-2 right-2"><CredBadge level={ch.credibility} /></span>
+        )}
+        {isAdmin && (
+          <div className="absolute bottom-2 right-2 z-20 flex gap-1">
+            <button onClick={(event) => { event.stopPropagation(); onEdit(ch); }} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white/70 hover:text-white" title="Përpuno">
+              <Edit2 className="h-3.5 w-3.5" />
+            </button>
+            <button onClick={(event) => { event.stopPropagation(); onHide(ch); }} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-yellow-300 hover:text-yellow-200" title="Fshihe">
+              <EyeOff className="h-3.5 w-3.5" />
+            </button>
+            <button onClick={(event) => { event.stopPropagation(); onDelete(ch); }} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-red-400 hover:text-red-300" title="Fshi">
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
         )}
       </div>
       {/* Info */}
@@ -313,6 +313,188 @@ function FilterSelect({ label, value, options, onChange }) {
   );
 }
 
+function AdminAddButton({ label, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="mb-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#8ab4ff]/30 bg-[#8ab4ff]/10 px-4 py-2 text-xs font-bold text-[#8ab4ff] hover:bg-[#8ab4ff]/15 sm:w-auto"
+    >
+      <Plus className="h-3.5 w-3.5" /> {label}
+    </button>
+  );
+}
+
+function MediaItemModal({ item, defaultType = "tv", onClose, onSave }) {
+  const itemType = item?.type || item?.category || defaultType;
+  const [form, setForm] = useState({
+    id: item?.id || `media_${Date.now()}`,
+    name: item?.name || item?.title || "",
+    type: itemType,
+    flag: item?.flag || "📡",
+    color: item?.color || "#8ab4ff",
+    site: item?.site || item?.website_url || item?.url || item?.link_url || "",
+    stream: item?.stream || item?.stream_url || item?.embed_url || "",
+    image_url: item?.image_url || "",
+    desc: item?.desc || item?.description || "",
+    credibility: item?.credibility || "e panjohur",
+    target_age: item?.target_age || "te_gjitha",
+    religious_orientation: item?.religious_orientation || "laik",
+    programmingText: (item?.programming_type || []).join(", "),
+    is_active: item?.is_active !== false,
+  });
+
+  const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const save = () => {
+    const name = form.name.trim();
+    if (!name) return;
+    const programming_type = form.programmingText
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    onSave({
+      ...item,
+      ...form,
+      name,
+      title: name,
+      category: form.type,
+      url: form.site,
+      site: form.site,
+      website_url: form.site,
+      link_url: form.site,
+      stream: form.stream,
+      stream_url: form.stream,
+      embed_url: form.stream,
+      desc: form.desc,
+      description: form.desc,
+      programming_type,
+    });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+112px)] pt-[calc(env(safe-area-inset-top)+88px)] sm:items-center sm:p-4"
+      style={{ background: "rgba(0,0,0,0.8)", WebkitOverflowScrolling: "touch" }}
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[calc(100dvh-220px)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 shadow-2xl sm:max-h-[90vh]"
+        style={{ background: "#1a2640" }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-5 py-4">
+          <h3 className="font-bold text-white">{item?.id ? "Përpuno median" : "Shto media"}</h3>
+          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-white/50 hover:bg-white/10">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 space-y-3 overflow-y-auto p-5" style={{ WebkitOverflowScrolling: "touch" }}>
+          <div>
+            <label className="mb-1 block text-xs text-white/50">Emri*</label>
+            <input
+              value={form.name}
+              onChange={(event) => update("name", event.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[#8ab4ff]/50"
+            />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs text-white/50">Kategoria</label>
+              <select
+                value={form.type}
+                onChange={(event) => update("type", event.target.value)}
+                className="w-full rounded-lg border border-white/10 bg-[#1a2640] px-3 py-2 text-sm text-white outline-none focus:border-[#8ab4ff]/50"
+              >
+                {MEDIA_CATS.filter((cat) => cat.key !== "all").map((cat) => (
+                  <option key={cat.key} value={cat.key}>{cat.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-white/50">Besueshmëria</label>
+              <select
+                value={form.credibility}
+                onChange={(event) => update("credibility", event.target.value)}
+                className="w-full rounded-lg border border-white/10 bg-[#1a2640] px-3 py-2 text-sm text-white outline-none focus:border-[#8ab4ff]/50"
+              >
+                <option value="e panjohur">E panjohur</option>
+                {CREDIBILITY_OPTS.filter((opt) => opt.key !== "all").map((opt) => (
+                  <option key={opt.key} value={opt.key}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs text-white/50">Simboli/flamuri</label>
+              <input value={form.flag} onChange={(event) => update("flag", event.target.value)}
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[#8ab4ff]/50" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-white/50">Ngjyra</label>
+              <input value={form.color} onChange={(event) => update("color", event.target.value)}
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[#8ab4ff]/50" />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-white/50">Faqja / linku</label>
+            <input value={form.site} onChange={(event) => update("site", event.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[#8ab4ff]/50" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-white/50">Stream / embed URL</label>
+            <input value={form.stream} onChange={(event) => update("stream", event.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[#8ab4ff]/50" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-white/50">Foto (URL)</label>
+            <input value={form.image_url} onChange={(event) => update("image_url", event.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[#8ab4ff]/50" />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs text-white/50">Grupmosha</label>
+              <select value={form.target_age} onChange={(event) => update("target_age", event.target.value)}
+                className="w-full rounded-lg border border-white/10 bg-[#1a2640] px-3 py-2 text-sm text-white outline-none focus:border-[#8ab4ff]/50">
+                {AGE_OPTS.filter((opt) => opt.key !== "all").map((opt) => <option key={opt.key} value={opt.key}>{opt.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-white/50">Orientimi</label>
+              <select value={form.religious_orientation} onChange={(event) => update("religious_orientation", event.target.value)}
+                className="w-full rounded-lg border border-white/10 bg-[#1a2640] px-3 py-2 text-sm text-white outline-none focus:border-[#8ab4ff]/50">
+                {RELIGION_OPTS.filter((opt) => opt.key !== "all").map((opt) => <option key={opt.key} value={opt.key}>{opt.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-white/50">Programet, të ndara me presje</label>
+            <input value={form.programmingText} onChange={(event) => update("programmingText", event.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[#8ab4ff]/50" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-white/50">Përshkrimi</label>
+            <textarea value={form.desc} onChange={(event) => update("desc", event.target.value)} rows={4}
+              className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[#8ab4ff]/50" />
+          </div>
+          <label className="flex items-center gap-2 text-sm text-white">
+            <input type="checkbox" checked={!!form.is_active} onChange={(event) => update("is_active", event.target.checked)} className="h-4 w-4 rounded" />
+            Shfaqe publikisht
+          </label>
+        </div>
+
+        <div className="flex shrink-0 justify-end gap-3 border-t border-white/10 px-5 py-4">
+          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-white/60 hover:bg-white/5">Anulo</button>
+          <button onClick={save} className="rounded-lg px-5 py-2 text-sm font-bold text-[#0b1020]" style={{ background: "linear-gradient(to right, #8ab4ff, #9bffd6)" }}>
+            <Check className="mr-1 inline h-4 w-4" /> Ruaj
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function MediaSection() {
   const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
@@ -324,6 +506,7 @@ export function MediaSection() {
   const [filterProgram, setFilterProgram] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [playerItem, setPlayerItem] = useState(null);
+  const [mediaModalItem, setMediaModalItem] = useState(null);
 
   useEffect(() => {
     base44.auth.isAuthenticated().then(async (authenticated) => {
@@ -332,6 +515,7 @@ export function MediaSection() {
   }, []);
 
   const isAdmin = user?.role === "admin" || user?.role === "moderator";
+  const canAddContent = user?.role === "admin";
 
   const { data: dbChannels = [] } = useQuery({
     queryKey: ["mediaChannels"],
@@ -362,6 +546,11 @@ export function MediaSection() {
 
   const updatePostMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.MediaPost.update(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mediaPosts"] }),
+  });
+
+  const createPostMutation = useMutation({
+    mutationFn: (data) => base44.entities.MediaPost.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mediaPosts"] }),
   });
 
@@ -410,13 +599,70 @@ export function MediaSection() {
   };
 
   const handleEditMediaItem = (channel) => {
-    const name = window.prompt("Emri i medias:", channel.name || "");
-    if (!name || name.trim() === channel.name) return;
-    if (!channel._fromDB) {
-      saveStaticMediaItem({ ...channel, name: name.trim() });
+    setMediaModalItem(channel);
+  };
+
+  const handleAddMediaItem = (type) => {
+    setMediaModalItem({
+      _isNew: true,
+      _fromPostDB: type === "podcast" || type === "blog",
+      type,
+      category: type,
+      is_active: true,
+    });
+  };
+
+  const handleSaveMediaItem = (item) => {
+    const shared = {
+      name: item.name,
+      type: item.type,
+      category: item.type,
+      flag: item.flag,
+      color: item.color,
+      site: item.site,
+      url: item.site,
+      website_url: item.site,
+      stream: item.stream,
+      stream_url: item.stream,
+      embed_url: item.stream,
+      image_url: item.image_url,
+      desc: item.desc,
+      description: item.description,
+      credibility: item.credibility,
+      target_age: item.target_age,
+      religious_orientation: item.religious_orientation,
+      programming_type: item.programming_type,
+      is_active: item.is_active,
+    };
+
+    if (item._fromPostDB) {
+      const postData = {
+        title: item.name,
+        category: item.type,
+        channel_name: item.name,
+        link_url: item.site,
+        embed_url: item.stream,
+        image_url: item.image_url,
+        description: item.description,
+        is_active: item.is_active,
+      };
+      if (item._isNew) createPostMutation.mutate(postData);
+      else updatePostMutation.mutate({ id: item.id, data: postData });
+      setMediaModalItem(null);
       return;
     }
-    updateChannelMutation.mutate({ id: channel.id, data: { name: name.trim() } });
+
+    if (item._fromDB) {
+      updateChannelMutation.mutate({ id: item.id, data: shared });
+      setMediaModalItem(null);
+      return;
+    }
+
+    saveStaticMediaItem({
+      ...shared,
+      id: item.id,
+    });
+    setMediaModalItem(null);
   };
 
   const handleHideMediaItem = (channel) => {
@@ -440,9 +686,15 @@ export function MediaSection() {
   };
 
   const handleEditPost = (post) => {
-    const title = window.prompt("Titulli:", post.title || "");
-    if (!title || title.trim() === post.title) return;
-    updatePostMutation.mutate({ id: post.id, data: { title: title.trim() } });
+    setMediaModalItem({
+      ...post,
+      _fromPostDB: true,
+      name: post.title || "",
+      type: post.category || "podcast",
+      site: post.link_url || "",
+      stream: post.embed_url || "",
+      desc: post.description || "",
+    });
   };
 
   const handleHidePost = (post) => {
@@ -548,9 +800,10 @@ export function MediaSection() {
       <div className="space-y-12">
 
         {/* ── TV ── */}
-        {show("tv") && tvList.length > 0 && (
+        {show("tv") && (tvList.length > 0 || canAddContent) && (
           <section>
             <SectionHeader icon={Tv} title="Televizion" dot />
+            {canAddContent && <AdminAddButton label="Shto TV" onClick={() => handleAddMediaItem("tv")} />}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {tvList.map(ch => <ChannelCard key={ch.id} ch={ch} onPlay={setPlayerItem} isAdmin={isAdmin} onEdit={handleEditMediaItem} onHide={handleHideMediaItem} onDelete={handleDeleteMediaItem} />)}
             </div>
@@ -558,9 +811,10 @@ export function MediaSection() {
         )}
 
         {/* ── Radio ── */}
-        {show("radio") && radioList.length > 0 && (
+        {show("radio") && (radioList.length > 0 || canAddContent) && (
           <section>
             <SectionHeader icon={Radio} title="Radio" dot />
+            {canAddContent && <AdminAddButton label="Shto radio" onClick={() => handleAddMediaItem("radio")} />}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {radioList.map(ch => <ChannelCard key={ch.id} ch={ch} onPlay={setPlayerItem} isAdmin={isAdmin} onEdit={handleEditMediaItem} onHide={handleHideMediaItem} onDelete={handleDeleteMediaItem} />)}
             </div>
@@ -568,9 +822,10 @@ export function MediaSection() {
         )}
 
         {/* ── Gazeta ── */}
-        {show("gazeta") && gazetaList.length > 0 && (
+        {show("gazeta") && (gazetaList.length > 0 || canAddContent) && (
           <section>
             <SectionHeader icon={Newspaper} title="Gazeta" />
+            {canAddContent && <AdminAddButton label="Shto gazetë" onClick={() => handleAddMediaItem("gazeta")} />}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {gazetaList.map(item => <PubCard key={item.id} item={item} onPlay={setPlayerItem} isAdmin={isAdmin} onEdit={handleEditMediaItem} onHide={handleHideMediaItem} onDelete={handleDeleteMediaItem} />)}
             </div>
@@ -578,9 +833,10 @@ export function MediaSection() {
         )}
 
         {/* ── Revista ── */}
-        {show("revista") && revistaList.length > 0 && (
+        {show("revista") && (revistaList.length > 0 || canAddContent) && (
           <section>
             <SectionHeader icon={BookOpen} title="Revista" />
+            {canAddContent && <AdminAddButton label="Shto revistë" onClick={() => handleAddMediaItem("revista")} />}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {revistaList.map(item => <PubCard key={item.id} item={item} onPlay={setPlayerItem} isAdmin={isAdmin} onEdit={handleEditMediaItem} onHide={handleHideMediaItem} onDelete={handleDeleteMediaItem} />)}
             </div>
@@ -591,6 +847,7 @@ export function MediaSection() {
         {show("podcast") && (
           <section>
             <SectionHeader icon={Mic} title="Podcast" />
+            {canAddContent && <AdminAddButton label="Shto podcast" onClick={() => handleAddMediaItem("podcast")} />}
             {otherDbPosts.filter(p => p.category === "podcast").length === 0 ? (
               <div className="text-center py-16 rounded-2xl border border-white/10 bg-white/5">
                 <Mic className="w-10 h-10 text-white/20 mx-auto mb-3" />
@@ -600,7 +857,20 @@ export function MediaSection() {
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {otherDbPosts.filter(p => p.category === "podcast").map(p => (
-                  <div key={p.id} className="rounded-2xl border border-white/10 p-4 flex flex-col gap-3 bg-white/5 hover:border-white/20 transition-all">
+                  <div key={p.id} className="relative rounded-2xl border border-white/10 p-4 flex flex-col gap-3 bg-white/5 hover:border-white/20 transition-all">
+                    {isAdmin && (
+                      <div className="absolute right-2 top-2 z-20 flex gap-1">
+                        <button onClick={() => handleEditPost(p)} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white/70 hover:text-white" title="Përpuno">
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </button>
+                        <button onClick={() => handleHidePost(p)} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-yellow-300 hover:text-yellow-200" title="Fshihe">
+                          <EyeOff className="h-3.5 w-3.5" />
+                        </button>
+                        <button onClick={() => handleDeletePost(p)} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-red-400 hover:text-red-300" title="Fshi">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
                     {p.image_url && <img src={p.image_url} alt={p.title} className="w-full h-36 object-cover rounded-xl" />}
                     <h3 className="text-white font-semibold text-sm">{p.title}</h3>
                     {p.channel_name && <p className="text-white/40 text-xs">{p.channel_name}</p>}
@@ -622,6 +892,7 @@ export function MediaSection() {
         {show("blog") && (
           <section>
             <SectionHeader icon={PenLine} title="Blog & Opinione — Autorë të pavarur" />
+            {canAddContent && <AdminAddButton label="Shto shkrim/blog" onClick={() => handleAddMediaItem("blog")} />}
             <p className="text-white/35 text-sm mb-6 max-w-2xl">
               Shkrimtarë dhe publicistë të pavarur ndajnë analiza, opinion dhe ese kulturore jashtë mediave tradicionale.
             </p>
@@ -706,6 +977,14 @@ export function MediaSection() {
 
       {/* ── Player Modal ── */}
       {playerItem && <MediaPlayerModal item={playerItem} onClose={() => setPlayerItem(null)} />}
+      {mediaModalItem && (
+        <MediaItemModal
+          item={mediaModalItem}
+          defaultType={mediaModalItem.type || mediaModalItem.category || "tv"}
+          onClose={() => setMediaModalItem(null)}
+          onSave={handleSaveMediaItem}
+        />
+      )}
 
     </section>
   );

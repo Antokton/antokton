@@ -134,8 +134,8 @@ function ProjectModal({ project, onClose, onSave }) {
   } : EMPTY_FORM);
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-[calc(env(safe-area-inset-top)+88px)] sm:items-center sm:p-4" style={{ background: "rgba(0,0,0,0.8)", WebkitOverflowScrolling: "touch" }} onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl border border-white/10 overflow-hidden shadow-2xl max-h-[calc(100dvh-120px)] sm:max-h-[90vh] flex flex-col" style={{ background: "#1a2640" }} onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+112px)] pt-[calc(env(safe-area-inset-top)+88px)] sm:items-center sm:p-4" style={{ background: "rgba(0,0,0,0.8)", WebkitOverflowScrolling: "touch" }} onClick={onClose}>
+      <div className="w-full max-w-lg rounded-2xl border border-white/10 overflow-hidden shadow-2xl max-h-[calc(100dvh-220px)] sm:max-h-[90vh] flex flex-col" style={{ background: "#1a2640" }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
           <h3 className="text-white font-bold">{project ? "Përpuno Projektin" : "Shto Projekt / Thirrje"}</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-white/50 hover:bg-white/10"><X className="w-4 h-4" /></button>
@@ -220,10 +220,10 @@ function OrgModal({ org, onClose, onSave }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-[calc(env(safe-area-inset-top)+88px)] sm:items-center sm:p-4" style={{ background: "rgba(0,0,0,0.8)", WebkitOverflowScrolling: "touch" }} onClick={onClose}>
-      <div className="flex max-h-[calc(100dvh-120px)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 shadow-2xl sm:max-h-[90vh]" style={{ background: "#1a2640" }} onClick={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+112px)] pt-[calc(env(safe-area-inset-top)+88px)] sm:items-center sm:p-4" style={{ background: "rgba(0,0,0,0.8)", WebkitOverflowScrolling: "touch" }} onClick={onClose}>
+      <div className="flex max-h-[calc(100dvh-220px)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 shadow-2xl sm:max-h-[90vh]" style={{ background: "#1a2640" }} onClick={(event) => event.stopPropagation()}>
         <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-5 py-4">
-          <h3 className="font-bold text-white">Përpuno organizatën</h3>
+          <h3 className="font-bold text-white">{org ? "Përpuno organizatën" : "Shto organizatë bamirësie"}</h3>
           <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-white/50 hover:bg-white/10">
             <X className="h-4 w-4" />
           </button>
@@ -272,6 +272,7 @@ function OrgModal({ org, onClose, onSave }) {
 export default function BamiresiFull() {
   const [user, setUser] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showOrgModal, setShowOrgModal] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const [editingOrg, setEditingOrg] = useState(null);
   const queryClient = useQueryClient();
@@ -283,6 +284,7 @@ export default function BamiresiFull() {
   }, []);
 
   const isAdmin = user?.role === "admin" || user?.role === "moderator";
+  const canAddContent = user?.role === "admin";
 
   const { data: projects = [] } = useQuery({
     queryKey: ["charityProjects"],
@@ -332,6 +334,7 @@ export default function BamiresiFull() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["siteConfig"] });
       setEditingOrg(null);
+      setShowOrgModal(false);
     },
   });
 
@@ -409,11 +412,19 @@ export default function BamiresiFull() {
               <span className="text-yellow-400 font-bold text-sm">Panel Administratori</span>
               <span className="text-white/40 text-xs">— {projects.length} projekte gjithsej</span>
             </div>
-            <button onClick={() => { setEditingProject(null); setShowModal(true); }}
-              className="flex w-full items-center justify-center gap-2 whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold text-[#0b1020] sm:w-auto"
-              style={{ background: "linear-gradient(to right,#8ab4ff,#9bffd6)" }}>
-              <Plus className="w-4 h-4" /> Shto Projekt / Thirrje
-            </button>
+            {canAddContent && (
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <button onClick={() => { setEditingProject(null); setShowModal(true); }}
+                  className="flex w-full items-center justify-center gap-2 whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold text-[#0b1020] sm:w-auto"
+                  style={{ background: "linear-gradient(to right,#8ab4ff,#9bffd6)" }}>
+                  <Plus className="w-4 h-4" /> Shto Projekt / Thirrje
+                </button>
+                <button onClick={() => { setEditingOrg(null); setShowOrgModal(true); }}
+                  className="flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-bold text-white hover:bg-white/10 sm:w-auto">
+                  <Plus className="w-4 h-4" /> Shto organizatë bamirësie
+                </button>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -472,7 +483,7 @@ export default function BamiresiFull() {
               style={{ background: "rgba(255,255,255,0.05)" }}>
               {isAdmin && (
                 <div className="absolute right-2 top-2 z-10 flex gap-1">
-                  <button onClick={() => setEditingOrg(org)} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white/70 hover:text-white" title="Përpuno">
+                  <button onClick={() => { setEditingOrg(org); setShowOrgModal(true); }} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white/70 hover:text-white" title="Përpuno">
                     <Edit2 className="h-3.5 w-3.5" />
                   </button>
                   <button onClick={() => handleDeleteOrg(org.id)} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-red-400 hover:text-red-300" title="Fshihe">
@@ -540,10 +551,10 @@ export default function BamiresiFull() {
           onSave={handleSave}
         />
       )}
-      {editingOrg && (
+      {showOrgModal && (
         <OrgModal
           org={editingOrg}
-          onClose={() => setEditingOrg(null)}
+          onClose={() => { setEditingOrg(null); setShowOrgModal(false); }}
           onSave={handleSaveOrg}
         />
       )}
