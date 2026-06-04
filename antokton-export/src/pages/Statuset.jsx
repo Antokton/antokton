@@ -46,7 +46,7 @@ function Lightbox({ src, onClose, status, currentUser, onLike, onComment, onShar
       {/* Top bar */}
       <div
         onClick={e => e.stopPropagation()}
-        style={{ position: "fixed", top: 0, left: 0, right: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "rgba(0,0,0,0.5)", zIndex: 2 }}>
+        style={{ position: "fixed", top: 0, left: 0, right: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(env(safe-area-inset-top) + 12px) 16px 12px", background: "rgba(0,0,0,0.5)", zIndex: 2 }}>
         <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 13 }}>
           {status?.author_name || ""}
         </div>
@@ -176,6 +176,66 @@ function Avatar({ name, email, photoUrl, size = 40 }) {
   return <UserAvatar name={name} email={email} photoUrl={photoUrl} size={size} />;
 }
 
+function InlineReplyTextarea({ currentUser, targetName, onCancel, onSubmit, compact = false }) {
+  const [draft, setDraft] = useState("");
+  const textareaRef = useRef(null);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => textareaRef.current?.focus(), 50);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  const submit = () => {
+    const text = draft.trim();
+    if (!text) return;
+    onSubmit(text);
+    setDraft("");
+  };
+
+  return (
+    <div className={`flex ${compact ? "items-center" : "items-start"} gap-2 mt-2`}>
+      <Avatar name={currentUser?.first_name || "?"} email={currentUser?.email} photoUrl={currentUser?.profile_photo_url} size={compact ? 26 : 24} />
+      <div
+        className={`flex-1 flex ${compact ? "items-center rounded-full" : "items-start rounded-2xl"} flex-wrap gap-1 px-3 ${compact ? "py-1.5" : "py-1.5"}`}
+        style={{ background: "#253347", minHeight: compact ? "32px" : "34px" }}
+      >
+        {targetName && (
+          <span className="flex items-center gap-1 text-[#8ab4ff] text-[12px] font-semibold shrink-0">
+            @{targetName}
+            <button onClick={onCancel} className="text-white/30 hover:text-white/60 ml-0.5" style={{ lineHeight: 1 }}>
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        )}
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          value={draft}
+          onChange={e => {
+            setDraft(e.target.value);
+            e.target.style.height = "auto";
+            e.target.style.height = e.target.scrollHeight + "px";
+          }}
+          onKeyDown={e => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              submit();
+            }
+          }}
+          placeholder="Shkruaj përgjigje…"
+          className={`${compact ? "text-[12px]" : "text-sm"} flex-1 bg-transparent text-white outline-none placeholder:text-white/35 min-w-0 resize-none overflow-hidden leading-snug`}
+          style={{ minHeight: compact ? "20px" : "22px", minWidth: "80px" }}
+        />
+        {draft.trim() && (
+          <button onClick={submit} className="text-[#8ab4ff] shrink-0">
+            <Send className={compact ? "w-3.5 h-3.5" : "w-4 h-4"} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─── REACTIONS CONFIG ─── */
 const COMMUNITY_IMPORT_LABEL = "Kërkesë komunitare e rishpërndarë me mbrojtje privatësie";
 const IMPORT_AUTHOR_OPTIONS = [
@@ -281,15 +341,46 @@ const REACTIONS = [
 
 /* ─── REACTION PICKER ─── */
 function ReactionPicker({ onReact, onClose }) {
+  const [hoveredReaction, setHoveredReaction] = useState(null);
+
+  useEffect(() => {
+    const handlePointerMove = (event) => {
+      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-reaction]");
+      setHoveredReaction(target?.getAttribute("data-reaction") || null);
+    };
+    const handlePointerUp = (event) => {
+      if (event.pointerType === "mouse") return;
+      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-reaction]");
+      const emoji = target?.getAttribute("data-reaction") || hoveredReaction;
+      if (emoji) onReact(emoji);
+      onClose();
+    };
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", onClose);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", onClose);
+    };
+  }, [hoveredReaction, onClose, onReact]);
+
   return (
     <div
-      className="absolute bottom-[110%] left-0 z-50 flex items-end gap-1.5 px-3 py-2.5 shadow-2xl border border-white/10"
-      style={{ background: "#1a2640", borderRadius: 999, whiteSpace: "nowrap" }}
+      className="absolute bottom-[110%] left-0 z-50 flex items-end gap-1.5 px-3 py-2.5 shadow-2xl border border-white/10 select-none touch-none"
+      style={{ background: "#1a2640", borderRadius: 999, whiteSpace: "nowrap", userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" }}
       onMouseLeave={onClose}
+      onContextMenu={e => e.preventDefault()}
     >
       {REACTIONS.map((r) => (
-        <button key={r.emoji} onClick={() => { onReact(r.emoji); onClose(); }}
-          className="flex flex-col items-center gap-0.5 group transition-transform hover:-translate-y-2 duration-150">
+        <button
+          key={r.emoji}
+          data-reaction={r.emoji}
+          onPointerEnter={() => setHoveredReaction(r.emoji)}
+          onClick={() => { onReact(r.emoji); onClose(); }}
+          className={`flex flex-col items-center gap-0.5 group transition-transform duration-150 select-none ${hoveredReaction === r.emoji ? "-translate-y-2" : "hover:-translate-y-2"}`}
+          style={{ userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" }}
+        >
           <span className="text-[26px] leading-none select-none">{r.emoji}</span>
           <span className="text-[9px] text-white/50 group-hover:text-white transition-colors opacity-0 group-hover:opacity-100">{r.label}</span>
         </button>
@@ -835,6 +926,8 @@ function StatusDetailPage({ status, currentUser, onBack }) {
   const [showShare, setShowShare] = useState(false);
   const [detailLightbox, setDetailLightbox] = useState(null);
   const hoverTimer = useRef(null);
+  const longPressTimer = useRef(null);
+  const longPressOpened = useRef(false);
   const scrollRef = useRef(null);
 
   const reactMutation = useMutation({
@@ -868,8 +961,9 @@ function StatusDetailPage({ status, currentUser, onBack }) {
   });
 
   const replyMutation = useMutation({
-    mutationFn: async (parentComment) => {
-      const txt = replyTexts[parentComment.id];
+    mutationFn: async (payload) => {
+      const parentComment = payload?.parentComment || payload;
+      const txt = payload?.text ?? replyTexts[parentComment.id];
       if (!currentUser || !txt?.trim()) return;
       await base44.entities.StatusComment.create({
         status_id: status.id,
@@ -897,34 +991,11 @@ function StatusDetailPage({ status, currentUser, onBack }) {
 
   const handleReplyDetail = (item) => {
     setReplyingTo(item);
-    setReplyTexts(p => ({ ...p, [item.id]: "" }));
   };
 
   // top-level comments only
   const topLevel = comments.filter(c => !c.parent_id);
   const getReplies = (id) => comments.filter(c => c.parent_id === id);
-
-  // Inline reply input for detail page
-  const InlineReplyInputDetail = ({ targetItem }) => (
-    <div className="flex items-start gap-2 mt-2">
-      <Avatar name={currentUser?.first_name || "?"} email={currentUser?.email} photoUrl={currentUser?.profile_photo_url} size={24} />
-      <div className="flex-1 flex items-start gap-2 rounded-2xl px-3 py-1.5" style={{ background: "#253347" }}>
-        <textarea
-          autoFocus
-          rows={1}
-          value={replyTexts[targetItem.id] || ""}
-          onChange={e => { setReplyTexts(p => ({ ...p, [targetItem.id]: e.target.value })); e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px"; }}
-          onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); replyMutation.mutate(targetItem); } }}
-          placeholder={`Repliko ${targetItem.author_name}…`}
-          className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/35 min-w-0 resize-none overflow-hidden leading-snug pt-0.5"
-          style={{ minHeight: "22px" }}
-        />
-        {(replyTexts[targetItem.id] || "").trim() && (
-          <button onClick={() => replyMutation.mutate(targetItem)} className="text-[#8ab4ff] shrink-0 mt-0.5"><Send className="w-3.5 h-3.5" /></button>
-        )}
-      </div>
-    </div>
-  );
 
   return (
     <div className="fixed inset-0 z-[999999] flex flex-col" style={{ background: "#0f1929", overflow: 'hidden' }}>
@@ -996,8 +1067,26 @@ function StatusDetailPage({ status, currentUser, onBack }) {
                 onClick={() => { if (!currentUser) { base44.auth.redirectToLogin(); return; } reactMutation.mutate(currentReaction || "👍"); }}
                 onMouseEnter={() => { hoverTimer.current = setTimeout(() => setShowReactionPicker(true), 600); }}
                 onMouseLeave={() => clearTimeout(hoverTimer.current)}
-                className="fb-action-btn flex items-center gap-1.5"
-                style={{ padding: "6px 10px 6px 6px", fontSize: "14px", fontWeight: 600, color: currentReaction ? (reactionInfo?.color || "#8ab4ff") : "rgba(255,255,255,0.5)", cursor: "pointer" }}>
+                onPointerDown={(e) => {
+                  if (e.pointerType === "mouse") return;
+                  e.preventDefault();
+                  longPressOpened.current = false;
+                  longPressTimer.current = setTimeout(() => {
+                    longPressOpened.current = true;
+                    setShowReactionPicker(true);
+                  }, 260);
+                }}
+                onPointerUp={(e) => {
+                  clearTimeout(longPressTimer.current);
+                  if (e.pointerType !== "mouse" && !longPressOpened.current) {
+                    if (!currentUser) { base44.auth.redirectToLogin(); return; }
+                    reactMutation.mutate(currentReaction || "👍");
+                  }
+                }}
+                onPointerCancel={() => clearTimeout(longPressTimer.current)}
+                onContextMenu={e => e.preventDefault()}
+                className="fb-action-btn flex items-center gap-1.5 select-none"
+                style={{ padding: "6px 10px 6px 6px", fontSize: "14px", fontWeight: 600, color: currentReaction ? (reactionInfo?.color || "#8ab4ff") : "rgba(255,255,255,0.5)", cursor: "pointer", userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" }}>
                 {currentReaction
                   ? <span style={{ fontSize: 18 }}>{reactionInfo?.emoji}</span>
                   : <ThumbsUp style={{ width: 18, height: 18 }} />}
@@ -1047,7 +1136,14 @@ function StatusDetailPage({ status, currentUser, onBack }) {
                       <button className="fb-action-btn text-white/30"><ThumbsUp className="w-3.5 h-3.5" /></button>
                     </div>
                     {/* Reply input inline below main comment */}
-                    {replyingTo?.id === c.id && <InlineReplyInputDetail targetItem={c} />}
+                    {replyingTo?.id === c.id && (
+                      <InlineReplyTextarea
+                        currentUser={currentUser}
+                        targetName={c.author_name}
+                        onCancel={() => setReplyingTo(null)}
+                        onSubmit={(text) => replyMutation.mutate({ parentComment: c, text })}
+                      />
+                    )}
 
                     {/* Replies */}
                     {replies.length > 0 && (
@@ -1068,7 +1164,14 @@ function StatusDetailPage({ status, currentUser, onBack }) {
                                 <button className="fb-action-btn text-white/30"><ThumbsUp className="w-3 h-3" /></button>
                               </div>
                               {/* Reply input inline below reply */}
-                              {replyingTo?.id === r.id && <InlineReplyInputDetail targetItem={r} />}
+                              {replyingTo?.id === r.id && (
+                                <InlineReplyTextarea
+                                  currentUser={currentUser}
+                                  targetName={r.author_name}
+                                  onCancel={() => setReplyingTo(null)}
+                                  onSubmit={(text) => replyMutation.mutate({ parentComment: r, text })}
+                                />
+                              )}
                             </div>
                           </div>
                         ))}
@@ -1293,12 +1396,12 @@ function StatusCard({ status, currentUser }) {
   const [replyingTo, setReplyingTo] = useState(null);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [showShare, setShowShare] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [editingStatusText, setEditingStatusText] = useState(null);
   const [lightboxImg, setLightboxImg] = useState(null);
   const hoverTimer = useRef(null);
   const longPressTimer = useRef(null);
+  const longPressOpened = useRef(false);
   const commentInputRef = useRef(null);
 
   const reactionsMap = status.reactions || {};
@@ -1335,25 +1438,27 @@ function StatusCard({ status, currentUser }) {
   });
 
   const commentMutation = useMutation({
-    mutationFn: async () => {
-      if (!currentUser || !commentText.trim()) return;
+    mutationFn: async (payload = {}) => {
+      const replyTarget = payload.replyTarget || replyingTo;
+      const textValue = payload.text ?? commentText;
+      if (!currentUser || !textValue.trim()) return;
       const commentData = {
         status_id: status.id,
         author_email: currentUser.email,
         author_name: currentUser.first_name || currentUser.full_name || currentUser.email.split("@")[0],
         author_photo_url: currentUser.profile_photo_url || "",
-        text: commentText.trim(),
+        text: textValue.trim(),
       };
-      if (replyingTo) {
-        commentData.parent_id = replyingTo.parent_id || replyingTo.id;
-        commentData.reply_to_name = replyingTo.author_name;
+      if (replyTarget) {
+        commentData.parent_id = replyTarget.parent_id || replyTarget.id;
+        commentData.reply_to_name = replyTarget.author_name;
       }
       await base44.entities.StatusComment.create(commentData);
       await base44.entities.Status.update(status.id, { comments_count: commentCount + 1 });
-      setCommentText("");
-      // keep replyingTo so the input stays inline below the reply
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables = {}) => {
+      if (variables.replyTarget) setReplyingTo(null);
+      else setCommentText("");
       queryClient.invalidateQueries({ queryKey: ["statusComments", status.id] });
       queryClient.invalidateQueries({ queryKey: ["statuses"] });
     },
@@ -1495,10 +1600,26 @@ function StatusCard({ status, currentUser }) {
             onClick={() => { if (!currentUser) { base44.auth.redirectToLogin(); return; } reactMutation.mutate(currentReaction || "👍"); }}
             onMouseEnter={() => { hoverTimer.current = setTimeout(() => setShowReactionPicker(true), 600); }}
             onMouseLeave={() => clearTimeout(hoverTimer.current)}
-            onTouchStart={() => { longPressTimer.current = setTimeout(() => setShowReactionPicker(true), 600); }}
-            onTouchEnd={() => clearTimeout(longPressTimer.current)}
-            className="fb-action-btn flex items-center gap-1 border-none"
-            style={{ padding: "4px 8px 4px 4px", fontSize: "13px", fontWeight: 600, color: currentReaction ? (reactionInfo?.color || "#8ab4ff") : "rgba(255,255,255,0.5)", cursor: "pointer" }}>
+            onPointerDown={(e) => {
+              if (e.pointerType === "mouse") return;
+              e.preventDefault();
+              longPressOpened.current = false;
+              longPressTimer.current = setTimeout(() => {
+                longPressOpened.current = true;
+                setShowReactionPicker(true);
+              }, 260);
+            }}
+            onPointerUp={(e) => {
+              clearTimeout(longPressTimer.current);
+              if (e.pointerType !== "mouse" && !longPressOpened.current) {
+                if (!currentUser) { base44.auth.redirectToLogin(); return; }
+                reactMutation.mutate(currentReaction || "👍");
+              }
+            }}
+            onPointerCancel={() => clearTimeout(longPressTimer.current)}
+            onContextMenu={e => e.preventDefault()}
+            className="fb-action-btn flex items-center gap-1 border-none select-none"
+            style={{ padding: "4px 8px 4px 4px", fontSize: "13px", fontWeight: 600, color: currentReaction ? (reactionInfo?.color || "#8ab4ff") : "rgba(255,255,255,0.5)", cursor: "pointer", userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" }}>
             {currentReaction
               ? <span style={{ fontSize: "16px", lineHeight: 1 }}>{reactionInfo?.emoji}</span>
               : <ThumbsUp style={{ width: 16, height: 16 }} />}
@@ -1523,14 +1644,7 @@ function StatusCard({ status, currentUser }) {
           style={{ padding: "4px 8px 4px 4px", fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.5)", cursor: "pointer" }}>
           <Forward style={{ width: 16, height: 16 }} />
         </button>
-        <button onClick={() => setShowReportModal(true)}
-          className="fb-action-btn ml-auto flex items-center gap-1"
-          style={{ padding: "4px 4px 4px 8px", fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.45)", cursor: "pointer" }}>
-          <Flag style={{ width: 14, height: 14 }} />
-          Raporto
-        </button>
       </div>
-      {showReportModal && <ReportModal status={status} currentUser={currentUser} onClose={() => setShowReportModal(false)} />}
 
 
 
@@ -1539,29 +1653,6 @@ function StatusCard({ status, currentUser }) {
         <div className="px-4 pb-3 space-y-3">
           {comments.filter(c => !c.parent_id).map(c => {
             const replies = comments.filter(r => r.parent_id === c.id).sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
-
-            // Inline reply input — renderohet brenda item-it që u klikua
-            const InlineReplyInput = ({ targetName, targetItem }) => (
-              <div className="flex gap-2 items-center mt-1">
-                <Avatar name={currentUser?.first_name || "?"} email={currentUser?.email} photoUrl={currentUser?.profile_photo_url} size={26} />
-                <div className="flex-1 flex items-center flex-wrap gap-1 rounded-full px-3 py-1.5" style={{ background: "#253347", minHeight: "32px" }}>
-                  <span className="flex items-center gap-1 text-[#8ab4ff] text-[12px] font-semibold shrink-0">
-                    @{targetName}
-                    <button onClick={() => { setReplyingTo(null); setCommentText(""); }} className="text-white/30 hover:text-white/60 ml-0.5"><X className="w-3 h-3" /></button>
-                  </span>
-                  <textarea
-                    ref={el => el && setTimeout(() => el.focus(), 50)}
-                    value={commentText} rows={1}
-                    onChange={e => { setCommentText(e.target.value); e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px"; }}
-                    onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (commentText.trim() && currentUser) commentMutation.mutate(); } }}
-                    placeholder="Shkruaj përgjigje…"
-                    className="flex-1 bg-transparent text-white text-[12px] outline-none placeholder:text-white/35 min-w-0 resize-none overflow-hidden leading-snug"
-                    style={{ minHeight: "20px", minWidth: "80px" }}
-                  />
-                  {commentText.trim() && <button onClick={() => { if (currentUser) commentMutation.mutate(); }} disabled={commentMutation.isPending} className="text-[#8ab4ff] shrink-0"><Send className="w-3.5 h-3.5" /></button>}
-                </div>
-              </div>
-            );
 
             return (
               <div key={c.id}>
@@ -1586,7 +1677,15 @@ function StatusCard({ status, currentUser }) {
                       <button className="fb-action-btn text-white/30 flex items-center gap-1 text-[11px]"><ThumbsUp className="w-3 h-3" /></button>
                     </div>
                     {/* INPUT: direkt poshtë action-row të komentit kryesor */}
-                    {replyingTo?.id === c.id && <InlineReplyInput targetName={c.author_name} targetItem={c} />}
+                    {replyingTo?.id === c.id && (
+                      <InlineReplyTextarea
+                        currentUser={currentUser}
+                        targetName={c.author_name}
+                        compact
+                        onCancel={() => setReplyingTo(null)}
+                        onSubmit={(text) => commentMutation.mutate({ replyTarget: c, text })}
+                      />
+                    )}
 
                     {/* Replies — brenda flex-1 */}
                     {replies.length > 0 && (
@@ -1613,13 +1712,19 @@ function StatusCard({ status, currentUser }) {
                                   <button className="fb-action-btn text-white/30 flex items-center gap-1 text-[11px]"><ThumbsUp className="w-3 h-3" /></button>
                                 </div>
                                 {/* INPUT: direkt poshtë action-row të këtij reply */}
-                                {replyingTo?.id === r.id && <InlineReplyInput targetName={r.author_name} targetItem={r} />}
+                                {replyingTo?.id === r.id && (
+                                  <InlineReplyTextarea
+                                    currentUser={currentUser}
+                                    targetName={r.author_name}
+                                    compact
+                                    onCancel={() => setReplyingTo(null)}
+                                    onSubmit={(text) => commentMutation.mutate({ replyTarget: r, text })}
+                                  />
+                                )}
                               </div>
                             </div>
                           </div>
                         ))}
-                        {/* INPUT: direkt poshtë replies për komentin kryesor */}
-                        {replyingTo?.id === c.id && <InlineReplyInput targetName={c.author_name} targetItem={c} />}
                       </div>
                     )}
                   </div>

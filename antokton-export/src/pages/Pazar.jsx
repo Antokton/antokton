@@ -11,7 +11,6 @@ import {
   AlertCircle, CheckCircle
 } from "lucide-react";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
-import PublicReportButton from "@/components/safety/PublicReportButton";
 
 /* ─── KATEGORITE ─── */
 const CATEGORIES = [
@@ -40,7 +39,7 @@ const FEMIJE_SUBCATS = [
 ];
 
 /* ─── LISTING CARD ─── */
-function ListingCard({ job, currentUser }) {
+function ListingCard({ job }) {
   const [liked, setLiked] = useState(false);
   const price = job.salary_info || "";
   return (
@@ -60,15 +59,6 @@ function ListingCard({ job, currentUser }) {
             ${liked ? "bg-red-500 text-white" : "bg-black/50 text-white/70 hover:text-white"}`}>
           <Heart className={`w-4 h-4 ${liked ? "fill-white" : ""}`} />
         </button>
-        <PublicReportButton
-          entity="Job"
-          entityId={job.id}
-          title={job.title}
-          reportedUserEmail={job.created_by || job.author_email || ""}
-          currentUser={currentUser}
-          compact
-          className="absolute right-2 top-12 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/70 transition-all hover:text-orange-200"
-        />
         {job.job_type === "ofroj" && price && (
           <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs font-bold px-2 py-0.5 rounded-lg">
             {price}
@@ -482,7 +472,7 @@ export default function Pazar() {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {filtered.map(job => <ListingCard key={job.id} job={job} currentUser={user} />)}
+                {filtered.map(job => <ListingCard key={job.id} job={job} />)}
               </div>
             )}
           </div>

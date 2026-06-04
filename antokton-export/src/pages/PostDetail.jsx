@@ -424,6 +424,26 @@ export default function PostDetail() {
     setShowDeleteModal(true);
   };
 
+  const startEditJob = () => {
+    setEditForm({
+      title: job.title,
+      description: job.description,
+      contact_info: job.contact_info || '',
+      phone_number: job.phone_number || '',
+      phone_app: job.phone_app || 'telefon',
+      salary_info: job.salary_info || '',
+      address: job.address || [job.city, job.country].filter(Boolean).join(", ") || '',
+      city: job.city || '',
+      zone: job.zone || '',
+      country: job.country || '',
+      location_precision: job.location_precision || 'sakte',
+      category: job.category || '',
+      pazar_category: job.pazar_category || '',
+      poster_name: job.poster_name || ''
+    });
+    setIsEditing(true);
+  };
+
   const editJobMutation = useMutation({
     mutationFn: async () => {
       if (!isValidInternationalPhone(editForm.phone_number)) {
@@ -569,6 +589,18 @@ export default function PostDetail() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-[#0b1020] border-white/10 w-48">
+                {isAuth && (user?.role === 'admin' || user?.role === 'moderator' || user?.email === job?.created_by) && !isEditing && (
+                  <>
+                    <DropdownMenuItem onClick={startEditJob} className="text-[#8ab4ff] hover:text-[#8ab4ff] cursor-pointer">
+                      <Pencil className="w-4 h-4 mr-2" />
+                      Përpuno
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleDeleteJob} className="text-red-400 hover:text-red-300 cursor-pointer">
+                      <X className="w-4 h-4 mr-2" />
+                      {deleteJobMutation.isPending ? "Duke fshirë..." : "Fshi"}
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuItem
                   onClick={() => {
                     const reasons = getReportReasons(job?.category);
@@ -584,27 +616,6 @@ export default function PostDetail() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-
-          {/* Admin/Moderator/Author Edit Bar */}
-          {isAuth && (user?.role === 'admin' || user?.role === 'moderator' || user?.email === job?.created_by) && !isEditing && (
-            <div className="mb-4 flex justify-end gap-2">
-              <Button
-                size="sm"
-                onClick={() => { setEditForm({ title: job.title, description: job.description, contact_info: job.contact_info || '', phone_number: job.phone_number || '', phone_app: job.phone_app || 'telefon', salary_info: job.salary_info || '', address: job.address || [job.city, job.country].filter(Boolean).join(", ") || '', city: job.city || '', zone: job.zone || '', country: job.country || '', location_precision: job.location_precision || 'sakte', category: job.category || '', pazar_category: job.pazar_category || '', poster_name: job.poster_name || '' }); setIsEditing(true); }}
-                className="bg-[#8ab4ff]/10 text-[#8ab4ff] border border-[#8ab4ff]/30 hover:bg-[#8ab4ff]/20 gap-1.5"
-              >
-                <Pencil className="w-3.5 h-3.5" /> Përpuno
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleDeleteJob}
-                disabled={deleteJobMutation.isPending}
-                className="bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 gap-1.5"
-              >
-                <X className="w-3.5 h-3.5" /> {deleteJobMutation.isPending ? "Duke fshirë..." : "Fshi"}
-              </Button>
-            </div>
-          )}
 
           {/* Edit Form */}
           {isEditing && (
