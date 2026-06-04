@@ -388,13 +388,25 @@ export default function Profile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const firstName = form.first_name.trim();
+    const surname = form.surname.trim();
+    if (!firstName || !surname) {
+      alert("Emri dhe mbiemri janë të detyrueshëm.");
+      return;
+    }
     if (!isValidInternationalPhone(form.phone)) {
       alert(getInternationalPhoneError("Telefoni"));
       return;
     }
     setLoading(true);
     try {
-      await base44.auth.updateMe({ ...form, phone: normalizeInternationalPhone(form.phone) });
+      await base44.auth.updateMe({
+        ...form,
+        first_name: firstName,
+        surname,
+        full_name: `${firstName} ${surname}`,
+        phone: normalizeInternationalPhone(form.phone),
+      });
       const updated = await base44.auth.me();
       setUser(updated);
       setSuccess(true);
@@ -731,8 +743,7 @@ export default function Profile() {
 
       <ProfilePanel
         title="Përmbledhje"
-        description="Aktiviteti, reputacioni, Akademia dhe shkarkimet e profilit."
-        defaultOpen
+        description="Aktiviteti, reputacioni dhe përmbledhja e Akademisë."
       >
       <div className="space-y-6 p-0">
       {/* Statistics - Aktiviteti Im */}
@@ -830,27 +841,6 @@ export default function Profile() {
 
       <AkademiaProfileSummary user={user} />
 
-      {/* CV Download */}
-      <Card className="bg-white/5 border-white/10 mb-6">
-        <CardContent className="p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <h3 className="text-white font-semibold text-lg mb-1">Dokumentet e profilit</h3>
-              <p className="text-white text-sm">Shkarko CV ose profilin e zgjeruar në PDF</p>
-            </div>
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-              <Button onClick={handleDownloadCV} variant="outline" className="w-full bg-white/10 border-white/30 text-white hover:bg-white/15 hover:text-white sm:w-auto">
-                <Download className="w-4 h-4 mr-2" />
-                CV Standard
-              </Button>
-              <Button onClick={handleDownloadEnhancedProfile} className="w-full bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] hover:opacity-90 sm:w-auto">
-                <Download className="w-4 h-4 mr-2" />
-                Profil i plotë
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
       </div>
       </ProfilePanel>
 
@@ -972,18 +962,22 @@ export default function Profile() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-white">Emri</Label>
+                <Label className="text-white">Emri *</Label>
                 <Input
                   value={form.first_name}
                   onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                  required
+                  autoComplete="given-name"
                   className="bg-white/5 border-white/10 text-white"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-white">Mbiemri</Label>
+                <Label className="text-white">Mbiemri *</Label>
                 <Input
                   value={form.surname}
                   onChange={(e) => setForm({ ...form, surname: e.target.value })}
+                  required
+                  autoComplete="family-name"
                   className="bg-white/5 border-white/10 text-white"
                 />
               </div>
@@ -1746,6 +1740,32 @@ export default function Profile() {
             </span>
           </div>
         )}
+
+        <ProfilePanel
+          title="Dokumentet e profilit"
+          description="Shkarkimet dhe dokumentet mbahen poshtë të dhënave kryesore të profilit."
+        >
+        <Card className="bg-white/5 border-white/10">
+          <CardContent className="p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <h3 className="text-white font-semibold text-base mb-1">CV dhe profili i zgjeruar</h3>
+                <p className="text-white/60 text-sm">Shkarko CV ose profilin e plotë kur të duhet për aplikime.</p>
+              </div>
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <Button type="button" onClick={handleDownloadCV} variant="outline" className="w-full bg-white/10 border-white/30 text-white hover:bg-white/15 hover:text-white sm:w-auto">
+                  <Download className="w-4 h-4 mr-2" />
+                  CV Standard
+                </Button>
+                <Button type="button" onClick={handleDownloadEnhancedProfile} className="w-full bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] hover:opacity-90 sm:w-auto">
+                  <Download className="w-4 h-4 mr-2" />
+                  Profil i plotë
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        </ProfilePanel>
 
         {/* Account Deletion */}
         <ProfilePanel

@@ -29,7 +29,7 @@ export default function AuthAccessBanner({
   const isFloating = variant === "floating";
   const returnUrl = `${window.location.origin}${location.pathname}${location.search}`;
   const [mode, setMode] = useState("prompt");
-  const [form, setForm] = useState({ email: "", password: "", full_name: "" });
+  const [form, setForm] = useState({ email: "", password: "", first_name: "", surname: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -81,8 +81,23 @@ export default function AuthAccessBanner({
         return;
       }
 
+      if (mode === "register") {
+        const firstName = form.first_name.trim();
+        const surname = form.surname.trim();
+        if (!firstName || !surname) {
+          setError("Për regjistrim duhet të vendosësh emrin dhe mbiemrin.");
+          return;
+        }
+      }
+
       const authResult = mode === "register"
-        ? await base44.auth.register({ email, password, full_name: form.full_name.trim() })
+        ? await base44.auth.register({
+            email,
+            password,
+            first_name: form.first_name.trim(),
+            surname: form.surname.trim(),
+            full_name: `${form.first_name.trim()} ${form.surname.trim()}`.trim(),
+          })
         : await base44.auth.loginViaEmailPassword(email, password);
 
       window.location.replace(getPostLoginUrl(returnUrl, authResult?.access_token));
@@ -147,14 +162,27 @@ export default function AuthAccessBanner({
       ) : (
         <form onSubmit={submit} className="mt-4 space-y-3">
           {mode === "register" && (
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-white/70">Emri i plotë</label>
-              <input
-                value={form.full_name}
-                onChange={(event) => setForm({ ...form, full_name: event.target.value })}
-                className="h-11 w-full rounded-xl border border-white/10 bg-white/10 px-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#8ab4ff]/70"
-                autoComplete="name"
-              />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-white/70">Emri *</label>
+                <input
+                  value={form.first_name}
+                  onChange={(event) => setForm({ ...form, first_name: event.target.value })}
+                  className="h-11 w-full rounded-xl border border-white/10 bg-white/10 px-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#8ab4ff]/70"
+                  autoComplete="given-name"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-white/70">Mbiemri *</label>
+                <input
+                  value={form.surname}
+                  onChange={(event) => setForm({ ...form, surname: event.target.value })}
+                  className="h-11 w-full rounded-xl border border-white/10 bg-white/10 px-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#8ab4ff]/70"
+                  autoComplete="family-name"
+                  required
+                />
+              </div>
             </div>
           )}
 

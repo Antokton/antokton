@@ -13,14 +13,14 @@ export default function UserRatingDisplay({ user, ratings }) {
     : 0;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div className="grid grid-cols-1 gap-3 mb-5 sm:grid-cols-3">
       {/* General Rating */}
       <Card className="bg-white/5 border-white/10">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-3">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2">
-              <Star className="w-5 h-5 text-yellow-400" />
-              <h3 className="text-white font-semibold text-sm">Vlerësim i përgjithshëm</h3>
+              <Star className="w-4 h-4 text-yellow-400" />
+              <h3 className="text-white font-semibold text-xs sm:text-sm">Vlerësim i përgjithshëm</h3>
             </div>
             <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
               {averageGeneral}/5
@@ -30,7 +30,7 @@ export default function UserRatingDisplay({ user, ratings }) {
             {[1, 2, 3, 4, 5].map((star) => (
               <Star
                 key={star}
-                className={`w-4 h-4 ${
+                className={`w-3.5 h-3.5 ${
                   star <= Math.round(averageGeneral)
                     ? "text-yellow-400 fill-yellow-400"
                     : "text-white/20"
@@ -44,11 +44,11 @@ export default function UserRatingDisplay({ user, ratings }) {
 
       {/* Professional Rating */}
       <Card className="bg-white/5 border-white/10">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-3">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2">
-              <Award className="w-5 h-5 text-blue-400" />
-              <h3 className="text-white font-semibold text-sm">Vlerësim profesional</h3>
+              <Award className="w-4 h-4 text-blue-400" />
+              <h3 className="text-white font-semibold text-xs sm:text-sm">Vlerësim profesional</h3>
             </div>
             {professionalRating ? (
               <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
@@ -62,7 +62,7 @@ export default function UserRatingDisplay({ user, ratings }) {
           </div>
           {professionalRating ? (
             <>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-white/60">Profesionalizëm</span>
                   <span className="text-white">{professionalRating.professionalism_score}/5</span>
@@ -87,11 +87,11 @@ export default function UserRatingDisplay({ user, ratings }) {
 
       {/* Standardi Hallall */}
       <Card className="bg-white/5 border-white/10">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-3">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-green-400" />
-              <h3 className="text-white font-semibold text-sm">Standardi Hallall</h3>
+              <Shield className="w-4 h-4 text-green-400" />
+              <h3 className="text-white font-semibold text-xs sm:text-sm">Standardi Hallall</h3>
             </div>
             {user.halal_verified ? (
               <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
