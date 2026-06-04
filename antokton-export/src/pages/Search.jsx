@@ -2,15 +2,16 @@ import React, { useState, useCallback, useMemo } from "react";
 import { base44 } from "@/api/antoktonClient";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Search as SearchIcon, Loader2, MapPin, Briefcase, ShoppingBag, Radio, Calendar, User, X, GraduationCap, Wrench, Heart } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import UserAvatar from "@/components/ui/UserAvatar";
+import { Search as SearchIcon, Loader2, MapPin, Briefcase, ShoppingBag, Radio, Calendar, Users, X, GraduationCap, Wrench, Heart } from "lucide-react";
+import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "../utils";
 
-const CATEGORY_PRIORITY = ["pune", "edukim", "sherbime", "pazar", "status", "prona", "bamiresi", "tjeter"];
+const CATEGORY_PRIORITY = ["anetare", "pune", "edukim", "sherbime", "pazar", "status", "prona", "bamiresi", "tjeter"];
 
 const CATEGORY_LABELS = {
+  anetare: { label: "Anëtarë", icon: Users, color: "#9bffd6" },
   pune: { label: "Punë", icon: Briefcase, color: "#8ab4ff" },
   edukim: { label: "Edukim", icon: GraduationCap, color: "#9bffd6" },
   sherbime: { label: "Shërbime", icon: Wrench, color: "#ffd6a5" },
@@ -63,7 +64,13 @@ export default function Search() {
     staleTime: 60000,
   });
 
-  const isLoading = loadingJobs || loadingStatuses || loadingEvents || loadingImported;
+  const { data: users = [], isLoading: loadingUsers } = useQuery({
+    queryKey: ["searchMembers"],
+    queryFn: () => base44.entities.User.list("-created_date", 500),
+    staleTime: 60000,
+  });
+
+  const isLoading = loadingJobs || loadingStatuses || loadingEvents || loadingImported || loadingUsers;
 
   const handleSearch = useCallback(() => {
     setSearchTerm(inputValue.trim());
@@ -79,6 +86,42 @@ export default function Search() {
     const q = searchTerm.toLowerCase();
 
     const matches = [];
+
+    // Members
+    users
+      .filter(member => !member.is_deleted && member.is_active !== false)
+      .forEach(member => {
+        const fullName = [member.first_name, member.surname].filter(Boolean).join(" ") || member.full_name || member.email || "Anëtar";
+        const text = [
+          fullName,
+          member.email,
+          member.job_title,
+          member.profession,
+          member.skills,
+          member.bio,
+          member.city,
+          member.country,
+          member.birthplace,
+          member.location,
+          member.member_category,
+        ].filter(Boolean).join(" ").toLowerCase();
+
+        if (text.includes(q)) {
+          matches.push({
+            id: member.id || member.email,
+            type: "member",
+            category: "anetare",
+            title: fullName,
+            description: member.bio || member.skills || member.job_description || "",
+            meta: [member.job_title || member.profession, member.birthplace || member.city || member.country].filter(Boolean).join(" • "),
+            link: member.email ? `/Member/${encodeURIComponent(member.email)}` : createPageUrl("Members"),
+            photoUrl: member.profile_photo_url,
+            email: member.email,
+            badge: member.role === "moderator" ? "Moderator" : member.role === "admin" ? "Admin" : member.member_category === "privileged" ? "I privilegjuar" : "Anëtar",
+            badgeColor: member.role === "admin" ? "#8ab4ff" : member.role === "moderator" ? "#c8b6ff" : "#9bffd6",
+          });
+        }
+      });
 
     // Jobs
     jobs.forEach(job => {
@@ -155,7 +198,7 @@ export default function Search() {
     });
 
     return matches;
-  }, [searchTerm, jobs, statuses, events, importedPosts]);
+  }, [searchTerm, users, jobs, statuses, events, importedPosts]);
 
   // Group by category
   const grouped = useMemo(() => {
@@ -174,7 +217,7 @@ export default function Search() {
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white tracking-tight mb-1">Kërko</h1>
-        <p className="text-white/50 text-sm">Kërko njoftime, shërbime, pazar, statuse dhe ngjarje</p>
+        <p className="text-white/50 text-sm">Kërko anëtarë, njoftime, shërbime, pazar, statuse dhe ngjarje</p>
       </div>
 
       {/* Search Input */}
@@ -250,26 +293,33 @@ export default function Search() {
                         <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 hover:bg-white/8 transition-all">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <h3 className="text-white text-sm font-semibold truncate">
-                                  {highlight(item.title, searchTerm)}
-                                </h3>
-                                {item.badge && (
-                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: `${item.badgeColor}20`, color: item.badgeColor }}>
-                                    {item.badge}
-                                  </span>
+                              <div className="flex items-start gap-3">
+                                {item.type === "member" && (
+                                  <UserAvatar name={item.title} email={item.email} photoUrl={item.photoUrl} size={42} />
                                 )}
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                    <h3 className="text-white text-sm font-semibold truncate">
+                                      {highlight(item.title, searchTerm)}
+                                    </h3>
+                                    {item.badge && (
+                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: `${item.badgeColor}20`, color: item.badgeColor }}>
+                                        {item.badge}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {item.description && (
+                                    <p className="text-white/50 text-xs line-clamp-2 mb-1">
+                                      {highlight(item.description.slice(0, 200), searchTerm)}
+                                    </p>
+                                  )}
+                                  {item.meta && (
+                                    <p className="text-white/30 text-xs flex items-center gap-1">
+                                      <MapPin className="w-3 h-3" />{item.meta}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                              {item.description && (
-                                <p className="text-white/50 text-xs line-clamp-2 mb-1">
-                                  {highlight(item.description.slice(0, 200), searchTerm)}
-                                </p>
-                              )}
-                              {item.meta && (
-                                <p className="text-white/30 text-xs flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" />{item.meta}
-                                </p>
-                              )}
                             </div>
                           </div>
                         </div>
