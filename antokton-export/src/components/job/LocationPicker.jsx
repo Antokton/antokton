@@ -99,10 +99,10 @@ const ANTOKTON_SUGGESTIONS = [
 const EUROPE_SUGGESTIONS = [
   // Gjermani
   { label: "Berlin, Gjermani", city: "Berlin", country: "Gjermani" },
-  { label: "München, Gjermani", city: "München", country: "Gjermani" },
+  { label: "München, Gjermani", city: "München", country: "Gjermani", aliases: ["Munich", "Muenchen"] },
   { label: "Hamburg, Gjermani", city: "Hamburg", country: "Gjermani" },
   { label: "Frankfurt, Gjermani", city: "Frankfurt", country: "Gjermani" },
-  { label: "Köln, Gjermani", city: "Köln", country: "Gjermani" },
+  { label: "Köln, Gjermani", city: "Köln", country: "Gjermani", aliases: ["Cologne", "Koeln"] },
   { label: "Stuttgart, Gjermani", city: "Stuttgart", country: "Gjermani" },
   { label: "Düsseldorf, Gjermani", city: "Düsseldorf", country: "Gjermani" },
   { label: "Dortmund, Gjermani", city: "Dortmund", country: "Gjermani" },
@@ -122,13 +122,13 @@ const EUROPE_SUGGESTIONS = [
   { label: "Edinburgh, Angli", city: "Edinburgh", country: "Angli" },
   { label: "Bristol, Angli", city: "Bristol", country: "Angli" },
   // Zvicër
-  { label: "Zürich, Zvicër", city: "Zürich", country: "Zvicër" },
-  { label: "Genf, Zvicër", city: "Genf", country: "Zvicër" },
+  { label: "Zürich, Zvicër", city: "Zürich", country: "Zvicër", aliases: ["Zurich", "Zuerich"] },
+  { label: "Genf, Zvicër", city: "Genf", country: "Zvicër", aliases: ["Geneva", "Genève"] },
   { label: "Basel, Zvicër", city: "Basel", country: "Zvicër" },
   { label: "Bern, Zvicër", city: "Bern", country: "Zvicër" },
   { label: "Lausanne, Zvicër", city: "Lausanne", country: "Zvicër" },
   // Austri
-  { label: "Wien, Austri", city: "Wien", country: "Austri" },
+  { label: "Wien, Austri", city: "Wien", country: "Austri", aliases: ["Vienna", "Vjenë"] },
   { label: "Graz, Austri", city: "Graz", country: "Austri" },
   { label: "Salzburg, Austri", city: "Salzburg", country: "Austri" },
   { label: "Innsbruck, Austri", city: "Innsbruck", country: "Austri" },
@@ -148,9 +148,9 @@ const EUROPE_SUGGESTIONS = [
   { label: "Nice, Francë", city: "Nice", country: "Francë" },
   { label: "Strasbourg, Francë", city: "Strasbourg", country: "Francë" },
   // Belgjikë
-  { label: "Bruksel, Belgjikë", city: "Bruksel", country: "Belgjikë" },
-  { label: "Antwerp, Belgjikë", city: "Antwerp", country: "Belgjikë" },
-  { label: "Gent, Belgjikë", city: "Gent", country: "Belgjikë" },
+  { label: "Bruksel, Belgjikë", city: "Bruksel", country: "Belgjikë", aliases: ["Bruxelles", "Brussel", "Brussels", "Brusel"] },
+  { label: "Antwerp, Belgjikë", city: "Antwerp", country: "Belgjikë", aliases: ["Antwerpen", "Anvers"] },
+  { label: "Gent, Belgjikë", city: "Gent", country: "Belgjikë", aliases: ["Ghent", "Gand"] },
   // Hollandë
   { label: "Amsterdam, Hollandë", city: "Amsterdam", country: "Hollandë" },
   { label: "Rotterdam, Hollandë", city: "Rotterdam", country: "Hollandë" },
@@ -165,7 +165,7 @@ const EUROPE_SUGGESTIONS = [
   { label: "Bergen, Norvegji", city: "Bergen", country: "Norvegji" },
   { label: "Trondheim, Norvegji", city: "Trondheim", country: "Norvegji" },
   // Danimarkë
-  { label: "Kopenhagë, Danimarkë", city: "Kopenhagë", country: "Danimarkë" },
+  { label: "Kopenhagë, Danimarkë", city: "Kopenhagë", country: "Danimarkë", aliases: ["Copenhagen", "København"] },
   { label: "Aarhus, Danimarkë", city: "Aarhus", country: "Danimarkë" },
   // Spanjë
   { label: "Madrid, Spanjë", city: "Madrid", country: "Spanjë" },
@@ -232,6 +232,16 @@ const STREET_SUGGESTIONS = [
 
 const ALL_SUGGESTIONS = [...STREET_SUGGESTIONS, ...ANTOKTON_SUGGESTIONS, ...EUROPE_SUGGESTIONS];
 
+function normalizeSearch(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ë/g, "e")
+    .replace(/ç/g, "c")
+    .trim();
+}
+
 function detectAntoktonZone(cityName) {
   if (!cityName) return null;
   const lower = cityName.toLowerCase().trim();
@@ -263,12 +273,19 @@ function getAlbanianName(nameRaw) {
 
 function getLocalSuggestions(query) {
   if (!query || query.trim().length < 2) return [];
-  const q = query.toLowerCase().trim();
-  return ALL_SUGGESTIONS.filter(s =>
-    s.label.toLowerCase().includes(q) ||
-    s.city.toLowerCase().includes(q) ||
-    (s.country && s.country.toLowerCase().includes(q))
-  ).slice(0, 4);
+  const q = normalizeSearch(query);
+  return ALL_SUGGESTIONS.filter(s => {
+    const searchable = [
+      s.label,
+      s.displayLabel,
+      s.fullAddress,
+      s.city,
+      s.country,
+      s.zone,
+      ...(s.aliases || []),
+    ].map(normalizeSearch).join(" ");
+    return searchable.includes(q);
+  }).slice(0, 6);
 }
 
 // Nominatim (OpenStreetMap) search — kthen vendndodhje reale nga e mbarë bota
@@ -353,6 +370,12 @@ export default function LocationPicker({ value = {}, onChange, className = "" })
   const wrapperRef = useRef(null);
   const inputRef = useRef(null);
 
+  useEffect(() => {
+    const nextAddress = value.address || [value.city, value.country && value.country !== "Antokton" ? value.country : (value.zone ? null : "Antokton")].filter(Boolean).join(", ") || "";
+    setInputVal(nextAddress);
+    setParsed(value.country || value.address ? value : null);
+  }, [value.address, value.city, value.country, value.zone]);
+
   // Close dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
@@ -415,7 +438,6 @@ Kthe VETËM JSON.`;
     // fullAddress ka formatin e saktë Google Maps (rrugë, numër, qytet, shtet)
     // displayLabel është versioni i shkurtuar për UI
     const addressForDB = s.fullAddress || s.displayLabel || s.label;
-    const displayText = s.displayLabel || s.label.split(",").slice(0,3).join(",").trim();
     setInputVal(addressForDB); // trego adresën e plotë në input pas zgjedhjes
     setSuggestions([]);
     setShowDropdown(false);
@@ -448,7 +470,7 @@ Kthe VETËM JSON.`;
         const remote = await searchNominatim(val);
         const localFresh = getLocalSuggestions(val);
         // Merge: lokalet Antokton para, pastaj Nominatim Antokton, pastaj tjerat
-        const remoteNew = remote.filter(r => !localFresh.some(l => l.city.toLowerCase() === r.city.toLowerCase() && l.country === r.country));
+        const remoteNew = remote.filter(r => !localFresh.some(l => normalizeSearch(l.city) === normalizeSearch(r.city) && l.country === r.country));
         const antoktonRemote = remoteNew.filter(r => r.is_antokton);
         const otherRemote = remoteNew.filter(r => !r.is_antokton);
         const merged = [...localFresh, ...antoktonRemote, ...otherRemote].slice(0, 9);

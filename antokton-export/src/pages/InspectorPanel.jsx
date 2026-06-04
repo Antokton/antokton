@@ -37,6 +37,16 @@ export default function InspectorPanel() {
       valid_for_months: 12
     });
   };
+  const selectedName = selectedUser
+    ? selectedUser.entity_type === "individual"
+      ? [selectedUser.first_name, selectedUser.surname].filter(Boolean).join(" ") || selectedUser.full_name || selectedUser.email
+      : selectedUser.company_name || selectedUser.email
+    : "";
+  const selectedTypeLabel = selectedUser?.entity_type === "individual"
+    ? (selectedUser.user_type === "job_seeker" ? "Punëkërkues" :
+       selectedUser.user_type === "employer" ? "Punëdhënës" :
+       selectedUser.user_type === "recruiter" ? "Rekrutues" : "Anëtar")
+    : "Kompani";
 
   useEffect(() => {
     const loadUser = async () => {
@@ -228,29 +238,35 @@ export default function InspectorPanel() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-2">
-          <Shield className="w-8 h-8 text-[#8ab4ff]" />
-          Paneli i Inspektorit
-        </h1>
-        <p className="text-white/50 mt-1">Certifiko anëtarë dhe firma për standarte profesionale, morale, halal dhe besueshmëri</p>
+    <div className="mx-auto w-full max-w-6xl overflow-hidden px-3 py-5 sm:px-6 sm:py-8">
+      <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="flex min-w-0 items-center gap-2 text-xl font-bold tracking-tight text-white sm:text-3xl">
+              <Shield className="h-6 w-6 shrink-0 text-[#8ab4ff] sm:h-8 sm:w-8" />
+              <span className="min-w-0 break-words">Paneli i Inspektorit</span>
+            </h1>
+            <p className="mt-1 max-w-3xl text-sm leading-relaxed text-white/55">
+              Certifiko anëtarë dhe firma për standarde profesionale, morale, hallall dhe besueshmërie.
+            </p>
+          </div>
         {user && (
           <Badge className={
-            user.role === 'admin' ? 'bg-red-500/20 text-red-400 border-red-500/30 mt-2' :
-            user.role === 'inspector' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30 mt-2' :
-            'bg-blue-500/20 text-blue-400 border-blue-500/30 mt-2'
+            user.role === 'admin' ? 'w-fit bg-red-500/20 text-red-400 border-red-500/30' :
+            user.role === 'inspector' ? 'w-fit bg-purple-500/20 text-purple-400 border-purple-500/30' :
+            'w-fit bg-blue-500/20 text-blue-400 border-blue-500/30'
           }>
             {user.role === 'admin' ? 'Administrator' :
              user.role === 'inspector' ? 'Inspektor' :
              'Moderator'}
           </Badge>
         )}
+        </div>
       </div>
 
       {/* All Members List */}
       {!selectedUser && (
-        <Card className="bg-white/5 border-white/10 mb-6">
+        <Card className="mb-6 overflow-hidden border-white/10 bg-white/5">
           <CardHeader>
             <CardTitle className="text-white">Lista e Anëtarëve</CardTitle>
           </CardHeader>
@@ -260,13 +276,13 @@ export default function InspectorPanel() {
                 <button
                   key={u.id}
                   onClick={() => setSelectedUser({ ...u, entity_type: "individual" })}
-                  className="w-full flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-all text-left border border-white/10"
+                  className="flex w-full min-w-0 items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/5 p-3 text-left transition-all hover:bg-white/10"
                 >
-                  <div>
-                    <p className="text-white font-medium">{u.first_name && u.surname ? `${u.first_name} ${u.surname}` : u.full_name || u.email}</p>
-                    <p className="text-white/50 text-xs">{u.email}</p>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-white">{u.first_name && u.surname ? `${u.first_name} ${u.surname}` : u.full_name || u.email}</p>
+                    <p className="truncate text-xs text-white/50">{u.email}</p>
                   </div>
-                  <Badge className="bg-white/10 text-white/70 border-white/20">{u.user_type || "job_seeker"}</Badge>
+                  <Badge className="shrink-0 bg-white/10 text-white/70 border-white/20">{u.user_type || "job_seeker"}</Badge>
                 </button>
               ))}
             </div>
@@ -275,15 +291,15 @@ export default function InspectorPanel() {
       )}
 
       {/* Search Entity */}
-      <Card className="bg-white/5 border-white/10 mb-6">
+      <Card className="mb-6 overflow-visible border-white/10 bg-white/5">
         <CardContent className="p-6">
           <div className="space-y-4">
             <div className="flex flex-col gap-2 mb-2">
               <p className="text-white/60 text-sm font-medium">Zgjedh kategorinë:</p>
-              <div className="flex gap-4">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
                   onClick={() => setSearchType("individual")}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                  className={`flex min-w-0 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm transition-all ${
                     searchType === "individual" 
                       ? "bg-[#8ab4ff] text-[#0b1020]" 
                       : "bg-white/5 text-white/60 hover:text-white"
@@ -294,7 +310,7 @@ export default function InspectorPanel() {
                 </button>
                 <button
                   onClick={() => setSearchType("company")}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                  className={`flex min-w-0 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm transition-all ${
                     searchType === "company" 
                       ? "bg-[#8ab4ff] text-[#0b1020]" 
                       : "bg-white/5 text-white/60 hover:text-white"
@@ -305,16 +321,17 @@ export default function InspectorPanel() {
                 </button>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Input
                 value={searchEmail}
                 onChange={(e) => setSearchEmail(e.target.value)}
                 placeholder={searchType === "individual" ? "Email i anëtarit..." : "Email i pronarit të kompanisë..."}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/60 flex-1"
-                onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+                className="min-w-0 flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/60"
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
-              <Button onClick={handleSearch} className="bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020]">
+              <Button onClick={handleSearch} className="shrink-0 bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020]">
                 <Search className="w-4 h-4" />
+                <span className="sm:hidden">Kërko</span>
               </Button>
             </div>
           </div>
@@ -324,37 +341,32 @@ export default function InspectorPanel() {
       {/* Selected Entity Info */}
       {selectedUser && (
         <>
-          <Card className="bg-white/5 border-white/10 mb-6">
+          <Card className="mb-6 overflow-hidden border-white/10 bg-white/5">
             <CardHeader className="border-b border-white/10">
-              <CardTitle className="text-white flex items-center gap-2">
-                {selectedUser.entity_type === "individual" ? <Users className="w-5 h-5" /> : <Building2 className="w-5 h-5" />}
-                {selectedUser.entity_type === "individual" ? "Anëtari i zgjedhur" : "Kompania e zgjedhur"}
+              <CardTitle className="flex min-w-0 flex-wrap items-center gap-2 text-white">
+                {selectedUser.entity_type === "individual" ? <Users className="h-5 w-5 shrink-0" /> : <Building2 className="h-5 w-5 shrink-0" />}
+                <span className="min-w-0 break-words">
+                  {selectedUser.entity_type === "individual" ? "Anëtari i zgjedhur" : "Kompania e zgjedhur"}
+                </span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-white/60 text-sm">Emri:</span>
-                  <span className="text-white font-medium">
-                    {selectedUser.entity_type === "individual" 
-                      ? `${selectedUser.first_name || ""} ${selectedUser.surname || ""}`
-                      : selectedUser.company_name
-                    }
-                  </span>
+            <CardContent className="p-4 sm:p-5">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="min-w-0 rounded-xl border border-white/10 bg-white/5 p-3">
+                  <span className="text-xs font-medium uppercase tracking-wide text-white/45">Emri</span>
+                  <p className="mt-1 break-words font-medium text-white">{selectedName}</p>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-white/60 text-sm">Email:</span>
-                  <span className="text-white">{selectedUser.email}</span>
+                <div className="min-w-0 rounded-xl border border-white/10 bg-white/5 p-3">
+                  <span className="text-xs font-medium uppercase tracking-wide text-white/45">Email</span>
+                  <p className="mt-1 break-all text-sm text-white">{selectedUser.email}</p>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-white/60 text-sm">Lloji:</span>
-                  <Badge className="bg-white/10 text-white border-white/20">
-                    {selectedUser.entity_type === "individual" 
-                      ? (selectedUser.user_type === 'job_seeker' ? 'Punëkërkues' :
-                         selectedUser.user_type === 'employer' ? 'Punëdhënës' :
-                         selectedUser.user_type === 'recruiter' ? 'Rekrutues' : 'Anëtar')
-                      : "Kompani"}
-                  </Badge>
+                <div className="min-w-0 rounded-xl border border-white/10 bg-white/5 p-3">
+                  <span className="text-xs font-medium uppercase tracking-wide text-white/45">Lloji</span>
+                  <div className="mt-2">
+                    <Badge className="max-w-full whitespace-normal border-white/20 bg-white/10 text-white">
+                      {selectedTypeLabel}
+                    </Badge>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -369,10 +381,10 @@ export default function InspectorPanel() {
                   Historiku i certifikimeve
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent className="p-4 sm:p-5">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {certifications.map(cert => (
-                   <div key={cert.id} className="min-w-0 bg-white/5 p-4 rounded-lg border border-white/10">
+                   <div key={cert.id} className="min-w-0 rounded-lg border border-white/10 bg-white/5 p-4">
                      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                        <div className="flex min-w-0 items-center gap-2">
                          <span className="text-2xl">{getBadgeIcon(cert.level)}</span>
@@ -380,7 +392,7 @@ export default function InspectorPanel() {
                            Niveli {cert.level}
                          </Badge>
                        </div>
-                       <Badge variant="outline" className="text-white/60 border-white/20">
+                       <Badge variant="outline" className="max-w-full whitespace-normal border-white/20 text-white/60">
                          {cert.certification_type}
                        </Badge>
                      </div>
@@ -423,7 +435,7 @@ export default function InspectorPanel() {
                           </Button>
                         </div>
                       )}
-                      <p className="text-white/40 text-xs mt-2">
+                      <p className="mt-2 break-words text-xs text-white/40">
                         Lëshuar nga: {(() => {
                           if (cert.inspector_name) return cert.inspector_name;
                           const inspector = allUsers.find(u => u.email === cert.inspector_email);
@@ -464,7 +476,7 @@ export default function InspectorPanel() {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6 space-y-6">
+          <CardContent className="space-y-6 p-4 sm:p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Certification Type */}
               <div className="space-y-2">
@@ -479,7 +491,7 @@ export default function InspectorPanel() {
                   <SelectContent className="bg-[#0b1020] border-white/20">
                     <SelectItem value="professional" className="text-white">Profesional</SelectItem>
                     <SelectItem value="moral" className="text-white">Moral</SelectItem>
-                    <SelectItem value="halal" className="text-white">Halal</SelectItem>
+                    <SelectItem value="halal" className="text-white">Hallall</SelectItem>
                     <SelectItem value="trustworthiness" className="text-white">Besueshmëri</SelectItem>
                   </SelectContent>
                 </Select>
@@ -572,33 +584,33 @@ export default function InspectorPanel() {
             {/* Report Upload */}
             <div className="space-y-2">
               <Label className="text-white/70">Ngarko raport mbështetës (opsional)</Label>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <Input
                   type="file"
                   onChange={(e) => setCertificationForm({ ...certificationForm, report_file: e.target.files?.[0] })}
-                  className="bg-white/10 border-white/20 text-white"
+                  className="min-w-0 bg-white/10 border-white/20 text-white"
                   accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
                 />
-                <Upload className="w-5 h-5 text-white/40" />
+                <Upload className="h-5 w-5 shrink-0 text-white/40" />
               </div>
               <p className="text-white/40 text-xs">Formatet e pranuara: PDF, DOC, DOCX, TXT, JPG, PNG</p>
             </div>
 
             {/* Preview Badge */}
-            <div className="p-4 bg-white/5 rounded-lg border border-white/10">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">{getBadgeIcon(certificationForm.level)}</span>
-                  <div>
-                    <div className="text-white font-medium">Paraparje e badge-it</div>
+            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="shrink-0 text-3xl">{getBadgeIcon(certificationForm.level)}</span>
+                  <div className="min-w-0">
+                    <div className="break-words font-medium text-white">Paraparje e badge-it</div>
                     <Badge className={getBadgeColor(certificationForm.level)}>
                       Niveli {certificationForm.level}
                     </Badge>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-white/60 text-sm">{certificationForm.certification_type}</div>
-                  <div className="text-white font-medium">{certificationForm.score}/100</div>
+                <div className="min-w-0 text-left sm:text-right">
+                  <div className="break-words text-sm text-white/60">{certificationForm.certification_type}</div>
+                  <div className="font-medium text-white">{certificationForm.score}/100</div>
                 </div>
               </div>
             </div>

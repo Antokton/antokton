@@ -22,6 +22,7 @@ import ProfileTabs from "../components/profile/ProfileTabs";
 import AkademiaProfileSummary from "../components/akademia/AkademiaProfileSummary";
 import AuthAccessBanner from "@/components/AuthAccessBanner";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
+import LocationPicker from "../components/job/LocationPicker";
 
 function MyApplications({ userEmail }) {
   const { data: myApplications = [] } = useQuery({
@@ -1029,23 +1030,31 @@ export default function Profile() {
 
             <div className="space-y-1.5">
               <Label className="text-white">Vendlindja *</Label>
-              <Input
-                value={form.birthplace}
-                onChange={(e) => setForm({ ...form, birthplace: e.target.value })}
-                placeholder="P.sh. Shkodër - Antokton"
-                required
-                className="bg-white/5 border-white/10 text-white"
+              <LocationPicker
+                value={{ address: form.birthplace }}
+                onChange={(loc) => setForm({
+                  ...form,
+                  birthplace: loc.address || "",
+                  birthplace_city: loc.city || "",
+                  birthplace_country: loc.country || "",
+                  birthplace_zone: loc.zone || "",
+                })}
+                className="profile-location-picker"
               />
             </div>
 
             <div className="space-y-1.5">
               <Label className="text-white">Vendbanimi aktual *</Label>
-              <Input
-                value={form.location}
-                onChange={(e) => setForm({ ...form, location: e.target.value })}
-                placeholder="P.sh. Bruksel, Belgjikë"
-                required
-                className="bg-white/5 border-white/10 text-white"
+              <LocationPicker
+                value={{ address: form.location }}
+                onChange={(loc) => setForm({
+                  ...form,
+                  location: loc.address || "",
+                  current_city: loc.city || "",
+                  current_country: loc.country || "",
+                  current_zone: loc.zone || "",
+                })}
+                className="profile-location-picker"
               />
             </div>
 
