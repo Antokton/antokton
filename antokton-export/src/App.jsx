@@ -43,6 +43,7 @@ const AuthenticatedApp = () => {
     return (
       <Routes>
         <Route path="/Login" element={<Login />} />
+        <Route path="/login" element={<Login />} />
       </Routes>
     );
   }
@@ -86,6 +87,12 @@ const AuthenticatedApp = () => {
           }
         />
       ))}
+      {Pages.Privacy && <Route path="/privacy" element={<LayoutWrapper currentPageName="Privacy"><Pages.Privacy /></LayoutWrapper>} />}
+      {Pages.Privacy && <Route path="/politika-e-privatesise" element={<LayoutWrapper currentPageName="Privacy"><Pages.Privacy /></LayoutWrapper>} />}
+      {Pages.Terms && <Route path="/terms" element={<LayoutWrapper currentPageName="Terms"><Pages.Terms /></LayoutWrapper>} />}
+      {Pages.Terms && <Route path="/kushtet-e-perdorimit" element={<LayoutWrapper currentPageName="Terms"><Pages.Terms /></LayoutWrapper>} />}
+      {Pages.Contact && <Route path="/contact" element={<LayoutWrapper currentPageName="Contact"><Pages.Contact /></LayoutWrapper>} />}
+      {Pages.Contact && <Route path="/kontakt" element={<LayoutWrapper currentPageName="Contact"><Pages.Contact /></LayoutWrapper>} />}
       <Route path="/akademia" element={<LayoutWrapper currentPageName="Akademia"><Akademia /></LayoutWrapper>} />
       <Route path="/akademia/:courseId" element={<LayoutWrapper currentPageName="Akademia"><AkademiaCourseDetail /></LayoutWrapper>} />
       <Route path="/AkademiaAdmin" element={<LayoutWrapper currentPageName="AkademiaAdmin"><AkademiaAdmin /></LayoutWrapper>} />

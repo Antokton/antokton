@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/antoktonClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
 
@@ -54,6 +55,10 @@ export default function Login() {
 
       let authResult;
       if (mode === "register") {
+        if (!acceptedLegal) {
+          setError("Për regjistrim duhet të pranosh Kushtet e Përdorimit dhe Politikën e Privatësisë.");
+          return;
+        }
         authResult = await base44.auth.register({
           email,
           password,
@@ -167,6 +172,24 @@ export default function Login() {
             </div>
           )}
 
+          {mode === "register" && (
+            <label className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-white/70">
+              <input
+                type="checkbox"
+                checked={acceptedLegal}
+                onChange={(event) => setAcceptedLegal(event.target.checked)}
+                className="mt-1 h-4 w-4 shrink-0"
+                required
+              />
+              <span>
+                Pranoj{" "}
+                <Link to="/terms" className="text-blue-200 hover:text-white underline">Kushtet e Përdorimit</Link>
+                {" "}dhe{" "}
+                <Link to="/privacy" className="text-blue-200 hover:text-white underline">Politikën e Privatësisë</Link>.
+              </span>
+            </label>
+          )}
+
           {successMessage && (
             <div className="flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-emerald-200 text-sm">
               <Mail className="w-4 h-4 mt-0.5 shrink-0" />
@@ -176,7 +199,7 @@ export default function Login() {
 
           <Button
             type="submit"
-            disabled={loading}
+            disabled={loading || (mode === "register" && !acceptedLegal)}
             className="w-full bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] font-semibold h-11"
           >
             {mode === "register" ? (

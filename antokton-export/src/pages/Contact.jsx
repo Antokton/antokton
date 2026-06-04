@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Mail, MessageCircle, Send, CheckCircle, Loader2, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
+import { CONTACT_EMAIL } from "@/lib/publicConfig";
 
 const chatCategories = [
   "Edukim",
@@ -20,12 +21,16 @@ const chatCategories = [
   "Administrata"
 ];
 
+const cleanText = (value, maxLength = 2000) =>
+  String(value || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, maxLength);
+
 export default function Contact() {
-  const [form, setForm] = useState({ name: "", email: "", category: "support", subject: "", message: "" });
+  const initialCategory = new URLSearchParams(window.location.search).get("category") || "support";
+  const [form, setForm] = useState({ name: "", email: "", category: initialCategory === "abuse" ? "abuse" : "support", subject: "", message: "" });
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [chatCategory, setChatCategory] = useState("Administrata");
+  const [chatCategory, setChatCategory] = useState(initialCategory === "abuse" ? "Probleme teknike" : "Administrata");
   const [chatMessage, setChatMessage] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [chatSuccess, setChatSuccess] = useState(false);
@@ -65,7 +70,7 @@ export default function Contact() {
       await base44.entities.StaffMessage.create({
         sender_email: user.email,
         category: chatCategory,
-        message: `[${chatCategory}] ${chatMessage || "Kërkesë për kontakt nga faqja Kontakt."}`,
+        message: `[${chatCategory}] ${cleanText(chatMessage, 2000) || "Kërkesë për kontakt nga faqja Kontakt."}`,
         is_resolved: false
       });
       setChatMessage("");
@@ -84,10 +89,10 @@ export default function Contact() {
     
     try {
       await base44.entities.ContactMessage.create({
-        name: form.name,
-        email: form.email,
-        subject: `[${categoryLabels[form.category]}] ${form.subject}`,
-        message: `Kategoria: ${categoryLabels[form.category]}\n\n${form.message}`,
+        name: cleanText(form.name, 120),
+        email: cleanText(form.email, 180),
+        subject: `[${categoryLabels[form.category]}] ${cleanText(form.subject, 180)}`,
+        message: `Kategoria: ${categoryLabels[form.category]}\n\n${cleanText(form.message, 3000)}`,
         status: "new"
       });
       
@@ -112,8 +117,8 @@ export default function Contact() {
           <div className="w-16 h-16 bg-gradient-to-br from-[#8ab4ff] to-[#9bffd6] rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Mail className="w-8 h-8 text-[#0b1020]" />
           </div>
-          <h1 className="text-4xl font-black text-white mb-3 uppercase tracking-wide">Na kontaktoni</h1>
-          <p className="text-white">Na shkruaj direkt në chat-in e brendshëm ose dërgo një mesazh me email.</p>
+          <h1 className="text-4xl font-black text-white mb-3 uppercase tracking-wide">Kontakt</h1>
+          <p className="text-white">Na shkruaj direkt në chat-in e brendshëm ose kontakto në email për pyetje, ankesa, raportime dhe kërkesa për fshirje të dhënash.</p>
         </motion.div>
 
         <Card id="antokton-chat" className="bg-white/5 border-[#9bffd6]/25 mb-6">
@@ -285,8 +290,8 @@ export default function Contact() {
             <CardContent className="p-6 text-center">
               <Mail className="w-8 h-8 text-[#8ab4ff] mx-auto mb-3" />
               <h3 className="text-white font-semibold mb-1">Email</h3>
-              <a href="mailto:info@antokton.com" className="text-[#8ab4ff] hover:text-[#9bffd6] text-sm transition-colors">
-                info@antokton.com
+              <a href={`mailto:${CONTACT_EMAIL}`} className="text-[#8ab4ff] hover:text-[#9bffd6] text-sm transition-colors">
+                {CONTACT_EMAIL}
               </a>
             </CardContent>
           </Card>

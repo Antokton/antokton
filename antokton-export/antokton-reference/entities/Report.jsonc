@@ -14,13 +14,38 @@
       "type": "string",
       "description": "Kategoria e postimit (pune, prona, sherbime, pazar, etj.)"
     },
+    "reported_entity": {
+      "type": "string",
+      "description": "Entiteti i raportuar, p.sh. Status, Job, Comment"
+    },
+    "reported_entity_id": {
+      "type": "string",
+      "description": "ID e entitetit te raportuar"
+    },
+    "reported_user_email": {
+      "type": "string",
+      "description": "Email i autorit te permbajtjes se raportuar"
+    },
+    "reporter_id": {
+      "type": "string",
+      "description": "ID e raportuesit, nese eshte i kycur"
+    },
     "reporter_email": {
       "type": "string",
       "description": "Email i raportuesit"
     },
+    "reporter_name": {
+      "type": "string",
+      "description": "Emer opsional i raportuesit kur nuk eshte i kycur"
+    },
+    "reporter_contact": {
+      "type": "string",
+      "description": "Email/kontakt opsional i raportuesit kur nuk eshte i kycur"
+    },
     "reason": {
       "type": "string",
       "enum": [
+        "inappropriate",
         "i_shitur",
         "vend_i_plotesuar",
         "nuk_jepet_me",
@@ -32,6 +57,10 @@
       ],
       "description": "Arsyeja e raportimit"
     },
+    "description": {
+      "type": "string",
+      "description": "Pershkrim shtese opsional"
+    },
     "details": {
       "type": "string",
       "description": "Detaje shtes\u00eb"
@@ -39,12 +68,28 @@
     "status": {
       "type": "string",
       "enum": [
+        "new",
+        "reviewing",
+        "rejected",
         "pending",
         "reviewed",
         "resolved"
       ],
-      "default": "pending",
+      "default": "new",
       "description": "Statusi i raportimit"
+    },
+    "admin_note": {
+      "type": "string",
+      "description": "Shenim i brendshem i stafit"
+    },
+    "reviewed_by": {
+      "type": "string",
+      "description": "Email i adminit/moderatorit qe e shqyrtoi"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e shqyrtimit"
     }
   },
   "required": [

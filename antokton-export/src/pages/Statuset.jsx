@@ -8,7 +8,7 @@ import {
   Image, Link2, Smile, MapPin, MessageCircle, Send, X,
   Briefcase, ShoppingBag, Calendar, Users, Newspaper,
   Globe, MoreHorizontal, Home, Trash2, Flag, Copy, Check,
-  ThumbsUp, ThumbsDown, Forward, ArrowLeft, ArrowUp, Edit2,
+  ThumbsUp, ThumbsDown, Forward, ArrowLeft, Edit2,
   ShieldCheck, EyeOff, Lock
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -300,32 +300,54 @@ function ReactionPicker({ onReact, onClose }) {
 
 /* ─── REPORT MODAL ─── */
 const REPORT_REASONS = [
-  { value: "spam",      label: "🚫 Spam / Reklamë e padëshiruar" },
-  { value: "fake",      label: "❌ Rremë / Mashtrim" },
-  { value: "offensive", label: "⚠️ Ofensiv / Papërshtatshëm" },
-  { value: "other",     label: "💬 Tjetër" },
+  { value: "inappropriate", label: "Përmbajtje e papërshtatshme" },
+  { value: "fake", label: "Mashtrim / njoftim i rremë" },
+  { value: "offensive", label: "Gjuhë fyese" },
+  { value: "spam", label: "Spam" },
+  { value: "other", label: "Tjetër" },
 ];
 
 function ReportModal({ status, currentUser, onClose }) {
   const [reason, setReason] = useState(REPORT_REASONS[0].value);
+  const [description, setDescription] = useState("");
+  const [reporterName, setReporterName] = useState("");
+  const [reporterContact, setReporterContact] = useState("");
   const [sending, setSending] = useState(false);
 
   const submit = async () => {
     setSending(true);
-    await base44.entities.Report.create({
-      post_id: status.id, post_title: (status.text || "").slice(0, 80),
-      post_category: "status", reporter_email: currentUser?.email || "",
-      reason, status: "pending",
-    });
-    const staff = (await base44.entities.User.list()).filter(u => u.role === "admin" || u.role === "moderator");
-    await Promise.all(staff.map(s => base44.entities.Notification.create({
-      user_email: s.email, type: "system",
-      title: "📋 Raportim i Ri (Status)",
-      message: `Statusi u raportua si: ${REPORT_REASONS.find(r => r.value === reason)?.label || reason}`,
-      link: "/Statuset", related_id: status.id,
-    })));
-    setSending(false); onClose();
-    alert("Raportimi u dërgua tek stafi. Faleminderit!");
+    try {
+      const cleanDescription = description.replace(/<[^>]*>/g, "").trim().slice(0, 2000);
+      await base44.entities.Report.create({
+        post_id: status.id,
+        reported_entity: "Status",
+        reported_entity_id: status.id,
+        reported_user_email: status.author_email || "",
+        post_title: (status.text || "").replace(/\s+/g, " ").slice(0, 120),
+        post_category: "status",
+        reporter_id: currentUser?.id || "",
+        reporter_email: currentUser?.email || "",
+        reporter_name: currentUser?.full_name || reporterName.trim().slice(0, 120),
+        reporter_contact: currentUser?.email || reporterContact.trim().slice(0, 180),
+        reason,
+        description: cleanDescription,
+        details: cleanDescription,
+        status: "new",
+      });
+      const staff = (await base44.entities.User.list()).filter(u => u.role === "admin" || u.role === "moderator");
+      await Promise.all(staff.map(s => base44.entities.Notification.create({
+        user_email: s.email, type: "system",
+        title: "Raportim i ri",
+        message: `Një status u raportua si: ${REPORT_REASONS.find(r => r.value === reason)?.label || reason}`,
+        link: "/Admin?section=reports", related_id: status.id,
+      })));
+      onClose();
+      alert("Raportimi u dërgua tek stafi. Faleminderit!");
+    } catch (error) {
+      alert(error.message || "Raportimi nuk u dërgua. Provo përsëri më vonë.");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -342,6 +364,16 @@ function ReportModal({ status, currentUser, onClose }) {
               {opt.label}
             </button>
           ))}
+          {!currentUser && (
+            <div className="grid gap-2 pt-2">
+              <input value={reporterName} onChange={(event) => setReporterName(event.target.value)} placeholder="Emri juaj (opsional)"
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/35 outline-none focus:border-[#8ab4ff]/60" />
+              <input value={reporterContact} onChange={(event) => setReporterContact(event.target.value)} placeholder="Email kontakti (opsional)"
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/35 outline-none focus:border-[#8ab4ff]/60" />
+            </div>
+          )}
+          <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Përshkrim shtesë opsional"
+            className="min-h-[84px] w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/35 outline-none focus:border-[#8ab4ff]/60" />
           <button onClick={submit} disabled={sending}
             className="w-full py-3 rounded-xl text-sm font-bold text-white disabled:opacity-40 mt-2 bg-red-500">
             {sending ? "Duke dërguar..." : "Dërgo Raportimin"}
@@ -394,7 +426,7 @@ function PostMenu({ status, currentUser, onEdit }) {
                 <Trash2 className="w-4 h-4" /> Fshi Postimin
               </button>
             )}
-            <button onClick={() => { setOpen(false); if (!currentUser) { base44.auth.redirectToLogin(); return; } setShowReport(true); }}
+            <button onClick={() => { setOpen(false); setShowReport(true); }}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/80 hover:bg-white/5">
               <Flag className="w-4 h-4 text-orange-400" /> Raporto Postimin
             </button>
@@ -1261,6 +1293,7 @@ function StatusCard({ status, currentUser }) {
   const [replyingTo, setReplyingTo] = useState(null);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [editingStatusText, setEditingStatusText] = useState(null);
   const [lightboxImg, setLightboxImg] = useState(null);
@@ -1490,7 +1523,14 @@ function StatusCard({ status, currentUser }) {
           style={{ padding: "4px 8px 4px 4px", fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.5)", cursor: "pointer" }}>
           <Forward style={{ width: 16, height: 16 }} />
         </button>
+        <button onClick={() => setShowReportModal(true)}
+          className="fb-action-btn ml-auto flex items-center gap-1"
+          style={{ padding: "4px 4px 4px 8px", fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.45)", cursor: "pointer" }}>
+          <Flag style={{ width: 14, height: 14 }} />
+          Raporto
+        </button>
       </div>
+      {showReportModal && <ReportModal status={status} currentUser={currentUser} onClose={() => setShowReportModal(false)} />}
 
 
 
@@ -1734,9 +1774,18 @@ export default function Statuset() {
     staleTime: 60000,
   });
 
+  const { data: myBlocks = [] } = useQuery({
+    queryKey: ["userBlocks", currentUser?.email],
+    queryFn: () => base44.entities.UserBlock.filter({ blocker_email: currentUser.email }, "-created_date", 500),
+    enabled: !!currentUser?.email,
+    staleTime: 60000,
+  });
+
   const visibleStatuses = useMemo(() => {
     const connectionByEmail = new Map(myConnections.map((item) => [item.contact_email, item.circle]));
+    const blockedEmails = new Set(myBlocks.map((item) => String(item.blocked_email || "").toLowerCase()).filter(Boolean));
     return allStatuses.filter((status) => {
+      if (blockedEmails.has(String(status.author_email || "").toLowerCase())) return false;
       const visibility = status.visibility || "public";
       if (visibility === "public") return true;
       if (!currentUser?.email) return false;
@@ -1746,7 +1795,7 @@ export default function Statuset() {
       if (visibility === "close_circle") return circle === "close";
       return true;
     });
-  }, [allStatuses, currentUser?.email, myConnections]);
+  }, [allStatuses, currentUser?.email, myBlocks, myConnections]);
 
   const statuses = visibleStatuses.slice(0, page * PAGE_SIZE);
   const hasMore = visibleStatuses.length > page * PAGE_SIZE;

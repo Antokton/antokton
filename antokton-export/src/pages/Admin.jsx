@@ -76,7 +76,7 @@ function slugifyDesignerPage(value) {
 export default function Admin() {
   const [user, setUser] = useState(null);
   const [tab, setTab] = useState("pending");
-  const [section, setSection] = useState("jobs");
+  const [section, setSection] = useState(() => new URLSearchParams(window.location.search).get("section") || "jobs");
   const [importTab, setImportTab] = useState("table");
   const [importEditingPost, setImportEditingPost] = useState(null);
   const [reviewsSection, setReviewsSection] = useState("pending");
@@ -560,6 +560,26 @@ export default function Admin() {
     publishToFacebookMutation.mutate(jobId);
   };
 
+  const updateReportMutation = useMutation({
+    mutationFn: async ({ report, status }) => {
+      await base44.entities.Report.update(report.id, {
+        status,
+        reviewed_by: user.email,
+        reviewed_at: new Date().toISOString(),
+      });
+      await base44.entities.AdminAction.create({
+        action_type: "review",
+        entity_type: "report",
+        entity_id: report.id,
+        entity_title: report.post_title || report.post_id || "Raportim",
+        performed_by: user.email,
+        previous_status: report.status || "new",
+        new_status: status,
+      });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reports"] }),
+  });
+
   const isAdmin = user?.role === "admin" || user?.member_category === "admin";
   const isModerator = user?.role === "moderator" || user?.member_category === "moderator";
   const hasAccess = isAdmin || isModerator;
@@ -691,6 +711,27 @@ export default function Admin() {
     if (reviewsSection === "approved") return r.is_approved;
     return true;
   });
+
+  const reportStatusLabels = {
+    new: "I ri",
+    pending: "I ri",
+    reviewing: "Në shqyrtim",
+    reviewed: "Në shqyrtim",
+    resolved: "I zgjidhur",
+    rejected: "I refuzuar",
+  };
+
+  const reportReasonLabels = {
+    inappropriate: "Përmbajtje e papërshtatshme",
+    fake: "Mashtrim / njoftim i rremë",
+    offensive: "Gjuhë fyese",
+    spam: "Spam",
+    other: "Tjetër",
+    i_shitur: "I shitur / jo në dispozicion",
+    vend_i_plotesuar: "Vend i plotësuar",
+    nuk_jepet_me: "Nuk ofrohet më",
+    cmim_i_ndryshuar: "Çmimi ndryshoi",
+  };
 
   const pendingJobsCount = allJobs.filter(j => j.status === "pending").length;
   const pendingEventsCount = allEvents.filter(e => e.status === "pending" || e.featured_request_status === "pending").length;
@@ -947,14 +988,18 @@ export default function Admin() {
         </div>
       ) : section === "reports" ? (
         <div className="space-y-3">
-          {reports.filter(r => r.status === 'pending').length === 0 ? (
+          {reports.length === 0 ? (
             <div className="text-center py-20">
               <Inbox className="w-12 h-12 text-white/20 mx-auto mb-4" />
-              <p className="text-white/40">Nuk ka raporte në pritje</p>
+              <p className="text-white/40">Nuk ka raportime</p>
             </div>
           ) : (
-            reports.filter(r => r.status === 'pending').map(report => {
+            reports.map(report => {
               const reportedJob = allJobs.find(j => j.id === report.post_id);
+              const statusValue = report.status === "pending" ? "new" : report.status === "reviewed" ? "reviewing" : (report.status || "new");
+              const openUrl = report.post_category === "status" || report.reported_entity === "Status"
+                ? "/Statuset"
+                : createPageUrl("PostDetail") + `?id=${report.post_id}`;
               return (
                 <motion.div
                   key={report.id}
@@ -966,33 +1011,53 @@ export default function Admin() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <Flag className="w-4 h-4 text-red-400" />
-                        <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
-                          {report.reason === 'spam' ? 'Spam' :
-                           report.reason === 'fake' ? 'Rremë/Mashtrim' :
-                           report.reason === 'offensive' ? 'Ofensiv' : 'Tjetër'}
+                        <Badge className="bg-red-500/20 text-red-300 border-red-500/30">
+                          {reportReasonLabels[report.reason] || report.reason || "Tjetër"}
+                        </Badge>
+                        <Badge className="bg-white/10 text-white/70 border-white/10">
+                          {reportStatusLabels[statusValue] || statusValue}
                         </Badge>
                       </div>
                       <h3 className="text-white font-semibold text-sm mb-1">
-                        Postimi: {reportedJob?.title || 'Njoftim i fshirë'}
+                        Postimi: {reportedJob?.title || report.post_title || report.post_id || "Përmbajtje e raportuar"}
                       </h3>
-                      {report.details && (
-                        <p className="text-white/60 text-xs mb-2">{report.details}</p>
+                      {(report.description || report.details) && (
+                        <p className="text-white/60 text-xs mb-2">{report.description || report.details}</p>
                       )}
-                      <p className="text-white/40 text-xs">
-                        Raportuar nga: {report.reporter_email} • {moment(report.created_date).fromNow()}
+                      <p className="text-white/40 text-xs leading-relaxed">
+                        Raportuar nga: {report.reporter_email || report.reporter_contact || report.reporter_name || "Anonim"}
+                        {report.reported_user_email ? ` • Autori: ${report.reported_user_email}` : ""}
+                        {" • "}{moment(report.created_date).fromNow()}
                       </p>
                     </div>
-                    <div className="flex gap-2">
-                      {reportedJob && (
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {(reportedJob || report.post_id) && (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => window.open(createPageUrl("PostDetail") + `?id=${report.post_id}`, '_blank')}
+                          onClick={() => window.open(openUrl, '_blank')}
                           className="gap-1 text-blue-400 border-blue-500/30 hover:bg-blue-500/10 h-8"
                         >
                           <Eye className="w-3.5 h-3.5" /> Shiko
                         </Button>
                       )}
+                      {[
+                        ["reviewing", "Në shqyrtim"],
+                        ["resolved", "I zgjidhur"],
+                        ["rejected", "I refuzuar"],
+                      ].map(([nextStatus, label]) => (
+                        <Button
+                          key={nextStatus}
+                          size="sm"
+                          variant="outline"
+                          disabled={updateReportMutation.isPending || statusValue === nextStatus}
+                          onClick={() => updateReportMutation.mutate({ report, status: nextStatus })}
+                          className="h-8 border-white/15 text-white/75 hover:bg-white/10"
+                        >
+                          {label}
+                        </Button>
+                      ))}
+                      {reportedJob && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -1005,6 +1070,7 @@ export default function Admin() {
                       >
                         <Trash2 className="w-3.5 h-3.5" /> Fshi Postimin
                       </Button>
+                      )}
                     </div>
                   </div>
                 </motion.div>

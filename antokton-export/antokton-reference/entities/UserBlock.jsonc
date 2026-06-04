@@ -1,0 +1,39 @@
+{
+  "name": "UserBlock",
+  "type": "object",
+  "properties": {
+    "blocker_user_id": {
+      "type": "string",
+      "description": "ID e perdoruesit qe bllokon"
+    },
+    "blocker_email": {
+      "type": "string",
+      "description": "Email i perdoruesit qe bllokon"
+    },
+    "blocked_user_id": {
+      "type": "string",
+      "description": "ID e perdoruesit te bllokuar"
+    },
+    "blocked_email": {
+      "type": "string",
+      "description": "Email i perdoruesit te bllokuar"
+    },
+    "blocked_name": {
+      "type": "string",
+      "description": "Emer per shfaqje ne listen e bllokimeve"
+    },
+    "blocked_photo_url": {
+      "type": "string",
+      "description": "Foto profili per shfaqje ne listen e bllokimeve"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e bllokimit"
+    }
+  },
+  "required": [
+    "blocker_email",
+    "blocked_email"
+  ]
+}

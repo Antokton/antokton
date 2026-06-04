@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/antoktonClient";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { Button } from "@/components/ui/button";
-import { Users, ArrowLeft, UserPlus, Trash2 } from "lucide-react";
+import { Users, ArrowLeft, UserPlus, Trash2, Ban, RotateCcw } from "lucide-react";
 
 export default function MemberProfile() {
   const { email = "" } = useParams();
@@ -32,6 +32,15 @@ export default function MemberProfile() {
   });
   const connection = connections[0];
 
+  const { data: blocks = [] } = useQuery({
+    queryKey: ["userBlock", currentUser?.email, decodedEmail],
+    queryFn: () => base44.entities.UserBlock.filter({ blocker_email: currentUser.email, blocked_email: decodedEmail }, "-created_date", 1),
+    enabled: !!currentUser?.email && !!decodedEmail && currentUser.email !== decodedEmail,
+  });
+  const block = blocks[0];
+  const cannotBlock = ["admin", "superadmin"].includes(String(member?.role || "").toLowerCase()) ||
+    ["admin", "superadmin"].includes(String(member?.member_category || "").toLowerCase());
+
   const saveConnection = useMutation({
     mutationFn: async (circle) => {
       const payload = {
@@ -50,6 +59,34 @@ export default function MemberProfile() {
   const removeConnection = useMutation({
     mutationFn: () => connection?.id ? base44.entities.UserConnection.delete(connection.id) : Promise.resolve(),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["userConnection", currentUser?.email, decodedEmail] }),
+  });
+
+  const blockUser = useMutation({
+    mutationFn: async () => {
+      if (cannotBlock) throw new Error("Administratorët nuk mund të bllokohen nga përdoruesit e zakonshëm.");
+      return base44.entities.UserBlock.create({
+        blocker_user_id: currentUser.id || "",
+        blocker_email: currentUser.email,
+        blocked_user_id: member?.id || "",
+        blocked_email: decodedEmail,
+        blocked_name: displayName,
+        blocked_photo_url: member?.profile_photo_url || "",
+        created_at: new Date().toISOString(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userBlock", currentUser?.email, decodedEmail] });
+      queryClient.invalidateQueries({ queryKey: ["userBlocks", currentUser?.email] });
+    },
+    onError: (error) => alert(error.message || "Bllokimi nuk u krye."),
+  });
+
+  const unblockUser = useMutation({
+    mutationFn: () => block?.id ? base44.entities.UserBlock.delete(block.id) : Promise.resolve(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userBlock", currentUser?.email, decodedEmail] });
+      queryClient.invalidateQueries({ queryKey: ["userBlocks", currentUser?.email] });
+    },
   });
 
   const displayName = useMemo(() => {
@@ -83,10 +120,10 @@ export default function MemberProfile() {
           <div className="mt-5 rounded-xl border border-white/10 bg-[#101b2d] p-4">
             <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold"><Users className="h-4 w-4 text-[#8ab4ff]" /> Shto në rrethin tim të interesit</h2>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => saveConnection.mutate("close")} className={connection?.circle === "close" ? "bg-[#8ab4ff] text-[#0b1020]" : "bg-white/10 text-white hover:bg-white/15"}>
+              <Button disabled={Boolean(block)} onClick={() => saveConnection.mutate("close")} className={connection?.circle === "close" ? "bg-[#8ab4ff] text-[#0b1020]" : "bg-white/10 text-white hover:bg-white/15"}>
                 <UserPlus className="mr-2 h-4 w-4" /> Rrethi i ngushtë
               </Button>
-              <Button onClick={() => saveConnection.mutate("wide")} className={connection?.circle === "wide" ? "bg-[#9bffd6] text-[#0b1020]" : "bg-white/10 text-white hover:bg-white/15"}>
+              <Button disabled={Boolean(block)} onClick={() => saveConnection.mutate("wide")} className={connection?.circle === "wide" ? "bg-[#9bffd6] text-[#0b1020]" : "bg-white/10 text-white hover:bg-white/15"}>
                 <UserPlus className="mr-2 h-4 w-4" /> Rrethi i gjerë
               </Button>
               {connection && (
@@ -94,7 +131,18 @@ export default function MemberProfile() {
                   <Trash2 className="mr-2 h-4 w-4" /> Hiqe nga rrethi
                 </Button>
               )}
+              {block ? (
+                <Button onClick={() => unblockUser.mutate()} className="bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25">
+                  <RotateCcw className="mr-2 h-4 w-4" /> Zhblloko
+                </Button>
+              ) : (
+                <Button disabled={cannotBlock || blockUser.isPending} onClick={() => blockUser.mutate()} className="bg-red-500/15 text-red-100 hover:bg-red-500/25 disabled:opacity-50">
+                  <Ban className="mr-2 h-4 w-4" /> Blloko përdorues
+                </Button>
+              )}
             </div>
+            {block && <p className="mt-3 text-xs text-red-100/70">Ky përdorues është i bllokuar. Nuk do t'i shohësh postimet në statuset e tua dhe mesazhet mes jush nuk lejohen.</p>}
+            {cannotBlock && <p className="mt-3 text-xs text-white/45">Administratorët nuk mund të bllokohen nga përdoruesit e zakonshëm.</p>}
           </div>
         )}
       </section>

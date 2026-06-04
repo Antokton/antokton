@@ -15,6 +15,7 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useSiteConfig } from "./lib/useSiteConfig";
 import { t, getLanguage, setLanguage } from "./lib/translations";
+import { CONTACT_EMAIL } from "@/lib/publicConfig";
 
 const BILETA_NAV_SUBMENU = [
   { id: "avion", label: "Avion", url: "/Bileta?type=avion#kerkese-bilete", visible: true },
@@ -1348,7 +1349,8 @@ export default function Layout({ children, currentPageName }) {
               <div className="space-y-2.5">
                 <Link to={createPageUrl("Privacy")} className="block text-sm text-white hover:text-white/60 transition-colors">Politika e Privatësisë</Link>
                 <Link to={createPageUrl("Terms")} className="block text-sm text-white hover:text-white/60 transition-colors">Termat e Përdorimit</Link>
-                <a href="mailto:info@antokton.com" className="block text-sm text-white hover:text-white/60 transition-colors">📧 info@antokton.com</a>
+                <Link to="/Contact?category=abuse#antokton-chat" className="block text-sm text-white hover:text-white/60 transition-colors">Raporto problem</Link>
+                <a href={`mailto:${CONTACT_EMAIL}`} className="block text-sm text-white hover:text-white/60 transition-colors">📧 {CONTACT_EMAIL}</a>
                 <a href="https://antokton.com" target="_blank" rel="noopener noreferrer" className="block text-sm text-white hover:text-white/60 transition-colors">🌐 antokton.com</a>
               </div>
             </div>

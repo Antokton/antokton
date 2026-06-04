@@ -1,6 +1,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText } from "lucide-react";
+import { CONTACT_EMAIL } from "@/lib/publicConfig";
 
 export default function Terms() {
   return (
@@ -11,8 +12,8 @@ export default function Terms() {
             <FileText className="w-6 h-6 text-[#0b1020]" />
           </div>
           <div>
-            <h1 className="text-4xl font-black text-white uppercase tracking-wide">Termat e Përdorimit</h1>
-            <p className="text-white mt-1">Përditësuar më: Shkurt 2026</p>
+            <h1 className="text-4xl font-black text-white uppercase tracking-wide">Kushtet e Përdorimit</h1>
+            <p className="text-white mt-1">Përditësuar për Beta Publike</p>
           </div>
         </div>
 
@@ -41,8 +42,9 @@ export default function Terms() {
             <section>
               <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-wide">3. Përmbajtja e përdoruesve</h2>
               <p className="leading-relaxed">
-                Ju jeni përgjegjës për përmbajtjen që publikoni. Ne rezervojmë të drejtën për të moderuar, 
-                edituar ose fshirë çdo përmbajtje që shkel këta terma ose politikat tona.
+                Ju jeni përgjegjës për postimet, komentet, mesazhet dhe njoftimet që publikoni. Administrata mund të fshehë,
+                kufizojë, përpunojë ose fshijë përmbajtje që shkel rregullat, sidomos mashtrimet, spam-in, gjuhën fyese ose
+                përmbajtjen e paligjshme.
               </p>
             </section>
 
@@ -65,8 +67,8 @@ export default function Terms() {
             <section>
               <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-wide">6. Kufizimi i përgjegjësisë</h2>
               <p className="leading-relaxed">
-                Antokton nuk është përgjegjës për marrëdhëniet mes punëdhënësve dhe punëkërkuesve. 
-                Ne nuk garantojmë saktësinë e informacioneve të postuara nga përdoruesit.
+                Antokton nuk është palë kontraktore në marrëveshjet mes përdoruesve. Përdoruesit duhet të verifikojnë vetë
+                ofertat, pagesat, punët, shërbimet, biletat, projektet bamirëse dhe çdo marrëveshje jashtë platformës.
               </p>
             </section>
 
@@ -89,9 +91,9 @@ export default function Terms() {
             <section>
               <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-wide">9. Kontakt</h2>
               <p className="leading-relaxed">
-                Për pyetje rreth këtyre termave, na kontaktoni në: 
-                <a href="mailto:legal@antokton.com" className="text-[#8ab4ff] hover:underline ml-1">
-                  legal@antokton.com
+                Për pyetje, ankesa ose kërkesa ligjore, na kontaktoni në:
+                <a href={`mailto:${CONTACT_EMAIL}`} className="text-[#8ab4ff] hover:underline ml-1">
+                  {CONTACT_EMAIL}
                 </a>
               </p>
             </section>

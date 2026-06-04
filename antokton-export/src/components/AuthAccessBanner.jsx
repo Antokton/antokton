@@ -34,6 +34,7 @@ export default function AuthAccessBanner({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
 
@@ -72,6 +73,11 @@ export default function AuthAccessBanner({
       if (mode === "reset") {
         await base44.auth.requestPasswordReset(email);
         setSuccessMessage("Nëse ky email ekziston, do të dërgohen udhëzimet për rivendosjen e fjalëkalimit.");
+        return;
+      }
+
+      if (mode === "register" && !acceptedLegal) {
+        setError("Për regjistrim duhet të pranosh Kushtet e Përdorimit dhe Politikën e Privatësisë.");
         return;
       }
 
@@ -209,9 +215,25 @@ export default function AuthAccessBanner({
             </div>
           )}
 
+          {mode === "register" && (
+            <label className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-2.5 text-xs text-white/70">
+              <input
+                type="checkbox"
+                checked={acceptedLegal}
+                onChange={(event) => setAcceptedLegal(event.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0"
+                required
+              />
+              <span>
+                Pranoj <Link to="/terms" className="text-blue-200 underline hover:text-white">Kushtet e Përdorimit</Link>
+                {" "}dhe <Link to="/privacy" className="text-blue-200 underline hover:text-white">Politikën e Privatësisë</Link>.
+              </span>
+            </label>
+          )}
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (mode === "register" && !acceptedLegal)}
             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#8ab4ff] text-sm font-bold text-[#06111f] transition hover:bg-[#a6c6ff] disabled:opacity-70"
           >
             {mode === "register" ? <UserPlus className="h-4 w-4" /> : mode === "reset" ? <KeyRound className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}

@@ -62,10 +62,11 @@ function SimilarPosts({ currentJobId, category }) {
 // Opsionet e raportimit sipas kategorisë
 const getReportReasons = (category) => {
   const base = [
-    { value: "spam", label: "🚫 Spam / Reklamë e padëshiruar" },
-    { value: "fake", label: "❌ Rremë / Mashtrim" },
-    { value: "offensive", label: "⚠️ Ofensiv / Papërshtatshëm" },
-    { value: "other", label: "💬 Tjetër" },
+    { value: "inappropriate", label: "Përmbajtje e papërshtatshme" },
+    { value: "fake", label: "Mashtrim / njoftim i rremë" },
+    { value: "offensive", label: "Gjuhë fyese" },
+    { value: "spam", label: "Spam" },
+    { value: "other", label: "Tjetër" },
   ];
   if (category === "prona" || category === "pazar") {
     return [
@@ -97,6 +98,7 @@ const reportReasonLabel = (value) => {
     { value: "vend_i_plotesuar", label: "Vend i plotësuar" },
     { value: "nuk_jepet_me", label: "Nuk ofrohet më" },
     { value: "cmim_i_ndryshuar", label: "Çmimi ndryshoi" },
+    { value: "inappropriate", label: "Përmbajtje e papërshtatshme" },
     { value: "spam", label: "Spam" },
     { value: "fake", label: "Rremë/Mashtrim" },
     { value: "offensive", label: "Ofensiv" },
@@ -126,7 +128,7 @@ export default function PostDetail() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [quickApplyForm, setQuickApplyForm] = useState({ name: "", email: "", message: "" });
-  const [reportForm, setReportForm] = useState({ reason: "", details: "" });
+  const [reportForm, setReportForm] = useState({ reason: "", details: "", reporter_name: "", reporter_contact: "" });
   const [reportReasons, setReportReasons] = useState([]);
   const [timeLeft, setTimeLeft] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -450,12 +452,19 @@ export default function PostDetail() {
     mutationFn: async () => {
       await base44.entities.Report.create({
         post_id: jobId,
+        reported_entity: "Job",
+        reported_entity_id: jobId,
+        reported_user_email: job?.created_by || job?.author_email || "",
         post_title: job?.title || "",
         post_category: job?.category || "",
-        reporter_email: user?.email,
+        reporter_id: user?.id || "",
+        reporter_email: user?.email || "",
+        reporter_name: user?.full_name || reportForm.reporter_name || "",
+        reporter_contact: user?.email || reportForm.reporter_contact || "",
         reason: reportForm.reason,
-        details: reportForm.details,
-        status: "pending"
+        description: (reportForm.details || "").replace(/<[^>]*>/g, "").trim().slice(0, 2000),
+        details: (reportForm.details || "").replace(/<[^>]*>/g, "").trim().slice(0, 2000),
+        status: "new"
       });
       // Dërgo notifikim tek të gjithë adminët/moderatorët
       const staffUsers = await base44.entities.User.list();
@@ -464,16 +473,16 @@ export default function PostDetail() {
         base44.entities.Notification.create({
           user_email: s.email,
           type: "system",
-          title: "📋 Raportim i Ri",
+          title: "Raportim i ri",
           message: `"${job?.title || "Njoftim"}" u raportua si: ${reportReasonLabel(reportForm.reason)}`,
-          link: `/PostDetail?id=${jobId}`,
+          link: `/Admin?section=reports`,
           related_id: jobId
         })
       ));
     },
     onSuccess: () => {
       setShowReportModal(false);
-      setReportForm({ reason: "", details: "" });
+      setReportForm({ reason: "", details: "", reporter_name: "", reporter_contact: "" });
       alert("Raportimi u dërgua tek stafi. Faleminderit!");
     }
   });
@@ -551,10 +560,9 @@ export default function PostDetail() {
               <DropdownMenuContent align="end" className="bg-[#0b1020] border-white/10 w-48">
                 <DropdownMenuItem
                   onClick={() => {
-                    if (!isAuth) { base44.auth.redirectToLogin(); return; }
                     const reasons = getReportReasons(job?.category);
                     setReportReasons(reasons);
-                    setReportForm({ reason: reasons[0]?.value || "spam", details: "" });
+                    setReportForm({ reason: reasons[0]?.value || "spam", details: "", reporter_name: "", reporter_contact: "" });
                     setShowReportModal(true);
                   }}
                   className="text-red-400 hover:text-red-300 cursor-pointer"
@@ -1153,6 +1161,29 @@ export default function PostDetail() {
                 className="bg-white/5 border-white/10 text-white"
               />
             </div>
+            {!isAuth && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-white/70">Emri (opsional)</Label>
+                  <Input
+                    value={reportForm.reporter_name}
+                    onChange={(e) => setReportForm({ ...reportForm, reporter_name: e.target.value })}
+                    placeholder="Emri juaj"
+                    className="bg-white/5 border-white/10 text-white"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-white/70">Email kontakti (opsional)</Label>
+                  <Input
+                    type="email"
+                    value={reportForm.reporter_contact}
+                    onChange={(e) => setReportForm({ ...reportForm, reporter_contact: e.target.value })}
+                    placeholder="email@shembull.com"
+                    className="bg-white/5 border-white/10 text-white"
+                  />
+                </div>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label className="text-white/70">Email *</Label>
               <Input

@@ -50,6 +50,7 @@ const {
   AUTH_BOOTSTRAP_ADMIN_PASSWORD
 } = config;
 const DEV_USER_EMAIL = getDevUserEmail();
+const reportRateLimit = new Map();
 
 function stripJsonComments(text) {
   return text
@@ -325,6 +326,83 @@ async function requesterHasRole(req, roles = []) {
   const allowed = new Set(roles.map((role) => String(role).toLowerCase()));
   return allowed.has(String(user?.role || "").toLowerCase()) ||
     allowed.has(String(user?.member_category || "").toLowerCase());
+}
+
+function requestIp(req) {
+  return String(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown").split(",")[0].trim();
+}
+
+function cleanPlainText(value, maxLength = 2000) {
+  return String(value || "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
+function isReportRateLimited(req, userEmail) {
+  const key = userEmail || requestIp(req);
+  const nowMs = Date.now();
+  const last = reportRateLimit.get(key) || 0;
+  reportRateLimit.set(key, nowMs);
+  for (const [storedKey, timestamp] of reportRateLimit) {
+    if (nowMs - timestamp > 10 * 60 * 1000) reportRateLimit.delete(storedKey);
+  }
+  return nowMs - last < 30 * 1000;
+}
+
+async function sanitizeReportPayload(req, body, userEmail) {
+  if (isReportRateLimited(req, userEmail)) {
+    const error = new Error("Ju lutemi prisni pak para se të dërgoni një raportim tjetër.");
+    error.statusCode = 429;
+    throw error;
+  }
+
+  const allowedReasons = new Set([
+    "inappropriate",
+    "spam",
+    "fake",
+    "offensive",
+    "other",
+    "i_shitur",
+    "vend_i_plotesuar",
+    "nuk_jepet_me",
+    "cmim_i_ndryshuar"
+  ]);
+  const reason = allowedReasons.has(String(body.reason || "")) ? String(body.reason) : "other";
+  const description = cleanPlainText(body.description || body.details || "", 2000);
+  const reporterContact = cleanPlainText(body.reporter_contact || body.reporter_email || "", 180);
+
+  return {
+    ...body,
+    post_id: cleanPlainText(body.post_id || body.reported_entity_id, 120),
+    reported_entity_id: cleanPlainText(body.reported_entity_id || body.post_id, 120),
+    reported_entity: cleanPlainText(body.reported_entity || body.post_category || "post", 80),
+    post_title: cleanPlainText(body.post_title, 180),
+    post_category: cleanPlainText(body.post_category, 80),
+    reported_user_email: normalizeEmail(body.reported_user_email || ""),
+    reporter_id: cleanPlainText(body.reporter_id, 120),
+    reporter_email: normalizeEmail(userEmail || body.reporter_email || ""),
+    reporter_name: cleanPlainText(body.reporter_name, 120),
+    reporter_contact: reporterContact,
+    reason,
+    description,
+    details: description,
+    status: "new"
+  };
+}
+
+async function chatIsBlocked(body) {
+  const sender = normalizeEmail(body.sender_email || "");
+  const receiver = normalizeEmail(body.receiver_email || "");
+  if (!sender || !receiver) return false;
+  const blocks = await allRecords("UserBlock");
+  return blocks.some((block) => {
+    const blocker = normalizeEmail(block.blocker_email || "");
+    const blocked = normalizeEmail(block.blocked_email || "");
+    return (blocker === sender && blocked === receiver) || (blocker === receiver && blocked === sender);
+  });
 }
 
 function hasActiveUserBlock(user) {
@@ -1070,6 +1148,14 @@ async function handleEntity(req, res, url, segments) {
 
   if (!entity) return sendError(res, 400, "Missing entity name");
 
+  if (entity === "Report" && req.method === "GET" && !(await requesterHasRole(req, ["admin", "moderator", "superadmin"]))) {
+    return sendError(res, 403, "Admin role required");
+  }
+
+  if (entity === "Report" && ["PUT", "PATCH", "DELETE"].includes(req.method) && !(await requesterHasRole(req, ["admin", "moderator", "superadmin"]))) {
+    return sendError(res, 403, "Admin role required");
+  }
+
   if (req.method === "GET" && tail.length === 0) {
     return send(res, 200, await redactEntityForRequest(entity, await listEntity(entity, url), req));
   }
@@ -1123,6 +1209,29 @@ async function handleEntity(req, res, url, segments) {
 
   if (req.method === "POST" && tail.length === 0) {
     const body = await readJson(req);
+    if (entity === "Report") {
+      try {
+        const sanitized = await sanitizeReportPayload(req, body, userEmail);
+        return send(res, 200, await createRecord(entity, sanitized, userEmail));
+      } catch (error) {
+        return sendError(res, error.statusCode || 400, error.message || "Raportimi nuk u pranua.");
+      }
+    }
+    if (entity === "ChatMessage" && await chatIsBlocked(body)) {
+      return sendError(res, 403, "Mesazhi nuk mund të dërgohet sepse njëri nga përdoruesit ka bllokuar tjetrin.");
+    }
+    if (entity === "UserBlock") {
+      if (!userEmail) return sendError(res, 401, "Authentication required");
+      const blockedUser = await findUserByEmail(body.blocked_email);
+      const blockedRole = String(blockedUser?.role || "").toLowerCase();
+      const blockedCategory = String(blockedUser?.member_category || "").toLowerCase();
+      if (["admin", "superadmin"].includes(blockedRole) || ["admin", "superadmin"].includes(blockedCategory)) {
+        return sendError(res, 403, "Administratorët nuk mund të bllokohen nga përdoruesit e zakonshëm.");
+      }
+      body.blocker_email = normalizeEmail(userEmail);
+      body.blocked_email = normalizeEmail(body.blocked_email || "");
+      body.created_at = body.created_at || now();
+    }
     const localized = await localizeRemoteAssets(body, [entity]);
     return send(res, 200, await createRecord(entity, localized, userEmail));
   }

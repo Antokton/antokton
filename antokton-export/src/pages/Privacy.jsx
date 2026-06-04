@@ -1,6 +1,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Shield } from "lucide-react";
+import { CONTACT_EMAIL } from "@/lib/publicConfig";
 
 export default function Privacy() {
   return (
@@ -12,7 +13,7 @@ export default function Privacy() {
           </div>
           <div>
             <h1 className="text-4xl font-black text-white uppercase tracking-wide">Politika e Privatësisë</h1>
-            <p className="text-white mt-1">Përditësuar më: Shkurt 2026</p>
+            <p className="text-white mt-1">Përditësuar për Beta Publike</p>
           </div>
         </div>
 
@@ -21,8 +22,8 @@ export default function Privacy() {
             <section>
               <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-wide">1. Të dhënat që mbledhim</h2>
               <p className="leading-relaxed">
-                Antokton mbledh informacione personale që ju na jepni vullnetarisht, përfshirë emrin, email-in, 
-                numrin e telefonit, vendndodhjen, dhe informacione profesionale si eksperienca e punës dhe aftësitë.
+                Antokton mbledh të dhëna që përdoruesi i vendos vetë në platformë, si emri, emaili,
+                profili publik, postimet, mesazhet, njoftimet, fotot e ngarkuara dhe të dhëna kontakti kur përdoruesi i shton.
               </p>
             </section>
 
@@ -30,9 +31,10 @@ export default function Privacy() {
               <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-wide">2. Si i përdorim të dhënat tuaja</h2>
               <ul className="list-disc pl-6 space-y-2">
                 <li>Për të ofruar dhe përmirësuar shërbimet tona</li>
-                <li>Për të lidhur punëkërkuesit me punëdhënësit</li>
-                <li>Për të dërguar njoftime relevante</li>
-                <li>Për të siguruar sigurinë e platformës</li>
+                <li>Për të mundësuar llogarinë, hyrjen dhe rikthimin e sesionit</li>
+                <li>Për të shfaqur postime, profile, njoftime, mesazhe dhe kërkesa</li>
+                <li>Për moderim, raportime, siguri dhe mbrojtje nga abuzimi</li>
+                <li>Për të përmirësuar funksionimin teknik të web/PWA/app</li>
               </ul>
             </section>
 
@@ -82,9 +84,9 @@ export default function Privacy() {
             <section>
               <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-wide">8. Na kontaktoni</h2>
               <p className="leading-relaxed">
-                Për pyetje rreth kësaj politike privatësie, na kontaktoni në: 
-                <a href="mailto:privacy@antokton.com" className="text-[#8ab4ff] hover:underline ml-1">
-                  privacy@antokton.com
+                Për kërkesa privatësie, fshirje llogarie ose pyetje për të dhënat, na kontaktoni në:
+                <a href={`mailto:${CONTACT_EMAIL}`} className="text-[#8ab4ff] hover:underline ml-1">
+                  {CONTACT_EMAIL}
                 </a>
               </p>
             </section>
