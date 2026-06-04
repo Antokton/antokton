@@ -6,9 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, MessageCircle, Send, X, Loader2, Circle, Flag, Shield, UserCog, Crown, Star, Sparkles, CheckCircle, Briefcase, SlidersHorizontal } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import UserAvatar from "@/components/ui/UserAvatar";
+import { Users, MessageCircle, Send, X, Loader2, Circle, Flag, Shield, UserCog, Crown, CheckCircle, Briefcase, SlidersHorizontal, MoreHorizontal, Eye } from "lucide-react";
+import { motion } from "framer-motion";
 import moment from "moment";
+import { Link } from "react-router-dom";
 import AdvancedMemberTable from "../components/members/AdvancedMemberTable";
 
 export default function Members() {
@@ -197,6 +200,15 @@ export default function Members() {
 
   const isAdmin = user?.role === "admin";
   const isModerator = user?.role === "moderator";
+  const canSeeStaffStatus = isAdmin || isModerator;
+
+  const memberName = (member) => (
+    member.first_name && member.surname
+      ? `${member.first_name} ${member.surname}`
+      : member.first_name || member.full_name || member.email
+  );
+
+  const memberProfilePath = (member) => member.email ? `/Member/${encodeURIComponent(member.email)}` : "/Members";
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
@@ -310,32 +322,29 @@ export default function Members() {
                 <p className="text-white/30 text-sm text-center py-8">{t("Asnjë anëtar", "No members")}</p>
               ) : (
                 filteredUsers.map((member) => (
-                  <button
+                  <div
                     key={member.id}
-                    onClick={() => setSelectedUser(member)}
-                    className={`w-full p-3 rounded-xl text-left transition-all ${
+                    className={`w-full rounded-xl border transition-all ${
                       selectedUser?.id === member.id
                         ? "bg-white/15 border border-[#8ab4ff]/30"
                         : "bg-white/5 border border-white/10 hover:bg-white/10"
                     }`}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 p-3">
                       <div className="relative">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#8ab4ff] to-[#9bffd6] flex items-center justify-center">
-                          <span className="text-[#0b1020] font-bold text-sm">
-                            {(member.first_name || member.full_name || member.email)[0].toUpperCase()}
-                          </span>
-                        </div>
+                        <UserAvatar name={memberName(member)} email={member.email} photoUrl={member.profile_photo_url} size={40} />
                         {isOnline(member) && (
                           <Circle className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 fill-green-500 text-green-500" />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedUser(member)}
+                        className="min-w-0 flex-1 text-left"
+                      >
                        <div className="flex items-center gap-2 flex-wrap">
                          <p className="text-white text-sm font-medium truncate">
-                           {member.first_name && member.surname 
-                             ? `${member.first_name} ${member.surname}`
-                             : member.first_name || member.full_name || member.email}
+                           {memberName(member)}
                          </p>
                          {member.is_verified && (
                            <CheckCircle className="w-3.5 h-3.5 text-green-400" title="Verifikuar" />
@@ -352,6 +361,12 @@ export default function Members() {
                          {member.member_category === 'leader' && (
                            <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px]">Udhëheqës</Badge>
                          )}
+                         {canSeeStaffStatus && member.role === 'moderator' && (
+                           <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30 text-[10px]">Moderator</Badge>
+                         )}
+                         {canSeeStaffStatus && member.role === 'admin' && (
+                           <Badge className="bg-red-500/20 text-red-300 border-red-500/30 text-[10px]">Admin</Badge>
+                         )}
                          {member.flag_color === "yellow" && <Flag className="w-3 h-3 text-yellow-500" />}
                          {member.flag_color === "red" && <Flag className="w-3 h-3 text-red-500" />}
                          </div>
@@ -361,9 +376,66 @@ export default function Members() {
                           member.user_type === 'recruiter' ? t('Rekrutues', 'Recruiter') :
                           t('Përdorues', 'User')}
                          </p>
-                      </div>
+                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+                            aria-label="Veprime për anëtarin"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-52 border-white/10 bg-[#0b1020] text-white">
+                          <DropdownMenuItem asChild className="cursor-pointer text-white/85">
+                            <Link to={memberProfilePath(member)}>
+                              <Eye className="h-4 w-4" /> Shiko profilin
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer text-white/85"
+                            onClick={() => setSelectedUser(member)}
+                          >
+                            <MessageCircle className="h-4 w-4" /> Shkruaj mesazh
+                          </DropdownMenuItem>
+                          {canSeeStaffStatus && (
+                            <>
+                              <DropdownMenuSeparator className="bg-white/10" />
+                              <DropdownMenuItem disabled className="text-white/45">
+                                <Shield className="h-4 w-4" />
+                                {member.role === "admin" ? "Admin" : member.role === "moderator" ? "Moderator" : "Anëtar"}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {isAdmin && member.role === 'user' && (
+                            <DropdownMenuItem
+                              className="cursor-pointer text-[#8ab4ff]"
+                              onClick={() => {
+                                if (confirm(t('A jeni të sigurt që dëshironi ta promovoni këtë anëtar në moderator?', 'Are you sure you want to promote this member to moderator?'))) {
+                                  promoteMutation.mutate(member.email);
+                                }
+                              }}
+                            >
+                              <UserCog className="h-4 w-4" /> Promovo në Moderator
+                            </DropdownMenuItem>
+                          )}
+                          {isAdmin && member.role === 'moderator' && (
+                            <DropdownMenuItem
+                              className="cursor-pointer text-orange-300"
+                              onClick={() => {
+                                if (confirm(t('A jeni të sigurt që dëshironi ta hiqni këtë anëtar nga moderatorët?', 'Are you sure you want to remove this moderator?'))) {
+                                  demoteMutation.mutate(member.email);
+                                }
+                              }}
+                            >
+                              <Shield className="h-4 w-4" /> Hiq Moderatorin
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                  </button>
+                  </div>
                 ))
               )}
               </div>

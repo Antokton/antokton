@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { base44 } from "@/api/antoktonClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -87,11 +88,128 @@ export default function NotificationBell() {
     system: "border-l-purple-500"
   };
 
+  const notificationPanel = (
+    <AnimatePresence>
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-[99998]"
+            onClick={() => setOpen(false)}
+          />
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="fixed left-3 right-3 top-[calc(72px+env(safe-area-inset-top))] bottom-[calc(86px+env(safe-area-inset-bottom))] z-[99999] flex flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0b1020] shadow-xl md:left-auto md:right-6 md:top-16 md:bottom-auto md:max-h-[500px] md:w-96 md:max-w-[calc(100vw-2rem)]"
+          >
+            <div className="p-4 border-b border-white/10 flex items-center justify-between">
+              <h3 className="text-white font-semibold">Njoftime</h3>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
+                    {unreadCount} të palexuara
+                  </Badge>
+                )}
+                <button type="button" onClick={() => setOpen(false)} className="rounded-lg p-1 text-white/45 hover:bg-white/10 hover:text-white" aria-label="Mbyll njoftimet">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto md:max-h-[400px]">
+              {notifications.length === 0 ? (
+                <div className="p-8 text-center text-white/40">
+                  Nuk ka njoftime
+                </div>
+              ) : (
+                notifications.map((notif) => {
+                  const canModerate = isStaff && ["application", "moderation_request", "suggestion"].includes(notif.type);
+                  return (
+                    <div
+                      key={notif.id}
+                      className={`p-4 border-b border-white/5 hover:bg-white/5 transition-colors border-l-4 ${typeColors[notif.type] || "border-l-white/20"} ${
+                        !notif.is_read ? "bg-white/5" : ""
+                      }`}
+                    >
+                      <div
+                        className="flex items-start justify-between gap-3 cursor-pointer"
+                        onClick={() => openNotification(notif)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-white font-medium text-sm mb-1">
+                            {notif.title}
+                          </h4>
+                          <p className="text-white/60 text-xs mb-2">
+                            {notif.message}
+                          </p>
+                          <p className="text-white/30 text-xs">
+                            {moment(notif.created_date).fromNow()}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteNotificationMutation.mutate(notif.id);
+                          }}
+                          className="text-white/40 hover:text-red-400 transition-colors p-1 flex-shrink-0"
+                          aria-label="Fshije njoftimin"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                        <div className="relative group">
+                          <button
+                            type="button"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-white/40 hover:text-white transition-colors p-1 flex-shrink-0"
+                            title="Veprime"
+                            aria-label="Veprime për njoftimin"
+                          >
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                          <div className="hidden group-focus-within:block group-hover:block absolute right-0 top-7 z-[100000] w-64 rounded-lg border border-white/10 bg-[#0b1020] py-1 shadow-2xl">
+                            <button type="button" onClick={(e) => { e.stopPropagation(); actOnNotification(notif, "delete"); }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-red-300 hover:bg-white/5">
+                              <X className="w-3.5 h-3.5" /> Fshije këtë njoftim
+                            </button>
+                            {canModerate && (
+                              <>
+                                <button type="button" onClick={(e) => { e.stopPropagation(); actOnNotification(notif, "approved"); }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-green-300 hover:bg-white/5">
+                                  <CheckCircle2 className="w-3.5 h-3.5" /> Mirato kërkesën
+                                </button>
+                                <button type="button" onClick={(e) => { e.stopPropagation(); actOnNotification(notif, "trusted_auto_approval"); }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-[#9bffd6] hover:bg-white/5">
+                                  <ShieldCheck className="w-3.5 h-3.5" /> Klasifiko si person të sigurt
+                                </button>
+                                <button type="button" onClick={(e) => { e.stopPropagation(); actOnNotification(notif, "rejected"); }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-orange-300 hover:bg-white/5">
+                                  <MessageSquareX className="w-3.5 h-3.5" /> Refuzo me feedback
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen(!open)}
+        type="button"
+        onClick={() => setOpen(current => !current)}
         className="relative p-2 text-white/60 hover:text-white transition-colors"
+        aria-label="Hap njoftimet"
+        aria-expanded={open}
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
@@ -100,110 +218,7 @@ export default function NotificationBell() {
           </span>
         )}
       </button>
-
-      <AnimatePresence>
-        {open && (
-          <>
-            <div
-              className="fixed inset-0 z-40"
-              onClick={() => setOpen(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="fixed left-3 right-3 top-[calc(72px+env(safe-area-inset-top))] bottom-[calc(86px+env(safe-area-inset-bottom))] z-50 flex flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0b1020] shadow-xl md:left-auto md:right-6 md:top-16 md:bottom-auto md:max-h-[500px] md:w-96 md:max-w-[calc(100vw-2rem)]"
-            >
-              <div className="p-4 border-b border-white/10 flex items-center justify-between">
-                <h3 className="text-white font-semibold">Njoftime</h3>
-                {unreadCount > 0 && (
-                  <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
-                    {unreadCount} të palexuara
-                  </Badge>
-                )}
-              </div>
-
-              <div className="flex-1 overflow-y-auto md:max-h-[400px]">
-                {notifications.length === 0 ? (
-                  <div className="p-8 text-center text-white/40">
-                    Nuk ka njoftime
-                  </div>
-                ) : (
-                  notifications.map((notif) => {
-                    const canModerate = isStaff && ["application", "moderation_request", "suggestion"].includes(notif.type);
-                    return (
-                    <div
-                      key={notif.id}
-                      className={`p-4 border-b border-white/5 hover:bg-white/5 transition-colors border-l-4 ${typeColors[notif.type]} ${
-                        !notif.is_read ? "bg-white/5" : ""
-                      }`}
-                    >
-                      <div 
-                       className="flex items-start justify-between gap-3 cursor-pointer"
-                       onClick={() => openNotification(notif)}
-                      >
-                       <div className="flex-1 min-w-0">
-                         <h4 className="text-white font-medium text-sm mb-1">
-                           {notif.title}
-                         </h4>
-                         <p className="text-white/60 text-xs mb-2">
-                           {notif.message}
-                         </p>
-                         <p className="text-white/30 text-xs">
-                           {moment(notif.created_date).fromNow()}
-                         </p>
-                       </div>
-                       <button
-                         onClick={(e) => {
-                           e.stopPropagation();
-                           deleteNotificationMutation.mutate(notif.id);
-                         }}
-                         className="text-white/40 hover:text-red-400 transition-colors p-1 flex-shrink-0"
-                       >
-                         <X className="w-4 h-4" />
-                       </button>
-                       <div className="relative group">
-                         <button
-                           onClick={(e) => e.stopPropagation()}
-                           className="text-white/40 hover:text-white transition-colors p-1 flex-shrink-0"
-                           title="Veprime"
-                           aria-label="Veprime për njoftimin"
-                         >
-                           <MoreHorizontal className="w-4 h-4" />
-                         </button>
-                         <div className="hidden group-focus-within:block group-hover:block absolute right-0 top-7 z-50 w-64 rounded-lg border border-white/10 bg-[#0b1020] py-1 shadow-2xl">
-                           <button onClick={(e) => { e.stopPropagation(); actOnNotification(notif, "delete"); }}
-                             className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-red-300 hover:bg-white/5">
-                             <X className="w-3.5 h-3.5" /> Fshije këtë njoftim
-                           </button>
-                           {canModerate && (
-                             <>
-                               <button onClick={(e) => { e.stopPropagation(); actOnNotification(notif, "approved"); }}
-                                 className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-green-300 hover:bg-white/5">
-                                 <CheckCircle2 className="w-3.5 h-3.5" /> Mirato kërkesën
-                               </button>
-                               <button onClick={(e) => { e.stopPropagation(); actOnNotification(notif, "trusted_auto_approval"); }}
-                                 className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-[#9bffd6] hover:bg-white/5">
-                                 <ShieldCheck className="w-3.5 h-3.5" /> Klasifiko si person të sigurt
-                               </button>
-                               <button onClick={(e) => { e.stopPropagation(); actOnNotification(notif, "rejected"); }}
-                                 className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-orange-300 hover:bg-white/5">
-                                 <MessageSquareX className="w-3.5 h-3.5" /> Refuzo me feedback
-                               </button>
-                             </>
-                           )}
-                         </div>
-                       </div>
-                      </div>
-
-                    </div>
-                  )})
-                )}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {typeof document !== "undefined" ? createPortal(notificationPanel, document.body) : notificationPanel}
     </div>
   );
 }

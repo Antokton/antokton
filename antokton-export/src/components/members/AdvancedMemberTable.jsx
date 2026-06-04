@@ -1,12 +1,14 @@
 import React, { useState } from "react";
-import { Table } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Crown, Flag, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import UserAvatar from "@/components/ui/UserAvatar";
+import { Crown, Flag, ArrowUpDown, ChevronLeft, ChevronRight, MoreHorizontal, Eye, MessageCircle } from "lucide-react";
 import moment from "moment";
+import { Link } from "react-router-dom";
 import { useMediaQuery } from "../useMediaQuery";
 
 export default function AdvancedMemberTable({ members, onSelectMember, activeSubs, language = 'sq' }) {
@@ -52,6 +54,14 @@ export default function AdvancedMemberTable({ members, onSelectMember, activeSub
       setSortOrder("desc");
     }
   };
+
+  const memberName = (member) => (
+    member.first_name && member.surname
+      ? `${member.first_name} ${member.surname}`
+      : member.first_name || member.full_name || member.email
+  );
+
+  const profilePath = (member) => member.email ? `/Member/${encodeURIComponent(member.email)}` : "/Members";
 
   return (
     <div className="space-y-4">
@@ -103,27 +113,40 @@ export default function AdvancedMemberTable({ members, onSelectMember, activeSub
           {paginatedMembers.map((member) => (
             <Card 
               key={member.id}
-              className="bg-white/8 border-white/15 cursor-pointer hover:bg-white/12 transition-colors"
-              onClick={() => onSelectMember(member)}
+              className="bg-white/8 border-white/15 hover:bg-white/12 transition-colors"
             >
               <CardContent className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 flex-1">
-                    <span className="text-white/90 font-medium text-sm">
-                      {member.first_name && member.surname
-                        ? `${member.first_name} ${member.surname}`
-                        : member.first_name || member.full_name || member.email}
+                <div className="flex items-start justify-between gap-3">
+                  <button type="button" onClick={() => onSelectMember(member)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                    <UserAvatar name={memberName(member)} email={member.email} photoUrl={member.profile_photo_url} size={34} />
+                    <span className="min-w-0 truncate text-white/90 font-medium text-sm">
+                      {memberName(member)}
                     </span>
                     {activeSubs.some(s => s.user_email === member.email) && (
                       <Crown className="w-3.5 h-3.5 text-yellow-400" />
                     )}
-                  </div>
-                  <div className="flex items-center gap-1">
+                  </button>
+                  <div className="flex shrink-0 items-center gap-1">
                     {member.flag_color === "yellow" && <Flag className="w-3 h-3 text-yellow-500" />}
                     {member.flag_color === "red" && <Flag className="w-3 h-3 text-red-500" />}
                     {member.is_online && (
                       <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                     )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button type="button" className="ml-1 flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white" aria-label="Veprime për anëtarin">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 border-white/10 bg-[#0b1020] text-white">
+                        <DropdownMenuItem asChild className="cursor-pointer text-white/85">
+                          <Link to={profilePath(member)}><Eye className="h-4 w-4" /> Shiko profilin</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer text-white/85" onClick={() => onSelectMember(member)}>
+                          <MessageCircle className="h-4 w-4" /> Shkruaj mesazh
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
                 <div className="flex gap-2 flex-wrap">
@@ -181,6 +204,9 @@ export default function AdvancedMemberTable({ members, onSelectMember, activeSub
                 <th className="px-4 py-3 text-left text-white/90 text-xs font-medium">
                   {t("Status", "Status")}
                 </th>
+                <th className="px-4 py-3 text-right text-white/90 text-xs font-medium">
+                  Veprime
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -192,10 +218,9 @@ export default function AdvancedMemberTable({ members, onSelectMember, activeSub
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
+                      <UserAvatar name={memberName(member)} email={member.email} photoUrl={member.profile_photo_url} size={30} />
                       <span className="text-white/90 text-sm font-medium">
-                        {member.first_name && member.surname
-                          ? `${member.first_name} ${member.surname}`
-                          : member.first_name || member.full_name || member.email}
+                        {memberName(member)}
                       </span>
                       {activeSubs.some(s => s.user_email === member.email) && (
                         <Crown className="w-3.5 h-3.5 text-yellow-400" />
@@ -235,6 +260,23 @@ export default function AdvancedMemberTable({ members, onSelectMember, activeSub
                         <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                       )}
                     </div>
+                  </td>
+                  <td className="px-4 py-3 text-right" onClick={(event) => event.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white" aria-label="Veprime për anëtarin">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 border-white/10 bg-[#0b1020] text-white">
+                        <DropdownMenuItem asChild className="cursor-pointer text-white/85">
+                          <Link to={profilePath(member)}><Eye className="h-4 w-4" /> Shiko profilin</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer text-white/85" onClick={() => onSelectMember(member)}>
+                          <MessageCircle className="h-4 w-4" /> Shkruaj mesazh
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                 </tr>
               ))}
