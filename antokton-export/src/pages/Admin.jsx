@@ -212,6 +212,17 @@ export default function Admin() {
     queryFn: () => base44.entities.Report.list("-created_date", 200),
   });
 
+  const { data: nameRequests = [] } = useQuery({
+    queryKey: ["nameChangeRequests"],
+    queryFn: async () => {
+      try {
+        return await base44.entities.UserNameChangeRequest.list("-created_date", 200);
+      } catch {
+        return [];
+      }
+    },
+  });
+
   const { data: siteConfigs = [] } = useQuery({
     queryKey: ["siteConfig"],
     queryFn: () => base44.entities.SiteConfig.list(),
@@ -256,6 +267,71 @@ export default function Admin() {
       queryClient.invalidateQueries({ queryKey: ["reports"] });
       queryClient.invalidateQueries({ queryKey: ["adminJobs"] });
     }
+  });
+
+  const reviewNameRequestMutation = useMutation({
+    mutationFn: async ({ request, status }) => {
+      const targetUser = allUsers.find((member) => member.email === request.user_email);
+      if (!targetUser) throw new Error("Përdoruesi nuk u gjet.");
+
+      if (status === "approved") {
+        if (request.request_type === "legal_name") {
+          const firstName = request.requested_first_name || targetUser.first_name || "";
+          const surname = request.requested_surname || targetUser.surname || "";
+          await base44.entities.User.update(targetUser.id, {
+            first_name: firstName,
+            surname,
+            full_name: `${firstName} ${surname}`.trim(),
+            pending_first_name: "",
+            pending_surname: "",
+            name_change_request_status: "approved",
+            last_name_change_at: new Date().toISOString(),
+            name_current_since: new Date().toISOString(),
+            name_change_count: Number(targetUser.name_change_count || 0) + 1,
+          });
+        } else {
+          const publicName = request.requested_public_name || "";
+          await base44.entities.User.update(targetUser.id, {
+            display_name: publicName,
+            public_name: publicName,
+            public_display_name: publicName,
+            pending_public_display_name: "",
+            public_name_mode: request.requested_public_name_mode || targetUser.public_name_mode || "nickname",
+            public_name_status: "approved",
+          });
+        }
+      } else {
+        await base44.entities.User.update(targetUser.id, {
+          pending_first_name: "",
+          pending_surname: "",
+          pending_public_display_name: "",
+          name_change_request_status: request.request_type === "legal_name" ? "rejected" : targetUser.name_change_request_status || "",
+          public_name_status: request.request_type === "public_display_name" ? "rejected" : targetUser.public_name_status || "",
+        });
+      }
+
+      await base44.entities.UserNameChangeRequest.update(request.id, {
+        status,
+        reviewed_by: user.email,
+        reviewed_at: new Date().toISOString(),
+      });
+      await base44.entities.AdminAction.create({
+        action_type: status === "approved" ? "approve_name_change" : "reject_name_change",
+        entity_type: "user_name_change_request",
+        entity_id: request.id,
+        entity_title: request.user_email,
+        admin_email: user.email,
+        new_status: status,
+        reason: request.reason || "",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["nameChangeRequests"] });
+      queryClient.invalidateQueries({ queryKey: ["allUsersAdmin"] });
+      queryClient.invalidateQueries({ queryKey: ["adminActions"] });
+      toast.success("Kërkesa e emrit u përditësua.");
+    },
+    onError: (error) => toast.error(error.message || "Kërkesa nuk u përditësua."),
   });
 
   const updateMutation = useMutation({
@@ -764,6 +840,7 @@ export default function Admin() {
   const pendingJobsCount = allJobs.filter(j => j.status === "pending").length;
   const pendingEventsCount = allEvents.filter(e => e.status === "pending" || e.featured_request_status === "pending").length;
   const pendingReviewsCount = companyReviews.filter(r => !r.is_approved).length;
+  const pendingNameRequestsCount = nameRequests.filter((request) => (request.status || "pending") === "pending").length;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
@@ -795,6 +872,7 @@ export default function Admin() {
               { key: "events", label: `Ngjarje (${pendingEventsCount})` },
               { key: "reviews", label: `Rishikime (${pendingReviewsCount})` },
               { key: "reports", label: "Raportimet" },
+              { key: "name-requests", label: `Emrat (${pendingNameRequestsCount})` },
               { key: "history", label: "Historiku" },
               { key: "import", label: "📥 Importo" },
             ].map(item => (
@@ -900,7 +978,7 @@ export default function Admin() {
         </Tabs>
       )}
 
-      {section !== "categories" && section !== "history" && section !== "analytics" && section !== "content" && section !== "notifications" && section !== "media" && section !== "partners" && section !== "charity" && section !== "users" && section !== "homepage" && section !== "designer" && section !== "settings" && section !== "import" && (
+      {section !== "categories" && section !== "history" && section !== "analytics" && section !== "content" && section !== "notifications" && section !== "media" && section !== "partners" && section !== "charity" && section !== "users" && section !== "homepage" && section !== "designer" && section !== "settings" && section !== "import" && section !== "name-requests" && (
         <Tabs value={tab} onValueChange={setTab} className="mb-6">
           <TabsList className="bg-white/10 border-white/10">
             <TabsTrigger value="pending" className="gap-1.5 data-[state=active]:bg-white/20 data-[state=active]:text-white">
@@ -916,7 +994,7 @@ export default function Admin() {
         </Tabs>
       )}
 
-      {isLoading && section !== "analytics" && section !== "content" && section !== "notifications" && section !== "reports" && section !== "designer" ? (
+      {isLoading && section !== "analytics" && section !== "content" && section !== "notifications" && section !== "reports" && section !== "designer" && section !== "name-requests" ? (
         <div className="flex justify-center py-20">
           <Loader2 className="w-6 h-6 text-white/30 animate-spin" />
         </div>
@@ -1017,6 +1095,75 @@ export default function Admin() {
           <div className="rounded-xl border border-yellow-400/20 bg-yellow-400/10 p-4 text-xs leading-relaxed text-yellow-50/75">
             Ky editor eshte per ndryshime vizuale te shpejta: tekst, imazh, link, ngjyra, madhesi fonti, sfond dhe fshehje elementi. Per ndryshime te medha layout-i ose funksione te reja, vazhdojme me kod te paster qe te mbetet i qendrueshem.
           </div>
+        </div>
+      ) : section === "name-requests" ? (
+        <div className="space-y-3">
+          {nameRequests.length === 0 ? (
+            <div className="text-center py-20">
+              <Inbox className="w-12 h-12 text-white/20 mx-auto mb-4" />
+              <p className="text-white/40">Nuk ka kërkesa për emra.</p>
+            </div>
+          ) : (
+            nameRequests.map((request) => {
+              const statusValue = request.status || "pending";
+              const isPending = statusValue === "pending";
+              return (
+                <motion.div
+                  key={request.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl border border-white/10 bg-white/5 p-4"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <Badge className="border-[#8ab4ff]/30 bg-[#8ab4ff]/15 text-[#8ab4ff]">
+                          {request.request_type === "legal_name" ? "Emër/Mbiemër" : "Emër publik"}
+                        </Badge>
+                        <Badge className={isPending ? "border-amber-400/30 bg-amber-400/15 text-amber-200" : statusValue === "approved" ? "border-emerald-400/30 bg-emerald-400/15 text-emerald-200" : "border-red-400/30 bg-red-400/15 text-red-200"}>
+                          {isPending ? "Në pritje" : statusValue === "approved" ? "Miratuar" : "Refuzuar"}
+                        </Badge>
+                      </div>
+                      <p className="break-all text-sm font-semibold text-white">{request.user_email}</p>
+                      {request.request_type === "legal_name" ? (
+                        <p className="mt-1 text-sm text-white/65">
+                          {request.current_first_name} {request.current_surname} → <span className="text-white">{request.requested_first_name} {request.requested_surname}</span>
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-sm text-white/65">
+                          {request.current_public_name || "Pa emër publik"} → <span className="text-white">{request.requested_public_name}</span>
+                          {request.requested_public_name_mode ? ` (${request.requested_public_name_mode})` : ""}
+                        </p>
+                      )}
+                      {request.reason && <p className="mt-2 text-xs leading-relaxed text-white/45">{request.reason}</p>}
+                      <p className="mt-1 text-xs text-white/35">{moment(request.created_date || request.created_at).fromNow()}</p>
+                    </div>
+                    {isPending && (
+                      <div className="flex shrink-0 flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => reviewNameRequestMutation.mutate({ request, status: "approved" })}
+                          disabled={reviewNameRequestMutation.isPending}
+                          className="bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30"
+                        >
+                          <Check className="mr-1 h-3.5 w-3.5" /> Mirato
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => reviewNameRequestMutation.mutate({ request, status: "rejected" })}
+                          disabled={reviewNameRequestMutation.isPending}
+                          className="border-red-400/40 text-red-200 hover:bg-red-500/10"
+                        >
+                          <X className="mr-1 h-3.5 w-3.5" /> Refuzo
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })
+          )}
         </div>
       ) : section === "reports" ? (
         <div className="space-y-3">

@@ -182,3 +182,22 @@ button:not(.bg-primary):not(.bg-accent):hover {
   border: 1px solid rgba(255, 255, 255, 0.25) !important;
   color: rgba(255, 255, 255, 0.6) !important;
 }
+
+/* Light CTA surfaces need dark text even when older global button rules force white. */
+button[class*="from-[#8ab4ff]"][class*="to-[#9bffd6]"],
+a[class*="from-[#8ab4ff]"][class*="to-[#9bffd6]"],
+[role="button"][class*="from-[#8ab4ff]"][class*="to-[#9bffd6]"],
+button[class*="bg-[#8ab4ff]"],
+a[class*="bg-[#8ab4ff]"],
+[role="button"][class*="bg-[#8ab4ff]"] {
+  color: #07111f !important;
+}
+
+button[class*="from-[#8ab4ff]"][class*="to-[#9bffd6]"]:hover,
+a[class*="from-[#8ab4ff]"][class*="to-[#9bffd6]"]:hover,
+[role="button"][class*="from-[#8ab4ff]"][class*="to-[#9bffd6]"]:hover,
+button[class*="bg-[#8ab4ff]"]:hover,
+a[class*="bg-[#8ab4ff]"]:hover,
+[role="button"][class*="bg-[#8ab4ff]"]:hover {
+  color: #07111f !important;
+}

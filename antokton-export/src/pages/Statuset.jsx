@@ -1512,7 +1512,12 @@ function StatusCard({ status, currentUser }) {
           <Avatar name={authorName} email={status.author_email} photoUrl={status.author_photo_url} size={40} />
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <Link to={`/Member/${encodeURIComponent(status.author_email || "")}`} className="text-white font-bold text-[14px] leading-snug hover:text-[#8ab4ff]">{authorName}</Link>
+              <Link
+                to={`/Member/${encodeURIComponent(status.author_email || "")}?name=${encodeURIComponent(authorName)}`}
+                className="text-white font-bold text-[14px] leading-snug hover:text-[#8ab4ff]"
+              >
+                {authorName}
+              </Link>
               {currentUser && currentUser.email !== status.author_email && (
                 <button className="text-[#8ab4ff] font-bold text-[13px]">· Ndiq</button>
               )}

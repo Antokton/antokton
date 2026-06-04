@@ -817,7 +817,7 @@ export default function PostDetail() {
                     href={part}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#8ab4ff] hover:text-[#9bffd6] underline"
+                    className="break-all text-[#8ab4ff] hover:text-[#9bffd6] underline"
                   >
                     {part}
                   </a>
@@ -865,7 +865,7 @@ export default function PostDetail() {
                      <div className="flex items-center gap-3">
                        <a
                          href={`tel:${cleanPhone}`}
-                         className="flex items-center gap-2 text-[#8ab4ff] hover:text-[#9bffd6] font-semibold text-base transition-colors"
+                         className="flex min-w-0 max-w-full items-center gap-2 break-all text-[#8ab4ff] hover:text-[#9bffd6] font-semibold text-base transition-colors"
                        >
                          {phoneIcon}
                          {job.phone_number}
@@ -890,11 +890,11 @@ export default function PostDetail() {
                       const urlMatch = line.match(/https?:\/\/[^\s]+/);
                       const mapsMatch = line.match(/^(rr\.|rruga|adresa|adresë|str\.|sheshi|bul\.)/i);
                       const phoneMatch = line.match(/[\+]?[\d\s\-\(\)]{7,}/);
-                      if (emailMatch) return <a key={i} href={`mailto:${emailMatch[0]}`} className="block text-[#8ab4ff] hover:text-[#9bffd6] underline">{line}</a>;
-                      if (urlMatch) return <a key={i} href={urlMatch[0]} target="_blank" rel="noopener noreferrer" className="block text-[#8ab4ff] hover:text-[#9bffd6] underline">{line}</a>;
-                      if (mapsMatch) return <a key={i} href={`https://www.google.com/maps/search/${encodeURIComponent(line)}`} target="_blank" rel="noopener noreferrer" className="block text-[#8ab4ff] hover:text-[#9bffd6] underline">📍 {line}</a>;
-                      if (phoneMatch && line.replace(/[^\d]/g,'').length >= 7) return <a key={i} href={`tel:${line.replace(/\s/g,'')}`} className="block text-[#8ab4ff] hover:text-[#9bffd6] underline">{line}</a>;
-                      return <span key={i} className="block">{line}</span>;
+                      if (emailMatch) return <a key={i} href={`mailto:${emailMatch[0]}`} className="block break-all text-[#8ab4ff] hover:text-[#9bffd6] underline">{line}</a>;
+                      if (urlMatch) return <a key={i} href={urlMatch[0]} target="_blank" rel="noopener noreferrer" className="block break-all text-[#8ab4ff] hover:text-[#9bffd6] underline">{line}</a>;
+                      if (mapsMatch) return <a key={i} href={`https://www.google.com/maps/search/${encodeURIComponent(line)}`} target="_blank" rel="noopener noreferrer" className="block break-words text-[#8ab4ff] hover:text-[#9bffd6] underline">📍 {line}</a>;
+                      if (phoneMatch && line.replace(/[^\d]/g,'').length >= 7) return <a key={i} href={`tel:${line.replace(/\s/g,'')}`} className="block break-all text-[#8ab4ff] hover:text-[#9bffd6] underline">{line}</a>;
+                      return <span key={i} className="block break-words">{line}</span>;
                     })}
                     {(job.city || job.country) && (
                       <a
@@ -910,7 +910,7 @@ export default function PostDetail() {
               href={job.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 mt-1 text-xs text-[#8ab4ff] hover:text-[#9bffd6] transition-colors underline underline-offset-2"
+              className="inline-flex max-w-full items-center gap-1.5 break-all mt-1 text-xs text-[#8ab4ff] hover:text-[#9bffd6] transition-colors underline underline-offset-2"
             >
               <ExternalLink className="w-3 h-3" /> Shiko njoftimin origjinal
             </a>
@@ -963,7 +963,7 @@ export default function PostDetail() {
                 className="flex min-w-0 max-w-full items-center gap-2 text-xs text-[#8ab4ff] hover:text-[#9bffd6] transition-colors"
               >
                 <Link2 className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="truncate underline underline-offset-2">{job.source_url}</span>
+                <span className="min-w-0 break-all underline underline-offset-2">{job.source_url}</span>
                 <ExternalLink className="w-3 h-3 flex-shrink-0" />
               </a>
             </div>

@@ -109,6 +109,38 @@ function ProfilePanel({ title, description, children, defaultOpen = false, dange
   );
 }
 
+const staffRoles = new Set(["admin", "moderator", "inspector", "superadmin"]);
+
+function isStaffUser(user) {
+  return staffRoles.has(String(user?.role || "").toLowerCase()) ||
+    staffRoles.has(String(user?.member_category || "").toLowerCase());
+}
+
+function getLegalNameChangeGate(user) {
+  const changeCount = Number(user?.name_change_count || 0);
+  const lastChange = user?.last_name_change_at ? moment(user.last_name_change_at) : null;
+  const currentSince = user?.name_current_since ? moment(user.name_current_since) : (lastChange || moment(user?.created_date));
+  const now = moment();
+
+  if (changeCount <= 0) return { allowed: true, reason: "Ndryshimi i parë lejohet brenda ditës." };
+  if (!lastChange?.isValid()) return { allowed: true, reason: "Nuk ka histori ndryshimi." };
+  if (changeCount === 1) {
+    const allowed = now.diff(lastChange, "days") >= 7;
+    return { allowed, reason: allowed ? "" : "Ndryshimi i dytë i emrit lejohet pas një jave, ose me miratim administratori." };
+  }
+  if (changeCount === 2) {
+    const allowed = now.diff(lastChange, "days") >= 30;
+    return { allowed, reason: allowed ? "" : "Ndryshimi i tretë i emrit lejohet pas një muaji, ose me miratim administratori." };
+  }
+
+  const tenDaysPassed = now.diff(lastChange, "days") >= 10;
+  const sixMonthsPassed = currentSince?.isValid() ? now.diff(currentSince, "months", true) >= 6 : false;
+  return {
+    allowed: tenDaysPassed && sixMonthsPassed,
+    reason: "Ndryshimet e tjera kërkojnë të paktën 10 ditë nga kërkesa dhe 6 muaj qëndrueshmëri me emrin aktual, ose miratim administratori.",
+  };
+}
+
 export default function Profile() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -119,6 +151,8 @@ export default function Profile() {
     profile_photo_url: "",
     first_name: "",
     surname: "",
+    public_display_name: "",
+    public_name_mode: "nickname",
     phone: "",
     birthplace: "",
     location: "",
@@ -179,6 +213,8 @@ export default function Profile() {
       profile_photo_url: currentUser.profile_photo_url || "",
       first_name: currentUser.first_name || "",
       surname: currentUser.surname || "",
+      public_display_name: currentUser.display_name || currentUser.public_name || currentUser.pending_public_display_name || "",
+      public_name_mode: currentUser.public_name_mode || "nickname",
       phone: currentUser.phone || "",
       birthplace: currentUser.birthplace || "",
       location: currentUser.location || "",
@@ -421,7 +457,12 @@ export default function Profile() {
     }
     setLoading(true);
     try {
-      await base44.auth.updateMe({
+      const staff = isStaffUser(user);
+      const legalNameChanged = firstName !== (user.first_name || "").trim() || surname !== (user.surname || "").trim();
+      const publicName = form.public_display_name.trim().slice(0, 80);
+      const existingPublicName = (user.display_name || user.public_name || "").trim();
+      const publicNameChanged = publicName !== existingPublicName;
+      const updatePayload = {
         ...form,
         first_name: firstName,
         surname,
@@ -429,10 +470,69 @@ export default function Profile() {
         location,
         full_name: `${firstName} ${surname}`,
         phone: normalizeInternationalPhone(form.phone),
-      });
+      };
+
+      if (legalNameChanged && !staff) {
+        const gate = getLegalNameChangeGate(user);
+        if (!gate.allowed) {
+          await base44.entities.UserNameChangeRequest.create({
+            user_email: user.email,
+            request_type: "legal_name",
+            current_first_name: user.first_name || "",
+            current_surname: user.surname || "",
+            requested_first_name: firstName,
+            requested_surname: surname,
+            status: "pending",
+            admin_can_override: true,
+            reason: gate.reason,
+            created_at: new Date().toISOString(),
+          });
+          updatePayload.first_name = user.first_name || "";
+          updatePayload.surname = user.surname || "";
+          updatePayload.full_name = user.full_name || `${user.first_name || ""} ${user.surname || ""}`.trim();
+          updatePayload.pending_first_name = firstName;
+          updatePayload.pending_surname = surname;
+          updatePayload.name_change_request_status = "pending";
+        } else {
+          updatePayload.last_name_change_at = new Date().toISOString();
+          updatePayload.name_current_since = new Date().toISOString();
+          updatePayload.name_change_count = Number(user.name_change_count || 0) + 1;
+          updatePayload.name_change_request_status = "";
+        }
+      }
+
+      if (publicNameChanged) {
+        if (staff) {
+          updatePayload.display_name = publicName;
+          updatePayload.public_name = publicName;
+          updatePayload.public_name_status = "approved";
+          updatePayload.pending_public_display_name = "";
+        } else {
+          await base44.entities.UserNameChangeRequest.create({
+            user_email: user.email,
+            request_type: "public_display_name",
+            current_public_name: existingPublicName,
+            requested_public_name: publicName,
+            requested_public_name_mode: form.public_name_mode || "nickname",
+            status: "pending",
+            requires_subscription_or_offer: true,
+            admin_can_override: true,
+            created_at: new Date().toISOString(),
+          });
+          updatePayload.public_display_name = existingPublicName;
+          updatePayload.pending_public_display_name = publicName;
+          updatePayload.public_name_status = "pending";
+          updatePayload.public_name_mode = form.public_name_mode || "nickname";
+        }
+      }
+
+      await base44.auth.updateMe(updatePayload);
       const updated = await base44.auth.me();
       setUser(updated);
       setSuccess(true);
+      if (updatePayload.name_change_request_status === "pending" || updatePayload.public_name_status === "pending") {
+        alert("Kërkesa për emrin u dërgua për miratim. Administratori mund ta miratojë në çdo kohë.");
+      }
       setTimeout(() => setSuccess(false), 3000);
     } catch (error) {
       alert("Gabim në ruajtje: " + error.message);
@@ -1004,6 +1104,46 @@ export default function Profile() {
                   className="bg-white/5 border-white/10 text-white"
                 />
               </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <Label className="text-white">Emri publik i shkurtër</Label>
+                  <p className="mt-1 text-xs leading-relaxed text-white/50">
+                    Adminët, moderatorët dhe inspektorët mund ta vendosin direkt. Për përdoruesit e tjerë ruhet si kërkesë për miratim nga stafi.
+                  </p>
+                </div>
+                {user.public_name_status === "pending" && (
+                  <Badge className="w-fit border-amber-400/30 bg-amber-400/15 text-amber-200">
+                    Në pritje miratimi
+                  </Badge>
+                )}
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_180px]">
+                <Input
+                  value={form.public_display_name}
+                  onChange={(e) => setForm({ ...form, public_display_name: e.target.value })}
+                  placeholder="P.sh. A. Krasniqi, nofkë ose emër firme"
+                  className="bg-white/5 border-white/10 text-white"
+                  maxLength={80}
+                />
+                <Select value={form.public_name_mode} onValueChange={(v) => setForm({ ...form, public_name_mode: v })}>
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="initial">Shkronjë</SelectItem>
+                    <SelectItem value="nickname">Nofkë</SelectItem>
+                    <SelectItem value="company">Emër firme</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {user.pending_public_display_name && (
+                <p className="mt-2 text-xs text-white/45">
+                  Kërkesa aktuale: <span className="text-white/75">{user.pending_public_display_name}</span>
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

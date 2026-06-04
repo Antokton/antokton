@@ -202,6 +202,15 @@ const serviceFields = [
   { value: "tjeter", label: "Shërbime të tjera" },
 ];
 
+const educationFields = [
+  { value: "shkolla", label: "Shkolla dhe qendra edukimi" },
+  { value: "trajnim_profesional", label: "Trajnime profesionale" },
+  { value: "kurse_online", label: "Kurse online" },
+  { value: "materiale_edukative", label: "Materiale edukative" },
+  { value: "mentorim", label: "Mentorim / këshillim" },
+  { value: "tjeter", label: "Tjetër edukim" },
+];
+
 const BASE_COUNTRIES = [
   "Antokton","Angli","Arabi","Austri","Belgjikë","Bosnje","Bullgari","Çeki","Danimarkë",
   "Egjipt","Emiratet","Estoni","Finlandë","Francë","Gjermani","Hungari",
@@ -284,6 +293,7 @@ const emptyForm = {
   phone_number: "", phone_app: "whatsapp",
   is_open_call: false, donation_platform: "", donation_type: "",
   property_subcategory: "", property_deal_type: "", service_field: "",
+  education_field: "", education_level_target: "",
   pazar_category: "", pazar_subcategory: "",
   certifications: [],
   halal_standard: "",
@@ -379,7 +389,7 @@ export default function CreatePost() {
 
     // Paralajmërim për fjalë problematike
     const combinedText = `${form.title} ${form.description}`;
-    const contactInfoWarning = getContactInfoInTextMessage(form.description);
+    const contactInfoWarning = getContactInfoInTextMessage(combinedText);
     if (contactInfoWarning) {
       alert(contactInfoWarning);
       return;
@@ -488,15 +498,30 @@ export default function CreatePost() {
   }
 
   const showJobType = form.category === "pune" || form.category === "sherbime";
-  const showProfession = form.category !== "pazar";
+  const showProfession = form.category === "pune" || form.category === "sherbime";
   const showServiceField = form.category === "sherbime";
+  const showEducationFields = form.category === "edukim";
   const showPropertyFields = false; // Prona është nënkategori e Pazarit tani
-  const showSalary = form.category === "pune" || form.category === "sherbime" || form.category === "pazar";
+  const showSalary = form.category === "pune" || form.category === "sherbime" || form.category === "pazar" || form.category === "edukim";
   const showPazarFields = form.category === "pazar";
   const selectedPazarCat = PAZAR_CATEGORIES.find(c => c.value === form.pazar_category);
   const pazarSubcategories = selectedPazarCat?.subcategories || [];
   const needsHalal = (form.category === "pune" || form.category === "sherbime") &&
     isHalalRequired(form.profession);
+  const valueInfoLabel = form.category === "pazar"
+    ? "Çmimi / vlera"
+    : form.category === "edukim"
+      ? "Tarifa / kostoja"
+      : form.category === "sherbime"
+        ? "Pagesa / buxheti"
+        : "Informacion rreth pagës";
+  const valueInfoPlaceholder = form.category === "pazar"
+    ? "P.sh. 350€, i diskutueshëm, falas"
+    : form.category === "edukim"
+      ? "P.sh. falas, 50€/muaj, me bursë"
+      : form.category === "sherbime"
+        ? "P.sh. sipas marrëveshjes, 25€/orë"
+        : "P.sh. 2000-3000€/muaj";
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
@@ -521,7 +546,7 @@ export default function CreatePost() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-sm font-medium" style={{ color: 'var(--text)' }}>Kategoria *</Label>
-            <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v, job_type: "ofroj", service_field: "", pazar_category: "", pazar_subcategory: "" })}>
+            <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v, job_type: v === "pune" || v === "sherbime" ? "ofroj" : "", service_field: "", education_field: "", education_level_target: "", pazar_category: "", pazar_subcategory: "" })}>
               <SelectTrigger className="h-11" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }}>
                 <SelectValue />
               </SelectTrigger>
@@ -592,6 +617,33 @@ export default function CreatePost() {
                 </Select>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Edukim - Kategoria & niveli */}
+        {showEducationFields && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium" style={{ color: 'var(--text)' }}>Lloji i edukimit</Label>
+              <Select value={form.education_field} onValueChange={(v) => setForm({ ...form, education_field: v })}>
+                <SelectTrigger className="h-11" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }}>
+                  <SelectValue placeholder="Zgjidh llojin..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {educationFields.map(item => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium" style={{ color: 'var(--text)' }}>Niveli / audienca</Label>
+              <Input
+                value={form.education_level_target}
+                onChange={(e) => setForm({ ...form, education_level_target: e.target.value })}
+                placeholder="P.sh. fillestar, profesional, fëmijë, të rritur"
+                className="h-11"
+                style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }}
+              />
+            </div>
           </div>
         )}
 
@@ -842,14 +894,17 @@ export default function CreatePost() {
             placeholder="Përshkruaj njoftimin në detaje..." className="min-h-[140px] resize-none"
             style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }}
             lang="sq" spellCheck={true} />
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>
+            Mos vendos numër telefoni ose email në tekstin e njoftimit. Telefoni, emaili dhe linket vendosen te fushat e kontaktit më poshtë.
+          </p>
         </div>
 
         {/* Paga */}
         {showSalary && (
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium" style={{ color: 'var(--text)' }}>Informacion rreth pagës / çmimit</Label>
+            <Label className="text-sm font-medium" style={{ color: 'var(--text)' }}>{valueInfoLabel}</Label>
             <Input value={form.salary_info} onChange={(e) => setForm({ ...form, salary_info: e.target.value })}
-              placeholder="P.sh. 2000-3000€/muaj" className="h-11"
+              placeholder={valueInfoPlaceholder} className="h-11"
               style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }} />
           </div>
         )}
@@ -894,7 +949,7 @@ export default function CreatePost() {
           <div className="space-y-1.5">
             <Label className="text-xs" style={{ color: 'var(--muted)' }}>Email ose info tjetër kontakti (opcional)</Label>
             <Input value={form.contact_info} onChange={(e) => setForm({ ...form, contact_info: e.target.value })}
-              placeholder="Email, adresë, faqe interneti..." className="h-11"
+              placeholder="Email, adresë, faqe interneti..." className="h-11 break-all"
               style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }} />
           </div>
         </div>
@@ -974,7 +1029,7 @@ export default function CreatePost() {
                     </Badge>
                   )}
                 </div>
-                <h3 className="text-lg font-bold text-white">{form.title || "Titulli i njoftimit"}</h3>
+                <h3 className="break-words text-lg font-bold text-white">{form.title || "Titulli i njoftimit"}</h3>
                 {(form.city || form.country) && (
                   <div className="flex items-center gap-1.5 text-sm text-white/40">
                     <MapPin className="w-4 h-4" />
@@ -986,7 +1041,7 @@ export default function CreatePost() {
                     💰 {form.salary_info}
                   </div>
                 )}
-                <p className="text-white/70 text-sm line-clamp-3">{form.description || "Përshkrimi do të shfaqet këtu..."}</p>
+                <p className="break-words text-white/70 text-sm line-clamp-3">{form.description || "Përshkrimi do të shfaqet këtu..."}</p>
               </div>
             </motion.div>
           )}

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/antoktonClient";
 import UserAvatar from "@/components/ui/UserAvatar";
@@ -122,6 +122,7 @@ function StatusPreview({ status, comments }) {
 
 export default function MemberProfile() {
   const { email = "" } = useParams();
+  const [searchParams] = useSearchParams();
   const decodedEmail = decodeURIComponent(email);
   const queryClient = useQueryClient();
   const [currentUser, setCurrentUser] = useState(null);
@@ -150,7 +151,8 @@ export default function MemberProfile() {
   });
   const member = users[0];
 
-  const displayName = useMemo(() => chosenMemberName(member, decodedEmail), [decodedEmail, member]);
+  const statusNameFallback = cleanValue(searchParams.get("name"));
+  const displayName = useMemo(() => chosenMemberName(member, statusNameFallback || decodedEmail), [decodedEmail, member, statusNameFallback]);
   const profileUrl = useMemo(() => {
     if (typeof window === "undefined") return `/Member/${encodeURIComponent(decodedEmail)}`;
     return `${window.location.origin}/Member/${encodeURIComponent(decodedEmail)}`;
