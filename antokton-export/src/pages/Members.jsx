@@ -202,11 +202,22 @@ export default function Members() {
   const isModerator = user?.role === "moderator";
   const canSeeStaffStatus = isAdmin || isModerator;
 
-  const memberName = (member) => (
-    member.first_name && member.surname
-      ? `${member.first_name} ${member.surname}`
-      : member.first_name || member.full_name || member.email
-  );
+  const memberName = (member) => {
+    const firstLast = `${member.first_name || ""} ${member.surname || ""}`.trim();
+    return (
+      member.display_name ||
+      member.public_name ||
+      member.preferred_name ||
+      member.profile_name ||
+      member.username ||
+      member.full_name ||
+      firstLast ||
+      member.first_name ||
+      member.name ||
+      member.email?.split("@")[0] ||
+      "Anëtar"
+    );
+  };
 
   const memberProfilePath = (member) => member.email ? `/Member/${encodeURIComponent(member.email)}` : "/Members";
 
@@ -337,9 +348,8 @@ export default function Members() {
                           <Circle className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 fill-green-500 text-green-500" />
                         )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedUser(member)}
+                      <Link
+                        to={memberProfilePath(member)}
                         className="min-w-0 flex-1 text-left"
                       >
                        <div className="flex items-center gap-2 flex-wrap">
@@ -376,7 +386,7 @@ export default function Members() {
                           member.user_type === 'recruiter' ? t('Rekrutues', 'Recruiter') :
                           t('Përdorues', 'User')}
                          </p>
-                      </button>
+                      </Link>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
@@ -453,7 +463,7 @@ export default function Members() {
                     <div className="relative">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#8ab4ff] to-[#9bffd6] flex items-center justify-center">
                         <span className="text-[#0b1020] font-bold">
-                          {(selectedUser.first_name || selectedUser.full_name || selectedUser.email)[0].toUpperCase()}
+                          {memberName(selectedUser)[0].toUpperCase()}
                         </span>
                       </div>
                       {isOnline(selectedUser) && (
@@ -462,9 +472,7 @@ export default function Members() {
                     </div>
                     <div>
                       <p className="text-white font-medium">
-                        {selectedUser.first_name && selectedUser.surname 
-                          ? `${selectedUser.first_name} ${selectedUser.surname}`
-                          : selectedUser.first_name || selectedUser.full_name || selectedUser.email?.split('@')[0]}
+                        {memberName(selectedUser)}
                       </p>
                       <p className="text-white/40 text-xs">
                         {isOnline(selectedUser) 

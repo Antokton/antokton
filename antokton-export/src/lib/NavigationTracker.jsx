@@ -28,6 +28,7 @@ const TREE_PARENT_ROUTES = {
     "/importposts": "/Feed",
     "/jobmatches": "/Feed",
     "/media": "/Home",
+    "/member": "/Statuset",
     "/members": "/Home",
     "/messages": "/Home",
     "/notificationcenter": "/Profile",
@@ -79,7 +80,12 @@ const getTreeParentPath = (pathname, mainPageKey) => {
     if (TREE_PARENT_ROUTES[firstSegment]) return TREE_PARENT_ROUTES[firstSegment];
 
     const segments = normalized.split("/").filter(Boolean);
-    if (segments.length > 1) return `/${segments.slice(0, -1).join("/")}`;
+    if (segments.length > 1) {
+        const candidateParent = `/${segments.slice(0, -1).join("/")}`;
+        const candidateLower = candidateParent.toLowerCase();
+        if (TREE_PARENT_ROUTES[candidateLower]) return candidateParent;
+        return TREE_PARENT_ROUTES[firstSegment] || homePath;
+    }
 
     return homePath;
 };
