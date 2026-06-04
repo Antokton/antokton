@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import AIJobDescriptionGenerator from "../components/job/AIJobDescriptionGenerator";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
+import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
 
 const ALL_PROFESSIONS = [
   "3D Artist","Administrator","Agjent Shitjesh","Agjent Sigurimesh","Agjent Udhëtimesh",
@@ -378,6 +379,11 @@ export default function CreatePost() {
 
     // Paralajmërim për fjalë problematike
     const combinedText = `${form.title} ${form.description}`;
+    const contactInfoWarning = getContactInfoInTextMessage(form.description);
+    if (contactInfoWarning) {
+      alert(contactInfoWarning);
+      return;
+    }
     if ((form.category === "pune" || form.category === "sherbime") && containsFlaggedWords(combinedText)) {
       const proceed = window.confirm(
         "⚠️ Paralajmërim: Përmbajtja juaj mund të mos përputhet me standardin e platformës. Ju lutemi rishikoni përpara publikimit.\n\nDëshironi të vazhdoni?"

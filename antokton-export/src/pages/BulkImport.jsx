@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/antoktonClient";
+import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, CheckCircle2, AlertCircle, Plus, Trash2, Send } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 
 const COUNTRIES = [
   { value: "Angli", label: "Angli" },
@@ -111,6 +111,12 @@ Kthe rezultatin SI JSON me këtë strukturë:
 
   const publishEntry = async (entry) => {
     if (!entry.result) return;
+    const contactInfoWarning = getContactInfoInTextMessage(entry.result.description);
+    if (contactInfoWarning) {
+      updateEntry(entry.id, "error", contactInfoWarning);
+      updateEntry(entry.id, "status", "error");
+      return;
+    }
     updateEntry(entry.id, "status", "publishing");
 
     try {

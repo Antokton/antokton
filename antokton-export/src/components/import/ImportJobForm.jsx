@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Link2, Sparkles, CheckCircle2, AlertCircle, Phone, MapPin, User, Briefcase, DollarSign, FileText, Image } from "lucide-react";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
+import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
 
 const CONTRACT_TYPES = [
   { value: "full-time", label: "Full-time" },
@@ -56,6 +57,11 @@ export default function ImportJobForm({ user, onDone }) {
 
   const handlePublish = async (status) => {
     if (!data) return;
+    const contactInfoWarning = getContactInfoInTextMessage(data.description);
+    if (contactInfoWarning) {
+      setError(contactInfoWarning);
+      return;
+    }
     if (!isValidInternationalPhone(data.phone_number)) {
       setError(getInternationalPhoneError("Numri i telefonit"));
       return;

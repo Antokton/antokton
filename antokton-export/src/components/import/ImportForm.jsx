@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Sparkles, Trash2, RotateCcw, Save, Send, Globe, Archive, X } from "lucide-react";
 import { COUNTRIES_DATA, CATEGORIES, LISTING_TYPES, SOURCES } from "./importConstants";
+import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
 
 export default function ImportForm({ user, editingPost, onDone }) {
   const qc = useQueryClient();
@@ -116,6 +117,8 @@ Kthe JSON me këto fusha.`;
   const save = async (status) => {
     if (!form.listing_type) { alert("Zgjidhni llojin e njoftimit!"); return; }
     if (!form.edited_text.trim()) { alert("Teksti nuk mund të jetë bosh!"); return; }
+    const contactInfoWarning = getContactInfoInTextMessage(form.edited_text);
+    if (contactInfoWarning) { alert(contactInfoWarning); return; }
     setLoading(true);
     const payload = {
       ...form,

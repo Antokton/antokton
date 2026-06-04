@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/antoktonClient";
+import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -626,6 +627,11 @@ export default function Admin() {
   };
 
   const saveEventEdit = (event) => {
+    const contactInfoWarning = getContactInfoInTextMessage(eventForm.description);
+    if (contactInfoWarning) {
+      toast.error(contactInfoWarning);
+      return;
+    }
     editEventMutation.mutate({
       id: event.id,
       event,
