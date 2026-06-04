@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Loader2, Search, CheckCircle, AlertCircle, Award, Upload, Users, Building2 } from "lucide-react";
+import { Shield, Loader2, Search, CheckCircle, AlertCircle, Award, Upload, Users, Building2, History, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function InspectorPanel() {
@@ -16,6 +16,7 @@ export default function InspectorPanel() {
   const [searchEmail, setSearchEmail] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchType, setSearchType] = useState("individual");
+  const [editingCertification, setEditingCertification] = useState(null);
   const [certificationForm, setCertificationForm] = useState({
     certification_type: "professional",
     level: 2,
@@ -25,6 +26,17 @@ export default function InspectorPanel() {
     valid_for_months: 12
   });
   const queryClient = useQueryClient();
+  const resetCertificationForm = () => {
+    setEditingCertification(null);
+    setCertificationForm({
+      certification_type: "professional",
+      level: 2,
+      score: 40,
+      notes: "",
+      report_file: null,
+      valid_for_months: 12
+    });
+  };
 
   useEffect(() => {
     const loadUser = async () => {
@@ -90,14 +102,40 @@ export default function InspectorPanel() {
     onSuccess: () => {
       toast.success("Certifikimi u krijua me sukses!");
       queryClient.invalidateQueries({ queryKey: ["certifications"] });
-      setCertificationForm({
-        certification_type: "professional",
-        level: 2,
-        score: 40,
-        notes: "",
-        report_file: null,
-        valid_for_months: 12
+      resetCertificationForm();
+    }
+  });
+
+  const updateCertificationMutation = useMutation({
+    mutationFn: async ({ id, data }) => {
+      let report_url = data.report_url;
+      if (certificationForm.report_file) {
+        const { file_url } = await base44.integrations.Core.UploadFile({
+          file: certificationForm.report_file
+        });
+        report_url = file_url;
+      }
+
+      const validUntil = new Date();
+      validUntil.setMonth(validUntil.getMonth() + certificationForm.valid_for_months);
+      const badgeType = certificationForm.level === 5 ? "diamond" :
+                       certificationForm.level === 4 ? "platinum" :
+                       certificationForm.level === 3 ? "gold" :
+                       certificationForm.level === 2 ? "silver" : "bronze";
+
+      return base44.entities.Certification.update(id, {
+        ...data,
+        badge_type: badgeType,
+        report_url,
+        valid_until: validUntil.toISOString(),
+        updated_by: user.email,
+        updated_at: new Date().toISOString()
       });
+    },
+    onSuccess: () => {
+      toast.success("Certifikimi u përpunua me sukses!");
+      queryClient.invalidateQueries({ queryKey: ["certifications"] });
+      resetCertificationForm();
     }
   });
 
@@ -122,6 +160,22 @@ export default function InspectorPanel() {
   const handleSubmitCertification = () => {
     if (!selectedUser) return;
 
+    if (editingCertification) {
+      updateCertificationMutation.mutate({
+        id: editingCertification.id,
+        data: {
+          certification_type: certificationForm.certification_type,
+          level: certificationForm.level,
+          score: certificationForm.score,
+          inspector_email: editingCertification.inspector_email || user.email,
+          notes: certificationForm.notes,
+          report_url: editingCertification.report_url || null,
+          is_active: editingCertification.is_active !== false
+        }
+      });
+      return;
+    }
+
     createCertificationMutation.mutate({
       certified_entity_email: selectedUser.email,
       entity_type: selectedUser.entity_type,
@@ -131,6 +185,19 @@ export default function InspectorPanel() {
       inspector_email: user.email,
       notes: certificationForm.notes
     });
+  };
+
+  const startEditCertification = (cert) => {
+    setEditingCertification(cert);
+    setCertificationForm({
+      certification_type: cert.certification_type || "professional",
+      level: Number(cert.level) || 2,
+      score: Number(cert.score) || 40,
+      notes: cert.notes || "",
+      report_file: null,
+      valid_for_months: 12
+    });
+    setTimeout(() => document.getElementById("inspector-certification-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
 
   const getBadgeColor = (level) => {
@@ -295,19 +362,19 @@ export default function InspectorPanel() {
 
           {/* Existing Certifications */}
           {certifications.length > 0 && (
-            <Card className="bg-white/5 border-white/10 mb-6">
+            <Card className="bg-white/5 border-white/10 mb-6 overflow-hidden">
               <CardHeader className="border-b border-white/10">
                 <CardTitle className="text-white flex items-center gap-2">
-                  <Award className="w-5 h-5" />
-                  Certifikimet ekzistuese
+                  <History className="w-5 h-5" />
+                  Historiku i certifikimeve
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {certifications.map(cert => (
-                   <div key={cert.id} className="bg-white/5 p-4 rounded-lg border border-white/10">
-                     <div className="flex items-center justify-between mb-2">
-                       <div className="flex items-center gap-2">
+                   <div key={cert.id} className="min-w-0 bg-white/5 p-4 rounded-lg border border-white/10">
+                     <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                       <div className="flex min-w-0 items-center gap-2">
                          <span className="text-2xl">{getBadgeIcon(cert.level)}</span>
                          <Badge className={getBadgeColor(cert.level)}>
                            Niveli {cert.level}
@@ -326,20 +393,11 @@ export default function InspectorPanel() {
                        </div>
                      )}
                      {(user.role === 'admin' || user.role === 'inspector') && (
-                        <div className="flex gap-2 mt-3">
+                        <div className="flex flex-wrap gap-2 mt-3">
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => {
-                              setCertificationForm({
-                                certification_type: cert.certification_type,
-                                level: cert.level,
-                                score: cert.score,
-                                notes: cert.notes || "",
-                                report_file: null,
-                                valid_for_months: 12
-                              });
-                            }}
+                            onClick={() => startEditCertification(cert)}
                             className="text-blue-400 border-blue-400/50 hover:bg-blue-400/10 text-xs"
                           >
                             Përpuno
@@ -385,11 +443,25 @@ export default function InspectorPanel() {
 
       {/* Certification Form */}
       {selectedUser && (
-        <Card className="bg-white/5 border-white/10">
+        <Card id="inspector-certification-form" className="bg-white/5 border-white/10 overflow-hidden">
           <CardHeader className="border-b border-white/10">
-            <CardTitle className="text-white text-lg flex items-center gap-2">
-              <Award className="w-5 h-5" />
-              Krijo certifikim të ri
+            <CardTitle className="text-white text-lg flex flex-wrap items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-2">
+                <Award className="w-5 h-5" />
+                {editingCertification ? "Përpuno certifikimin" : "Krijo certifikim të ri"}
+              </span>
+              {editingCertification && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={resetCertificationForm}
+                  className="border-white/20 text-white hover:bg-white/10"
+                >
+                  <X className="mr-1 h-3.5 w-3.5" />
+                  Anulo
+                </Button>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
@@ -533,11 +605,11 @@ export default function InspectorPanel() {
 
             <Button
               onClick={handleSubmitCertification}
-              disabled={createCertificationMutation.isPending}
+              disabled={createCertificationMutation.isPending || updateCertificationMutation.isPending}
               className="w-full bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] font-semibold"
             >
-              {createCertificationMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Krijo certifikimin
+              {(createCertificationMutation.isPending || updateCertificationMutation.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {editingCertification ? "Ruaj ndryshimet" : "Krijo certifikimin"}
             </Button>
           </CardContent>
         </Card>

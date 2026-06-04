@@ -121,6 +121,7 @@ export default function Profile() {
     phone: "",
     birthplace: "",
     location: "",
+    calendar_preference: "both",
     gender: "",
     education_level: "",
     religious_belief: "",
@@ -180,6 +181,7 @@ export default function Profile() {
       phone: currentUser.phone || "",
       birthplace: currentUser.birthplace || "",
       location: currentUser.location || "",
+      calendar_preference: currentUser.calendar_preference || "both",
       gender: currentUser.gender || "",
       education_level: currentUser.education_level || "",
       religious_belief: currentUser.religious_belief || "",
@@ -390,8 +392,26 @@ export default function Profile() {
     e.preventDefault();
     const firstName = form.first_name.trim();
     const surname = form.surname.trim();
+    const birthplace = form.birthplace.trim();
+    const location = form.location.trim();
     if (!firstName || !surname) {
       alert("Emri dhe mbiemri janë të detyrueshëm.");
+      return;
+    }
+    if (!birthplace) {
+      alert("Vendlindja është e detyrueshme.");
+      return;
+    }
+    if (!location) {
+      alert("Vendbanimi aktual është i detyrueshëm.");
+      return;
+    }
+    if (!form.user_type) {
+      alert("Lloji i përdoruesit është i detyrueshëm.");
+      return;
+    }
+    if (!form.calendar_preference) {
+      alert("Zgjidh preferencën e kalendarit.");
       return;
     }
     if (!isValidInternationalPhone(form.phone)) {
@@ -404,6 +424,8 @@ export default function Profile() {
         ...form,
         first_name: firstName,
         surname,
+        birthplace,
+        location,
         full_name: `${firstName} ${surname}`,
         phone: normalizeInternationalPhone(form.phone),
       });
@@ -1006,21 +1028,23 @@ export default function Profile() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-white">Vendlindja</Label>
+              <Label className="text-white">Vendlindja *</Label>
               <Input
                 value={form.birthplace}
                 onChange={(e) => setForm({ ...form, birthplace: e.target.value })}
                 placeholder="P.sh. Shkodër - Antokton"
+                required
                 className="bg-white/5 border-white/10 text-white"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-white">Vendi ku ndodhesh / ku po jeton</Label>
+              <Label className="text-white">Vendbanimi aktual *</Label>
               <Input
                 value={form.location}
                 onChange={(e) => setForm({ ...form, location: e.target.value })}
                 placeholder="P.sh. Bruksel, Belgjikë"
+                required
                 className="bg-white/5 border-white/10 text-white"
               />
             </div>
@@ -1100,8 +1124,8 @@ export default function Profile() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-white">Lloji i përdoruesit</Label>
-              <Select value={form.user_type} onValueChange={(v) => setForm({ ...form, user_type: v })}>
+              <Label className="text-white">Lloji i përdoruesit *</Label>
+              <Select value={form.user_type} onValueChange={(v) => setForm({ ...form, user_type: v })} required>
                 <SelectTrigger className="bg-white/5 border-white/10 text-white">
                   <SelectValue />
                 </SelectTrigger>
@@ -1109,6 +1133,24 @@ export default function Profile() {
                   <SelectItem value="job_seeker" className="text-white">Punëkërkues</SelectItem>
                   <SelectItem value="employer" className="text-white">Punëdhënës</SelectItem>
                   <SelectItem value="recruiter" className="text-white">Rekrutues</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-white">Preferenca e kalendarit *</Label>
+              <Select
+                value={form.calendar_preference}
+                onValueChange={(v) => setForm({ ...form, calendar_preference: v })}
+                required
+              >
+                <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                  <SelectValue placeholder="Zgjidh kalendarin" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#0b1020] border-white/20">
+                  <SelectItem value="gregorian" className="text-white">Vetëm Gregorian</SelectItem>
+                  <SelectItem value="hijri" className="text-white">Vetëm Hixhri</SelectItem>
+                  <SelectItem value="both" className="text-white">Gregorian dhe Hixhri</SelectItem>
                 </SelectContent>
               </Select>
             </div>

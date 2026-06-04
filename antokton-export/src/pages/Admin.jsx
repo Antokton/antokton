@@ -196,6 +196,17 @@ export default function Admin() {
     queryFn: () => base44.entities.AdminAction.list("-created_date", 200),
   });
 
+  const { data: userActivities = [] } = useQuery({
+    queryKey: ["adminUserActivities"],
+    queryFn: async () => {
+      try {
+        return await base44.entities.UserActivity.list("-created_date", 200);
+      } catch {
+        return [];
+      }
+    },
+  });
+
   const { data: reports = [] } = useQuery({
     queryKey: ["reports"],
     queryFn: () => base44.entities.Report.list("-created_date", 200),
@@ -217,6 +228,17 @@ export default function Admin() {
       description: page.description || "Faqe e krijuar nga paneli Web Dizajn",
     })),
   ];
+  const recentRegistrations = allUsers.slice(0, 8);
+  const disabledOrDeletedUsers = allUsers
+    .filter((member) => member.is_deleted || member.is_disabled || member.status === "deleted" || member.status === "disabled" || member.account_status === "deleted" || member.account_status === "disabled")
+    .slice(0, 8);
+  const platformActivityLog = [
+    ...adminActions.map((item) => ({ ...item, source: "Admin", label: item.entity_title || item.action_type || "Veprim administrativ" })),
+    ...userActivities.map((item) => ({ ...item, source: "Aktivitet", label: item.activity_type || item.event_type || item.path || "Aktivitet përdoruesi" })),
+    ...reports.map((item) => ({ ...item, source: "Raportim", label: item.reason || item.status || "Raportim" })),
+  ]
+    .sort((a, b) => new Date(b.created_date || b.updated_date || 0) - new Date(a.created_date || a.updated_date || 0))
+    .slice(0, 80);
 
   const invalidateEventQueries = () => {
     queryClient.invalidateQueries({ queryKey: ["adminEvents"] });
@@ -799,7 +821,7 @@ export default function Admin() {
               <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
                 {[
                   { key: "analytics", label: "📊 Analitika" },
-                  { key: "notifications", label: "📨 Njoftimet" },
+                  { key: "notifications", label: "📨 Njoftime masive" },
                   { key: "content", label: "📝 Përmbajtja" },
                 ].map(item => (
                   <button
@@ -931,6 +953,10 @@ export default function Admin() {
                 </Button>
               </div>
             </div>
+          </div>
+
+          <div className="rounded-xl border border-[#8ab4ff]/25 bg-[#8ab4ff]/10 p-4 text-sm leading-relaxed text-white/70">
+            Për editim vizual më të saktë në telefon, ktheje telefonin horizontalisht. Paneli mbetet i përdorshëm edhe vertikalisht, por hapësira horizontale ndihmon sidomos kur zgjedh elemente të vegjël në faqe.
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
@@ -1254,6 +1280,47 @@ export default function Admin() {
           {tab === "all" && (
             <div>
               <h3 className="text-lg font-semibold text-white mb-4">Historiku i plotë i veprimeve</h3>
+              <div className="mb-6 grid gap-3 lg:grid-cols-3">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <h4 className="mb-3 text-sm font-semibold text-white">Regjistrime të fundit</h4>
+                  <div className="space-y-2">
+                    {recentRegistrations.map((member) => (
+                      <div key={member.id || member.email} className="min-w-0 rounded-lg bg-black/15 p-2">
+                        <p className="truncate text-xs font-semibold text-white">{[member.first_name, member.surname].filter(Boolean).join(" ") || member.full_name || member.email}</p>
+                        <p className="truncate text-[11px] text-white/40">{member.email}</p>
+                      </div>
+                    ))}
+                    {recentRegistrations.length === 0 && <p className="text-xs text-white/40">Nuk ka regjistrime.</p>}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <h4 className="mb-3 text-sm font-semibold text-white">Çregjistrime / çaktivizime</h4>
+                  <div className="space-y-2">
+                    {disabledOrDeletedUsers.map((member) => (
+                      <div key={member.id || member.email} className="min-w-0 rounded-lg bg-red-500/10 p-2">
+                        <p className="truncate text-xs font-semibold text-white">{[member.first_name, member.surname].filter(Boolean).join(" ") || member.full_name || member.email}</p>
+                        <p className="truncate text-[11px] text-white/40">{member.account_status || member.status || "i çaktivizuar"}</p>
+                      </div>
+                    ))}
+                    {disabledOrDeletedUsers.length === 0 && <p className="text-xs text-white/40">Nuk ka çaktivizime të fundit.</p>}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <h4 className="mb-3 text-sm font-semibold text-white">Activity log</h4>
+                  <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                    {platformActivityLog.slice(0, 12).map((item, index) => (
+                      <div key={item.id || `${item.source}-${index}`} className="min-w-0 rounded-lg bg-black/15 p-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-semibold text-[#9bffd6]">{item.source}</span>
+                          <span className="shrink-0 text-[10px] text-white/35">{moment(item.created_date || item.updated_date).format("DD/MM HH:mm")}</span>
+                        </div>
+                        <p className="truncate text-xs text-white/65">{item.label}</p>
+                      </div>
+                    ))}
+                    {platformActivityLog.length === 0 && <p className="text-xs text-white/40">Nuk ka aktivitet për t'u shfaqur.</p>}
+                  </div>
+                </div>
+              </div>
               {adminActions.length === 0 ? (
                 <p className="text-white/40 text-center py-8">Nuk ka veprime të regjistruara</p>
               ) : (
