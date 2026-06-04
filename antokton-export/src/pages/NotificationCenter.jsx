@@ -4,10 +4,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Trash2, CheckCircle2, Clock, AlertCircle, Loader2, Mail, MoreHorizontal, ShieldCheck, MessageSquareX } from "lucide-react";
+import { Search, Trash2, CheckCircle2, Clock, AlertCircle, Mail, MoreHorizontal, ShieldCheck, MessageSquareX } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import moment from "moment";
 import { Link } from "react-router-dom";
@@ -83,6 +83,13 @@ export default function NotificationCenter() {
     }
   });
 
+  const openNotification = (notification) => {
+    if (!notification.is_read) markAsReadMutation.mutate(notification.id);
+    if (notification.link) {
+      window.location.href = notification.link;
+    }
+  };
+
   const notificationActionMutation = useMutation({
     mutationFn: async ({ notification, action }) => {
       if (action === "delete") return base44.entities.Notification.delete(notification.id);
@@ -133,10 +140,10 @@ export default function NotificationCenter() {
   }
 
   return (
-    <div className="w-full py-4">
-      <div className="flex items-center justify-between mb-8">
+    <div className="w-full max-w-5xl mx-auto px-3 py-4 sm:px-4">
+      <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight flex items-center gap-2">
             <Mail className="w-8 h-8" />
             Qendra e Njoftimeve
           </h1>
@@ -185,7 +192,7 @@ export default function NotificationCenter() {
 
       {/* Action Buttons */}
       {filteredNotifications.length > 0 && (
-        <div className="flex gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-6">
           {unreadCount > 0 && (
             <Button
               onClick={() => markAllAsReadMutation.mutate()}
@@ -247,6 +254,7 @@ export default function NotificationCenter() {
                     onMarkAsRead={() => markAsReadMutation.mutate(notif.id)}
                     onDelete={() => deleteMutation.mutate(notif.id)}
                     onAction={(action) => notificationActionMutation.mutate({ notification: notif, action })}
+                    onOpen={() => openNotification(notif)}
                     isStaff={["admin", "moderator"].includes(String(user?.role || user?.member_category || "").toLowerCase())}
                   />
                 </motion.div>
@@ -278,6 +286,7 @@ export default function NotificationCenter() {
                     onMarkAsRead={() => markAsReadMutation.mutate(notif.id)}
                     onDelete={() => deleteMutation.mutate(notif.id)}
                     onAction={(action) => notificationActionMutation.mutate({ notification: notif, action })}
+                    onOpen={() => openNotification(notif)}
                     isStaff={["admin", "moderator"].includes(String(user?.role || user?.member_category || "").toLowerCase())}
                   />
                 </motion.div>
@@ -290,7 +299,7 @@ export default function NotificationCenter() {
   );
 }
 
-function NotificationCard({ notification, onMarkAsRead, onDelete, onAction, isStaff }) {
+function NotificationCard({ notification, onMarkAsRead, onDelete, onAction, onOpen, isStaff }) {
   const canModerate = isStaff && ["application", "moderation_request", "suggestion"].includes(notification.type);
   return (
     <Card className={`${notification.is_read ? 'bg-white/5 border-white/10' : 'bg-white/10 border-white/20'} transition-all hover:bg-white/15`}>
@@ -298,7 +307,7 @@ function NotificationCard({ notification, onMarkAsRead, onDelete, onAction, isSt
         <div className="flex items-start gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
-              <div className="flex-1">
+              <button type="button" onClick={onOpen} className="flex-1 min-w-0 text-left">
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className={`font-semibold ${notification.is_read ? 'text-white/80' : 'text-white'}`}>
                     {notification.title}
@@ -313,7 +322,7 @@ function NotificationCard({ notification, onMarkAsRead, onDelete, onAction, isSt
                 <div className="text-white/40 text-xs mt-2">
                   {moment(notification.created_date).fromNow()}
                 </div>
-              </div>
+              </button>
               <div className="flex gap-2 flex-shrink-0">
                 {!notification.is_read && (
                   <Button
@@ -363,6 +372,7 @@ function NotificationCard({ notification, onMarkAsRead, onDelete, onAction, isSt
             {notification.link && (
               <Link
                 to={notification.link}
+                onClick={onMarkAsRead}
                 className="text-[#8ab4ff] text-xs hover:underline mt-2 inline-block"
               >
                 Shiko detajet →

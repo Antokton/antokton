@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/antoktonClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, X, Check, MoreHorizontal, CheckCircle2, ShieldCheck, MessageSquareX } from "lucide-react";
+import { Bell, X, MoreHorizontal, CheckCircle2, ShieldCheck, MessageSquareX } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import moment from "moment";
 
@@ -48,6 +47,16 @@ export default function NotificationBell() {
   const unreadCount = notifications.filter(n => !n.is_read).length;
   const badgeLabel = unreadCount > 99 ? "99+" : String(unreadCount);
   const isStaff = ["admin", "moderator"].includes(String(user?.role || user?.member_category || "").toLowerCase());
+
+  const openNotification = (notif) => {
+    if (!notif.is_read) markAsReadMutation.mutate(notif.id);
+    if (notif.link) {
+      setOpen(false);
+      window.setTimeout(() => {
+        window.location.href = notif.link;
+      }, 0);
+    }
+  };
 
   const actOnNotification = async (notif, action) => {
     if (action === "delete") {
@@ -103,7 +112,7 @@ export default function NotificationBell() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="absolute right-0 top-12 w-96 max-w-[calc(100vw-2rem)] bg-[#0b1020] border border-white/10 rounded-xl shadow-xl z-50 max-h-[500px] overflow-hidden"
+              className="fixed left-3 right-3 top-[calc(72px+env(safe-area-inset-top))] bottom-[calc(86px+env(safe-area-inset-bottom))] z-50 flex flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0b1020] shadow-xl md:left-auto md:right-6 md:top-16 md:bottom-auto md:max-h-[500px] md:w-96 md:max-w-[calc(100vw-2rem)]"
             >
               <div className="p-4 border-b border-white/10 flex items-center justify-between">
                 <h3 className="text-white font-semibold">Njoftime</h3>
@@ -114,7 +123,7 @@ export default function NotificationBell() {
                 )}
               </div>
 
-              <div className="overflow-y-auto max-h-[400px]">
+              <div className="flex-1 overflow-y-auto md:max-h-[400px]">
                 {notifications.length === 0 ? (
                   <div className="p-8 text-center text-white/40">
                     Nuk ka njoftime
@@ -131,13 +140,7 @@ export default function NotificationBell() {
                     >
                       <div 
                        className="flex items-start justify-between gap-3 cursor-pointer"
-                       onClick={() => {
-                         if (!notif.is_read) markAsReadMutation.mutate(notif.id);
-                         if (notif.link) {
-                           window.location.href = notif.link;
-                           setOpen(false);
-                         }
-                       }}
+                       onClick={() => openNotification(notif)}
                       >
                        <div className="flex-1 min-w-0">
                          <h4 className="text-white font-medium text-sm mb-1">
