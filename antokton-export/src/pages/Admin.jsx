@@ -997,9 +997,13 @@ export default function Admin() {
             reports.map(report => {
               const reportedJob = allJobs.find(j => j.id === report.post_id);
               const statusValue = report.status === "pending" ? "new" : report.status === "reviewed" ? "reviewing" : (report.status || "new");
-              const openUrl = report.post_category === "status" || report.reported_entity === "Status"
+              const reportedKind = String(report.reported_entity || report.post_category || "").toLowerCase();
+              const reportedId = report.reported_entity_id || report.post_id;
+              const openUrl = reportedKind === "status"
                 ? "/Statuset"
-                : createPageUrl("PostDetail") + `?id=${report.post_id}`;
+                : reportedKind === "event"
+                  ? createPageUrl("EventDetail") + `?id=${reportedId}`
+                  : createPageUrl("PostDetail") + `?id=${reportedId}`;
               return (
                 <motion.div
                   key={report.id}

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
-import { MapPin, Clock, MessageCircle, User, Send, ArrowLeft, Phone, Briefcase, Flag, Share2, Copy, Users as UsersIcon, X, Pencil, Check, MoreVertical, ExternalLink, Link2 } from "lucide-react";
+import { MapPin, Clock, MessageCircle, Send, ArrowLeft, Phone, Briefcase, Flag, Share2, Copy, Users as UsersIcon, X, Pencil, Check, MoreVertical, ExternalLink, Link2 } from "lucide-react";
 import LocationPicker from "../components/job/LocationPicker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ApplicationForm from "../components/job/ApplicationForm";
 import CommentItem from "../components/job/CommentItem";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 function SimilarPosts({ currentJobId, category }) {
   const { data: similarJobs = [] } = useQuery({
@@ -448,6 +449,16 @@ export default function PostDetail() {
     }
   });
 
+  const { data: posterProfile } = useQuery({
+    queryKey: ["jobPosterProfile", job?.created_by],
+    queryFn: async () => {
+      const users = await base44.entities.User.filter({ email: job.created_by }, "-created_date", 1);
+      return users[0] || null;
+    },
+    enabled: !!job?.created_by,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const reportPostMutation = useMutation({
     mutationFn: async () => {
       await base44.entities.Report.create({
@@ -730,14 +741,24 @@ export default function PostDetail() {
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 text-[#8ab4ff] hover:text-[#9bffd6] transition-colors underline underline-offset-2"
                   >
-                    <User className="w-4 h-4" />
+                    <UserAvatar
+                      name={job.poster_name || posterProfile?.full_name || posterProfile?.first_name}
+                      email={job.created_by}
+                      photoUrl={posterProfile?.profile_photo_url || job.author_photo_url}
+                      size={24}
+                    />
                     {job.poster_name}
                   </a>
                 );
               }
               return (
                 <span className="flex items-center gap-1.5 text-white/70">
-                  <User className="w-4 h-4" />
+                  <UserAvatar
+                    name={job.poster_name || posterProfile?.full_name || posterProfile?.first_name}
+                    email={job.created_by}
+                    photoUrl={posterProfile?.profile_photo_url || job.author_photo_url}
+                    size={24}
+                  />
                   {job.poster_name}
                 </span>
               );

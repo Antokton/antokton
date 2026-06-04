@@ -8,12 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar as CalendarIcon, Loader2, Plus, MapPin, Users, Video, Clock, Edit, Trash2, X, Upload, Image as ImageIcon, Star, CalendarDays } from "lucide-react";
+import { Calendar as CalendarIcon, Loader2, Plus, MapPin, Users, Video, Clock, Edit, Trash2, X, Upload, Star, CalendarDays } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "../utils";
 import moment from "moment";
-import HijriCalendar, { gregorianToHijri, hijriMonths } from "../components/calendar/HijriCalendar";
+import { gregorianToHijri, hijriMonths } from "../components/calendar/HijriCalendar";
+import PublicReportButton from "@/components/safety/PublicReportButton";
 
 const hijriToGregorian = (hijriYear, hijriMonth, hijriDay) => {
   const N = Math.ceil(10.646 * ((hijriYear) * 30 + hijriMonth) - 404) + hijriDay;
@@ -568,16 +569,27 @@ export default function Events() {
                         </Badge>
                       )}
                     </div>
-                    {(user?.email === event.organizer_email || canAdminEvents) && (
-                      <div className="flex gap-1.5">
+                    <div className="flex gap-1.5">
+                      <PublicReportButton
+                        entity="Event"
+                        entityId={event.id}
+                        title={event.title}
+                        reportedUserEmail={event.organizer_email || event.created_by || ""}
+                        currentUser={user}
+                        compact
+                        className="text-white/55 hover:text-orange-200 transition-colors"
+                      />
+                      {(user?.email === event.organizer_email || canAdminEvents) && (
+                        <>
                         <button onClick={() => handleEdit(event)} className="text-white/65 hover:text-white transition-colors">
                           <Edit className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => handleDelete(event)} className="text-white/65 hover:text-red-400 transition-colors">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                      </div>
-                    )}
+                        </>
+                      )}
+                    </div>
                   </div>
 
                   <Link to={`${createPageUrl("EventDetail")}?id=${event.id}`} className="block group">
