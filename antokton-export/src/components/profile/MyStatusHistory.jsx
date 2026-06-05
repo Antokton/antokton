@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from "react";
 import { base44 } from "@/api/antoktonClient";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Filter } from "lucide-react";
+import { Download, Filter, Globe, Link2, MessageCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 import moment from "moment";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 function downloadFile(filename, content, type = "application/json") {
   const blob = new Blob([content], { type });
@@ -14,10 +16,37 @@ function downloadFile(filename, content, type = "application/json") {
   URL.revokeObjectURL(url);
 }
 
+const visibilityLabels = {
+  public: "Publik",
+  wide_circle: "Rrethi i gjerë",
+  close_circle: "Rrethi i ngushtë",
+};
+
+function getAuthorName(user) {
+  return (
+    user?.display_name ||
+    user?.public_name ||
+    user?.full_name ||
+    [user?.first_name, user?.surname].filter(Boolean).join(" ") ||
+    user?.first_name ||
+    user?.email?.split("@")[0] ||
+    "Unë"
+  );
+}
+
+function getStatusText(status) {
+  return status.text || status.content || status.caption || "";
+}
+
+function getStatusLink(status) {
+  return status.import_show_source_link ? (status.link_url || status.import_source_url || "") : (status.link_url || "");
+}
+
 export default function MyStatusHistory({ user }) {
   const [fromDate, setFromDate] = useState("");
   const [visibility, setVisibility] = useState("all");
   const threeYearsAgo = useMemo(() => moment().subtract(3, "years").startOf("day"), []);
+  const authorName = getAuthorName(user);
 
   const { data: statuses = [], isLoading } = useQuery({
     queryKey: ["myStatuses", user?.email],
@@ -117,24 +146,90 @@ export default function MyStatusHistory({ user }) {
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((status) => (
-            <article key={status.id} className="rounded-xl border border-white/10 bg-[#101b2d] p-3">
-              <div className="mb-2 flex items-center justify-between gap-2 text-xs text-white/40">
-                <span>{moment(status.created_date).format("DD/MM/YYYY HH:mm")}</span>
-                <span>{status.visibility === "wide_circle" ? "Rrethi i gjerë" : status.visibility === "close_circle" ? "Rrethi i ngushtë" : "Publik"}</span>
-              </div>
-              <p className="whitespace-pre-wrap text-sm text-white/85">{status.text || "(pa tekst)"}</p>
-              {(status.comments || []).length > 0 && (
-                <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
-                  {status.comments.map((comment) => (
-                    <div key={comment.id} className="rounded-lg bg-white/5 px-3 py-2 text-xs text-white/70">
-                      <strong className="text-white/90">{comment.author_name || comment.author_email}:</strong> {comment.text}
+          {filtered.map((status) => {
+            const statusText = getStatusText(status);
+            const statusLink = getStatusLink(status);
+            const created = status.created_date || status.created_at;
+            return (
+              <article key={status.id} className="overflow-hidden rounded-none border border-white/10 bg-[#1a2640] sm:rounded-2xl">
+                <div className="flex items-start justify-between gap-3 px-4 pb-2 pt-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <UserAvatar
+                      name={authorName}
+                      email={user?.email}
+                      photoUrl={user?.profile_photo_url}
+                      size={40}
+                    />
+                    <div className="min-w-0">
+                      <Link
+                        to={`/Member/${encodeURIComponent(user?.email || "")}?name=${encodeURIComponent(authorName)}`}
+                        className="block truncate text-[14px] font-bold leading-snug text-white hover:text-[#8ab4ff]"
+                      >
+                        {authorName}
+                      </Link>
+                      <p className="mt-0.5 flex flex-wrap items-center gap-1 text-[12px] text-white/40">
+                        <span>{created ? moment(created).fromNow() : "Pa datë"}</span>
+                        <span>·</span>
+                        <Globe className="h-3 w-3" />
+                        <span>{visibilityLabels[status.visibility || "public"] || "Publik"}</span>
+                      </p>
                     </div>
-                  ))}
+                  </div>
+                  {status.category && (
+                    <span className="shrink-0 rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-white/50">
+                      {status.category}
+                    </span>
+                  )}
                 </div>
-              )}
-            </article>
-          ))}
+
+                {statusText && (
+                  <p className="whitespace-pre-wrap break-words px-4 pb-3 text-[14px] leading-snug text-white">
+                    {statusText}
+                  </p>
+                )}
+
+                {status.image_url && (
+                  <img
+                    src={status.image_url}
+                    alt=""
+                    className="max-h-[520px] w-full object-cover"
+                    loading="lazy"
+                  />
+                )}
+
+                {statusLink && (
+                  <div className="mx-4 mb-2 mt-2">
+                    <a
+                      href={statusLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex min-w-0 items-center gap-2 rounded-xl border border-white/10 p-3 text-sm text-[#8ab4ff]"
+                      style={{ background: "#253347" }}
+                    >
+                      <Link2 className="h-4 w-4 shrink-0" />
+                      <span className="min-w-0 break-all">{statusLink}</span>
+                    </a>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 border-t border-white/[0.06] px-4 py-2 text-[13px] font-semibold text-white/50">
+                  <MessageCircle className="h-4 w-4" />
+                  <span>{status.comments?.length || 0} komente</span>
+                </div>
+
+                {(status.comments || []).length > 0 && (
+                  <div className="space-y-2 border-t border-white/10 px-4 py-3">
+                    {status.comments.map((comment) => (
+                      <div key={comment.id} className="rounded-xl bg-white/[0.06] px-3 py-2 text-xs text-white/70">
+                        <strong className="text-white/90">{comment.author_name || comment.author_email || "Koment"}:</strong>{" "}
+                        <span className="break-words">{comment.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </div>
       )}
     </div>

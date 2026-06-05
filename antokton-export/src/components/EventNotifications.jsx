@@ -168,7 +168,7 @@ export default function EventNotifications() {
                 <div ref={dailyRef} className="flex-1 min-w-0 marquee-container">
                   <Link 
                     to={`${createPageUrl("EventDetail")}?id=${featuredDayEvent.id}`}
-                    className="text-[10px] md:text-xs text-white/70 hover:text-yellow-300 block"
+                    className="text-[11px] md:text-[13px] text-white/70 hover:text-yellow-300 block"
                   >
                     <span className={`marquee-content ${shouldAnimateDaily ? 'animate' : ''}`}>
                       {[...Array(shouldAnimateDaily ? 10 : 1)].map((_, i) => (
@@ -203,7 +203,7 @@ export default function EventNotifications() {
                 <div ref={weeklyRef} className="flex-1 min-w-0 marquee-container">
                   <Link 
                     to={`${createPageUrl("EventDetail")}?id=${featuredWeekEvent.id}`}
-                    className="text-[10px] md:text-xs text-white/70 hover:text-blue-300 block"
+                    className="text-[11px] md:text-[13px] text-white/70 hover:text-blue-300 block"
                   >
                     <span className={`marquee-content ${shouldAnimateWeekly ? 'animate' : ''}`}>
                       {[...Array(shouldAnimateWeekly ? 10 : 1)].map((_, i) => (

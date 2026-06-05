@@ -147,6 +147,7 @@ export default function Profile() {
   const [success, setSuccess] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [industrySpecializationText, setIndustrySpecializationText] = useState("");
   const [form, setForm] = useState({
     profile_photo_url: "",
     first_name: "",
@@ -250,6 +251,11 @@ export default function Profile() {
       islam_learning_interest: currentUser.islam_learning_interest || "",
       member_faith_category: currentUser.member_faith_category || ""
     });
+    setIndustrySpecializationText(
+      Array.isArray(currentUser.industry_specialization)
+        ? currentUser.industry_specialization.join(", ")
+        : currentUser.industry_specialization || ""
+    );
   }, [currentUser]);
 
   const { data: subscriptions = [] } = useQuery({
@@ -462,6 +468,7 @@ export default function Profile() {
       const publicName = form.public_display_name.trim().slice(0, 80);
       const existingPublicName = (user.display_name || user.public_name || "").trim();
       const publicNameChanged = publicName !== existingPublicName;
+      const recruitmentTeamSize = String(form.recruitment_team_size ?? "").trim();
       const updatePayload = {
         ...form,
         first_name: firstName,
@@ -470,6 +477,11 @@ export default function Profile() {
         location,
         full_name: `${firstName} ${surname}`,
         phone: normalizeInternationalPhone(form.phone),
+        recruitment_team_size: recruitmentTeamSize === "" ? 0 : Number(recruitmentTeamSize),
+        industry_specialization: industrySpecializationText
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
       };
 
       if (legalNameChanged && !staff) {
@@ -1772,9 +1784,14 @@ export default function Profile() {
                 <div className="space-y-1.5">
                   <Label className="text-white">Madhësia e ekipit të rekrutimit</Label>
                   <Input
-                    type="number"
-                    value={form.recruitment_team_size}
-                    onChange={(e) => setForm({ ...form, recruitment_team_size: parseInt(e.target.value) || 0 })}
+                    type="text"
+                    inputMode="numeric"
+                    value={Number(form.recruitment_team_size) === 0 ? "" : form.recruitment_team_size}
+                    onChange={(e) => {
+                      const nextValue = e.target.value.replace(/[^\d]/g, "");
+                      setForm({ ...form, recruitment_team_size: nextValue });
+                    }}
+                    placeholder="P.sh. 3"
                     className="bg-white/5 border-white/10 text-white"
                   />
                 </div>
@@ -1783,11 +1800,8 @@ export default function Profile() {
               <div className="space-y-1.5">
                 <Label className="text-white">Specializimi në industri (të ndara me presje)</Label>
                 <Input
-                  value={form.industry_specialization?.join(", ") || ""}
-                  onChange={(e) => setForm({ 
-                    ...form, 
-                    industry_specialization: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
-                  })}
+                  value={industrySpecializationText}
+                  onChange={(e) => setIndustrySpecializationText(e.target.value)}
                   placeholder="Teknologji, Ndërtim, Shëndetësi"
                   className="bg-white/5 border-white/10 text-white"
                 />
