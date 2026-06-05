@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Sparkles, Trash2, RotateCcw, Save, Send, Globe, Archive, X } from "lucide-react";
 import { COUNTRIES_DATA, CATEGORIES, LISTING_TYPES, SOURCES } from "./importConstants";
 import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
+import { extractImportedPostFields } from "@/lib/importExtractors";
 
 export default function ImportForm({ user, editingPost, onDone }) {
   const qc = useQueryClient();
@@ -23,6 +24,9 @@ export default function ImportForm({ user, editingPost, onDone }) {
     country: "",
     region: "",
     city: "",
+    address: "",
+    phone_number: "",
+    contact_info: "",
     source: "facebook_group",
     show_author_publicly: false,
     show_original_post_url_publicly: false,
@@ -45,10 +49,26 @@ export default function ImportForm({ user, editingPost, onDone }) {
 
   // When user types in the textarea for the first time (new post)
   const handleTextChange = (val) => {
+    const extracted = extractImportedPostFields(val, { description: val });
     if (!originalTextLocked) {
-      setForm(f => ({ ...f, original_text: val, edited_text: val }));
+      setForm(f => ({
+        ...f,
+        original_text: val,
+        edited_text: val,
+        phone_number: f.phone_number || extracted.phone_number,
+        contact_info: f.contact_info || extracted.contact_info,
+        address: f.address || extracted.address,
+        city: f.city || extracted.city,
+      }));
     } else {
-      set("edited_text", val);
+      setForm(f => ({
+        ...f,
+        edited_text: val,
+        phone_number: f.phone_number || extracted.phone_number,
+        contact_info: f.contact_info || extracted.contact_info,
+        address: f.address || extracted.address,
+        city: f.city || extracted.city,
+      }));
     }
   };
 
@@ -117,11 +137,24 @@ Kthe JSON me këto fusha.`;
   const save = async (status) => {
     if (!form.listing_type) { alert("Zgjidhni llojin e njoftimit!"); return; }
     if (!form.edited_text.trim()) { alert("Teksti nuk mund të jetë bosh!"); return; }
-    const contactInfoWarning = getContactInfoInTextMessage(form.edited_text);
+    const prepared = extractImportedPostFields(form.original_text || form.edited_text, {
+      ...form,
+      description: form.edited_text,
+      source_url: form.original_post_url,
+      show_source_url: form.show_original_post_url_publicly,
+    });
+    const contactInfoWarning = getContactInfoInTextMessage(prepared.description);
     if (contactInfoWarning) { alert(contactInfoWarning); return; }
     setLoading(true);
     const payload = {
       ...form,
+      edited_text: prepared.description,
+      address: prepared.address || form.address || "",
+      city: prepared.city || form.city || "",
+      phone_number: prepared.phone_number || form.phone_number || "",
+      contact_info: prepared.contact_info || form.contact_info || "",
+      original_post_url: prepared.source_url || form.original_post_url || "",
+      import_original_text: prepared.import_original_text || form.original_text || "",
       status,
       imported_by: user.email,
       ...(status === "publikuar" && !editingPost?.published_at ? { published_at: new Date().toISOString() } : {}),
@@ -330,6 +363,27 @@ Kthe JSON me këto fusha.`;
             )}
           </div>
         </div>
+        <div>
+          <label className="text-white/60 text-xs mb-1 block">Adresa / lokacioni i nxjerrë</label>
+          <Input value={form.address} onChange={e => set("address", e.target.value)} placeholder="Adresa ose lokacioni..." className="bg-white/5 border-white/10 text-white text-sm" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }} />
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
+        <label className="text-white text-sm font-semibold block">Kontaktet e nxjerra nga njoftimi</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-white/60 text-xs mb-1 block">Telefon</label>
+            <Input value={form.phone_number} onChange={e => set("phone_number", e.target.value)} placeholder="+00 00 000 000 000" className="bg-white/5 border-white/10 text-white text-sm" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }} />
+          </div>
+          <div>
+            <label className="text-white/60 text-xs mb-1 block">Email / kontakt tjetër</label>
+            <Input value={form.contact_info} onChange={e => set("contact_info", e.target.value)} placeholder="email, website, telefon lokal..." className="bg-white/5 border-white/10 text-white text-sm" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }} />
+          </div>
+        </div>
+        <p className="text-white/40 text-xs">
+          Në ruajtje, telefoni/emaili/linku hiqen nga trupi i tekstit dhe mbeten te fushat e kontaktit/gjurmimit.
+        </p>
       </div>
 
       {/* Action Buttons */}

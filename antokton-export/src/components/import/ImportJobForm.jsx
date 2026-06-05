@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Link2, Sparkles, CheckCircle2, AlertCircle, Phone, MapPin, User, Briefcase, DollarSign, FileText, Image } from "lucide-react";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
+import { extractImportedPostFields } from "@/lib/importExtractors";
 
 const CONTRACT_TYPES = [
   { value: "full-time", label: "Full-time" },
@@ -43,7 +44,11 @@ export default function ImportJobForm({ user, onDone }) {
     try {
       const res = await base44.functions.invoke("importJobPost", { url: url.trim(), job_type: jobType });
       if (res.data?.success) {
-        setData(res.data.data);
+        setData(extractImportedPostFields(res.data.data?.import_original_text || res.data.data?.original_text || res.data.data?.description || "", {
+          ...res.data.data,
+          source_url: res.data.data?.source_url || url.trim(),
+          show_source_url: false,
+        }));
         setStep("preview");
       } else {
         setError(res.data?.error || "Nuk u mundua të importohet njoftimi.");
@@ -57,21 +62,25 @@ export default function ImportJobForm({ user, onDone }) {
 
   const handlePublish = async (status) => {
     if (!data) return;
-    const contactInfoWarning = getContactInfoInTextMessage(data.description);
+    const prepared = extractImportedPostFields(data.import_original_text || data.original_text || data.description || "", data);
+    const contactInfoWarning = getContactInfoInTextMessage(prepared.description);
     if (contactInfoWarning) {
       setError(contactInfoWarning);
       return;
     }
-    if (!isValidInternationalPhone(data.phone_number)) {
+    if (!isValidInternationalPhone(prepared.phone_number)) {
       setError(getInternationalPhoneError("Numri i telefonit"));
       return;
     }
-    const phoneNumber = normalizeInternationalPhone(data.phone_number);
+    const phoneNumber = normalizeInternationalPhone(prepared.phone_number);
     setSaving(true);
     try {
       await base44.entities.Job.create({
-        ...data,
+        ...prepared,
         phone_number: phoneNumber || "",
+        source_url: prepared.source_url || url.trim(),
+        show_source_url: Boolean(prepared.show_source_url),
+        import_original_text: prepared.import_original_text || prepared.original_text || "",
         status: status,
         moderation_status: status === "approved" ? "approved" : "pending",
         is_halal_compliant: true,
@@ -320,8 +329,17 @@ export default function ImportJobForm({ user, onDone }) {
           {/* Source URL */}
           <div>
             <label className="text-white/50 text-xs mb-1 block">Burimi origjinal (URL)</label>
-            <Input value={data.source_url || url} readOnly
-              className="bg-white/5 border-white/10 text-white/50 text-xs" style={{ background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.4)' }} />
+            <Input value={data.source_url || url} onChange={e => set("source_url", e.target.value)}
+              className="bg-white/5 border-white/10 text-white text-xs" style={{ background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.75)' }} />
+            <label className="mt-2 flex cursor-pointer items-start gap-2 text-white/50 text-xs">
+              <input
+                type="checkbox"
+                checked={Boolean(data.show_source_url)}
+                onChange={e => set("show_source_url", e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-[#8ab4ff]"
+              />
+              <span>Shfaq linkun publikisht. Lëre pa zgjedhur për ta ruajtur vetëm për gjurmim të postimit origjinal.</span>
+            </label>
           </div>
 
           {error && (

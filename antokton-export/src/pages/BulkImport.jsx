@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/antoktonClient";
-import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
+import { extractImportedPostFields } from "@/lib/importExtractors";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -73,13 +73,19 @@ Detyra jote:
 2. Rishkruaj të gjithë tekstin duke e korrigjuar drejtshkrimin dhe gramatikën sipas STANDARDIT TË GJUHËS SHQIPE. Mos përdor dialekte, mos përdor fjalë të huaja kur ekzistojnë shqip, mos shkurto fjalët, shkruaj saktë çdo fjalë. Mbaj të gjitha informacionet origjinale (pagë, kualifikime, kontakt, telefon, etj.).
 3. Nxirr vendin/qytetin nëse përmendет
 4. Nxirr profesionin nëse përmendет
+5. Nxirr kontaktet, linkun burimor dhe lokacionin/adresën nëse përmenden. Mos i lër kontaktet brenda përshkrimit publik.
 
 Kthe rezultatin SI JSON me këtë strukturë:
 {
   "title": "titulli i njoftimit",
-  "description": "teksti i plotë i korrigjuar në shqip standard",
+  "description": "teksti i plotë i korrigjuar në shqip standard, pa telefon/email/link brenda trupit",
   "city": "qyteti nëse ka, ose string bosh",
-  "profession": "profesioni nëse ka, ose string bosh"
+  "address": "adresa/lokacioni nëse ka, ose string bosh",
+  "profession": "profesioni nëse ka, ose string bosh",
+  "phone_number": "numri ndërkombëtar me + nëse ka, ose string bosh",
+  "contact_info": "email, telefon lokal ose kontakt tjetër nëse ka, ose string bosh",
+  "source_url": "linku origjinal nëse ka, ose string bosh",
+  "import_original_text": "teksti origjinal i plotë"
 }`,
         response_json_schema: {
           type: "object",
@@ -87,12 +93,17 @@ Kthe rezultatin SI JSON me këtë strukturë:
             title: { type: "string" },
             description: { type: "string" },
             city: { type: "string" },
-            profession: { type: "string" }
+            address: { type: "string" },
+            profession: { type: "string" },
+            phone_number: { type: "string" },
+            contact_info: { type: "string" },
+            source_url: { type: "string" },
+            import_original_text: { type: "string" }
           }
         }
       });
 
-      updateEntry(entry.id, "result", result);
+      updateEntry(entry.id, "result", extractImportedPostFields(entry.rawText, result));
       updateEntry(entry.id, "status", "ready");
     } catch (err) {
       updateEntry(entry.id, "error", err.message);
@@ -111,22 +122,23 @@ Kthe rezultatin SI JSON me këtë strukturë:
 
   const publishEntry = async (entry) => {
     if (!entry.result) return;
-    const contactInfoWarning = getContactInfoInTextMessage(entry.result.description);
-    if (contactInfoWarning) {
-      updateEntry(entry.id, "error", contactInfoWarning);
-      updateEntry(entry.id, "status", "error");
-      return;
-    }
+    const result = extractImportedPostFields(entry.rawText, entry.result);
     updateEntry(entry.id, "status", "publishing");
 
     try {
       await base44.entities.Job.create({
-        title: entry.result.title,
-        description: entry.result.description,
+        title: result.title,
+        description: result.description,
         country: entry.country,
-        city: entry.result.city || "",
+        city: result.city || "",
+        address: result.address || "",
         category: entry.category,
-        profession: entry.result.profession || "",
+        profession: result.profession || "",
+        contact_info: result.contact_info || "",
+        phone_number: result.phone_number || "",
+        source_url: result.source_url || "",
+        show_source_url: Boolean(result.show_source_url),
+        import_original_text: result.import_original_text || entry.rawText,
         status: "approved",
         poster_name: user?.full_name || "Admin"
       });
@@ -260,12 +272,15 @@ Kthe rezultatin SI JSON me këtë strukturë:
                   <span className="text-[#8ab4ff] text-xs font-medium">Teksti i korrigjuar:</span>
                   <p className="text-white/80 text-xs mt-0.5 whitespace-pre-wrap line-clamp-4">{entry.result.description}</p>
                 </div>
-                {entry.result.city && (
-                  <div className="flex gap-4">
-                    <span className="text-white/50 text-xs">Qyteti: <span className="text-white">{entry.result.city}</span></span>
-                    {entry.result.profession && <span className="text-white/50 text-xs">Profesioni: <span className="text-white">{entry.result.profession}</span></span>}
-                  </div>
-                )}
+                <div className="grid gap-1 sm:grid-cols-2">
+                  {entry.result.import_original_text && <span className="text-white/50 text-xs">Origjinali: <span className="text-white/70">i ruajtur për gjurmim</span></span>}
+                  {entry.result.city && <span className="text-white/50 text-xs">Qyteti: <span className="text-white">{entry.result.city}</span></span>}
+                  {entry.result.address && <span className="text-white/50 text-xs">Lokacioni: <span className="text-white">{entry.result.address}</span></span>}
+                  {entry.result.profession && <span className="text-white/50 text-xs">Profesioni: <span className="text-white">{entry.result.profession}</span></span>}
+                  {entry.result.phone_number && <span className="text-white/50 text-xs">Telefon: <span className="text-white">{entry.result.phone_number}</span></span>}
+                  {entry.result.contact_info && <span className="text-white/50 text-xs">Kontakt: <span className="text-white whitespace-pre-wrap">{entry.result.contact_info}</span></span>}
+                  {entry.result.source_url && <span className="text-white/50 text-xs">Burimi: <span className="text-white break-all">{entry.result.source_url}</span></span>}
+                </div>
               </div>
             )}
 

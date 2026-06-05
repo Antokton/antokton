@@ -439,7 +439,9 @@ export default function PostDetail() {
       location_precision: job.location_precision || 'sakte',
       category: job.category || '',
       pazar_category: job.pazar_category || '',
-      poster_name: job.poster_name || ''
+      poster_name: job.poster_name || '',
+      source_url: job.source_url || '',
+      show_source_url: Boolean(job.show_source_url)
     });
     setIsEditing(true);
   };
@@ -668,6 +670,19 @@ export default function PostDetail() {
               <div className="space-y-1">
                 <Label className="text-white/60 text-xs">Email / Kontakt tjetër</Label>
                 <Input value={editForm.contact_info} onChange={e => setEditForm({...editForm, contact_info: e.target.value})} className="bg-white/5 border-white/10 text-white" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-white/60 text-xs">Link burimi / kontakt online</Label>
+                <Input value={editForm.source_url || ''} onChange={e => setEditForm({...editForm, source_url: e.target.value})} placeholder="https://..." className="bg-white/5 border-white/10 text-white" />
+                <label className="flex cursor-pointer items-start gap-2 text-xs text-white/50">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editForm.show_source_url)}
+                    onChange={e => setEditForm({...editForm, show_source_url: e.target.checked})}
+                    className="mt-0.5 h-4 w-4 accent-[#8ab4ff]"
+                  />
+                  <span>Shfaq linkun publikisht. Pa zgjedhje ruhet vetëm për gjurmim të postimit origjinal.</span>
+                </label>
               </div>
               <div className="space-y-1">
                 <Label className="text-white/60 text-xs">Kategoria</Label>
@@ -954,7 +969,7 @@ export default function PostDetail() {
           )}
 
           {/* Linku i burimit - i klikueshëm */}
-          {job.source_url && (
+          {job.source_url && job.show_source_url && (
             <div className="mt-3">
               <a
                 href={job.source_url}

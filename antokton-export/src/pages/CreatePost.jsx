@@ -291,6 +291,7 @@ const emptyForm = {
   title: "", description: "", category: "pune", job_type: "",
   country: "", zone: "", city: "", zones: [], profession: "", salary_info: "", contact_info: "",
   phone_number: "", phone_app: "whatsapp",
+  source_url: "", show_source_url: false,
   is_open_call: false, donation_platform: "", donation_type: "",
   property_subcategory: "", property_deal_type: "", service_field: "",
   education_field: "", education_level_target: "",
@@ -951,6 +952,26 @@ export default function CreatePost() {
             <Input value={form.contact_info} onChange={(e) => setForm({ ...form, contact_info: e.target.value })}
               placeholder="Email, adresë, faqe interneti..." className="h-11 break-all"
               style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }} />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs" style={{ color: 'var(--muted)' }}>Link burimi / kontakt online (opcional)</Label>
+            <Input
+              value={form.source_url}
+              onChange={(e) => setForm({ ...form, source_url: e.target.value })}
+              placeholder="https://..."
+              className="h-11 break-all"
+              style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }}
+            />
+            <label className="flex cursor-pointer items-start gap-2 text-xs" style={{ color: 'var(--muted)' }}>
+              <input
+                type="checkbox"
+                checked={Boolean(form.show_source_url)}
+                onChange={(e) => setForm({ ...form, show_source_url: e.target.checked })}
+                className="mt-0.5 h-4 w-4 accent-[#8ab4ff]"
+              />
+              <span>Shfaq linkun publikisht. Lëre pa zgjedhur nëse linku duhet të ruhet vetëm për gjurmim të postimit origjinal.</span>
+            </label>
           </div>
         </div>
 
