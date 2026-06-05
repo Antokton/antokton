@@ -162,7 +162,7 @@ const auth = {
       body: { email }
     });
   },
-  redirectToLogin(fromUrl = window.location.href) {
+  redirectToLogin(fromUrl = window.location.href, mode = "login") {
     if (import.meta.env.DEV) {
       const email = import.meta.env.VITE_ANTOKTON_DEV_USER_EMAIL || 'admin@antokton.local';
       setToken(`dev:${email}`);
@@ -172,6 +172,7 @@ const auth = {
     if (window.location.pathname.toLowerCase() === '/login') return;
     const target = new URL('/Login', window.location.origin);
     target.searchParams.set('from_url', fromUrl);
+    if (mode === "register") target.searchParams.set('mode', 'register');
     window.location.href = target.toString();
   },
   logout(fromUrl) {

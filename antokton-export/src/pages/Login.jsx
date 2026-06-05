@@ -8,7 +8,7 @@ import { Lock, Mail, UserPlus, LogIn, AlertCircle, Eye, EyeOff, KeyRound } from 
 
 export default function Login() {
   const [searchParams] = useSearchParams();
-  const [mode, setMode] = useState("login");
+  const [mode, setMode] = useState(() => searchParams.get("mode") === "register" ? "register" : "login");
   const [form, setForm] = useState({ email: "", password: "", full_name: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -173,19 +173,19 @@ export default function Login() {
           )}
 
           {mode === "register" && (
-            <label className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-white/70">
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-4 text-sm leading-relaxed text-white/75 transition hover:bg-white/10">
               <input
                 type="checkbox"
                 checked={acceptedLegal}
                 onChange={(event) => setAcceptedLegal(event.target.checked)}
-                className="mt-1 h-4 w-4 shrink-0"
+                className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer"
                 required
               />
               <span>
                 Pranoj{" "}
-                <Link to="/terms" className="text-blue-200 hover:text-white underline">Kushtet e Përdorimit</Link>
+                <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-blue-200 hover:text-white underline" onClick={(event) => event.stopPropagation()}>Kushtet e Përdorimit</Link>
                 {" "}dhe{" "}
-                <Link to="/privacy" className="text-blue-200 hover:text-white underline">Politikën e Privatësisë</Link>.
+                <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-200 hover:text-white underline" onClick={(event) => event.stopPropagation()}>Politikën e Privatësisë</Link>.
               </span>
             </label>
           )}
@@ -200,7 +200,7 @@ export default function Login() {
           <Button
             type="submit"
             disabled={loading || (mode === "register" && !acceptedLegal)}
-            className="w-full bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] font-semibold h-11"
+            className="w-full bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] font-semibold h-11 hover:opacity-90"
           >
             {mode === "register" ? (
               <UserPlus className="w-4 h-4 mr-2" />

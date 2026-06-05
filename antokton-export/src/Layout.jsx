@@ -548,7 +548,7 @@ export default function Layout({ children, currentPageName }) {
 
             {/* CTA */}
             <span
-              onClick={() => base44.auth.redirectToLogin()}
+              onClick={() => base44.auth.redirectToLogin(window.location.href, "register")}
               style={{
                 display: 'block',
                 background: 'linear-gradient(to right, #8ab4ff, #9bffd6)',

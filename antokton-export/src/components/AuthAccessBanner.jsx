@@ -153,7 +153,7 @@ export default function AuthAccessBanner({
           <button
             type="button"
             onClick={() => switchMode("register")}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 text-sm font-semibold text-white px-3 py-2.5 transition hover:bg-white/15"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border-0 bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-sm font-bold text-[#06111f] px-3 py-2.5 transition hover:opacity-90"
           >
             <UserPlus className="h-4 w-4" />
             Regjistrohu
@@ -244,17 +244,17 @@ export default function AuthAccessBanner({
           )}
 
           {mode === "register" && (
-            <label className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-2.5 text-xs text-white/70">
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-4 text-xs leading-relaxed text-white/75 transition hover:bg-white/10 sm:text-sm">
               <input
                 type="checkbox"
                 checked={acceptedLegal}
                 onChange={(event) => setAcceptedLegal(event.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0"
+                className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer"
                 required
               />
               <span>
-                Pranoj <Link to="/terms" className="text-blue-200 underline hover:text-white">Kushtet e Përdorimit</Link>
-                {" "}dhe <Link to="/privacy" className="text-blue-200 underline hover:text-white">Politikën e Privatësisë</Link>.
+                Pranoj <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-blue-200 underline hover:text-white" onClick={(event) => event.stopPropagation()}>Kushtet e Përdorimit</Link>
+                {" "}dhe <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-200 underline hover:text-white" onClick={(event) => event.stopPropagation()}>Politikën e Privatësisë</Link>.
               </span>
             </label>
           )}
@@ -262,7 +262,7 @@ export default function AuthAccessBanner({
           <button
             type="submit"
             disabled={loading || (mode === "register" && !acceptedLegal)}
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#8ab4ff] text-sm font-bold text-[#06111f] transition hover:bg-[#a6c6ff] disabled:opacity-70"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-sm font-bold text-[#06111f] transition hover:opacity-90 disabled:opacity-70"
           >
             {mode === "register" ? <UserPlus className="h-4 w-4" /> : mode === "reset" ? <KeyRound className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}
             {loading ? "Duke punuar..." : mode === "register" ? "Regjistrohu" : mode === "reset" ? "Dërgo kërkesën" : "Hyr"}

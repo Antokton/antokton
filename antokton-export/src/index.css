@@ -190,6 +190,8 @@ a[class*="from-[#8ab4ff]"][class*="to-[#9bffd6]"],
 button[class*="bg-[#8ab4ff]"],
 a[class*="bg-[#8ab4ff]"],
 [role="button"][class*="bg-[#8ab4ff]"] {
+  background: linear-gradient(to right, #8ab4ff, #9bffd6) !important;
+  border-color: transparent !important;
   color: #07111f !important;
 }
 
@@ -199,5 +201,7 @@ a[class*="from-[#8ab4ff]"][class*="to-[#9bffd6]"]:hover,
 button[class*="bg-[#8ab4ff]"]:hover,
 a[class*="bg-[#8ab4ff]"]:hover,
 [role="button"][class*="bg-[#8ab4ff]"]:hover {
+  background: linear-gradient(to right, #8ab4ff, #9bffd6) !important;
+  border-color: transparent !important;
   color: #07111f !important;
 }

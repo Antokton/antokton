@@ -5,7 +5,7 @@ import { CONTACT_EMAIL } from "@/lib/publicConfig";
 
 export default function Privacy() {
   return (
-    <div className="min-h-screen py-12 px-4 sm:px-6">
+    <div className="min-h-screen bg-[#07101f] py-12 px-4 sm:px-6">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-12 h-12 bg-gradient-to-br from-[#8ab4ff] to-[#9bffd6] rounded-2xl flex items-center justify-center">
