@@ -292,6 +292,7 @@ const emptyForm = {
   country: "", zone: "", city: "", zones: [], profession: "", salary_info: "", contact_info: "",
   phone_number: "", phone_app: "whatsapp",
   source_url: "", show_source_url: false,
+  author_profile_url: "", import_author_profile_url: "", show_author_profile_url: false,
   is_open_call: false, donation_platform: "", donation_type: "",
   property_subcategory: "", property_deal_type: "", service_field: "",
   education_field: "", education_level_target: "",
@@ -955,7 +956,7 @@ export default function CreatePost() {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: 'var(--muted)' }}>Link burimi / kontakt online (opcional)</Label>
+            <Label className="text-xs" style={{ color: 'var(--muted)' }}>Linku i burimit / postimit origjinal (opcional)</Label>
             <Input
               value={form.source_url}
               onChange={(e) => setForm({ ...form, source_url: e.target.value })}
@@ -971,6 +972,26 @@ export default function CreatePost() {
                 className="mt-0.5 h-4 w-4 accent-[#8ab4ff]"
               />
               <span>Shfaq linkun publikisht. Lëre pa zgjedhur nëse linku duhet të ruhet vetëm për gjurmim të postimit origjinal.</span>
+            </label>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs" style={{ color: 'var(--muted)' }}>Linku i postuesit / kontaktit online (opcional)</Label>
+            <Input
+              value={form.author_profile_url}
+              onChange={(e) => setForm({ ...form, author_profile_url: e.target.value, import_author_profile_url: e.target.value })}
+              placeholder="https://facebook.com/profile... ose link kontakti"
+              className="h-11 break-all"
+              style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }}
+            />
+            <label className="flex cursor-pointer items-start gap-2 text-xs" style={{ color: 'var(--muted)' }}>
+              <input
+                type="checkbox"
+                checked={Boolean(form.show_author_profile_url)}
+                onChange={(e) => setForm({ ...form, show_author_profile_url: e.target.checked })}
+                className="mt-0.5 h-4 w-4 accent-[#8ab4ff]"
+              />
+              <span>Shfaq linkun e postuesit si kontakt publik. Lëre pa zgjedhur nëse duhet të ruhet vetëm privatisht për admin/moderator.</span>
             </label>
           </div>
         </div>

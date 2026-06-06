@@ -48,6 +48,11 @@ const isUrlLike = (value = "") => /^https?:\/\//i.test(String(value || "").trim(
 
 const looksCorruptedText = (value = "") => /�|Ã|Â|â€|Ð|Ñ|\\u00[0-9a-f]{2}/i.test(String(value || ""));
 
+const looksTruncatedText = (value = "") => {
+  const text = sanitizeImportedText(value);
+  return /(^|\s)(?:\.{3}|…)(?:\s|$)/.test(text) || /\bn[eë]\.\.\./i.test(text);
+};
+
 const cleanRoleLine = (line = "") => sanitizeImportedText(line)
   .replace(/^[\s\-–—•●▪▫*✅✔️☑️🔹🔸📌]+\s*/u, "")
   .replace(/^\d+[\).:\-–]\s*/, "")
@@ -65,7 +70,9 @@ const titleCase = (value = "") => String(value || "")
   .replace(/\s+/g, " ")
   .trim()
   .split(" ")
-  .map((word) => word.charAt(0).toLocaleUpperCase("sq-AL") + word.slice(1))
+  .map((word, index) => (index > 0 && ["në", "ne", "dhe", "për", "per", "me"].includes(word)
+    ? word.replace("ne", "në").replace("per", "për")
+    : word.charAt(0).toLocaleUpperCase("sq-AL") + word.slice(1)))
   .join(" ");
 
 const cleanImportedText = (value = "") => sanitizeImportedText(value)
@@ -128,8 +135,16 @@ const extractLocationFromText = (rawText = "") => {
   for (const line of lines) {
     const match = line.match(labelRe);
     if (!match?.[1]) continue;
-    const value = cleanRoleLine(match[1]).replace(/\s*(?:deri|rreth)\s+\d+.*$/i, "").trim();
-    const city = value.split(/[,;|/]| dhe | ose /i).map((part) => part.trim()).filter(Boolean).join(", ");
+    const value = cleanRoleLine(match[1])
+      .replace(/\s*\((?:deri|rreth)[^)]+\)\s*/i, "")
+      .replace(/\s*(?:deri|rreth)\s+\d+.*$/i, "")
+      .trim();
+    const city = value
+      .split(/[,;|/]| dhe | ose /i)
+      .map((part) => part.trim())
+      .filter((part) => part && !/^rrethin[eë]?$/i.test(part))
+      .slice(0, 1)
+      .join(", ");
     return { address: value, city: city || value };
   }
   const knownCityMatch = String(rawText || "").match(/\b(G[uü]tersloh|Bielefeld|Berlin|Hamburg|München|Munich|Dortmund|Düsseldorf|Dusseldorf|Köln|Koln|Frankfurt)\b/gi);
@@ -138,6 +153,14 @@ const extractLocationFromText = (rawText = "") => {
     return { address: city, city };
   }
   return { address: "", city: "" };
+};
+
+const inferCountryFromLocation = (rawText = "") => {
+  const value = sanitizeImportedText(rawText).toLowerCase();
+  if (/\b(gjermani|germany|deutschland|gütersloh|gutersloh|bielefeld|berlin|hamburg|münchen|munich|dortmund|düsseldorf|dusseldorf|köln|koln|frankfurt)\b/i.test(value)) {
+    return "Gjermani";
+  }
+  return "";
 };
 
 const isLikelyRoleLine = (line = "", rawLine = "") => {
@@ -180,6 +203,32 @@ const splitRoleLines = (rawText = "") => {
   }).slice(0, 6);
 };
 
+const buildRoleDescription = (rawText = "", role = "") => {
+  const selectedProfession = inferProfession(role).toLowerCase();
+  const lines = sanitizeImportedText(rawText)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return lines
+    .filter((line) => {
+      const clean = cleanRoleLine(line);
+      if (!clean) return false;
+      if (!hasProfessionKeyword(clean)) return true;
+      if (!isLikelyRoleLine(clean, line)) return true;
+      return inferProfession(clean).toLowerCase() === selectedProfession;
+    })
+    .join("\n")
+    .trim();
+};
+
+const makeRoleTitle = (role = "", rawText = "") => {
+  const profession = inferProfession(role);
+  const location = extractLocationFromText(rawText);
+  const city = (location.city || "").split(",")[0]?.trim();
+  return [profession, city ? `në ${city}` : ""].filter(Boolean).join(" ");
+};
+
 const polishDraft = (draft = {}, rawText = "") => {
   const profession = inferProfession(draft.profession || draft.title || "");
   const location = extractLocationFromText(rawText || draft.import_original_text || draft.original_text || draft.description || "");
@@ -191,6 +240,7 @@ const polishDraft = (draft = {}, rawText = "") => {
     description: cleanImportedText(draft.description || rawText || ""),
     city: draft.city || location.city || "",
     address: draft.address || location.address || "",
+    country: draft.country || inferCountryFromLocation(rawText || draft.import_original_text || draft.original_text || draft.description || location.city || location.address),
   };
 };
 
@@ -219,6 +269,7 @@ const importedTextFromData = (data = {}) => [
 const hasImportableText = (text = "") => {
   const clean = sanitizeImportedText(text).replace(/https?:\/\/\S+/gi, "").replace(/\s+/g, " ").trim();
   if (looksCorruptedText(clean)) return false;
+  if (looksTruncatedText(clean)) return false;
   if (clean.length < 80) return false;
   if (!/[a-zA-ZçÇëË]/.test(clean)) return false;
   if (/facebook|log in|login|sign up|permalink|browser/i.test(clean) && clean.length < 220) return false;
@@ -231,6 +282,7 @@ const isMeaningfulDraft = (draft = {}) => {
   const profession = sanitizeImportedText(draft.profession || "").trim();
   if (!title || !description || !profession) return false;
   if (looksCorruptedText(`${title}\n${description}\n${profession}\n${draft.city || ""}\n${draft.address || ""}`)) return false;
+  if (looksTruncatedText(`${title}\n${description}`)) return false;
   if (isUrlLike(title) || isUrlLike(description)) return false;
   if (title.length > 120 || profession.split(/\s+/).length > 4) return false;
   if (description.length < 80) return false;
@@ -243,9 +295,9 @@ const buildHeuristicDrafts = (rawText = "", baseDraft = {}, fallbackUrl = "", jo
 
   return roles.map((role) => normalizeDraft(rawText, {
     ...baseDraft,
-    title: inferProfession(role),
+    title: makeRoleTitle(role, rawText),
     profession: baseDraft.profession || inferProfession(role),
-    description: `${inferProfession(role)}\n\n${rawText}`.trim(),
+    description: `${inferProfession(role)}\n\n${buildRoleDescription(rawText, role) || rawText}`.trim(),
   }, fallbackUrl, jobType));
 };
 
@@ -283,6 +335,7 @@ const hasUsefulAiDraft = (draft) => Boolean(draft?.title || draft?.description |
 
 export default function ImportJobForm({ user, onDone }) {
   const [url, setUrl] = useState("");
+  const [authorUrl, setAuthorUrl] = useState("");
   const [rawText, setRawText] = useState("");
   const [jobType, setJobType] = useState("ofroj");
   const [loading, setLoading] = useState(false);
@@ -389,10 +442,12 @@ ${text || importedData.description || importedData.title || ""}`;
 
     try {
       if (cleanText) {
-        const aiResult = await extractDraftsWithAi({ text: cleanText, sourceUrl: cleanUrl, importedData: { source_url: cleanUrl } });
-        const nextDrafts = aiResult.drafts.length
-          ? aiResult.drafts
-          : buildHeuristicDrafts(cleanText, { source_url: cleanUrl }, cleanUrl, jobType);
+        const baseDraft = { source_url: cleanUrl, author_profile_url: authorUrl.trim(), import_author_profile_url: authorUrl.trim() };
+        const heuristicDrafts = buildHeuristicDrafts(cleanText, baseDraft, cleanUrl, jobType);
+        const aiResult = await extractDraftsWithAi({ text: cleanText, sourceUrl: cleanUrl, importedData: baseDraft });
+        const nextDrafts = heuristicDrafts.length > aiResult.drafts.length
+          ? heuristicDrafts
+          : (aiResult.drafts.length ? aiResult.drafts : heuristicDrafts);
         setDraftList(nextDrafts);
         if (nextDrafts.length > 1) {
           setError(`U gjetën ${nextDrafts.length} pozicione. Kontrollo secilin draft veçmas para publikimit.`);
@@ -403,7 +458,7 @@ ${text || importedData.description || importedData.title || ""}`;
         return;
       }
 
-      const aiFromUrl = await extractDraftsWithAi({ text: "", sourceUrl: cleanUrl, importedData: { source_url: cleanUrl }, requireSourceText: true });
+      const aiFromUrl = await extractDraftsWithAi({ text: "", sourceUrl: cleanUrl, importedData: { source_url: cleanUrl, author_profile_url: authorUrl.trim(), import_author_profile_url: authorUrl.trim() }, requireSourceText: true });
       if (aiFromUrl.readSuccess && aiFromUrl.drafts.length) {
         setDraftList(aiFromUrl.drafts);
         if (aiFromUrl.drafts.length > 1) {
@@ -424,10 +479,12 @@ ${text || importedData.description || importedData.title || ""}`;
           setError("Ky link nuk dha tekst të lexueshëm për njoftimin. Për Facebook/grupe private sistemi nuk mund të lexojë postimin vetëm nga linku; ngjit tekstin e postimit ose përdor një link publik që shfaq përmbajtjen pa login.");
           return;
         }
-        const aiResult = await extractDraftsWithAi({ text: importedText, sourceUrl: cleanUrl, importedData: res.data.data });
-        const nextDrafts = aiResult.drafts.length
-          ? aiResult.drafts
-          : buildHeuristicDrafts(importedText, res.data.data, cleanUrl, jobType).filter(isMeaningfulDraft);
+        const importedBase = { ...res.data.data, author_profile_url: authorUrl.trim() || res.data.data?.author_profile_url || "", import_author_profile_url: authorUrl.trim() || res.data.data?.import_author_profile_url || "" };
+        const heuristicDrafts = buildHeuristicDrafts(importedText, importedBase, cleanUrl, jobType).filter(isMeaningfulDraft);
+        const aiResult = await extractDraftsWithAi({ text: importedText, sourceUrl: cleanUrl, importedData: importedBase });
+        const nextDrafts = heuristicDrafts.length > aiResult.drafts.length
+          ? heuristicDrafts
+          : (aiResult.drafts.length ? aiResult.drafts : heuristicDrafts);
         if (!nextDrafts.length) {
           setDraftList([]);
           setStep("input");
@@ -548,6 +605,16 @@ ${text || importedData.description || importedData.title || ""}`;
               className="bg-white/5 border-white/15 text-white placeholder:text-white/30"
               style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }}
               onKeyDown={(e) => e.key === "Enter" && !loading && handleImport()}
+            />
+          </div>
+          <div className="flex-1 space-y-2">
+            <label className="text-white/60 text-xs flex items-center gap-1"><User className="w-3.5 h-3.5" /> Linku i postuesit / kontaktit, opsional</label>
+            <Input
+              value={authorUrl}
+              onChange={(e) => setAuthorUrl(e.target.value)}
+              placeholder="https://facebook.com/profile..."
+              className="bg-white/5 border-white/15 text-white placeholder:text-white/30"
+              style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }}
             />
           </div>
           <div className="sm:w-44 space-y-2">
@@ -671,6 +738,16 @@ ${text || importedData.description || importedData.title || ""}`;
               <div><label className="text-white/50 text-xs mb-1 block">Shteti</label><Input value={data.country || ""} onChange={(e) => set("country", e.target.value)} className="bg-white/5 border-white/10 text-white" style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }} /></div>
               <div><label className="text-white/50 text-xs mb-1 block">Adresa</label><Input value={data.address || ""} onChange={(e) => set("address", e.target.value)} className="bg-white/5 border-white/10 text-white" style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }} /></div>
             </div>
+            {(data.address || data.city || data.country) && (
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([data.address || data.city, data.country].filter(Boolean).join(", "))}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-[#8ab4ff] hover:text-[#9bffd6] underline underline-offset-2"
+              >
+                <MapPin className="w-3 h-3" /> Hap lokacionin në Google Maps
+              </a>
+            )}
           </div>
 
           <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
