@@ -48,6 +48,17 @@ const isUrlLike = (value = "") => /^https?:\/\//i.test(String(value || "").trim(
 
 const looksCorruptedText = (value = "") => /�|Ã|Â|â€|Ð|Ñ|\\u00[0-9a-f]{2}/i.test(String(value || ""));
 
+const normalizeImportUrl = (value = "") => {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (/^(?:www\.|m\.|mbasic\.)?facebook\.com\//i.test(raw)) return `https://${raw}`;
+  if (/^\/?groups\/[^/]+\/(?:permalink|posts)\/[^/]+/i.test(raw)) {
+    return `https://www.facebook.com/${raw.replace(/^\/+/, "")}`;
+  }
+  return raw;
+};
+
 const looksTruncatedText = (value = "") => {
   const text = sanitizeImportedText(value);
   return /(^|\s)(?:\.{3}|…)(?:\s|$)/.test(text) || /\bn[eë]\.\.\./i.test(text);
@@ -435,7 +446,7 @@ ${text || importedData.description || importedData.title || ""}`;
   };
 
   const handleImport = async () => {
-    const cleanUrl = url.trim();
+    const cleanUrl = normalizeImportUrl(url);
     const cleanText = rawText.trim();
     if (!cleanUrl && !cleanText) {
       setError("Ngjit linkun ose tekstin e njoftimit para importimit.");
@@ -444,6 +455,7 @@ ${text || importedData.description || importedData.title || ""}`;
 
     setLoading(true);
     setError("");
+    if (cleanUrl && cleanUrl !== url.trim()) setUrl(cleanUrl);
 
     try {
       if (cleanText) {
