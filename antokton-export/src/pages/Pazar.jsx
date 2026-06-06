@@ -119,7 +119,15 @@ function ImportModal({ onClose, onImported }) {
     try {
       const res = await base44.functions.invoke("importMarketplacePost", { url: url.trim(), category, job_type: jobType });
       if (res.data?.success) {
-        setExtracted(res.data.data);
+        const imported = res.data.data || {};
+        setExtracted({
+          ...imported,
+          source_url: imported.source_url || url.trim(),
+          import_source_url: imported.import_source_url || imported.source_url || url.trim(),
+          import_author_profile_url: imported.import_author_profile_url || imported.author_profile_url || "",
+          show_source_url: false,
+          show_author_profile_url: false,
+        });
         setStep("preview");
       } else {
         setError(res.data?.error || "Nuk u mundua të importohet njoftimi.");
@@ -143,6 +151,16 @@ function ImportModal({ onClose, onImported }) {
       await base44.entities.Job.create({
         ...extracted,
         phone_number: phoneNumber || "",
+        source_url: extracted.source_url || url,
+        author_profile_url: extracted.author_profile_url || "",
+        import_source_url: extracted.import_source_url || extracted.source_url || url,
+        import_author_profile_url: extracted.import_author_profile_url || extracted.author_profile_url || "",
+        importer_email: user?.email || "",
+        import_original_text: extracted.import_original_text || extracted.description || "",
+        show_source_url: extracted.show_source_url === true,
+        show_author_profile_url: extracted.show_author_profile_url === true,
+        imported_community_request: true,
+        import_type: "marketplace_import_assistant",
         status: "approved",
         category: "pazar",
         pazar_category: category,
@@ -270,9 +288,14 @@ function ImportModal({ onClose, onImported }) {
                   <div className="flex gap-2 mt-1">
                     <input value={extracted.poster_name || ""} onChange={e => setExtracted({...extracted, poster_name: e.target.value})}
                       className="flex-1 bg-[#1c2333] border border-white/15 rounded-xl px-3 py-2 text-white text-sm outline-none" placeholder="Emri dhënësit..." />
-                    <input value={extracted.author_profile_url || ""} onChange={e => setExtracted({...extracted, author_profile_url: e.target.value})}
-                      className="flex-1 bg-[#1c2333] border border-white/15 rounded-xl px-3 py-2 text-white text-sm outline-none" placeholder="URL profili..." />
+                    <input value={extracted.author_profile_url || ""} onChange={e => setExtracted({...extracted, author_profile_url: e.target.value, import_author_profile_url: e.target.value})}
+                      className="flex-1 bg-[#1c2333] border border-white/15 rounded-xl px-3 py-2 text-white text-sm outline-none" placeholder="Linku i postuesit / kontaktit..." />
                   </div>
+                  <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                    <input type="checkbox" checked={extracted.show_author_profile_url === true} onChange={e => setExtracted({...extracted, show_author_profile_url: e.target.checked})}
+                      className="w-4 h-4 accent-blue-500" />
+                    <span className="text-white/50 text-xs">Shfaq linkun e postuesit si kontakt publik</span>
+                  </label>
                 </div>
                 <div>
                   <label className="text-white/40 text-xs">Përshkrimi</label>
@@ -294,14 +317,14 @@ function ImportModal({ onClose, onImported }) {
                     className="w-full bg-[#1c2333] border border-white/15 rounded-xl px-3 py-2 text-white text-sm outline-none mt-1" placeholder="email, link..." />
                 </div>
                           <div>
-            <label className="text-white/40 text-xs">Linku origjinal i njoftimit</label>
-            <input value={extracted.source_url || ""} onChange={e => setExtracted({...extracted, source_url: e.target.value})}
+            <label className="text-white/40 text-xs">Linku i njoftimit / burimit</label>
+            <input value={extracted.source_url || ""} onChange={e => setExtracted({...extracted, source_url: e.target.value, import_source_url: e.target.value})}
               className="w-full bg-[#1c2333] border border-white/15 rounded-xl px-3 py-2 text-white text-sm outline-none"
               placeholder="p.sh. https://merrfal.com/..." />
             <label className="flex items-center gap-2 mt-1 cursor-pointer">
-              <input type="checkbox" checked={extracted.show_source_url || false} onChange={e => setExtracted({...extracted, show_source_url: e.target.checked})}
+              <input type="checkbox" checked={extracted.show_source_url === true} onChange={e => setExtracted({...extracted, show_source_url: e.target.checked})}
                 className="w-4 h-4 accent-blue-500" />
-              <span className="text-white/50 text-xs">Shfaq linkun origjinal te kontakti</span>
+              <span className="text-white/50 text-xs">Shfaq linkun e njoftimit publikisht</span>
             </label>
           </div>
               </div>

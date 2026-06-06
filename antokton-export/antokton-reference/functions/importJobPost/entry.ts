@@ -223,11 +223,15 @@ Kthe VETËM JSON valid. Mos shpiko — nëse nuk gjendet, lëre fushën bosh ose
       contact_info: ai?.contact_info || "",
       poster_name: scraped.posterName || ai?.poster_name || "",
       author_profile_url: scraped.posterUrl || ai?.author_profile_url || "",
+      import_author_profile_url: scraped.posterUrl || ai?.author_profile_url || "",
       required_skills: ai?.required_skills || "",
       halal_standard: ai?.halal_standard === "po" ? "po" : "jo",
       image_urls: finalImages,
       category: "pune",
       source_url: url,
+      import_source_url: url,
+      show_source_url: false,
+      show_author_profile_url: false,
     };
 
     return Response.json({ success: true, data });

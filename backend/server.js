@@ -694,12 +694,28 @@ async function requesterCanAuditImports(req) {
   return ["admin", "moderator"].includes(String(user?.role || "").toLowerCase());
 }
 
-async function redactImportedStatus(record, canAudit) {
-  if (!record || !(record.imported_community_request || record.import_type === "community_request")) return record;
+function isImportedRecord(record) {
+  return Boolean(
+    record?.imported_community_request ||
+    record?.import_type ||
+    record?.import_source_url ||
+    record?.import_author_profile_url ||
+    record?.import_original_text ||
+    record?.importer_email ||
+    record?.source_url ||
+    record?.author_profile_url ||
+    record?.show_source_url !== undefined ||
+    record?.show_author_profile_url !== undefined
+  );
+}
+
+async function redactImportedRecord(record, canAudit) {
+  if (!record || !isImportedRecord(record)) return record;
   if (canAudit) return record;
 
   const redacted = { ...record };
   delete redacted.import_source_url;
+  delete redacted.import_author_profile_url;
   delete redacted.import_original_author_name;
   delete redacted.import_original_text;
   delete redacted.import_private_image_url;
@@ -707,7 +723,15 @@ async function redactImportedStatus(record, canAudit) {
   delete redacted.importer_email;
   delete redacted.import_privacy_choices;
 
-  if (!redacted.import_show_source_link) {
+  if (redacted.show_source_url !== true) {
+    delete redacted.source_url;
+  }
+
+  if (redacted.show_author_profile_url !== true) {
+    delete redacted.author_profile_url;
+  }
+
+  if (!redacted.import_show_source_link && redacted.show_source_url !== true) {
     delete redacted.link_url;
     delete redacted.link_title;
   }
@@ -720,14 +744,15 @@ async function redactImportedStatus(record, canAudit) {
 }
 
 async function redactEntityForRequest(entity, payload, req) {
-  if (entity !== "Status") return payload;
+  const redactedEntities = new Set(["Job", "Status", "ImportedPost"]);
+  if (!redactedEntities.has(entity)) return payload;
   const canAudit = await requesterCanAuditImports(req);
   if (Array.isArray(payload)) {
     const out = [];
-    for (const record of payload) out.push(await redactImportedStatus(record, canAudit));
+    for (const record of payload) out.push(await redactImportedRecord(record, canAudit));
     return out;
   }
-  return redactImportedStatus(payload, canAudit);
+  return redactImportedRecord(payload, canAudit);
 }
 
 function buildEmptySchemaResult(schema) {

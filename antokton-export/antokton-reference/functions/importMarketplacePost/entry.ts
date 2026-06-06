@@ -203,9 +203,13 @@ Deno.serve(async (req: Request) => {
         city: scraped.city || '',
         poster_name: scraped.posterName || '',
         author_profile_url: '',
+        import_author_profile_url: '',
         contact_info: '',
         country: '',
-                source_url: url || '',
+        source_url: url || '',
+        import_source_url: url || '',
+        show_source_url: false,
+        show_author_profile_url: false,
       }
     };
 

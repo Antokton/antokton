@@ -113,16 +113,37 @@
     },
     "author_profile_url": {
       "type": "string",
-      "description": "URL e profilit t\u00eb postuesit"
+      "description": "URL e profilit/kontaktit t\u00eb postuesit; publikohet vet\u00ebm n\u00ebse show_author_profile_url=true"
     },
     "source_url": {
       "type": "string",
-      "description": "URL e burimit origjinal"
+      "description": "URL e njoftimit/listimit burim; publikohet vet\u00ebm n\u00ebse show_source_url=true"
     },
     "show_source_url": {
       "type": "boolean",
       "default": false,
-      "description": "Shfaq linkun origjinal te kontakti"
+      "description": "Shfaq linkun e njoftimit/listimit publikisht"
+    },
+    "show_author_profile_url": {
+      "type": "boolean",
+      "default": false,
+      "description": "Shfaq linkun e postuesit si kontakt publik"
+    },
+    "import_source_url": {
+      "type": "string",
+      "description": "URL origjinal i njoftimit/listimit i ruajtur vet\u00ebm p\u00ebr gjurmim t\u00eb brendsh\u00ebm"
+    },
+    "import_author_profile_url": {
+      "type": "string",
+      "description": "URL i profilit/kontaktit t\u00eb postuesit i ruajtur vet\u00ebm p\u00ebr gjurmim t\u00eb brendsh\u00ebm"
+    },
+    "importer_email": {
+      "type": "string",
+      "description": "Email i adminit/moderatorit q\u00eb importoi postimin"
+    },
+    "import_original_text": {
+      "type": "string",
+      "description": "Teksti origjinal i importuar; nuk shfaqet publikisht"
     },
     "image_urls": {
       "type": "array",

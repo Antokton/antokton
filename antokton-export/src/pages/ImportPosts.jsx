@@ -6,9 +6,9 @@ import ImportJobForm from "../components/import/ImportJobForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Download, Table, PlusCircle, ShieldAlert, Briefcase } from "lucide-react";
 
-export default function ImportPosts() {
+export default function ImportPosts({ defaultTab = "table" }) {
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState("table");
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [editingPost, setEditingPost] = useState(null);
 
   useEffect(() => {

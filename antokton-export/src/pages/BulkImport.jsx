@@ -137,8 +137,15 @@ Kthe rezultatin SI JSON me këtë strukturë:
         contact_info: result.contact_info || "",
         phone_number: result.phone_number || "",
         source_url: result.source_url || "",
-        show_source_url: Boolean(result.show_source_url),
+        author_profile_url: result.author_profile_url || "",
+        import_source_url: result.import_source_url || result.source_url || "",
+        import_author_profile_url: result.import_author_profile_url || result.author_profile_url || "",
+        importer_email: user?.email || "",
+        show_source_url: result.show_source_url === true,
+        show_author_profile_url: result.show_author_profile_url === true,
         import_original_text: result.import_original_text || entry.rawText,
+        imported_community_request: true,
+        import_type: "bulk_import_assistant",
         status: "approved",
         poster_name: user?.full_name || "Admin"
       });

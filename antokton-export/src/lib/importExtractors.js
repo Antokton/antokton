@@ -64,8 +64,9 @@ export function extractImportedPostFields(rawText = "", initial = {}) {
   const internationalPhones = phones.filter((phone) => /^\s*\+/.test(phone));
   const localPhones = phones.filter((phone) => !/^\s*\+/.test(phone));
 
-  const sourceUrl = cleanUrl(initial.source_url || initial.original_post_url || urls[0] || "");
-  const contactUrls = urls.filter((url) => url !== sourceUrl);
+  const sourceUrl = cleanUrl(initial.source_url || initial.import_source_url || initial.original_post_url || urls[0] || "");
+  const authorProfileUrl = cleanUrl(initial.author_profile_url || initial.import_author_profile_url || "");
+  const contactUrls = urls.filter((url) => url !== sourceUrl && url !== authorProfileUrl);
   const address =
     initial.address ||
     extractFirstByLabels(combined, ["adresa", "adresë", "lokacioni", "lokacion", "vendndodhja", "location", "address"]) ||
@@ -92,6 +93,10 @@ export function extractImportedPostFields(rawText = "", initial = {}) {
     address,
     city,
     source_url: sourceUrl,
-    show_source_url: Boolean(initial.show_source_url),
+    author_profile_url: authorProfileUrl,
+    import_source_url: initial.import_source_url || sourceUrl,
+    import_author_profile_url: initial.import_author_profile_url || authorProfileUrl,
+    show_source_url: initial.show_source_url === true,
+    show_author_profile_url: initial.show_author_profile_url === true,
   };
 }
