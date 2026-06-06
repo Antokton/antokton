@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Sparkles, Trash2, RotateCcw, Save, Send, Globe, Archive, X } from "lucide-react";
 import { COUNTRIES_DATA, CATEGORIES, LISTING_TYPES, SOURCES } from "./importConstants";
 import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
-import { extractImportedPostFields } from "@/lib/importExtractors";
+import { extractImportedPostFields, sanitizeImportedText } from "@/lib/importExtractors";
 
 export default function ImportForm({ user, editingPost, onDone }) {
   const qc = useQueryClient();
@@ -64,12 +64,13 @@ export default function ImportForm({ user, editingPost, onDone }) {
 
   // When user types in the textarea for the first time (new post)
   const handleTextChange = (val) => {
-    const extracted = extractImportedPostFields(val, { description: val });
+    const cleanVal = sanitizeImportedText(val);
+    const extracted = extractImportedPostFields(cleanVal, { description: cleanVal });
     if (!originalTextLocked) {
       setForm(f => ({
         ...f,
-        original_text: val,
-        edited_text: val,
+        original_text: cleanVal,
+        edited_text: cleanVal,
         phone_number: f.phone_number || extracted.phone_number,
         contact_info: f.contact_info || extracted.contact_info,
         address: f.address || extracted.address,
@@ -78,7 +79,7 @@ export default function ImportForm({ user, editingPost, onDone }) {
     } else {
       setForm(f => ({
         ...f,
-        edited_text: val,
+        edited_text: cleanVal,
         phone_number: f.phone_number || extracted.phone_number,
         contact_info: f.contact_info || extracted.contact_info,
         address: f.address || extracted.address,
@@ -132,7 +133,10 @@ Kthe JSON me këto fusha.`;
         import_source_url: val,
         ...(res.author_name ? { author_name: res.author_name } : {}),
         ...(res.source ? { source: res.source } : {}),
-        ...(res.suggested_text && !f.edited_text ? { original_text: res.suggested_text, edited_text: res.suggested_text } : {}),
+        ...(res.suggested_text && !f.edited_text ? {
+          original_text: sanitizeImportedText(res.suggested_text),
+          edited_text: sanitizeImportedText(res.suggested_text)
+        } : {}),
       }));
     } catch {}
     setUrlLoading(false);
@@ -149,7 +153,7 @@ Kthe JSON me këto fusha.`;
       prompt = `Pastro këtë tekst: largo hapësirat e tepërta, normalizon ndërprerjet e rreshtave, largo formatimin e çrregullt. Kthe vetëm tekstin e pastruar pa koment:\n\n${form.edited_text}`;
     }
     const res = await base44.integrations.Core.InvokeLLM({ prompt });
-    set("edited_text", typeof res === "string" ? res.trim() : (res?.text || form.edited_text).trim());
+    set("edited_text", sanitizeImportedText(typeof res === "string" ? res.trim() : (res?.text || form.edited_text).trim()));
     setAiLoading(false);
   };
 
@@ -159,9 +163,13 @@ Kthe JSON me këto fusha.`;
   const save = async (status) => {
     if (!form.listing_type) { alert("Zgjidhni llojin e njoftimit!"); return; }
     if (!form.edited_text.trim()) { alert("Teksti nuk mund të jetë bosh!"); return; }
-    const prepared = extractImportedPostFields(form.original_text || form.edited_text, {
+    const cleanOriginalText = sanitizeImportedText(form.original_text || form.edited_text);
+    const cleanEditedText = sanitizeImportedText(form.edited_text);
+    const prepared = extractImportedPostFields(cleanOriginalText, {
       ...form,
-      description: form.edited_text,
+      original_text: cleanOriginalText,
+      edited_text: cleanEditedText,
+      description: cleanEditedText,
       source_url: form.source_url || form.original_post_url,
       import_source_url: form.import_source_url || form.source_url || form.original_post_url,
       author_profile_url: form.author_profile_url,
@@ -174,6 +182,7 @@ Kthe JSON me këto fusha.`;
     setLoading(true);
     const payload = {
       ...form,
+      original_text: prepared.original_text || cleanOriginalText,
       edited_text: prepared.description,
       address: prepared.address || form.address || "",
       city: prepared.city || form.city || "",

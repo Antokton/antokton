@@ -4,6 +4,54 @@ const PHONE_RE = /(?:\+\d{1,4}[\s().-]?)?(?:\d[\s().-]?){7,14}\d\b/g;
 
 const UNIQUE = (items) => Array.from(new Set(items.filter(Boolean).map((v) => String(v).trim()).filter(Boolean)));
 
+const NAMED_ENTITIES = {
+  amp: "&",
+  apos: "'",
+  ccedil: "ç",
+  Ccedil: "Ç",
+  euml: "ë",
+  Euml: "Ë",
+  gt: ">",
+  lt: "<",
+  nbsp: " ",
+  quot: "\"",
+};
+
+const MOJIBAKE_REPLACEMENTS = [
+  [/Ã«/g, "ë"],
+  [/Ã‹/g, "Ë"],
+  [/Ã§/g, "ç"],
+  [/Ã‡/g, "Ç"],
+  [/â€™/g, "'"],
+  [/â€˜/g, "'"],
+  [/â€œ/g, "\""],
+  [/â€�/g, "\""],
+  [/â€“/g, "–"],
+  [/â€”/g, "—"],
+  [/Â /g, " "],
+  [/Â/g, ""],
+];
+
+export function sanitizeImportedText(value = "") {
+  let text = String(value || "");
+  text = text.replace(/&#x([0-9a-f]+);?/gi, (_, hex) => {
+    const codePoint = Number.parseInt(hex, 16);
+    return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : "";
+  });
+  text = text.replace(/&#(\d+);?/g, (_, number) => {
+    const codePoint = Number.parseInt(number, 10);
+    return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : "";
+  });
+  text = text.replace(/&([a-zA-Z][a-zA-Z0-9]+);/g, (match, name) => (
+    Object.prototype.hasOwnProperty.call(NAMED_ENTITIES, name) ? NAMED_ENTITIES[name] : match
+  ));
+  for (const [pattern, replacement] of MOJIBAKE_REPLACEMENTS) {
+    text = text.replace(pattern, replacement);
+  }
+  text = text.replace(/([a-zçë])Ë/g, "$1ë").replace(/([a-zçë])Ç/g, "$1ç");
+  return text.normalize("NFC");
+}
+
 function cleanUrl(url = "") {
   return String(url).trim().replace(/[.,;:!?]+$/, "");
 }
@@ -30,7 +78,7 @@ function hasUrl(text = "") {
 }
 
 function extractFirstByLabels(text = "", labels = []) {
-  const lines = String(text || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const lines = sanitizeImportedText(text).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   const labelRe = new RegExp(`^(?:${labels.join("|")})\\s*[:\\-–]\\s*(.+)$`, "i");
   for (const line of lines) {
     const match = line.match(labelRe);
@@ -40,7 +88,7 @@ function extractFirstByLabels(text = "", labels = []) {
 }
 
 export function stripContactLines(text = "") {
-  return String(text || "")
+  return sanitizeImportedText(text)
     .split(/\r?\n/)
     .filter((line) => {
       const value = line.trim();
@@ -54,9 +102,13 @@ export function stripContactLines(text = "") {
 }
 
 export function extractImportedPostFields(rawText = "", initial = {}) {
-  const source = String(rawText || "");
-  const description = String(initial.description || source || "");
-  const combined = [source, description, initial.contact_info].filter(Boolean).join("\n");
+  const cleanInitial = Object.fromEntries(Object.entries(initial || {}).map(([key, value]) => [
+    key,
+    typeof value === "string" ? sanitizeImportedText(value) : value,
+  ]));
+  const source = sanitizeImportedText(rawText || "");
+  const description = sanitizeImportedText(cleanInitial.description || source || "");
+  const combined = sanitizeImportedText([source, description, cleanInitial.contact_info].filter(Boolean).join("\n"));
 
   const emails = UNIQUE(combined.match(EMAIL_RE) || []);
   const urls = UNIQUE((combined.match(URL_RE) || []).map(cleanUrl));
@@ -64,39 +116,39 @@ export function extractImportedPostFields(rawText = "", initial = {}) {
   const internationalPhones = phones.filter((phone) => /^\s*\+/.test(phone));
   const localPhones = phones.filter((phone) => !/^\s*\+/.test(phone));
 
-  const sourceUrl = cleanUrl(initial.source_url || initial.import_source_url || initial.original_post_url || urls[0] || "");
-  const authorProfileUrl = cleanUrl(initial.author_profile_url || initial.import_author_profile_url || "");
+  const sourceUrl = cleanUrl(cleanInitial.source_url || cleanInitial.import_source_url || cleanInitial.original_post_url || urls[0] || "");
+  const authorProfileUrl = cleanUrl(cleanInitial.author_profile_url || cleanInitial.import_author_profile_url || "");
   const contactUrls = urls.filter((url) => url !== sourceUrl && url !== authorProfileUrl);
   const address =
-    initial.address ||
+    cleanInitial.address ||
     extractFirstByLabels(combined, ["adresa", "adresë", "lokacioni", "lokacion", "vendndodhja", "location", "address"]) ||
     "";
   const city =
-    initial.city ||
+    cleanInitial.city ||
     extractFirstByLabels(combined, ["qyteti", "qytet", "city"]) ||
     "";
 
   const contactLines = UNIQUE([
-    initial.contact_info,
+    cleanInitial.contact_info,
     ...emails,
     ...contactUrls,
     ...localPhones.map((phone) => `Telefon: ${phone}`),
   ]);
 
   return {
-    ...initial,
+    ...cleanInitial,
     description: stripContactLines(description) || description,
-    import_original_text: initial.import_original_text || source,
-    original_text: initial.original_text || source,
+    import_original_text: sanitizeImportedText(cleanInitial.import_original_text || source),
+    original_text: sanitizeImportedText(cleanInitial.original_text || source),
     contact_info: contactLines.join("\n"),
-    phone_number: initial.phone_number || internationalPhones[0] || "",
+    phone_number: cleanInitial.phone_number || internationalPhones[0] || "",
     address,
     city,
     source_url: sourceUrl,
     author_profile_url: authorProfileUrl,
-    import_source_url: initial.import_source_url || sourceUrl,
-    import_author_profile_url: initial.import_author_profile_url || authorProfileUrl,
-    show_source_url: initial.show_source_url === true,
-    show_author_profile_url: initial.show_author_profile_url === true,
+    import_source_url: cleanInitial.import_source_url || sourceUrl,
+    import_author_profile_url: cleanInitial.import_author_profile_url || authorProfileUrl,
+    show_source_url: cleanInitial.show_source_url === true,
+    show_author_profile_url: cleanInitial.show_author_profile_url === true,
   };
 }

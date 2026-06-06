@@ -821,6 +821,52 @@ function basicSearch(records, queryText, fields) {
   );
 }
 
+const HTML_ENTITIES = {
+  amp: "&",
+  apos: "'",
+  ccedil: "ç",
+  Ccedil: "Ç",
+  euml: "ë",
+  Euml: "Ë",
+  gt: ">",
+  lt: "<",
+  nbsp: " ",
+  quot: "\"",
+};
+
+function sanitizeImportedText(value = "") {
+  let text = String(value || "");
+  text = text.replace(/&#x([0-9a-f]+);?/gi, (_, hex) => {
+    const codePoint = Number.parseInt(hex, 16);
+    return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : "";
+  });
+  text = text.replace(/&#(\d+);?/g, (_, number) => {
+    const codePoint = Number.parseInt(number, 10);
+    return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : "";
+  });
+  text = text.replace(/&([a-zA-Z][a-zA-Z0-9]+);/g, (match, name) => (
+    Object.prototype.hasOwnProperty.call(HTML_ENTITIES, name) ? HTML_ENTITIES[name] : match
+  ));
+  for (const [pattern, replacement] of [
+    [/Ã«/g, "ë"],
+    [/Ã‹/g, "Ë"],
+    [/Ã§/g, "ç"],
+    [/Ã‡/g, "Ç"],
+    [/â€™/g, "'"],
+    [/â€˜/g, "'"],
+    [/â€œ/g, "\""],
+    [/â€�/g, "\""],
+    [/â€“/g, "–"],
+    [/â€”/g, "—"],
+    [/Â /g, " "],
+    [/Â/g, ""],
+  ]) {
+    text = text.replace(pattern, replacement);
+  }
+  text = text.replace(/([a-zçë])Ë/g, "$1ë").replace(/([a-zçë])Ç/g, "$1ç");
+  return text.normalize("NFC");
+}
+
 async function scrapeBasicListing(url) {
   const response = await fetch(url, {
     headers: {
@@ -865,10 +911,10 @@ async function scrapeBasicListing(url) {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 6000);
-  const descriptionText = [description, jsonLdText, bodyText].filter(Boolean).join("\n").trim();
+  const descriptionText = sanitizeImportedText([description, jsonLdText, bodyText].filter(Boolean).join("\n").trim());
 
   return {
-    title: title.replace(/\s+/g, " ").trim(),
+    title: sanitizeImportedText(title).replace(/\s+/g, " ").trim(),
     description: descriptionText,
     import_original_text: descriptionText,
     image_urls: [...new Set(imageUrls)],

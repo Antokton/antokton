@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Link2, Sparkles, CheckCircle2, AlertCircle, Phone, MapPin, User, Briefcase, DollarSign, FileText, Image, ClipboardPaste } from "lucide-react";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
-import { extractImportedPostFields } from "@/lib/importExtractors";
+import { extractImportedPostFields, sanitizeImportedText } from "@/lib/importExtractors";
 
 const CONTRACT_TYPES = [
   { value: "full-time", label: "Full-time" },
@@ -48,25 +48,7 @@ const isUrlLike = (value = "") => /^https?:\/\//i.test(String(value || "").trim(
 
 const looksCorruptedText = (value = "") => /�|Ã|Â|â€|Ð|Ñ|\\u00[0-9a-f]{2}/i.test(String(value || ""));
 
-const decodeHtmlEntities = (value = "") => String(value || "")
-  .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => {
-    const codePoint = parseInt(hex, 16);
-    return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : "";
-  })
-  .replace(/&#(\d+);?/g, (_, number) => {
-    const codePoint = parseInt(number, 10);
-    return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : "";
-  })
-  .replace(/&nbsp;/gi, " ")
-  .replace(/&amp;/gi, "&")
-  .replace(/&quot;/gi, "\"")
-  .replace(/&apos;|&#39;/gi, "'")
-  .replace(/&ccedil;/gi, "ç")
-  .replace(/&Ccedil;/g, "Ç")
-  .replace(/&euml;/gi, "ë")
-  .replace(/&Euml;/g, "Ë");
-
-const cleanRoleLine = (line = "") => decodeHtmlEntities(line)
+const cleanRoleLine = (line = "") => sanitizeImportedText(line)
   .replace(/^[\s\-–—•●▪▫*✅✔️☑️🔹🔸📌]+\s*/u, "")
   .replace(/^\d+[\).:\-–]\s*/, "")
   .replace(/\s+/g, " ")
@@ -86,7 +68,7 @@ const titleCase = (value = "") => String(value || "")
   .map((word) => word.charAt(0).toLocaleUpperCase("sq-AL") + word.slice(1))
   .join(" ");
 
-const cleanImportedText = (value = "") => decodeHtmlEntities(value)
+const cleanImportedText = (value = "") => sanitizeImportedText(value)
   .split(/\r?\n/)
   .map((line) => {
     const trimmed = line.replace(/\s+/g, " ").trim();
@@ -141,7 +123,7 @@ const inferProfession = (title = "") => {
 };
 
 const extractLocationFromText = (rawText = "") => {
-  const lines = decodeHtmlEntities(rawText).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const lines = sanitizeImportedText(rawText).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   const labelRe = /^(?:lokacioni|lokacion|vendndodhja|vendi|qyteti|qytet|adresa|adres[eë]|location|address)\s*[:\-–]\s*(.+)$/i;
   for (const line of lines) {
     const match = line.match(labelRe);
@@ -169,7 +151,7 @@ const isLikelyRoleLine = (line = "", rawLine = "") => {
 };
 
 const splitRoleLines = (rawText = "") => {
-  const rawLines = decodeHtmlEntities(rawText).split(/\r?\n/);
+  const rawLines = sanitizeImportedText(rawText).split(/\r?\n/);
 
   const roles = [];
   let inPositionSection = false;
@@ -232,10 +214,10 @@ const importedTextFromData = (data = {}) => [
   data.original_text,
   data.description,
   data.title,
-].filter(Boolean).map(decodeHtmlEntities).join("\n").trim();
+].filter(Boolean).map(sanitizeImportedText).join("\n").trim();
 
 const hasImportableText = (text = "") => {
-  const clean = String(text || "").replace(/https?:\/\/\S+/gi, "").replace(/\s+/g, " ").trim();
+  const clean = sanitizeImportedText(text).replace(/https?:\/\/\S+/gi, "").replace(/\s+/g, " ").trim();
   if (looksCorruptedText(clean)) return false;
   if (clean.length < 80) return false;
   if (!/[a-zA-ZçÇëË]/.test(clean)) return false;
@@ -244,9 +226,9 @@ const hasImportableText = (text = "") => {
 };
 
 const isMeaningfulDraft = (draft = {}) => {
-  const title = String(draft.title || "").trim();
-  const description = String(draft.description || "").trim();
-  const profession = String(draft.profession || "").trim();
+  const title = sanitizeImportedText(draft.title || "").trim();
+  const description = sanitizeImportedText(draft.description || "").trim();
+  const profession = sanitizeImportedText(draft.profession || "").trim();
   if (!title || !description || !profession) return false;
   if (looksCorruptedText(`${title}\n${description}\n${profession}\n${draft.city || ""}\n${draft.address || ""}`)) return false;
   if (isUrlLike(title) || isUrlLike(description)) return false;
@@ -268,15 +250,15 @@ const buildHeuristicDrafts = (rawText = "", baseDraft = {}, fallbackUrl = "", jo
 };
 
 const normalizeDraft = (rawText, draft = {}, fallbackUrl = "", jobType = "ofroj") => {
-  const decodedRawText = decodeHtmlEntities(rawText);
+  const decodedRawText = sanitizeImportedText(rawText);
   const decodedDraft = {
     ...draft,
-    title: decodeHtmlEntities(draft.title || ""),
-    description: decodeHtmlEntities(draft.description || ""),
-    profession: decodeHtmlEntities(draft.profession || ""),
-    city: decodeHtmlEntities(draft.city || ""),
-    address: decodeHtmlEntities(draft.address || ""),
-    contact_info: decodeHtmlEntities(draft.contact_info || ""),
+    title: sanitizeImportedText(draft.title || ""),
+    description: sanitizeImportedText(draft.description || ""),
+    profession: sanitizeImportedText(draft.profession || ""),
+    city: sanitizeImportedText(draft.city || ""),
+    address: sanitizeImportedText(draft.address || ""),
+    contact_info: sanitizeImportedText(draft.contact_info || ""),
   };
   const polished = polishDraft(decodedDraft, decodedRawText);
   return extractImportedPostFields(decodedRawText || "", {
