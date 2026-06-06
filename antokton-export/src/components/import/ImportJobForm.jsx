@@ -59,6 +59,8 @@ const normalizeImportUrl = (value = "") => {
   return raw;
 };
 
+const isFacebookUrl = (value = "") => /(?:^|\/\/)(?:www\.|m\.|mbasic\.)?facebook\.com\//i.test(normalizeImportUrl(value));
+
 const looksTruncatedText = (value = "") => {
   const text = sanitizeImportedText(value);
   return /(^|\s)(?:\.{3}|…)(?:\s|$)/.test(text) || /\bn[eë]\.\.\./i.test(text);
@@ -452,6 +454,13 @@ ${text || importedData.description || importedData.title || ""}`;
       setError("Ngjit linkun ose tekstin e njoftimit para importimit.");
       return;
     }
+    if (cleanUrl && isFacebookUrl(cleanUrl) && !cleanText) {
+      if (cleanUrl !== url.trim()) setUrl(cleanUrl);
+      setDraftList([]);
+      setStep("input");
+      setError("Për Facebook, kopjo tekstin e postimit këtu. Linku ruhet vetëm për gjurmim.");
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -461,10 +470,14 @@ ${text || importedData.description || importedData.title || ""}`;
       if (cleanText) {
         const baseDraft = { source_url: cleanUrl, author_profile_url: authorUrl.trim(), import_author_profile_url: authorUrl.trim() };
         const heuristicDrafts = buildHeuristicDrafts(cleanText, baseDraft, cleanUrl, jobType);
-        const aiResult = await extractDraftsWithAi({ text: cleanText, sourceUrl: cleanUrl, importedData: baseDraft });
-        const nextDrafts = heuristicDrafts.length > aiResult.drafts.length
+        const aiResult = cleanUrl && isFacebookUrl(cleanUrl)
+          ? { drafts: [], warning: "" }
+          : await extractDraftsWithAi({ text: cleanText, sourceUrl: cleanUrl, importedData: baseDraft });
+        const nextDrafts = cleanUrl && isFacebookUrl(cleanUrl)
           ? heuristicDrafts
-          : (aiResult.drafts.length ? aiResult.drafts : heuristicDrafts);
+          : (heuristicDrafts.length > aiResult.drafts.length
+            ? heuristicDrafts
+            : (aiResult.drafts.length ? aiResult.drafts : heuristicDrafts));
         setDraftList(nextDrafts);
         if (nextDrafts.length > 1) {
           setError(`U gjetën ${nextDrafts.length} pozicione. Kontrollo secilin draft veçmas para publikimit.`);
