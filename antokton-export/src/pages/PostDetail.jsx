@@ -967,16 +967,6 @@ export default function PostDetail() {
                         <span className="min-w-0 break-words">{[job.address || job.city, job.country === "Antokton" ? null : job.country].filter(Boolean).join(", ")}</span>
                       </a>
                     )}
-                              {job.source_url && (job.show_source_url === true || canSeePrivateImportFields) && (
-            <a
-              href={job.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex max-w-full items-center gap-1.5 break-all mt-1 text-xs text-[#8ab4ff] hover:text-[#9bffd6] transition-colors underline underline-offset-2"
-            >
-              <ExternalLink className="w-3 h-3" /> Shiko njoftimin origjinal
-            </a>
-          )}
                   </div>
                 ) : (
                   <div className="space-y-3">
