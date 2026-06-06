@@ -34,6 +34,10 @@ const PROFESSION_KEYWORDS = [
   "teknik", "ndihmes", "ndihmës", "menaxher", "arkëtar", "shitës", "roje"
 ];
 
+const SECTION_STOP_RE = /^(?:cfar[eë]|çfar[eë]|ofrojm[eë]|ofrohet|kushtet|benefitet|paga|pagesa|lokacioni|lokacion|vendndodhja|adresa|kontakt|tel|telefon|whatsapp|viber|email|apliko|na kontakto)\b/i;
+const POSITION_SECTION_RE = /(?:pozicionet|pozitat|vende pune|fusha|profesione|rekrutim|k[eë]rkojm[eë]|kerkojme|k[eë]rkohet)/i;
+const BULLET_RE = /^[\s\-–—•●▪▫*✅✔️☑️🔹🔸📌]+\s*/u;
+
 const hasProfessionKeyword = (value = "") => {
   const normalized = String(value || "").toLowerCase();
   return PROFESSION_KEYWORDS.some((keyword) => normalized.includes(keyword));
@@ -45,37 +49,157 @@ const cleanRoleLine = (line = "") => String(line || "")
   .replace(/\s+/g, " ")
   .trim();
 
+const sentenceCase = (value = "") => {
+  const text = String(value || "").toLocaleLowerCase("sq-AL").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  return text.charAt(0).toLocaleUpperCase("sq-AL") + text.slice(1);
+};
+
+const titleCase = (value = "") => String(value || "")
+  .toLocaleLowerCase("sq-AL")
+  .replace(/\s+/g, " ")
+  .trim()
+  .split(" ")
+  .map((word) => word.charAt(0).toLocaleUpperCase("sq-AL") + word.slice(1))
+  .join(" ");
+
+const cleanImportedText = (value = "") => String(value || "")
+  .split(/\r?\n/)
+  .map((line) => {
+    const trimmed = line.replace(/\s+/g, " ").trim();
+    if (!trimmed) return "";
+    if (/^[A-ZÇË0-9\s.,:;!?()/%+-]+$/.test(trimmed) && /[A-ZÇË]{3,}/.test(trimmed)) {
+      return sentenceCase(trimmed);
+    }
+    return trimmed;
+  })
+  .join("\n")
+  .replace(/\n{3,}/g, "\n\n")
+  .trim();
+
 const isContactOrBenefitLine = (line = "") => {
   const value = String(line || "").toLowerCase();
-  return /kontakt|tel|telefon|whatsapp|viber|email|paga|pages|akomodim|banim|transport|kontrat|dokument|apliko|cv|info/.test(value);
+  return /kontakt|tel|telefon|whatsapp|viber|email|paga|pages|akomodim|banim|transport|kontrat|dokument|apliko|cv|info|mund[eë]si|sigurim/.test(value);
 };
 
 const inferProfession = (title = "") => {
   const clean = cleanRoleLine(title);
   const lower = clean.toLowerCase();
-  const keyword = PROFESSION_KEYWORDS.find((item) => lower.includes(item));
-  if (!keyword) return clean;
-  const words = clean.split(/\s+/);
-  const index = words.findIndex((word) => word.toLowerCase().includes(keyword));
-  return words.slice(Math.max(index, 0), Math.min(words.length, index + 4)).join(" ") || clean;
+  const mappings = [
+    [/elektricist/, "Elektricist"],
+    [/hidraulik/, "Hidraulik"],
+    [/gips|gipskarton|knauf/, "Punëtor gipskartoni"],
+    [/shofer/, "Shofer"],
+    [/kuzhinier/, "Kuzhinier"],
+    [/kamerier/, "Kamerier"],
+    [/banakier/, "Banakier"],
+    [/murator/, "Murator"],
+    [/montues/, "Montues"],
+    [/mekanik/, "Mekanik"],
+    [/pastrues/, "Pastrues"],
+    [/infermier/, "Infermier"],
+    [/programues/, "Programues"],
+    [/saldues/, "Saldues"],
+    [/magazinier/, "Magazinier"],
+    [/recepsionist/, "Recepsionist"],
+    [/operator/, "Operator"],
+    [/teknik/, "Teknik"],
+    [/menaxher/, "Menaxher"],
+    [/ark[eë]tar/, "Arkëtar"],
+    [/shit[eë]s/, "Shitës"],
+    [/nd[eë]rtim|ndertim/, "Punëtor ndërtimi"],
+    [/pun[eë]tor/, "Punëtor"],
+  ];
+  const match = mappings.find(([regex]) => regex.test(lower));
+  if (match) return match[1];
+  return titleCase(clean).split(/\s+/).slice(0, 3).join(" ");
+};
+
+const extractLocationFromText = (rawText = "") => {
+  const lines = String(rawText || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const labelRe = /^(?:lokacioni|lokacion|vendndodhja|vendi|qyteti|qytet|adresa|adres[eë]|location|address)\s*[:\-–]\s*(.+)$/i;
+  for (const line of lines) {
+    const match = line.match(labelRe);
+    if (!match?.[1]) continue;
+    const value = cleanRoleLine(match[1]).replace(/\s*(?:deri|rreth)\s+\d+.*$/i, "").trim();
+    const city = value.split(/[,;|/]| dhe | ose /i).map((part) => part.trim()).filter(Boolean).join(", ");
+    return { address: value, city: city || value };
+  }
+  const knownCityMatch = String(rawText || "").match(/\b(G[uü]tersloh|Bielefeld|Berlin|Hamburg|München|Munich|Dortmund|Düsseldorf|Dusseldorf|Köln|Koln|Frankfurt)\b/gi);
+  if (knownCityMatch?.length) {
+    const city = Array.from(new Set(knownCityMatch.map((item) => titleCase(item.replace("Gutersloh", "Gütersloh"))))).join(", ");
+    return { address: city, city };
+  }
+  return { address: "", city: "" };
+};
+
+const isLikelyRoleLine = (line = "", rawLine = "") => {
+  const clean = cleanRoleLine(line);
+  if (clean.length < 3 || clean.length > 90) return false;
+  if (SECTION_STOP_RE.test(clean) || isContactOrBenefitLine(clean)) return false;
+  if (!hasProfessionKeyword(clean)) return false;
+  const isBullet = BULLET_RE.test(rawLine) || /^\s*\d+[\).:\-–]\s*/.test(rawLine);
+  const isPositionContext = POSITION_SECTION_RE.test(rawLine) || isBullet;
+  return isPositionContext || clean.split(/\s+/).length <= 6;
 };
 
 const splitRoleLines = (rawText = "") => {
-  const lines = String(rawText || "")
-    .split(/\r?\n/)
-    .map(cleanRoleLine)
-    .filter(Boolean);
+  const rawLines = String(rawText || "").split(/\r?\n/);
 
   const roles = [];
-  for (const line of lines) {
-    if (line.length < 4 || line.length > 120) continue;
-    if (isContactOrBenefitLine(line)) continue;
-    if (!hasProfessionKeyword(line)) continue;
-    if (/^(kerkojm[eë]|k[eë]rkohet|ofrojm[eë]|vende pune)\b/i.test(line) && line.length > 55) continue;
+  let inPositionSection = false;
+  for (const rawLine of rawLines) {
+    const line = cleanRoleLine(rawLine);
+    if (!line) continue;
+    if (SECTION_STOP_RE.test(line) && !POSITION_SECTION_RE.test(line)) {
+      inPositionSection = false;
+      continue;
+    }
+    if (POSITION_SECTION_RE.test(line)) {
+      inPositionSection = true;
+      if (!hasProfessionKeyword(line) || line.length > 60) continue;
+    }
+    if (!inPositionSection && !BULLET_RE.test(rawLine) && !/^\s*\d+[\).:\-–]\s*/.test(rawLine)) continue;
+    if (!isLikelyRoleLine(line, rawLine)) continue;
     roles.push(line);
   }
 
-  return Array.from(new Set(roles)).slice(0, 8);
+  const seen = new Set();
+  return roles.filter((role) => {
+    const key = inferProfession(role).toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 6);
+};
+
+const polishDraft = (draft = {}, rawText = "") => {
+  const profession = inferProfession(draft.profession || draft.title || "");
+  const location = extractLocationFromText(rawText || draft.import_original_text || draft.original_text || draft.description || "");
+  const title = draft.title || profession || "Njoftim pune";
+  return {
+    ...draft,
+    title: titleCase(title).split(/\s+/).slice(0, 10).join(" "),
+    profession,
+    description: cleanImportedText(draft.description || rawText || ""),
+    city: draft.city || location.city || "",
+    address: draft.address || location.address || "",
+  };
+};
+
+const dedupeDrafts = (items = [], rawText = "") => {
+  const roleCount = splitRoleLines(rawText).length;
+  const seen = new Set();
+  const cleanItems = items
+    .map((item) => polishDraft(item, rawText))
+    .filter((item) => item.title || item.description || item.profession)
+    .filter((item) => {
+      const key = `${(item.profession || "").toLowerCase()}|${(item.city || "").toLowerCase()}`;
+      if (!item.profession || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  return roleCount > 0 ? cleanItems.slice(0, roleCount) : cleanItems;
 };
 
 const buildHeuristicDrafts = (rawText = "", baseDraft = {}, fallbackUrl = "", jobType = "ofroj") => {
@@ -84,28 +208,31 @@ const buildHeuristicDrafts = (rawText = "", baseDraft = {}, fallbackUrl = "", jo
 
   return roles.map((role) => normalizeDraft(rawText, {
     ...baseDraft,
-    title: role,
+    title: inferProfession(role),
     profession: baseDraft.profession || inferProfession(role),
-    description: `${role}\n\n${rawText}`.trim(),
+    description: `${inferProfession(role)}\n\n${rawText}`.trim(),
   }, fallbackUrl, jobType));
 };
 
-const normalizeDraft = (rawText, draft = {}, fallbackUrl = "", jobType = "ofroj") => extractImportedPostFields(rawText || "", {
-  ...draft,
-  title: draft.title || rawText?.split("\n").find(Boolean)?.slice(0, 90) || "Njoftim pune",
-  description: draft.description || rawText || "",
-  import_original_text: rawText || draft.import_original_text || draft.original_text || draft.description || "",
-  original_text: rawText || draft.original_text || draft.description || "",
-  source_url: draft.source_url || fallbackUrl || "",
-  import_source_url: draft.import_source_url || draft.source_url || fallbackUrl || "",
-  author_profile_url: draft.author_profile_url || "",
-  import_author_profile_url: draft.import_author_profile_url || draft.author_profile_url || "",
-  show_source_url: false,
-  show_author_profile_url: false,
-  category: draft.category || "pune",
-  job_type: draft.job_type || jobType || "ofroj",
-  status: "pending",
-});
+const normalizeDraft = (rawText, draft = {}, fallbackUrl = "", jobType = "ofroj") => {
+  const polished = polishDraft(draft, rawText);
+  return extractImportedPostFields(rawText || "", {
+    ...polished,
+    title: polished.title || rawText?.split("\n").find(Boolean)?.slice(0, 90) || "Njoftim pune",
+    description: polished.description || rawText || "",
+    import_original_text: rawText || draft.import_original_text || draft.original_text || draft.description || "",
+    original_text: rawText || draft.original_text || draft.description || "",
+    source_url: draft.source_url || fallbackUrl || "",
+    import_source_url: draft.import_source_url || draft.source_url || fallbackUrl || "",
+    author_profile_url: draft.author_profile_url || "",
+    import_author_profile_url: draft.import_author_profile_url || draft.author_profile_url || "",
+    show_source_url: false,
+    show_author_profile_url: false,
+    category: draft.category || "pune",
+    job_type: draft.job_type || jobType || "ofroj",
+    status: "pending",
+  });
+};
 
 const hasUsefulAiDraft = (draft) => Boolean(draft?.title || draft?.description || draft?.profession || draft?.city || draft?.country);
 
@@ -134,8 +261,9 @@ export default function ImportJobForm({ user, onDone }) {
 Rregulla:
 - Nëse ka disa vende pune/profesione/rekrutime, kthe secilin si objekt më vete në jobs[].
 - Mos shpik pagë, qytet, shtet, punëdhënës, kontakt, ose link.
-- Profesioni duhet të jetë i plotësuar kur del nga teksti.
+- Profesioni duhet të jetë i plotësuar kur del nga teksti dhe të jetë i shkurtër: 1-3 fjalë.
 - Përshkrimi duhet të jetë shqip i pastër, por me faktet e ruajtura.
+- Mos përdor tekst me të gjitha shkronjat e mëdha; ktheje në drejtshkrim normal.
 - Kontaktet mbaji në contact_info/phone_number, mos i përziej në përshkrim.
 - Nëse linku nuk jep përmbajtje të lexueshme, përdor vetëm tekstin e dhënë dhe mos shpik.
 
@@ -180,14 +308,15 @@ ${text || importedData.description || importedData.title || ""}`;
       });
 
       const jobs = Array.isArray(response?.jobs) ? response.jobs.filter(hasUsefulAiDraft) : [];
+      const sourceText = text || importedData.description || "";
       return {
         warning: response?.warning || "",
-        drafts: jobs.map((job) => normalizeDraft(text || importedData.description || "", {
+        drafts: dedupeDrafts(jobs.map((job) => normalizeDraft(sourceText, {
           ...importedData,
           ...job,
           category: job.category || importedData.category || "pune",
           source_url: sourceUrl || importedData.source_url || "",
-        }, sourceUrl, jobType)),
+        }, sourceUrl, jobType)), sourceText),
       };
     } catch {
       return { warning: "", drafts: [] };
@@ -380,17 +509,21 @@ ${text || importedData.description || importedData.title || ""}`;
           </div>
 
           {hasMultipleDrafts && (
-            <div className="rounded-xl border border-[#8ab4ff]/20 bg-[#8ab4ff]/10 p-3">
-              <p className="text-[#9bffd6] text-xs font-bold mb-2">U ndanë {drafts.length} vende pune. Zgjidh draftin për redaktim:</p>
-              <div className="flex flex-wrap gap-2">
+            <div className="rounded-xl border border-[#8ab4ff]/20 bg-[#8ab4ff]/10 p-3 space-y-3">
+              <p className="text-[#9bffd6] text-xs font-bold">Të gjitha draft-et para miratimit ({drafts.length})</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {drafts.map((draft, index) => (
                   <button
                     key={`${draft.title}-${index}`}
                     type="button"
                     onClick={() => setSelectedDraftIndex(index)}
-                    className={`rounded-lg border px-3 py-1.5 text-xs ${selectedDraftIndex === index ? "border-[#8ab4ff] bg-[#8ab4ff]/20 text-white" : "border-white/10 bg-white/5 text-white/60"}`}
+                    className={`rounded-lg border p-3 text-left transition-colors ${selectedDraftIndex === index ? "border-[#8ab4ff] bg-[#8ab4ff]/20 text-white" : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"}`}
                   >
-                    {index + 1}. {draft.profession || draft.title || "Draft"}
+                    <span className="block text-[10px] uppercase tracking-wide text-white/40">Draft {index + 1}</span>
+                    <span className="block text-sm font-semibold text-white">{draft.title || "Njoftim pune"}</span>
+                    <span className="mt-1 block text-xs text-white/65">
+                      {[draft.profession, draft.city || draft.address, draft.phone_number].filter(Boolean).join(" • ") || "Kontrollo fushat"}
+                    </span>
                   </button>
                 ))}
               </div>
