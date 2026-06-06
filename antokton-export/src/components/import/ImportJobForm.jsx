@@ -53,6 +53,11 @@ const looksTruncatedText = (value = "") => {
   return /(^|\s)(?:\.{3}|…)(?:\s|$)/.test(text) || /\bn[eë]\.\.\./i.test(text);
 };
 
+const hasCompleteJobSignals = (value = "") => {
+  const text = sanitizeImportedText(value);
+  return splitRoleLines(text).length > 1 && /kontakt|informata|tel|telefon|whatsapp|\+\d{1,4}/i.test(text) && /lokacion|vendndodhja|qytet|adresa|gütersloh|gutersloh|bielefeld/i.test(text);
+};
+
 const cleanRoleLine = (line = "") => sanitizeImportedText(line)
   .replace(/^[\s\-–—•●▪▫*✅✔️☑️🔹🔸📌]+\s*/u, "")
   .replace(/^\d+[\).:\-–]\s*/, "")
@@ -269,7 +274,7 @@ const importedTextFromData = (data = {}) => [
 const hasImportableText = (text = "") => {
   const clean = sanitizeImportedText(text).replace(/https?:\/\/\S+/gi, "").replace(/\s+/g, " ").trim();
   if (looksCorruptedText(clean)) return false;
-  if (looksTruncatedText(clean)) return false;
+  if (looksTruncatedText(clean) && !hasCompleteJobSignals(text)) return false;
   if (clean.length < 80) return false;
   if (!/[a-zA-ZçÇëË]/.test(clean)) return false;
   if (/facebook|log in|login|sign up|permalink|browser/i.test(clean) && clean.length < 220) return false;
@@ -282,7 +287,7 @@ const isMeaningfulDraft = (draft = {}) => {
   const profession = sanitizeImportedText(draft.profession || "").trim();
   if (!title || !description || !profession) return false;
   if (looksCorruptedText(`${title}\n${description}\n${profession}\n${draft.city || ""}\n${draft.address || ""}`)) return false;
-  if (looksTruncatedText(`${title}\n${description}`)) return false;
+  if (looksTruncatedText(`${title}\n${description}`) && !hasCompleteJobSignals(description)) return false;
   if (isUrlLike(title) || isUrlLike(description)) return false;
   if (title.length > 120 || profession.split(/\s+/).length > 4) return false;
   if (description.length < 80) return false;
