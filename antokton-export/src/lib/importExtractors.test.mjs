@@ -25,3 +25,13 @@ test("extractImportedPostFields stores decoded UTF-8 text", () => {
   assert.equal(result.import_original_text, "Punë në Gjermani");
   assert.equal(result.description, "Kërkohet Punëtorë");
 });
+
+test("extractImportedPostFields extracts German phone and country from imported text", () => {
+  const result = extractImportedPostFields(`
+📍 Lokacioni: Gütersloh dhe rrethinë (deri në 70 km)
+📞 Kontakt dhe Informata: +49 177 8749318
+`, {});
+
+  assert.equal(result.phone_number, "+49 177 8749318");
+  assert.equal(result.country, "Gjermani");
+});
