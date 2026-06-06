@@ -867,15 +867,99 @@ function sanitizeImportedText(value = "") {
   return text.normalize("NFC");
 }
 
-async function scrapeBasicListing(url) {
+function decodeJsString(value = "") {
+  try {
+    return JSON.parse(`"${String(value).replace(/"/g, "\\\"")}"`);
+  } catch {
+    return String(value || "")
+      .replace(/\\u([0-9a-f]{4})/gi, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
+      .replace(/\\\//g, "/")
+      .replace(/\\"/g, "\"")
+      .replace(/\\n/g, "\n");
+  }
+}
+
+function facebookUrlVariants(url) {
+  if (!/facebook\.com/i.test(url)) return [url];
+  const variants = new Set([url]);
+  try {
+    const parsed = new URL(url);
+    for (const host of ["www.facebook.com", "m.facebook.com", "mbasic.facebook.com"]) {
+      parsed.hostname = host;
+      variants.add(parsed.toString());
+    }
+  } catch {}
+  return [...variants];
+}
+
+async function fetchPublicHtml(url) {
   const response = await fetch(url, {
     headers: {
-      "User-Agent": "Mozilla/5.0 AntoktonBot/1.0",
-      Accept: "text/html,application/xhtml+xml"
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36 AntoktonPublicImport/1.0",
+      Accept: "text/html,application/xhtml+xml",
+      "Accept-Language": "sq,en-US;q=0.9,en;q=0.8"
     },
     signal: AbortSignal.timeout(12000)
   });
-  const html = await response.text();
+  return response.text();
+}
+
+function hasImportSignal(text = "") {
+  const value = sanitizeImportedText(text).toLowerCase();
+  return /k[eë]rkohen|k[eë]rkohet|pun[eë]tor|pun[eë]|pozicion|lokacion|kontakt|informata|glassfaser|elektricist|bagerist|\+\d{1,4}/i.test(value);
+}
+
+function extractFacebookPublicText(html = "") {
+  const candidates = [];
+  const addCandidate = (value) => {
+    const text = sanitizeImportedText(value)
+      .replace(/\\\//g, "/")
+      .replace(/\s+\|\s+facebook\s*$/i, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (text.length >= 40 && hasImportSignal(text)) candidates.push(text);
+  };
+
+  for (const pattern of [
+    /"(?:message|text|body|description|story|title)"\s*:\s*"((?:\\.|[^"\\]){40,3000})"/gi,
+    /"__html"\s*:\s*"((?:\\.|[^"\\]){40,3000})"/gi,
+  ]) {
+    for (const match of html.matchAll(pattern)) {
+      addCandidate(decodeJsString(match[1]));
+    }
+  }
+
+  for (const match of html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi)) {
+    const script = decodeJsString(match[1]);
+    if (!hasImportSignal(script)) continue;
+    const snippets = script
+      .split(/(?=K[ËE]RKOHEN|K[eë]rkohen|📢|Lokacioni|Kontakt)/i)
+      .map((part) => part.slice(0, 1800));
+    snippets.forEach(addCandidate);
+  }
+
+  return [...new Set(candidates)]
+    .sort((a, b) => {
+      const score = (text) => (text.match(/🔹|•|\n|\+\d|lokacion|kontakt|glassfaser|elektricist|bagerist/gi) || []).length + Math.min(text.length / 300, 10);
+      return score(b) - score(a);
+    })
+    .slice(0, 6)
+    .join("\n\n");
+}
+
+async function scrapeBasicListing(url) {
+  const htmlResults = [];
+  for (const targetUrl of facebookUrlVariants(url)) {
+    try {
+      const html = await fetchPublicHtml(targetUrl);
+      htmlResults.push({ url: targetUrl, html });
+      if (extractFacebookPublicText(html).length > 180) break;
+    } catch {
+      // Try the next public variant.
+    }
+  }
+  if (!htmlResults.length) throw new Error("Import failed");
+  const html = htmlResults.map((item) => item.html).join("\n");
   const title =
     /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i.exec(html)?.[1] ||
     /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] ||
@@ -887,7 +971,11 @@ async function scrapeBasicListing(url) {
   const imageUrls = [...html.matchAll(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)/gi)]
     .map((match) => match[1])
     .filter(Boolean);
-  const phone = /href=["']tel:(\+?[\d\s().-]{7,})["']/i.exec(html)?.[1]?.replace(/[^\d+]/g, "") || "";
+  const facebookPublicText = extractFacebookPublicText(html);
+  const phone =
+    /href=["']tel:(\+?[\d\s().-]{7,})["']/i.exec(html)?.[1]?.replace(/[^\d+]/g, "") ||
+    /(\+\d{1,4}[\s().-]?(?:\d[\s().-]?){7,14}\d)\b/.exec(facebookPublicText || html)?.[1] ||
+    "";
   const jsonLdText = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)]
     .map((match) => {
       try {
@@ -911,7 +999,7 @@ async function scrapeBasicListing(url) {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 6000);
-  const descriptionText = sanitizeImportedText([description, jsonLdText, bodyText].filter(Boolean).join("\n").trim());
+  const descriptionText = sanitizeImportedText([facebookPublicText, description, jsonLdText, bodyText].filter(Boolean).join("\n").trim());
 
   return {
     title: sanitizeImportedText(title).replace(/\s+/g, " ").trim(),
