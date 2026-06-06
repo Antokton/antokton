@@ -77,6 +77,16 @@ function hasUsefulPhone(candidate = "") {
   return true;
 }
 
+function normalizePhoneForCountry(phone = "", country = "", context = "") {
+  const clean = cleanPhone(phone);
+  if (!clean) return "";
+  if (/^\s*\+/.test(clean)) return clean;
+  const digits = clean.replace(/\D/g, "");
+  const isGermany = country === "Gjermani" || /\b(gjermani|germany|deutschland)\b/i.test(context);
+  if (isGermany && /^0\d{7,14}$/.test(digits)) return `+49${digits.slice(1)}`;
+  return "";
+}
+
 function hasEmail(text = "") {
   return new RegExp(EMAIL_RE.source, "i").test(String(text || ""));
 }
@@ -129,19 +139,22 @@ export function extractImportedPostFields(rawText = "", initial = {}) {
   const contactUrls = urls.filter((url) => url !== sourceUrl && url !== authorProfileUrl);
   const address =
     cleanInitial.address ||
-    extractFirstByLabels(combined, ["adresa", "adresë", "lokacioni", "lokacion", "vendndodhja", "location", "address"]) ||
+    extractFirstByLabels(combined, ["adresa", "adresë", "lokacioni", "lokacion", "vendndodhja", "vendi i pun[eë]s", "vendi pun[eë]s", "vendi", "location", "address"]) ||
     "";
   const city =
     cleanInitial.city ||
     extractFirstByLabels(combined, ["qyteti", "qytet", "city"]) ||
     "";
   const country = cleanInitial.country || inferCountryFromText([combined, address, city].join("\n"));
+  const normalizedLocalPhone = localPhones.map((phone) => normalizePhoneForCountry(phone, country, combined)).find(Boolean) || "";
+  const primaryPhone = cleanInitial.phone_number || internationalPhones[0] || normalizedLocalPhone || "";
+  const contactOnlyLocalPhones = localPhones.filter((phone) => normalizePhoneForCountry(phone, country, combined) !== primaryPhone);
 
   const contactLines = UNIQUE([
     cleanInitial.contact_info,
     ...emails,
     ...contactUrls,
-    ...localPhones.map((phone) => `Telefon: ${phone}`),
+    ...contactOnlyLocalPhones.map((phone) => `Telefon: ${phone}`),
   ]);
 
   return {
@@ -150,7 +163,7 @@ export function extractImportedPostFields(rawText = "", initial = {}) {
     import_original_text: sanitizeImportedText(cleanInitial.import_original_text || source),
     original_text: sanitizeImportedText(cleanInitial.original_text || source),
     contact_info: contactLines.join("\n"),
-    phone_number: cleanInitial.phone_number || internationalPhones[0] || "",
+    phone_number: primaryPhone,
     address,
     city,
     country,

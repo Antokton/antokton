@@ -17,7 +17,7 @@ import moment from "moment";
 import { motion, AnimatePresence } from "framer-motion";
 import ApplicationForm from "../components/job/ApplicationForm";
 import CommentItem from "../components/job/CommentItem";
-import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
+import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizePhoneForCountry } from "@/lib/phone";
 import UserAvatar from "@/components/ui/UserAvatar";
 
 function SimilarPosts({ currentJobId, category }) {
@@ -452,10 +452,14 @@ export default function PostDetail() {
 
   const editJobMutation = useMutation({
     mutationFn: async () => {
-      if (!isValidInternationalPhone(editForm.phone_number)) {
+      const phoneNumber = normalizePhoneForCountry(
+        editForm.phone_number,
+        editForm.country,
+        `${editForm.city || ""} ${editForm.address || ""} ${editForm.description || ""}`
+      );
+      if (phoneNumber && !isValidInternationalPhone(phoneNumber)) {
         throw new Error(getInternationalPhoneError("Numri i telefonit"));
       }
-      const phoneNumber = normalizeInternationalPhone(editForm.phone_number);
       await base44.entities.Job.update(jobId, {
         ...editForm,
         address: editForm.address || editForm.city || "",

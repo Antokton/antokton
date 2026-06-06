@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { extractImportedPostFields, sanitizeImportedText } from "./importExtractors.js";
+import { normalizePhoneForCountry } from "./phone.js";
 
 test("sanitizeImportedText decodes Albanian HTML entities", () => {
   assert.equal(sanitizeImportedText("Pun&#xeb; n&#xeb; Gjermani"), "Punë në Gjermani");
@@ -34,4 +35,19 @@ test("extractImportedPostFields extracts German phone and country from imported 
 
   assert.equal(result.phone_number, "+49 177 8749318");
   assert.equal(result.country, "Gjermani");
+});
+
+test("extractImportedPostFields normalizes German local phone numbers", () => {
+  const result = extractImportedPostFields(`
+Vendi i punës: Gjermani
+Telefon/WhatsApp: 0176 77817618
+`, {});
+
+  assert.equal(result.phone_number, "+4917677817618");
+  assert.equal(result.address, "Gjermani");
+  assert.equal(result.country, "Gjermani");
+});
+
+test("normalizePhoneForCountry converts German local numbers without choosing an app", () => {
+  assert.equal(normalizePhoneForCountry("0176 77817618", "Gjermani"), "+4917677817618");
 });
