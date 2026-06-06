@@ -137,6 +137,7 @@ export default function PostDetail() {
   const [showComments, setShowComments] = useState(false);
 
   const queryClient = useQueryClient();
+  const canSeePrivateImportFields = user?.role === "admin" || user?.role === "moderator";
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -191,7 +192,7 @@ export default function PostDetail() {
   }, [user, jobId]);
 
   const { data: job, isLoading } = useQuery({
-    queryKey: ["job", jobId],
+    queryKey: ["job", jobId, user?.role],
     queryFn: async () => {
       if (!jobId) return null;
       const result = await base44.entities.Job.filter({ id: jobId });
@@ -758,12 +759,13 @@ export default function PostDetail() {
             {job.poster_name && (() => {
               const canSeeProfile = isAuth && (hasActiveSubscription || user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'inspector');
               const profileLink = job.created_by ? `/UserProfiles?email=${encodeURIComponent(job.created_by)}` : null;
-              const externalLink = job.author_profile_url || null;
-              if (canSeeProfile && (profileLink || externalLink)) {
+              const externalLink = (canSeePrivateImportFields || job.show_author_profile_url === true) ? job.author_profile_url || null : null;
+              const visibleProfileLink = canSeeProfile ? profileLink : null;
+              if (visibleProfileLink || externalLink) {
                 return (
                   <a
-                    href={profileLink || externalLink}
-                    target={externalLink && !profileLink ? "_blank" : "_self"}
+                    href={visibleProfileLink || externalLink}
+                    target={externalLink && !visibleProfileLink ? "_blank" : "_self"}
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 text-[#8ab4ff] hover:text-[#9bffd6] transition-colors underline underline-offset-2"
                   >
@@ -920,7 +922,7 @@ export default function PostDetail() {
                         <MapPin className="w-3 h-3" /> Hap në Google Maps
                       </a>
                     )}
-                              {job.source_url && job.show_source_url && (
+                              {job.source_url && (job.show_source_url === true || canSeePrivateImportFields) && (
             <a
               href={job.source_url}
               target="_blank"
@@ -969,7 +971,7 @@ export default function PostDetail() {
           )}
 
           {/* Linku i burimit - i klikueshëm */}
-          {job.source_url && job.show_source_url && (
+          {job.source_url && (job.show_source_url === true || canSeePrivateImportFields) && (
             <div className="mt-3">
               <a
                 href={job.source_url}

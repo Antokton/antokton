@@ -107,6 +107,8 @@ const AuthenticatedApp = () => {
       <Route path="/Statuset" element={<LayoutWrapper currentPageName="Statuset"><Statuset /></LayoutWrapper>} />
       <Route path="/Pazar" element={<LayoutWrapper currentPageName="Pazar"><Pazar /></LayoutWrapper>} />
       <Route path="/ImportPosts" element={<LayoutWrapper currentPageName="ImportPosts"><ImportPosts /></LayoutWrapper>} />
+      <Route path="/admin/import-assistant" element={<LayoutWrapper currentPageName="ImportPosts"><ImportPosts /></LayoutWrapper>} />
+      <Route path="/admin/import-assistant/queue" element={<LayoutWrapper currentPageName="ImportPosts"><ImportPosts defaultTab="table" /></LayoutWrapper>} />
       <Route path="/Media" element={<LayoutWrapper currentPageName="Media"><Media /></LayoutWrapper>} />
       <Route path="/Edukim" element={<LayoutWrapper currentPageName="Edukim"><Edukim /></LayoutWrapper>} />
       <Route path="/Member/:email" element={<LayoutWrapper currentPageName="Members"><MemberProfile /></LayoutWrapper>} />

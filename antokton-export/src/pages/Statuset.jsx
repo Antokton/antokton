@@ -262,7 +262,7 @@ const formatImportedAuthorName = (name, mode = "full") => {
 const getPublicSourceUrl = (status) => {
   if (!status) return "";
   if (!isImportedCommunityRequest(status)) return status.link_url || "";
-  return status.import_show_source_link ? (status.link_url || status.import_source_url || "") : "";
+  return (status.show_source_url === true || status.import_show_source_link) ? (status.source_url || status.link_url || status.import_source_url || "") : "";
 };
 
 const shouldShowStatusImage = (status) => {
@@ -275,6 +275,7 @@ function ImportedStatusInfo({ status }) {
 
   const publicAuthor = status.import_public_author_label || formatImportedAuthorName(status.import_original_author_name, status.import_author_display);
   const publicSourceUrl = getPublicSourceUrl(status);
+  const publicAuthorProfileUrl = status.show_author_profile_url === true ? status.author_profile_url : "";
 
   return (
     <div className="mx-4 mb-2 rounded-xl border border-[#8ab4ff]/20 px-3 py-2 text-[12px]" style={{ background: "rgba(138,180,255,0.08)" }}>
@@ -284,6 +285,11 @@ function ImportedStatusInfo({ status }) {
       </div>
       {publicAuthor && (
         <p className="mt-1 text-white/70">Autori origjinal: <span className="text-white">{publicAuthor}</span></p>
+      )}
+      {publicAuthorProfileUrl && (
+        <a href={publicAuthorProfileUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-[#8ab4ff] hover:underline">
+          <Link2 className="w-3.5 h-3.5" /> Kontakti i postuesit
+        </a>
       )}
       {!status.import_show_images && (
         <p className="mt-1 flex items-center gap-1 text-white/45"><EyeOff className="w-3.5 h-3.5" /> Fotot e importuara janë fshehur nga publiku.</p>
@@ -304,6 +310,7 @@ function ImportAuditBox({ status, currentUser }) {
   if (!isImportedCommunityRequest(status) || !isStaffUser(currentUser)) return null;
 
   const sourceUrl = status.import_source_url || status.link_url || "";
+  const authorProfileUrl = status.import_author_profile_url || status.author_profile_url || "";
   const choices = [
     `Autori: ${status.import_author_display || "full"}`,
     status.import_hide_profile_photo ? "fotoja e profilit e fshehur" : "fotoja e profilit e lejuar",
@@ -321,6 +328,9 @@ function ImportAuditBox({ status, currentUser }) {
         <p>Zgjedhjet: <span className="text-white">{choices}</span></p>
         {sourceUrl && (
           <p>Burimi privat: <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[#8ab4ff] hover:underline break-all">{sourceUrl}</a></p>
+        )}
+        {authorProfileUrl && (
+          <p>Linku i postuesit: <a href={authorProfileUrl} target="_blank" rel="noopener noreferrer" className="text-[#8ab4ff] hover:underline break-all">{authorProfileUrl}</a></p>
         )}
         {status.import_private_image_url && (
           <p>Foto private: <a href={status.import_private_image_url} target="_blank" rel="noopener noreferrer" className="text-[#8ab4ff] hover:underline break-all">hap foton</a></p>
@@ -582,12 +592,14 @@ function CreatePostModal({ currentUser, onClose, initialImportMode = false }) {
   const [visibility, setVisibility] = useState("public");
   const [externalUrl, setExternalUrl] = useState("");
   const [originalAuthorName, setOriginalAuthorName] = useState("");
+  const [authorProfileUrl, setAuthorProfileUrl] = useState("");
   const [externalImageUrl, setExternalImageUrl] = useState("");
   const [importPrivacy, setImportPrivacy] = useState({
     authorDisplay: "full",
     hideProfilePhoto: true,
     showImages: true,
     showSourceLink: false,
+    showAuthorProfileLink: false,
   });
   const setPrivacy = (key, value) => setImportPrivacy((current) => ({ ...current, [key]: value }));
   const currentUserEmail = currentUser?.email || "";
@@ -613,12 +625,14 @@ function CreatePostModal({ currentUser, onClose, initialImportMode = false }) {
         else image_url = externalImageUrl.trim();
       }
       const sourceUrl = externalUrl.trim();
+      const profileUrl = authorProfileUrl.trim();
       const originalAuthor = originalAuthorName.trim();
       const publicAuthorLabel = formatImportedAuthorName(originalAuthor, importPrivacy.authorDisplay);
       const importFields = importMode ? {
         imported_community_request: true,
         import_type: "community_request",
         import_source_url: sourceUrl,
+        import_author_profile_url: profileUrl,
         import_original_author_name: originalAuthor,
         import_original_text: text.trim(),
         import_public_author_label: publicAuthorLabel,
@@ -627,6 +641,10 @@ function CreatePostModal({ currentUser, onClose, initialImportMode = false }) {
         import_show_images: importPrivacy.showImages,
         import_show_source_link: importPrivacy.showSourceLink,
         import_private_image_url,
+        source_url: sourceUrl,
+        author_profile_url: importPrivacy.showAuthorProfileLink ? profileUrl : "",
+        show_source_url: importPrivacy.showSourceLink,
+        show_author_profile_url: importPrivacy.showAuthorProfileLink,
         importer_email: currentUserEmail,
         importer_name: importerName,
         imported_at: new Date().toISOString(),
@@ -700,6 +718,9 @@ function CreatePostModal({ currentUser, onClose, initialImportMode = false }) {
               <input value={originalAuthorName} onChange={e => setOriginalAuthorName(e.target.value)}
                 placeholder="Emri i autorit origjinal (opsional)"
                 className="w-full rounded-lg px-3 py-2 bg-[#162238] text-white outline-none placeholder:text-white/35 border border-white/10" />
+              <input value={authorProfileUrl} onChange={e => setAuthorProfileUrl(e.target.value)}
+                placeholder="Linku i postuesit / kontaktit (opsional)"
+                className="w-full rounded-lg px-3 py-2 bg-[#162238] text-white outline-none placeholder:text-white/35 border border-white/10" />
               <input value={externalImageUrl} onChange={e => setExternalImageUrl(e.target.value)}
                 placeholder="URL e fotos origjinale (opsionale, ose ngarko foto)"
                 className="w-full rounded-lg px-3 py-2 bg-[#162238] text-white outline-none placeholder:text-white/35 border border-white/10" />
@@ -730,6 +751,10 @@ function CreatePostModal({ currentUser, onClose, initialImportMode = false }) {
                 <button type="button" onClick={() => setPrivacy("showSourceLink", false)}
                   className={`rounded-lg px-2 py-1.5 text-left border ${!importPrivacy.showSourceLink ? "border-[#8ab4ff] text-white bg-[#8ab4ff]/15" : "border-white/10 text-white/60"}`}>
                   Mbaje burimin privat
+                </button>
+                <button type="button" onClick={() => setPrivacy("showAuthorProfileLink", !importPrivacy.showAuthorProfileLink)}
+                  className={`rounded-lg px-2 py-1.5 text-left border ${importPrivacy.showAuthorProfileLink ? "border-[#8ab4ff] text-white bg-[#8ab4ff]/15" : "border-white/10 text-white/60"}`}>
+                  Shfaq linkun e postuesit si kontakt publik
                 </button>
               </div>
               <p className="text-white/45 leading-relaxed">

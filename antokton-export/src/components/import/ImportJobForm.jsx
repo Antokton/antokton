@@ -34,7 +34,11 @@ const normalizeDraft = (rawText, draft = {}, fallbackUrl = "", jobType = "ofroj"
   import_original_text: rawText || draft.import_original_text || draft.original_text || draft.description || "",
   original_text: rawText || draft.original_text || draft.description || "",
   source_url: draft.source_url || fallbackUrl || "",
+  import_source_url: draft.import_source_url || draft.source_url || fallbackUrl || "",
+  author_profile_url: draft.author_profile_url || "",
+  import_author_profile_url: draft.import_author_profile_url || draft.author_profile_url || "",
   show_source_url: false,
+  show_author_profile_url: false,
   category: draft.category || "pune",
   job_type: draft.job_type || jobType || "ofroj",
   status: "pending",
@@ -103,7 +107,11 @@ export default function ImportJobForm({ user, onDone }) {
         ...prepared,
         phone_number: phoneNumber || "",
         source_url: prepared.source_url || url.trim(),
-        show_source_url: Boolean(prepared.show_source_url),
+        author_profile_url: prepared.author_profile_url || "",
+        import_source_url: prepared.import_source_url || prepared.source_url || url.trim(),
+        import_author_profile_url: prepared.import_author_profile_url || prepared.author_profile_url || "",
+        show_source_url: prepared.show_source_url === true,
+        show_author_profile_url: prepared.show_author_profile_url === true,
         import_original_text: prepared.import_original_text || prepared.original_text || "",
         imported_community_request: true,
         import_type: "job_import_assistant",
@@ -287,8 +295,21 @@ export default function ImportJobForm({ user, onDone }) {
             <div className="flex items-center gap-2 mb-1"><User className="w-4 h-4 text-[#c084fc]" /><span className="text-white font-semibold text-sm">Dhënësi / Kompania</span></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><label className="text-white/50 text-xs mb-1 block">Emri</label><Input value={data.poster_name || ""} onChange={(e) => set("poster_name", e.target.value)} className="bg-white/5 border-white/10 text-white" style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }} /></div>
-              <div><label className="text-white/50 text-xs mb-1 block">URL profili / kompanie</label><Input value={data.author_profile_url || ""} onChange={(e) => set("author_profile_url", e.target.value)} className="bg-white/5 border-white/10 text-white" style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }} /></div>
+              <div><label className="text-white/50 text-xs mb-1 block">Linku i postuesit / kontaktit</label><Input value={data.author_profile_url || ""} onChange={(e) => {
+                set("author_profile_url", e.target.value);
+                set("import_author_profile_url", e.target.value);
+              }} className="bg-white/5 border-white/10 text-white" style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }} /></div>
             </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={data.show_author_profile_url === true}
+                onChange={(e) => set("show_author_profile_url", e.target.checked)}
+                className="rounded border-white/20"
+                style={{ accentColor: "#8ab4ff" }}
+              />
+              <span className="text-white/60 text-xs">Shfaq linkun e postuesit si kontakt publik</span>
+            </label>
           </div>
 
           {Array.isArray(data.image_urls) && data.image_urls.length > 0 && (
@@ -301,11 +322,14 @@ export default function ImportJobForm({ user, onDone }) {
           )}
 
           <div>
-            <label className="text-white/50 text-xs mb-1 block">Burimi origjinal (URL)</label>
-            <Input value={data.source_url || url} onChange={(e) => set("source_url", e.target.value)} className="bg-white/5 border-white/10 text-white text-xs" style={{ background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.75)" }} />
+            <label className="text-white/50 text-xs mb-1 block">Linku i njoftimit / burimit</label>
+            <Input value={data.source_url || url} onChange={(e) => {
+              set("source_url", e.target.value);
+              set("import_source_url", e.target.value);
+            }} className="bg-white/5 border-white/10 text-white text-xs" style={{ background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.75)" }} />
             <label className="mt-2 flex cursor-pointer items-start gap-2 text-white/50 text-xs">
               <input type="checkbox" checked={Boolean(data.show_source_url)} onChange={(e) => set("show_source_url", e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#8ab4ff]" />
-              <span>Shfaq linkun publikisht. Lëre pa zgjedhur për ta ruajtur vetëm për gjurmim të postimit origjinal.</span>
+              <span>Shfaq linkun e njoftimit publikisht. Lëre pa zgjedhur për ta ruajtur vetëm për gjurmim të postimit origjinal.</span>
             </label>
           </div>
 

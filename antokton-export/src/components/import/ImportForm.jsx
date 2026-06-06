@@ -19,6 +19,11 @@ export default function ImportForm({ user, editingPost, onDone }) {
     author_name: "",
     author_profile_url: "",
     original_post_url: "",
+    source_url: "",
+    import_source_url: "",
+    import_author_profile_url: "",
+    importer_email: "",
+    import_original_text: "",
     category: "",
     listing_type: "",
     country: "",
@@ -30,6 +35,8 @@ export default function ImportForm({ user, editingPost, onDone }) {
     source: "facebook_group",
     show_author_publicly: false,
     show_original_post_url_publicly: false,
+    show_source_url: false,
+    show_author_profile_url: false,
   };
 
   const [form, setForm] = useState(empty);
@@ -37,7 +44,15 @@ export default function ImportForm({ user, editingPost, onDone }) {
 
   useEffect(() => {
     if (editingPost) {
-      setForm({ ...empty, ...editingPost });
+      setForm({
+        ...empty,
+        ...editingPost,
+        source_url: editingPost.source_url || editingPost.original_post_url || "",
+        import_source_url: editingPost.import_source_url || editingPost.source_url || editingPost.original_post_url || "",
+        import_author_profile_url: editingPost.import_author_profile_url || editingPost.author_profile_url || "",
+        show_source_url: editingPost.show_source_url === true || editingPost.show_original_post_url_publicly === true,
+        show_author_profile_url: editingPost.show_author_profile_url === true,
+      });
       setOriginalTextLocked(true);
     } else {
       setForm(empty);
@@ -92,7 +107,12 @@ export default function ImportForm({ user, editingPost, onDone }) {
   const [urlLoading, setUrlLoading] = useState(false);
 
   const handleUrlChange = async (val) => {
-    set("original_post_url", val);
+    setForm(f => ({
+      ...f,
+      original_post_url: val,
+      source_url: val,
+      import_source_url: val,
+    }));
     if (!val.trim() || (!val.includes("facebook.com") && !val.includes("instagram.com") && !val.includes("linkedin.com"))) return;
     setUrlLoading(true);
     const prompt = `Nga ky link i postimit: ${val}
@@ -108,6 +128,8 @@ Kthe JSON me këto fusha.`;
       setForm(f => ({
         ...f,
         original_post_url: val,
+        source_url: val,
+        import_source_url: val,
         ...(res.author_name ? { author_name: res.author_name } : {}),
         ...(res.source ? { source: res.source } : {}),
         ...(res.suggested_text && !f.edited_text ? { original_text: res.suggested_text, edited_text: res.suggested_text } : {}),
@@ -140,8 +162,12 @@ Kthe JSON me këto fusha.`;
     const prepared = extractImportedPostFields(form.original_text || form.edited_text, {
       ...form,
       description: form.edited_text,
-      source_url: form.original_post_url,
-      show_source_url: form.show_original_post_url_publicly,
+      source_url: form.source_url || form.original_post_url,
+      import_source_url: form.import_source_url || form.source_url || form.original_post_url,
+      author_profile_url: form.author_profile_url,
+      import_author_profile_url: form.import_author_profile_url || form.author_profile_url,
+      show_source_url: form.show_source_url,
+      show_author_profile_url: form.show_author_profile_url,
     });
     const contactInfoWarning = getContactInfoInTextMessage(prepared.description);
     if (contactInfoWarning) { alert(contactInfoWarning); return; }
@@ -154,7 +180,13 @@ Kthe JSON me këto fusha.`;
       phone_number: prepared.phone_number || form.phone_number || "",
       contact_info: prepared.contact_info || form.contact_info || "",
       original_post_url: prepared.source_url || form.original_post_url || "",
+      source_url: prepared.source_url || form.source_url || form.original_post_url || "",
+      import_source_url: prepared.import_source_url || prepared.source_url || form.source_url || form.original_post_url || "",
+      import_author_profile_url: prepared.import_author_profile_url || form.author_profile_url || "",
+      importer_email: user.email,
       import_original_text: prepared.import_original_text || form.original_text || "",
+      show_source_url: prepared.show_source_url === true,
+      show_author_profile_url: prepared.show_author_profile_url === true,
       status,
       imported_by: user.email,
       ...(status === "publikuar" && !editingPost?.published_at ? { published_at: new Date().toISOString() } : {}),
@@ -233,10 +265,14 @@ Kthe JSON me këto fusha.`;
             />
           </div>
           <div>
-            <label className="text-white/60 text-xs mb-1 block">URL e profilit</label>
+            <label className="text-white/60 text-xs mb-1 block">Linku i postuesit / kontaktit</label>
             <Input
               value={form.author_profile_url}
-              onChange={e => set("author_profile_url", e.target.value)}
+              onChange={e => setForm(f => ({
+                ...f,
+                author_profile_url: e.target.value,
+                import_author_profile_url: e.target.value,
+              }))}
               placeholder="https://facebook.com/..."
               className="bg-white/5 border-white/10 text-white placeholder-white/40 text-sm"
               style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}
@@ -253,30 +289,44 @@ Kthe JSON me këto fusha.`;
           />
           <span className="text-white/60 text-xs">Shfaq emrin e autorit publikisht</span>
         </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={form.show_author_profile_url}
+            onChange={e => set("show_author_profile_url", e.target.checked)}
+            className="rounded border-white/20"
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', accentColor: '#8ab4ff' }}
+          />
+          <span className="text-white/60 text-xs">Shfaq linkun e postuesit si kontakt publik</span>
+        </label>
       </div>
 
       {/* Original Post URL - admin/mod only */}
       <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
         <label className="text-white text-sm font-semibold block flex items-center gap-2">
-          Linku i postimit origjinal <span className="text-white/30 text-xs font-normal">(i brendshëm)</span>
+          Linku i njoftimit / burimit <span className="text-white/30 text-xs font-normal">(i brendshëm)</span>
           {urlLoading && <Loader2 className="w-3 h-3 animate-spin text-[#8ab4ff]" />}
         </label>
         <Input
           value={form.original_post_url}
           onChange={e => handleUrlChange(e.target.value)}
-          placeholder="https://facebook.com/groups/... (AI do të plotësojë automatikisht)"
+          placeholder="https://facebook.com/groups/... ose link i faqes burim"
           className="bg-white/5 border-white/10 text-white placeholder-white/40 text-sm"
           style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}
         />
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
-            checked={form.show_original_post_url_publicly}
-            onChange={e => set("show_original_post_url_publicly", e.target.checked)}
+            checked={form.show_source_url}
+            onChange={e => setForm(f => ({
+              ...f,
+              show_source_url: e.target.checked,
+              show_original_post_url_publicly: e.target.checked,
+            }))}
             className="rounded border-white/20"
             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', accentColor: '#8ab4ff' }}
           />
-          <span className="text-white/60 text-xs">Shfaq linkun origjinal publikisht</span>
+          <span className="text-white/60 text-xs">Shfaq linkun e njoftimit publikisht</span>
         </label>
       </div>
 
