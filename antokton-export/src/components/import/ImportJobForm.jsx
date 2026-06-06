@@ -6,6 +6,7 @@ import { Loader2, Link2, Sparkles, CheckCircle2, AlertCircle, Phone, MapPin, Use
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizePhoneForCountry } from "@/lib/phone";
 import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
 import { extractImportedPostFields, sanitizeImportedText } from "@/lib/importExtractors";
+import LocationPicker from "@/components/job/LocationPicker";
 
 const CONTRACT_TYPES = [
   { value: "full-time", label: "Full-time" },
@@ -25,6 +26,16 @@ const EXPERIENCE_LEVELS = [
 const JOB_TYPES = [
   { value: "ofroj", label: "🟢 Ofroj punë" },
   { value: "kerkoj", label: "🟡 Kërkoj punë" },
+];
+
+const PHONE_APPS = [
+  { value: "telefon", label: "Telefon" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "viber", label: "Viber" },
+  { value: "telegram", label: "Telegram" },
+  { value: "bip", label: "BiP" },
+  { value: "signal", label: "Signal" },
+  { value: "tjeter", label: "Tjetër" },
 ];
 
 const PROFESSION_KEYWORDS = [
@@ -778,11 +789,25 @@ ${text || importedData.description || importedData.title || ""}`;
 
           <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
             <div className="flex items-center gap-2 mb-1"><MapPin className="w-4 h-4 text-[#fbbf24]" /><span className="text-white font-semibold text-sm">Vendndodhja</span></div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div><label className="text-white/50 text-xs mb-1 block">Qyteti</label><Input value={data.city || ""} onChange={(e) => set("city", e.target.value)} className="bg-white/5 border-white/10 text-white" style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }} /></div>
-              <div><label className="text-white/50 text-xs mb-1 block">Shteti</label><Input value={data.country || ""} onChange={(e) => set("country", e.target.value)} className="bg-white/5 border-white/10 text-white" style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }} /></div>
-              <div><label className="text-white/50 text-xs mb-1 block">Adresa</label><Input value={data.address || ""} onChange={(e) => set("address", e.target.value)} className="bg-white/5 border-white/10 text-white" style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }} /></div>
-            </div>
+            <LocationPicker
+              value={{
+                address: data.address || "",
+                city: data.city || "",
+                country: data.country || "",
+                zone: data.zone || "",
+                location_precision: data.location_precision || "sakte",
+              }}
+              onChange={(location) => {
+                setDraftList(drafts.map((draft, index) => index === selectedDraftIndex ? {
+                  ...draft,
+                  address: location.address || "",
+                  city: location.city || "",
+                  country: location.country || "",
+                  zone: location.zone || "",
+                  location_precision: location.location_precision || "sakte",
+                } : draft));
+              }}
+            />
             {(data.address || data.city || data.country) && (
               <a
                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([data.address || data.city, data.country].filter(Boolean).join(", "))}`}
@@ -790,17 +815,30 @@ ${text || importedData.description || importedData.title || ""}`;
                 rel="noreferrer"
                 className="inline-flex items-center gap-1 text-xs text-[#8ab4ff] hover:text-[#9bffd6] underline underline-offset-2"
               >
-                <MapPin className="w-3 h-3" /> Hap lokacionin në Google Maps
+                <MapPin className="w-3 h-3" /> {[data.address || data.city, data.country].filter(Boolean).join(", ")}
               </a>
             )}
           </div>
 
           <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
             <div className="flex items-center gap-2 mb-1"><Phone className="w-4 h-4 text-[#9bffd6]" /><span className="text-white font-semibold text-sm">Kontakti</span></div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_180px_1fr] gap-3">
               <div>
                 <label className="text-white/50 text-xs mb-1 flex items-center gap-1 block">Numri i telefonit {!data.phone_number && <span className="text-yellow-400/70 text-[10px]">(shtoje nëse mungon)</span>}</label>
                 <Input value={data.phone_number || ""} onChange={(e) => set("phone_number", e.target.value)} placeholder={PHONE_PLACEHOLDER} className={`bg-white/5 border-white/10 text-white ${!data.phone_number ? "border-yellow-400/30" : ""}`} style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }} />
+              </div>
+              <div>
+                <label className="text-white/50 text-xs mb-1 block">Lloji i kontaktit</label>
+                <Select value={data.phone_app || "telefon"} onValueChange={(v) => set("phone_app", v)}>
+                  <SelectTrigger className="border-white/10 text-white text-sm" style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#0b1020] border-white/10">
+                    {PHONE_APPS.map((app) => (
+                      <SelectItem key={app.value} value={app.value} className="text-white">{app.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="text-white/50 text-xs mb-1 block">Kontakt tjetër</label>
