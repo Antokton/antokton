@@ -242,6 +242,12 @@ function normalizeSearch(value) {
     .trim();
 }
 
+function normalizeCountryName(country = "") {
+  const value = String(country || "").trim();
+  if (/^(gjermani|gjermania|germany|deutschland)$/i.test(value)) return "Gjermani";
+  return value;
+}
+
 function detectAntoktonZone(cityName) {
   if (!cityName) return null;
   const lower = cityName.toLowerCase().trim();
@@ -298,7 +304,7 @@ async function searchNominatim(query) {
     const results = data.map(item => {
       const addr = item.address || {};
       const rawCity = addr.city || addr.town || addr.village || addr.hamlet || addr.suburb || addr.municipality || addr.county || item.display_name.split(",")[0];
-      const countryRaw = addr.country || "";
+      const countryRaw = normalizeCountryName(addr.country || "");
 
       // Zëvendëso me emrin shqip nëse ekziston alias
       const albanianPlace = getAlbanianName(rawCity) || getAlbanianName(item.display_name.split(",")[0]);
@@ -307,7 +313,7 @@ async function searchNominatim(query) {
       // Kontrollojmë nëse është territor Antokton
       const detectedZone = albanianPlace ? albanianPlace.zone : detectAntoktonZone(city);
       const isAntokton = !!detectedZone;
-      const country = isAntokton ? "Antokton" : countryRaw;
+      const country = isAntokton ? "Antokton" : normalizeCountryName(countryRaw);
 
       const nearCity = albanianPlace?.near || "";
       const postcode = addr.postcode || "";
@@ -413,7 +419,7 @@ Kthe VETËM JSON.`;
           }
         }
       });
-      const country = res.antokton_country || res.country_raw || "";
+      const country = normalizeCountryName(res.antokton_country || res.country_raw || "");
       const city = res.city || "";
       const zone = res.is_antokton ? detectAntoktonZone(city) : null;
       // Ruaj adresën e plotë të tipuar nga përdoruesi (rruga + qyteti), jo vetëm qytetin
@@ -444,7 +450,7 @@ Kthe VETËM JSON.`;
     setActiveIdx(-1);
     const result = {
       address: addressForDB,
-      country: s.country || "",
+      country: normalizeCountryName(s.country || ""),
       zone: s.zone || "",
       city: s.city || "",
       location_precision: "sakte",

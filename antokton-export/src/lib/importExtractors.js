@@ -62,10 +62,16 @@ function cleanPhone(phone = "") {
 
 function inferCountryFromText(text = "") {
   const value = sanitizeImportedText(text).toLowerCase();
-  if (/\b(gjermani|germany|deutschland|gütersloh|gutersloh|bielefeld|berlin|hamburg|münchen|munich|dortmund|düsseldorf|dusseldorf|köln|koln|frankfurt)\b/i.test(value)) {
+  if (/\b(gjermani|gjermania|germany|deutschland|gütersloh|gutersloh|bielefeld|berlin|hamburg|münchen|munich|dortmund|düsseldorf|dusseldorf|köln|koln|frankfurt)\b/i.test(value)) {
     return "Gjermani";
   }
   return "";
+}
+
+function normalizeCountryName(country = "") {
+  const value = sanitizeImportedText(country).trim();
+  if (/^(gjermani|gjermania|germany|deutschland)$/i.test(value)) return "Gjermani";
+  return value;
 }
 
 function hasUsefulPhone(candidate = "") {
@@ -145,7 +151,7 @@ export function extractImportedPostFields(rawText = "", initial = {}) {
     cleanInitial.city ||
     extractFirstByLabels(combined, ["qyteti", "qytet", "city"]) ||
     "";
-  const country = cleanInitial.country || inferCountryFromText([combined, address, city].join("\n"));
+  const country = normalizeCountryName(cleanInitial.country) || inferCountryFromText([combined, address, city].join("\n"));
   const normalizedLocalPhone = localPhones.map((phone) => normalizePhoneForCountry(phone, country, combined)).find(Boolean) || "";
   const primaryPhone = cleanInitial.phone_number || internationalPhones[0] || normalizedLocalPhone || "";
   const contactOnlyLocalPhones = localPhones.filter((phone) => normalizePhoneForCountry(phone, country, combined) !== primaryPhone);

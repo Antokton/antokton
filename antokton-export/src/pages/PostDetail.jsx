@@ -696,7 +696,7 @@ export default function PostDetail() {
                 </label>
               </div>
               <div className="space-y-1">
-                <Label className="text-white/60 text-xs">Linku i postuesit / kontaktit online</Label>
+                <Label className="text-white/60 text-xs">Linku i kontaktit nga burimi</Label>
                 <Input
                   value={editForm.author_profile_url || ''}
                   onChange={e => setEditForm({...editForm, author_profile_url: e.target.value, import_author_profile_url: e.target.value})}
@@ -710,7 +710,7 @@ export default function PostDetail() {
                     onChange={e => setEditForm({...editForm, show_author_profile_url: e.target.checked})}
                     className="mt-0.5 h-4 w-4 accent-[#8ab4ff]"
                   />
-                  <span>Shfaq linkun e postuesit si kontakt publik. Pa zgjedhje ruhet vetëm për admin/moderator.</span>
+                  <span>Shfaq linkun e kontaktit publikisht. Pa zgjedhje ruhet vetëm për admin/moderator.</span>
                 </label>
               </div>
               <div className="space-y-1">

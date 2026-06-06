@@ -664,7 +664,7 @@ ${text || importedData.description || importedData.title || ""}`;
             />
           </div>
           <div className="flex-1 space-y-2">
-            <label className="text-white/60 text-xs flex items-center gap-1"><User className="w-3.5 h-3.5" /> Linku i postuesit / kontaktit, opsional</label>
+            <label className="text-white/60 text-xs flex items-center gap-1"><User className="w-3.5 h-3.5" /> Linku i kontaktit nga burimi, opsional</label>
             <Input
               value={authorUrl}
               onChange={(e) => setAuthorUrl(e.target.value)}
@@ -808,16 +808,6 @@ ${text || importedData.description || importedData.title || ""}`;
                 } : draft));
               }}
             />
-            {(data.address || data.city || data.country) && (
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([data.address || data.city, data.country].filter(Boolean).join(", "))}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-[#8ab4ff] hover:text-[#9bffd6] underline underline-offset-2"
-              >
-                <MapPin className="w-3 h-3" /> {[data.address || data.city, data.country].filter(Boolean).join(", ")}
-              </a>
-            )}
           </div>
 
           <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
@@ -851,7 +841,7 @@ ${text || importedData.description || importedData.title || ""}`;
             <div className="flex items-center gap-2 mb-1"><User className="w-4 h-4 text-[#c084fc]" /><span className="text-white font-semibold text-sm">Dhënësi / Kompania</span></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><label className="text-white/50 text-xs mb-1 block">Emri</label><Input value={data.poster_name || ""} onChange={(e) => set("poster_name", e.target.value)} className="bg-white/5 border-white/10 text-white" style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }} /></div>
-              <div><label className="text-white/50 text-xs mb-1 block">Linku i postuesit / kontaktit</label><Input value={data.author_profile_url || ""} onChange={(e) => {
+              <div><label className="text-white/50 text-xs mb-1 block">Linku i kontaktit nga burimi</label><Input value={data.author_profile_url || ""} onChange={(e) => {
                 set("author_profile_url", e.target.value);
                 set("import_author_profile_url", e.target.value);
               }} className="bg-white/5 border-white/10 text-white" style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }} /></div>
@@ -864,7 +854,7 @@ ${text || importedData.description || importedData.title || ""}`;
                 className="rounded border-white/20"
                 style={{ accentColor: "#8ab4ff" }}
               />
-              <span className="text-white/60 text-xs">Shfaq linkun e postuesit si kontakt publik</span>
+              <span className="text-white/60 text-xs">Shfaq linkun e kontaktit publikisht</span>
             </label>
           </div>
 

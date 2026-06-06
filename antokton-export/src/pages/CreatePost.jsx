@@ -981,7 +981,7 @@ export default function CreatePost() {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: 'var(--muted)' }}>Linku i postuesit / kontaktit online (opcional)</Label>
+            <Label className="text-xs" style={{ color: 'var(--muted)' }}>Linku i kontaktit nga burimi (opcional)</Label>
             <Input
               value={form.author_profile_url}
               onChange={(e) => setForm({ ...form, author_profile_url: e.target.value, import_author_profile_url: e.target.value })}
@@ -996,7 +996,7 @@ export default function CreatePost() {
                 onChange={(e) => setForm({ ...form, show_author_profile_url: e.target.checked })}
                 className="mt-0.5 h-4 w-4 accent-[#8ab4ff]"
               />
-              <span>Shfaq linkun e postuesit si kontakt publik. Lëre pa zgjedhur nëse duhet të ruhet vetëm privatisht për admin/moderator.</span>
+              <span>Shfaq linkun e kontaktit publikisht. Lëre pa zgjedhur nëse duhet të ruhet vetëm privatisht për admin/moderator.</span>
             </label>
           </div>
         </div>

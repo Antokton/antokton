@@ -51,3 +51,11 @@ Telefon/WhatsApp: 0176 77817618
 test("normalizePhoneForCountry converts German local numbers without choosing an app", () => {
   assert.equal(normalizePhoneForCountry("0176 77817618", "Gjermani"), "+4917677817618");
 });
+
+test("extractImportedPostFields normalizes Gjermania to Gjermani", () => {
+  const result = extractImportedPostFields("Punë në Gjermania", {
+    country: "Gjermania",
+  });
+
+  assert.equal(result.country, "Gjermani");
+});
