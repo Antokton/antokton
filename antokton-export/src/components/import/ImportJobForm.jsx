@@ -31,7 +31,8 @@ const PROFESSION_KEYWORDS = [
   "punetor", "punëtor", "elektricist", "hidraulik", "shofer", "kuzhinier", "kamerier",
   "banakier", "murator", "gips", "gipskarton", "montues", "mekanik", "pastrues",
   "infermier", "programues", "saldues", "magazinier", "recepsionist", "operator",
-  "teknik", "ndihmes", "ndihmës", "menaxher", "arkëtar", "shitës", "roje"
+  "teknik", "ndihmes", "ndihmës", "menaxher", "arkëtar", "shitës", "roje",
+  "glassfaser", "fibra optike", "bagerist", "eskavator", "bager"
 ];
 
 const SECTION_STOP_RE = /^(?:cfar[eë]|çfar[eë]|ofrojm[eë]|ofrohet|kushtet|benefitet|paga|pagesa|lokacioni|lokacion|vendndodhja|adresa|kontakt|tel|telefon|whatsapp|viber|email|apliko|na kontakto)\b/i;
@@ -47,7 +48,25 @@ const isUrlLike = (value = "") => /^https?:\/\//i.test(String(value || "").trim(
 
 const looksCorruptedText = (value = "") => /�|Ã|Â|â€|Ð|Ñ|\\u00[0-9a-f]{2}/i.test(String(value || ""));
 
-const cleanRoleLine = (line = "") => String(line || "")
+const decodeHtmlEntities = (value = "") => String(value || "")
+  .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => {
+    const codePoint = parseInt(hex, 16);
+    return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : "";
+  })
+  .replace(/&#(\d+);?/g, (_, number) => {
+    const codePoint = parseInt(number, 10);
+    return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : "";
+  })
+  .replace(/&nbsp;/gi, " ")
+  .replace(/&amp;/gi, "&")
+  .replace(/&quot;/gi, "\"")
+  .replace(/&apos;|&#39;/gi, "'")
+  .replace(/&ccedil;/gi, "ç")
+  .replace(/&Ccedil;/g, "Ç")
+  .replace(/&euml;/gi, "ë")
+  .replace(/&Euml;/g, "Ë");
+
+const cleanRoleLine = (line = "") => decodeHtmlEntities(line)
   .replace(/^[\s\-–—•●▪▫*✅✔️☑️🔹🔸📌]+\s*/u, "")
   .replace(/^\d+[\).:\-–]\s*/, "")
   .replace(/\s+/g, " ")
@@ -67,7 +86,7 @@ const titleCase = (value = "") => String(value || "")
   .map((word) => word.charAt(0).toLocaleUpperCase("sq-AL") + word.slice(1))
   .join(" ");
 
-const cleanImportedText = (value = "") => String(value || "")
+const cleanImportedText = (value = "") => decodeHtmlEntities(value)
   .split(/\r?\n/)
   .map((line) => {
     const trimmed = line.replace(/\s+/g, " ").trim();
@@ -90,7 +109,9 @@ const inferProfession = (title = "") => {
   const clean = cleanRoleLine(title);
   const lower = clean.toLowerCase();
   const mappings = [
+    [/glassfaser|fibra optike/, "Punëtor Glassfaser"],
     [/elektricist/, "Elektricist"],
+    [/bagerist|eskavator|bager/, "Bagerist"],
     [/hidraulik/, "Hidraulik"],
     [/gips|gipskarton|knauf/, "Punëtor gipskartoni"],
     [/shofer/, "Shofer"],
@@ -120,7 +141,7 @@ const inferProfession = (title = "") => {
 };
 
 const extractLocationFromText = (rawText = "") => {
-  const lines = String(rawText || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const lines = decodeHtmlEntities(rawText).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   const labelRe = /^(?:lokacioni|lokacion|vendndodhja|vendi|qyteti|qytet|adresa|adres[eë]|location|address)\s*[:\-–]\s*(.+)$/i;
   for (const line of lines) {
     const match = line.match(labelRe);
@@ -148,7 +169,7 @@ const isLikelyRoleLine = (line = "", rawLine = "") => {
 };
 
 const splitRoleLines = (rawText = "") => {
-  const rawLines = String(rawText || "").split(/\r?\n/);
+  const rawLines = decodeHtmlEntities(rawText).split(/\r?\n/);
 
   const roles = [];
   let inPositionSection = false;
@@ -211,7 +232,7 @@ const importedTextFromData = (data = {}) => [
   data.original_text,
   data.description,
   data.title,
-].filter(Boolean).join("\n").trim();
+].filter(Boolean).map(decodeHtmlEntities).join("\n").trim();
 
 const hasImportableText = (text = "") => {
   const clean = String(text || "").replace(/https?:\/\/\S+/gi, "").replace(/\s+/g, " ").trim();
@@ -247,13 +268,23 @@ const buildHeuristicDrafts = (rawText = "", baseDraft = {}, fallbackUrl = "", jo
 };
 
 const normalizeDraft = (rawText, draft = {}, fallbackUrl = "", jobType = "ofroj") => {
-  const polished = polishDraft(draft, rawText);
-  return extractImportedPostFields(rawText || "", {
+  const decodedRawText = decodeHtmlEntities(rawText);
+  const decodedDraft = {
+    ...draft,
+    title: decodeHtmlEntities(draft.title || ""),
+    description: decodeHtmlEntities(draft.description || ""),
+    profession: decodeHtmlEntities(draft.profession || ""),
+    city: decodeHtmlEntities(draft.city || ""),
+    address: decodeHtmlEntities(draft.address || ""),
+    contact_info: decodeHtmlEntities(draft.contact_info || ""),
+  };
+  const polished = polishDraft(decodedDraft, decodedRawText);
+  return extractImportedPostFields(decodedRawText || "", {
     ...polished,
-    title: polished.title || rawText?.split("\n").find(Boolean)?.slice(0, 90) || "Njoftim pune",
-    description: polished.description || rawText || "",
-    import_original_text: rawText || draft.import_original_text || draft.original_text || draft.description || "",
-    original_text: rawText || draft.original_text || draft.description || "",
+    title: polished.title || decodedRawText?.split("\n").find(Boolean)?.slice(0, 90) || "Njoftim pune",
+    description: polished.description || decodedRawText || "",
+    import_original_text: decodedRawText || draft.import_original_text || draft.original_text || draft.description || "",
+    original_text: decodedRawText || draft.original_text || draft.description || "",
     source_url: draft.source_url || fallbackUrl || "",
     import_source_url: draft.import_source_url || draft.source_url || fallbackUrl || "",
     author_profile_url: draft.author_profile_url || "",
