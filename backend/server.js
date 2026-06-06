@@ -842,14 +842,40 @@ async function scrapeBasicListing(url) {
     .map((match) => match[1])
     .filter(Boolean);
   const phone = /href=["']tel:(\+?[\d\s().-]{7,})["']/i.exec(html)?.[1]?.replace(/[^\d+]/g, "") || "";
+  const jsonLdText = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)]
+    .map((match) => {
+      try {
+        const data = JSON.parse(match[1].trim());
+        return JSON.stringify(data);
+      } catch {
+        return "";
+      }
+    })
+    .filter(Boolean)
+    .join("\n");
+  const bodyText = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, "\"")
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 6000);
+  const descriptionText = [description, jsonLdText, bodyText].filter(Boolean).join("\n").trim();
 
   return {
     title: title.replace(/\s+/g, " ").trim(),
-    description: description.replace(/\s+/g, " ").trim(),
+    description: descriptionText,
+    import_original_text: descriptionText,
     image_urls: [...new Set(imageUrls)],
     phone_number: phone,
     source_url: url,
-    show_source_url: true
+    import_source_url: url,
+    show_source_url: false
   };
 }
 
