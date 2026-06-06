@@ -27,6 +27,69 @@ const JOB_TYPES = [
   { value: "kerkoj", label: "🟡 Kërkoj punë" },
 ];
 
+const PROFESSION_KEYWORDS = [
+  "punetor", "punëtor", "elektricist", "hidraulik", "shofer", "kuzhinier", "kamerier",
+  "banakier", "murator", "gips", "gipskarton", "montues", "mekanik", "pastrues",
+  "infermier", "programues", "saldues", "magazinier", "recepsionist", "operator",
+  "teknik", "ndihmes", "ndihmës", "menaxher", "arkëtar", "shitës", "roje"
+];
+
+const hasProfessionKeyword = (value = "") => {
+  const normalized = String(value || "").toLowerCase();
+  return PROFESSION_KEYWORDS.some((keyword) => normalized.includes(keyword));
+};
+
+const cleanRoleLine = (line = "") => String(line || "")
+  .replace(/^[\s\-–—•●▪▫*✅✔️☑️🔹🔸📌]+\s*/u, "")
+  .replace(/^\d+[\).:\-–]\s*/, "")
+  .replace(/\s+/g, " ")
+  .trim();
+
+const isContactOrBenefitLine = (line = "") => {
+  const value = String(line || "").toLowerCase();
+  return /kontakt|tel|telefon|whatsapp|viber|email|paga|pages|akomodim|banim|transport|kontrat|dokument|apliko|cv|info/.test(value);
+};
+
+const inferProfession = (title = "") => {
+  const clean = cleanRoleLine(title);
+  const lower = clean.toLowerCase();
+  const keyword = PROFESSION_KEYWORDS.find((item) => lower.includes(item));
+  if (!keyword) return clean;
+  const words = clean.split(/\s+/);
+  const index = words.findIndex((word) => word.toLowerCase().includes(keyword));
+  return words.slice(Math.max(index, 0), Math.min(words.length, index + 4)).join(" ") || clean;
+};
+
+const splitRoleLines = (rawText = "") => {
+  const lines = String(rawText || "")
+    .split(/\r?\n/)
+    .map(cleanRoleLine)
+    .filter(Boolean);
+
+  const roles = [];
+  for (const line of lines) {
+    if (line.length < 4 || line.length > 120) continue;
+    if (isContactOrBenefitLine(line)) continue;
+    if (!hasProfessionKeyword(line)) continue;
+    if (/^(kerkojm[eë]|k[eë]rkohet|ofrojm[eë]|vende pune)\b/i.test(line) && line.length > 55) continue;
+    roles.push(line);
+  }
+
+  return Array.from(new Set(roles)).slice(0, 8);
+};
+
+const buildHeuristicDrafts = (rawText = "", baseDraft = {}, fallbackUrl = "", jobType = "ofroj") => {
+  const roles = splitRoleLines(rawText);
+  if (!roles.length) return [normalizeDraft(rawText, baseDraft, fallbackUrl, jobType)];
+
+  return roles.map((role) => normalizeDraft(rawText, {
+    ...baseDraft,
+    title: role,
+    profession: baseDraft.profession || inferProfession(role),
+    description: `${role}\n\n${rawText}`.trim(),
+  }, fallbackUrl, jobType));
+};
+
 const normalizeDraft = (rawText, draft = {}, fallbackUrl = "", jobType = "ofroj") => extractImportedPostFields(rawText || "", {
   ...draft,
   title: draft.title || rawText?.split("\n").find(Boolean)?.slice(0, 90) || "Njoftim pune",
@@ -44,6 +107,8 @@ const normalizeDraft = (rawText, draft = {}, fallbackUrl = "", jobType = "ofroj"
   status: "pending",
 });
 
+const hasUsefulAiDraft = (draft) => Boolean(draft?.title || draft?.description || draft?.profession || draft?.city || draft?.country);
+
 export default function ImportJobForm({ user, onDone }) {
   const [url, setUrl] = useState("");
   const [rawText, setRawText] = useState("");
@@ -52,8 +117,82 @@ export default function ImportJobForm({ user, onDone }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [step, setStep] = useState("input");
-  const [data, setData] = useState(null);
+  const [drafts, setDrafts] = useState([]);
+  const [selectedDraftIndex, setSelectedDraftIndex] = useState(0);
   const isStaff = user?.role === "admin" || user?.role === "moderator";
+  const data = drafts[selectedDraftIndex] || null;
+  const hasMultipleDrafts = drafts.length > 1;
+
+  const setDraftList = (items) => {
+    setDrafts(items);
+    setSelectedDraftIndex(0);
+  };
+
+  const extractDraftsWithAi = async ({ text, sourceUrl, importedData = {} }) => {
+    const prompt = `Je asistent importi për Antokton. Nxirr njoftime pune nga teksti/linku më poshtë.
+
+Rregulla:
+- Nëse ka disa vende pune/profesione/rekrutime, kthe secilin si objekt më vete në jobs[].
+- Mos shpik pagë, qytet, shtet, punëdhënës, kontakt, ose link.
+- Profesioni duhet të jetë i plotësuar kur del nga teksti.
+- Përshkrimi duhet të jetë shqip i pastër, por me faktet e ruajtura.
+- Kontaktet mbaji në contact_info/phone_number, mos i përziej në përshkrim.
+- Nëse linku nuk jep përmbajtje të lexueshme, përdor vetëm tekstin e dhënë dhe mos shpik.
+
+Linku i burimit: ${sourceUrl || ""}
+
+Teksti/të dhënat:
+${text || importedData.description || importedData.title || ""}`;
+
+    try {
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt,
+        add_context_from_internet: Boolean(sourceUrl),
+        response_json_schema: {
+          type: "object",
+          properties: {
+            jobs: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  description: { type: "string" },
+                  profession: { type: "string" },
+                  category: { type: "string" },
+                  country: { type: "string" },
+                  city: { type: "string" },
+                  address: { type: "string" },
+                  salary_info: { type: "string" },
+                  phone_number: { type: "string" },
+                  contact_info: { type: "string" },
+                  poster_name: { type: "string" },
+                  author_profile_url: { type: "string" },
+                  required_skills: { type: "string" },
+                  contract_type: { type: "string" },
+                  experience_level: { type: "string" }
+                }
+              }
+            },
+            warning: { type: "string" }
+          }
+        }
+      });
+
+      const jobs = Array.isArray(response?.jobs) ? response.jobs.filter(hasUsefulAiDraft) : [];
+      return {
+        warning: response?.warning || "",
+        drafts: jobs.map((job) => normalizeDraft(text || importedData.description || "", {
+          ...importedData,
+          ...job,
+          category: job.category || importedData.category || "pune",
+          source_url: sourceUrl || importedData.source_url || "",
+        }, sourceUrl, jobType)),
+      };
+    } catch {
+      return { warning: "", drafts: [] };
+    }
+  };
 
   const handleImport = async () => {
     const cleanUrl = url.trim();
@@ -68,7 +207,16 @@ export default function ImportJobForm({ user, onDone }) {
 
     try {
       if (cleanText) {
-        setData(normalizeDraft(cleanText, { source_url: cleanUrl }, cleanUrl, jobType));
+        const aiResult = await extractDraftsWithAi({ text: cleanText, sourceUrl: cleanUrl, importedData: { source_url: cleanUrl } });
+        const nextDrafts = aiResult.drafts.length
+          ? aiResult.drafts
+          : buildHeuristicDrafts(cleanText, { source_url: cleanUrl }, cleanUrl, jobType);
+        setDraftList(nextDrafts);
+        if (nextDrafts.length > 1) {
+          setError(`U gjetën ${nextDrafts.length} pozicione. Kontrollo secilin draft veçmas para publikimit.`);
+        } else if (aiResult.warning) {
+          setError(aiResult.warning);
+        }
         setStep("preview");
         return;
       }
@@ -76,7 +224,19 @@ export default function ImportJobForm({ user, onDone }) {
       const res = await base44.functions.invoke("importJobPost", { url: cleanUrl, job_type: jobType });
       if (res.data?.success) {
         const importedText = res.data.data?.import_original_text || res.data.data?.original_text || res.data.data?.description || "";
-        setData(normalizeDraft(importedText, res.data.data, cleanUrl, jobType));
+        const aiResult = await extractDraftsWithAi({ text: importedText, sourceUrl: cleanUrl, importedData: res.data.data });
+        const nextDrafts = aiResult.drafts.length
+          ? aiResult.drafts
+          : buildHeuristicDrafts(importedText, res.data.data, cleanUrl, jobType);
+        setDraftList(nextDrafts);
+        const weakImport = !importedText || !nextDrafts.some((draft) => draft.profession || draft.city || draft.country);
+        if (weakImport) {
+          setError("Linku nuk dha të dhëna të mjaftueshme për profesion/lokacion. Nëse është Facebook/grup privat, ngjit tekstin e postimit; sistemi nuk mund të anashkalojë kufizimet e login-it.");
+        } else if (nextDrafts.length > 1) {
+          setError(`U gjetën ${nextDrafts.length} pozicione. Kontrollo secilin draft veçmas para publikimit.`);
+        } else if (aiResult.warning) {
+          setError(aiResult.warning);
+        }
         setStep("preview");
       } else {
         setError(res.data?.error || "Nuk u mundua të importohet njoftimi.");
@@ -88,38 +248,44 @@ export default function ImportJobForm({ user, onDone }) {
     }
   };
 
-  const handlePublish = async (status) => {
-    if (!data) return;
-    const prepared = normalizeDraft(data.import_original_text || data.original_text || data.description || "", data, url.trim(), data.job_type || jobType);
+  const saveDraft = async (draft, status) => {
+    const prepared = normalizeDraft(draft.import_original_text || draft.original_text || draft.description || "", draft, url.trim(), draft.job_type || jobType);
     const contactInfoWarning = getContactInfoInTextMessage(prepared.description);
     if (contactInfoWarning) {
-      setError(contactInfoWarning);
-      return;
+      throw new Error(contactInfoWarning);
     }
     if (prepared.phone_number && !isValidInternationalPhone(prepared.phone_number)) {
-      setError(getInternationalPhoneError("Numri i telefonit"));
-      return;
+      throw new Error(getInternationalPhoneError("Numri i telefonit"));
     }
     const phoneNumber = normalizeInternationalPhone(prepared.phone_number);
+    await base44.entities.Job.create({
+      ...prepared,
+      phone_number: phoneNumber || "",
+      source_url: prepared.source_url || url.trim(),
+      author_profile_url: prepared.author_profile_url || "",
+      import_source_url: prepared.import_source_url || prepared.source_url || url.trim(),
+      import_author_profile_url: prepared.import_author_profile_url || prepared.author_profile_url || "",
+      show_source_url: prepared.show_source_url === true,
+      show_author_profile_url: prepared.show_author_profile_url === true,
+      import_original_text: prepared.import_original_text || prepared.original_text || "",
+      imported_community_request: true,
+      import_type: "job_import_assistant",
+      importer_email: user?.email || "",
+      status,
+      moderation_status: status === "approved" ? "approved" : "pending",
+      is_halal_compliant: true,
+    });
+  };
+
+  const handlePublish = async (status, publishAll = false) => {
+    const targets = publishAll ? drafts : [data].filter(Boolean);
+    if (!targets.length) return;
+
     setSaving(true);
     try {
-      await base44.entities.Job.create({
-        ...prepared,
-        phone_number: phoneNumber || "",
-        source_url: prepared.source_url || url.trim(),
-        author_profile_url: prepared.author_profile_url || "",
-        import_source_url: prepared.import_source_url || prepared.source_url || url.trim(),
-        import_author_profile_url: prepared.import_author_profile_url || prepared.author_profile_url || "",
-        show_source_url: prepared.show_source_url === true,
-        show_author_profile_url: prepared.show_author_profile_url === true,
-        import_original_text: prepared.import_original_text || prepared.original_text || "",
-        imported_community_request: true,
-        import_type: "job_import_assistant",
-        importer_email: user?.email || "",
-        status,
-        moderation_status: status === "approved" ? "approved" : "pending",
-        is_halal_compliant: true,
-      });
+      for (const draft of targets) {
+        await saveDraft(draft, status);
+      }
       setStep("done");
       setTimeout(() => onDone?.(), 1200);
     } catch (e) {
@@ -129,14 +295,16 @@ export default function ImportJobForm({ user, onDone }) {
     }
   };
 
-  const set = (key, val) => setData((d) => ({ ...d, [key]: val }));
+  const set = (key, val) => setDrafts((items) => items.map((item, index) => (
+    index === selectedDraftIndex ? { ...item, [key]: val } : item
+  )));
 
   if (step === "done") {
     return (
       <div className="text-center py-16 space-y-3">
         <CheckCircle2 className="w-14 h-14 text-[#9bffd6] mx-auto" />
         <p className="text-white font-bold text-xl">Njoftimi u importua!</p>
-        <p className="text-white/50 text-sm">Njoftimi u shtua dhe do të shfaqet sipas statusit të zgjedhur.</p>
+        <p className="text-white/50 text-sm">Draft-et u shtuan dhe do të shfaqen sipas statusit të zgjedhur.</p>
       </div>
     );
   }
@@ -210,6 +378,24 @@ export default function ImportJobForm({ user, onDone }) {
           <div className="flex items-center gap-2 text-[#9bffd6] text-sm font-medium">
             <CheckCircle2 className="w-4 h-4" /> Drafti u krijua — kontrolloje dhe redaktoje para publikimit
           </div>
+
+          {hasMultipleDrafts && (
+            <div className="rounded-xl border border-[#8ab4ff]/20 bg-[#8ab4ff]/10 p-3">
+              <p className="text-[#9bffd6] text-xs font-bold mb-2">U ndanë {drafts.length} vende pune. Zgjidh draftin për redaktim:</p>
+              <div className="flex flex-wrap gap-2">
+                {drafts.map((draft, index) => (
+                  <button
+                    key={`${draft.title}-${index}`}
+                    type="button"
+                    onClick={() => setSelectedDraftIndex(index)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs ${selectedDraftIndex === index ? "border-[#8ab4ff] bg-[#8ab4ff]/20 text-white" : "border-white/10 bg-white/5 text-white/60"}`}
+                  >
+                    {index + 1}. {draft.profession || draft.title || "Draft"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
             <div className="flex items-center gap-2 mb-1">
@@ -338,10 +524,15 @@ export default function ImportJobForm({ user, onDone }) {
           <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 pt-1">
             <button onClick={() => handlePublish("approved")} disabled={saving} className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-[#0b1020] disabled:opacity-40" style={{ background: "linear-gradient(to right, #8ab4ff, #9bffd6)" }}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-              {isStaff ? "Publiko njoftimin" : "Publiko direkt"}
+              {isStaff ? "Publiko draftin" : "Publiko direkt"}
             </button>
+            {isStaff && hasMultipleDrafts && (
+              <button onClick={() => handlePublish("approved", true)} disabled={saving} className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-[#9bffd6] border border-[#9bffd6]/30 bg-[#9bffd6]/10 hover:bg-[#9bffd6]/20 transition-colors disabled:opacity-40">
+                Publiko të gjitha ({drafts.length})
+              </button>
+            )}
             {!isStaff && <button onClick={() => handlePublish("pending")} disabled={saving} className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-[#8ab4ff] border border-[#8ab4ff]/30 bg-[#8ab4ff]/10 hover:bg-[#8ab4ff]/20 transition-colors disabled:opacity-40">Dërgo për moderim</button>}
-            <button onClick={() => { setStep("input"); setData(null); setError(""); }} className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm text-white/50 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors sm:ml-auto">← Importo tjetër</button>
+            <button onClick={() => { setStep("input"); setDraftList([]); setError(""); }} className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm text-white/50 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors sm:ml-auto">← Importo tjetër</button>
           </div>
         </>
       )}
