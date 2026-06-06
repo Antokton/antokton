@@ -442,7 +442,10 @@ export default function PostDetail() {
       pazar_category: job.pazar_category || '',
       poster_name: job.poster_name || '',
       source_url: job.source_url || '',
-      show_source_url: Boolean(job.show_source_url)
+      show_source_url: Boolean(job.show_source_url),
+      author_profile_url: job.author_profile_url || '',
+      import_author_profile_url: job.import_author_profile_url || job.author_profile_url || '',
+      show_author_profile_url: Boolean(job.show_author_profile_url)
     });
     setIsEditing(true);
   };
@@ -461,6 +464,9 @@ export default function PostDetail() {
         category: editForm.category,
         pazar_category: editForm.pazar_category || undefined,
         poster_name: editForm.poster_name || job.poster_name,
+        author_profile_url: editForm.author_profile_url || "",
+        import_author_profile_url: editForm.import_author_profile_url || editForm.author_profile_url || "",
+        show_author_profile_url: editForm.show_author_profile_url === true,
       });
     },
     onSuccess: () => {
@@ -673,7 +679,7 @@ export default function PostDetail() {
                 <Input value={editForm.contact_info} onChange={e => setEditForm({...editForm, contact_info: e.target.value})} className="bg-white/5 border-white/10 text-white" />
               </div>
               <div className="space-y-1">
-                <Label className="text-white/60 text-xs">Link burimi / kontakt online</Label>
+                <Label className="text-white/60 text-xs">Linku i burimit / postimit origjinal</Label>
                 <Input value={editForm.source_url || ''} onChange={e => setEditForm({...editForm, source_url: e.target.value})} placeholder="https://..." className="bg-white/5 border-white/10 text-white" />
                 <label className="flex cursor-pointer items-start gap-2 text-xs text-white/50">
                   <input
@@ -683,6 +689,24 @@ export default function PostDetail() {
                     className="mt-0.5 h-4 w-4 accent-[#8ab4ff]"
                   />
                   <span>Shfaq linkun publikisht. Pa zgjedhje ruhet vetëm për gjurmim të postimit origjinal.</span>
+                </label>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-white/60 text-xs">Linku i postuesit / kontaktit online</Label>
+                <Input
+                  value={editForm.author_profile_url || ''}
+                  onChange={e => setEditForm({...editForm, author_profile_url: e.target.value, import_author_profile_url: e.target.value})}
+                  placeholder="https://facebook.com/profile..."
+                  className="bg-white/5 border-white/10 text-white"
+                />
+                <label className="flex cursor-pointer items-start gap-2 text-xs text-white/50">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editForm.show_author_profile_url)}
+                    onChange={e => setEditForm({...editForm, show_author_profile_url: e.target.checked})}
+                    className="mt-0.5 h-4 w-4 accent-[#8ab4ff]"
+                  />
+                  <span>Shfaq linkun e postuesit si kontakt publik. Pa zgjedhje ruhet vetëm për admin/moderator.</span>
                 </label>
               </div>
               <div className="space-y-1">
@@ -868,6 +892,11 @@ export default function PostDetail() {
               : phoneApp === "telegram"
               ? `https://t.me/${cleanPhone}`
               : `tel:${cleanPhone}`;
+            const canShowAuthorContactUrl = canSeePrivateImportFields || job.show_author_profile_url === true;
+            const authorContactUrl = job.author_profile_url || "";
+            const isAuthorContactLine = (line = "") => (
+              authorContactUrl && line.trim().replace(/\/$/, "") === authorContactUrl.trim().replace(/\/$/, "")
+            );
 
             return (
               <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10">
@@ -902,7 +931,7 @@ export default function PostDetail() {
                      </div>
                    )}
                     {/* Info tjetër kontakti */}
-                    {job.contact_info && job.contact_info.split(/\n/).map((line, i) => {
+                    {job.contact_info && job.contact_info.split(/\n/).filter((line) => canShowAuthorContactUrl || !isAuthorContactLine(line)).map((line, i) => {
                       const emailMatch = line.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
                       const urlMatch = line.match(/https?:\/\/[^\s]+/);
                       const mapsMatch = line.match(/^(rr\.|rruga|adresa|adresë|str\.|sheshi|bul\.)/i);
@@ -913,13 +942,25 @@ export default function PostDetail() {
                       if (phoneMatch && line.replace(/[^\d]/g,'').length >= 7) return <a key={i} href={`tel:${line.replace(/\s/g,'')}`} className="block break-all text-[#8ab4ff] hover:text-[#9bffd6] underline">{line}</a>;
                       return <span key={i} className="block break-words">{line}</span>;
                     })}
-                    {(job.city || job.country) && (
+                    {canShowAuthorContactUrl && authorContactUrl && !(job.contact_info || "").includes(authorContactUrl) && (
                       <a
-                        href={`https://www.google.com/maps/search/${encodeURIComponent([job.city, job.country === "Antokton" ? null : job.country].filter(Boolean).join(", "))}`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 mt-1 text-xs text-[#9bffd6] hover:text-white border border-[#9bffd6]/30 rounded-full px-2.5 py-1"
+                        href={authorContactUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block break-all text-[#8ab4ff] hover:text-[#9bffd6] underline"
                       >
-                        <MapPin className="w-3 h-3" /> Hap në Google Maps
+                        {authorContactUrl}
+                      </a>
+                    )}
+                    {(job.address || job.city || job.country) && (
+                      <a
+                        href={`https://www.google.com/maps/search/${encodeURIComponent([job.address || job.city, job.country === "Antokton" ? null : job.country].filter(Boolean).join(", "))}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="inline-flex max-w-full items-center gap-1.5 mt-1 text-xs text-[#9bffd6] hover:text-white underline underline-offset-2"
+                        title="Hap lokacionin në hartë"
+                      >
+                        <MapPin className="w-3 h-3 shrink-0" />
+                        <span className="min-w-0 break-words">{[job.address || job.city, job.country === "Antokton" ? null : job.country].filter(Boolean).join(", ")}</span>
                       </a>
                     )}
                               {job.source_url && (job.show_source_url === true || canSeePrivateImportFields) && (
