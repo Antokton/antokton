@@ -43,6 +43,8 @@ const hasProfessionKeyword = (value = "") => {
   return PROFESSION_KEYWORDS.some((keyword) => normalized.includes(keyword));
 };
 
+const isUrlLike = (value = "") => /^https?:\/\//i.test(String(value || "").trim());
+
 const cleanRoleLine = (line = "") => String(line || "")
   .replace(/^[\s\-–—•●▪▫*✅✔️☑️🔹🔸📌]+\s*/u, "")
   .replace(/^\d+[\).:\-–]\s*/, "")
@@ -202,6 +204,31 @@ const dedupeDrafts = (items = [], rawText = "") => {
   return roleCount > 0 ? cleanItems.slice(0, roleCount) : cleanItems;
 };
 
+const importedTextFromData = (data = {}) => [
+  data.import_original_text,
+  data.original_text,
+  data.description,
+  data.title,
+].filter(Boolean).join("\n").trim();
+
+const hasImportableText = (text = "") => {
+  const clean = String(text || "").replace(/https?:\/\/\S+/gi, "").replace(/\s+/g, " ").trim();
+  if (clean.length < 80) return false;
+  if (!/[a-zA-ZçÇëË]/.test(clean)) return false;
+  if (/facebook|log in|login|sign up|permalink|browser/i.test(clean) && clean.length < 220) return false;
+  return hasProfessionKeyword(clean) || /pun[eë]|pozicion|rekrutim|k[eë]rkojm[eë]|ofrojm[eë]|lokacion|kontakt/i.test(clean);
+};
+
+const isMeaningfulDraft = (draft = {}) => {
+  const title = String(draft.title || "").trim();
+  const description = String(draft.description || "").trim();
+  const profession = String(draft.profession || "").trim();
+  if (!title || !description || !profession) return false;
+  if (isUrlLike(title) || isUrlLike(description)) return false;
+  if (title.length > 120 || profession.split(/\s+/).length > 4) return false;
+  return hasProfessionKeyword(`${profession} ${title} ${description}`);
+};
+
 const buildHeuristicDrafts = (rawText = "", baseDraft = {}, fallbackUrl = "", jobType = "ofroj") => {
   const roles = splitRoleLines(rawText);
   if (!roles.length) return [normalizeDraft(rawText, baseDraft, fallbackUrl, jobType)];
@@ -265,7 +292,8 @@ Rregulla:
 - Përshkrimi duhet të jetë shqip i pastër, por me faktet e ruajtura.
 - Mos përdor tekst me të gjitha shkronjat e mëdha; ktheje në drejtshkrim normal.
 - Kontaktet mbaji në contact_info/phone_number, mos i përziej në përshkrim.
-- Nëse linku nuk jep përmbajtje të lexueshme, përdor vetëm tekstin e dhënë dhe mos shpik.
+- Nëse linku nuk jep përmbajtje të lexueshme, kthe read_success=false dhe jobs=[].
+- Nëse ka vetëm link, provo ta lexosh linkun publik. Mos përdor vetëm URL-në si tekst njoftimi.
 
 Linku i burimit: ${sourceUrl || ""}
 
@@ -279,6 +307,7 @@ ${text || importedData.description || importedData.title || ""}`;
         response_json_schema: {
           type: "object",
           properties: {
+            read_success: { type: "boolean" },
             jobs: {
               type: "array",
               items: {
@@ -309,17 +338,19 @@ ${text || importedData.description || importedData.title || ""}`;
 
       const jobs = Array.isArray(response?.jobs) ? response.jobs.filter(hasUsefulAiDraft) : [];
       const sourceText = text || importedData.description || "";
+      const readSuccess = response?.read_success !== false && (Boolean(text) || Boolean(jobs.length));
       return {
+        readSuccess,
         warning: response?.warning || "",
-        drafts: dedupeDrafts(jobs.map((job) => normalizeDraft(sourceText, {
+        drafts: dedupeDrafts(jobs.map((job) => normalizeDraft(sourceText || job.description || "", {
           ...importedData,
           ...job,
           category: job.category || importedData.category || "pune",
           source_url: sourceUrl || importedData.source_url || "",
-        }, sourceUrl, jobType)), sourceText),
+        }, sourceUrl, jobType)), sourceText).filter(isMeaningfulDraft),
       };
     } catch {
-      return { warning: "", drafts: [] };
+      return { readSuccess: false, warning: "", drafts: [] };
     }
   };
 
@@ -350,15 +381,39 @@ ${text || importedData.description || importedData.title || ""}`;
         return;
       }
 
+      const aiFromUrl = await extractDraftsWithAi({ text: "", sourceUrl: cleanUrl, importedData: { source_url: cleanUrl } });
+      if (aiFromUrl.readSuccess && aiFromUrl.drafts.length) {
+        setDraftList(aiFromUrl.drafts);
+        if (aiFromUrl.drafts.length > 1) {
+          setError(`U gjetën ${aiFromUrl.drafts.length} pozicione. Kontrollo secilin draft veçmas para publikimit.`);
+        } else if (aiFromUrl.warning) {
+          setError(aiFromUrl.warning);
+        }
+        setStep("preview");
+        return;
+      }
+
       const res = await base44.functions.invoke("importJobPost", { url: cleanUrl, job_type: jobType });
       if (res.data?.success) {
-        const importedText = res.data.data?.import_original_text || res.data.data?.original_text || res.data.data?.description || "";
+        const importedText = importedTextFromData(res.data.data);
+        if (!hasImportableText(importedText)) {
+          setDraftList([]);
+          setStep("input");
+          setError("Ky link nuk dha tekst të lexueshëm për njoftimin. Për Facebook/grupe private sistemi nuk mund të lexojë postimin vetëm nga linku; ngjit tekstin e postimit ose përdor një link publik që shfaq përmbajtjen pa login.");
+          return;
+        }
         const aiResult = await extractDraftsWithAi({ text: importedText, sourceUrl: cleanUrl, importedData: res.data.data });
         const nextDrafts = aiResult.drafts.length
           ? aiResult.drafts
-          : buildHeuristicDrafts(importedText, res.data.data, cleanUrl, jobType);
+          : buildHeuristicDrafts(importedText, res.data.data, cleanUrl, jobType).filter(isMeaningfulDraft);
+        if (!nextDrafts.length) {
+          setDraftList([]);
+          setStep("input");
+          setError("Nuk u krijua draft i besueshëm nga ky link. Sistemi nuk do të publikojë draft të pasaktë; ngjit tekstin e plotë të njoftimit ose përdor link publik me përmbajtje të lexueshme.");
+          return;
+        }
         setDraftList(nextDrafts);
-        const weakImport = !importedText || !nextDrafts.some((draft) => draft.profession || draft.city || draft.country);
+        const weakImport = !importedText || !nextDrafts.every(isMeaningfulDraft);
         if (weakImport) {
           setError("Linku nuk dha të dhëna të mjaftueshme për profesion/lokacion. Nëse është Facebook/grup privat, ngjit tekstin e postimit; sistemi nuk mund të anashkalojë kufizimet e login-it.");
         } else if (nextDrafts.length > 1) {
