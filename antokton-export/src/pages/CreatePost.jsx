@@ -10,7 +10,7 @@ import LocationPicker from "../components/job/LocationPicker";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import AIJobDescriptionGenerator from "../components/job/AIJobDescriptionGenerator";
-import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
+import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizePhoneForCountry } from "@/lib/phone";
 import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
 
 const ALL_PROFESSIONS = [
@@ -290,7 +290,7 @@ const containsFlaggedWords = (text) => {
 const emptyForm = {
   title: "", description: "", category: "pune", job_type: "",
   country: "", zone: "", city: "", zones: [], profession: "", salary_info: "", contact_info: "",
-  phone_number: "", phone_app: "whatsapp",
+  phone_number: "", phone_app: "telefon",
   source_url: "", show_source_url: false,
   author_profile_url: "", import_author_profile_url: "", show_author_profile_url: false,
   is_open_call: false, donation_platform: "", donation_type: "",
@@ -402,11 +402,17 @@ export default function CreatePost() {
       );
       if (!proceed) return;
     }
-    if (!isValidInternationalPhone(form.phone_number)) {
+
+    const finalCountry = form.country === "__other__" ? (customCountry.trim() || "Tjetër") : form.country;
+    const phoneNumber = normalizePhoneForCountry(
+      form.phone_number,
+      finalCountry,
+      `${form.city || ""} ${form.address || ""} ${form.description || ""}`
+    );
+    if (phoneNumber && !isValidInternationalPhone(phoneNumber)) {
       alert(getInternationalPhoneError("Numri i telefonit"));
       return;
     }
-    const phoneNumber = normalizeInternationalPhone(form.phone_number);
 
     setLoading(true);
     const defaultName = user?.first_name && user?.surname
@@ -424,7 +430,6 @@ export default function CreatePost() {
     }
 
     const finalProfession = typedProfession || "Tjetër";
-    const finalCountry = form.country === "__other__" ? (customCountry.trim() || "Tjetër") : form.country;
     const publishStatus = isAdminOrMod ? "approved" : "pending";
 
     await base44.entities.Job.create({

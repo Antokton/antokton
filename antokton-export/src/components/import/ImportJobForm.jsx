@@ -3,7 +3,7 @@ import { base44 } from "@/api/antoktonClient";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Link2, Sparkles, CheckCircle2, AlertCircle, Phone, MapPin, User, Briefcase, DollarSign, FileText, Image, ClipboardPaste } from "lucide-react";
-import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
+import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizePhoneForCountry } from "@/lib/phone";
 import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
 import { extractImportedPostFields, sanitizeImportedText } from "@/lib/importExtractors";
 
@@ -32,7 +32,8 @@ const PROFESSION_KEYWORDS = [
   "banakier", "murator", "gips", "gipskarton", "montues", "mekanik", "pastrues",
   "infermier", "programues", "saldues", "magazinier", "recepsionist", "operator",
   "teknik", "ndihmes", "ndihmës", "menaxher", "arkëtar", "shitës", "roje",
-  "glassfaser", "fibra optike", "bagerist", "eskavator", "bager"
+  "glassfaser", "fibra optike", "bagerist", "eskavator", "bager", "kopshtar",
+  "pastruese", "pastrim", "kujdestar", "kujdestare", "ndihmese", "ndihmëse"
 ];
 
 const SECTION_STOP_RE = /^(?:cfar[eë]|çfar[eë]|ofrojm[eë]|ofrohet|kushtet|benefitet|paga|pagesa|lokacioni|lokacion|vendndodhja|adresa|kontakt|tel|telefon|whatsapp|viber|email|apliko|na kontakto)\b/i;
@@ -119,6 +120,10 @@ const inferProfession = (title = "") => {
     [/glassfaser|fibra optike/, "Punëtor Glassfaser"],
     [/elektricist/, "Elektricist"],
     [/bagerist|eskavator|bager/, "Bagerist"],
+    [/kopshtar/, "Kopshtar"],
+    [/pastruese|pastrues|pastrim/, "Pastrues"],
+    [/kujdestar|kujdestare/, "Kujdestar"],
+    [/ndihm[eë]se|ndihm[eë]s/, "Ndihmës"],
     [/hidraulik/, "Hidraulik"],
     [/gips|gipskarton|knauf/, "Punëtor gipskartoni"],
     [/shofer/, "Shofer"],
@@ -144,12 +149,13 @@ const inferProfession = (title = "") => {
   ];
   const match = mappings.find(([regex]) => regex.test(lower));
   if (match) return match[1];
+  if (/njoftim\s+pune|pun[eë]\s+n[eë]\s+gjermani|ofroj\s+pun[eë]|k[eë]rkoj\s+pun[eë]/i.test(clean)) return "";
   return titleCase(clean).split(/\s+/).slice(0, 3).join(" ");
 };
 
 const extractLocationFromText = (rawText = "") => {
   const lines = sanitizeImportedText(rawText).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  const labelRe = /^(?:lokacioni|lokacion|vendndodhja|vendi|qyteti|qytet|adresa|adres[eë]|location|address)\s*[:\-–]\s*(.+)$/i;
+  const labelRe = /^(?:lokacioni|lokacion|vendndodhja|vendi i pun[eë]s|vendi pun[eë]s|vendi|qyteti|qytet|adresa|adres[eë]|location|address)\s*[:\-–]\s*(.+)$/i;
   for (const line of lines) {
     const match = line.match(labelRe);
     if (!match?.[1]) continue;
@@ -248,9 +254,13 @@ const makeRoleTitle = (role = "", rawText = "") => {
 };
 
 const polishDraft = (draft = {}, rawText = "") => {
-  const profession = inferProfession(draft.profession || draft.title || "");
+  const profession = inferProfession(draft.profession || draft.title || "") || inferProfession(rawText || draft.import_original_text || draft.original_text || draft.description || "");
   const location = extractLocationFromText(rawText || draft.import_original_text || draft.original_text || draft.description || "");
-  const title = draft.title || profession || "Njoftim pune";
+  const country = draft.country || inferCountryFromLocation(rawText || draft.import_original_text || draft.original_text || draft.description || location.city || location.address);
+  const genericTitle = !draft.title || /njoftim\s+pune|pun[eë]\s+n[eë]\s+gjermani/i.test(draft.title);
+  const title = genericTitle && profession
+    ? [profession, location.city || location.address || country ? `në ${location.city || location.address || country}` : ""].filter(Boolean).join(" ")
+    : (draft.title || profession || "Njoftim pune");
   return {
     ...draft,
     title: titleCase(title).split(/\s+/).slice(0, 10).join(" "),
@@ -258,7 +268,7 @@ const polishDraft = (draft = {}, rawText = "") => {
     description: cleanImportedText(draft.description || rawText || ""),
     city: draft.city || location.city || "",
     address: draft.address || location.address || "",
-    country: draft.country || inferCountryFromLocation(rawText || draft.import_original_text || draft.original_text || draft.description || location.city || location.address),
+    country,
   };
 };
 
@@ -547,13 +557,18 @@ ${text || importedData.description || importedData.title || ""}`;
     if (contactInfoWarning) {
       throw new Error(contactInfoWarning);
     }
-    if (prepared.phone_number && !isValidInternationalPhone(prepared.phone_number)) {
+    const phoneNumber = normalizePhoneForCountry(
+      prepared.phone_number,
+      prepared.country,
+      `${prepared.city || ""} ${prepared.address || ""} ${prepared.description || ""} ${prepared.import_original_text || ""}`
+    );
+    if (phoneNumber && !isValidInternationalPhone(phoneNumber)) {
       throw new Error(getInternationalPhoneError("Numri i telefonit"));
     }
-    const phoneNumber = normalizeInternationalPhone(prepared.phone_number);
     await base44.entities.Job.create({
       ...prepared,
       phone_number: phoneNumber || "",
+      phone_app: phoneNumber ? (prepared.phone_app || "telefon") : "",
       source_url: prepared.source_url || url.trim(),
       author_profile_url: prepared.author_profile_url || "",
       import_source_url: prepared.import_source_url || prepared.source_url || url.trim(),
