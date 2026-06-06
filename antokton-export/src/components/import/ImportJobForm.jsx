@@ -45,6 +45,8 @@ const hasProfessionKeyword = (value = "") => {
 
 const isUrlLike = (value = "") => /^https?:\/\//i.test(String(value || "").trim());
 
+const looksCorruptedText = (value = "") => /�|Ã|Â|â€|Ð|Ñ|\\u00[0-9a-f]{2}/i.test(String(value || ""));
+
 const cleanRoleLine = (line = "") => String(line || "")
   .replace(/^[\s\-–—•●▪▫*✅✔️☑️🔹🔸📌]+\s*/u, "")
   .replace(/^\d+[\).:\-–]\s*/, "")
@@ -213,6 +215,7 @@ const importedTextFromData = (data = {}) => [
 
 const hasImportableText = (text = "") => {
   const clean = String(text || "").replace(/https?:\/\/\S+/gi, "").replace(/\s+/g, " ").trim();
+  if (looksCorruptedText(clean)) return false;
   if (clean.length < 80) return false;
   if (!/[a-zA-ZçÇëË]/.test(clean)) return false;
   if (/facebook|log in|login|sign up|permalink|browser/i.test(clean) && clean.length < 220) return false;
@@ -224,8 +227,10 @@ const isMeaningfulDraft = (draft = {}) => {
   const description = String(draft.description || "").trim();
   const profession = String(draft.profession || "").trim();
   if (!title || !description || !profession) return false;
+  if (looksCorruptedText(`${title}\n${description}\n${profession}\n${draft.city || ""}\n${draft.address || ""}`)) return false;
   if (isUrlLike(title) || isUrlLike(description)) return false;
   if (title.length > 120 || profession.split(/\s+/).length > 4) return false;
+  if (description.length < 80) return false;
   return hasProfessionKeyword(`${profession} ${title} ${description}`);
 };
 
@@ -282,7 +287,7 @@ export default function ImportJobForm({ user, onDone }) {
     setSelectedDraftIndex(0);
   };
 
-  const extractDraftsWithAi = async ({ text, sourceUrl, importedData = {} }) => {
+  const extractDraftsWithAi = async ({ text, sourceUrl, importedData = {}, requireSourceText = false }) => {
     const prompt = `Je asistent importi për Antokton. Nxirr njoftime pune nga teksti/linku më poshtë.
 
 Rregulla:
@@ -294,6 +299,8 @@ Rregulla:
 - Kontaktet mbaji në contact_info/phone_number, mos i përziej në përshkrim.
 - Nëse linku nuk jep përmbajtje të lexueshme, kthe read_success=false dhe jobs=[].
 - Nëse ka vetëm link, provo ta lexosh linkun publik. Mos përdor vetëm URL-në si tekst njoftimi.
+- Kur lexon vetëm nga linku, kthe edhe source_text me tekstin origjinal të lexuar nga linku. Pa source_text të lexueshëm, read_success duhet të jetë false.
+- Nëse teksti del me encoding të prishur, p.sh. PunÃ«tor, kthe read_success=false.
 
 Linku i burimit: ${sourceUrl || ""}
 
@@ -308,6 +315,7 @@ ${text || importedData.description || importedData.title || ""}`;
           type: "object",
           properties: {
             read_success: { type: "boolean" },
+            source_text: { type: "string" },
             jobs: {
               type: "array",
               items: {
@@ -337,8 +345,9 @@ ${text || importedData.description || importedData.title || ""}`;
       });
 
       const jobs = Array.isArray(response?.jobs) ? response.jobs.filter(hasUsefulAiDraft) : [];
-      const sourceText = text || importedData.description || "";
-      const readSuccess = response?.read_success !== false && (Boolean(text) || Boolean(jobs.length));
+      const sourceText = text || response?.source_text || importedData.description || "";
+      const sourceTextOk = hasImportableText(sourceText);
+      const readSuccess = response?.read_success !== false && (Boolean(text) || sourceTextOk) && (!requireSourceText || sourceTextOk);
       return {
         readSuccess,
         warning: response?.warning || "",
@@ -381,7 +390,7 @@ ${text || importedData.description || importedData.title || ""}`;
         return;
       }
 
-      const aiFromUrl = await extractDraftsWithAi({ text: "", sourceUrl: cleanUrl, importedData: { source_url: cleanUrl } });
+      const aiFromUrl = await extractDraftsWithAi({ text: "", sourceUrl: cleanUrl, importedData: { source_url: cleanUrl }, requireSourceText: true });
       if (aiFromUrl.readSuccess && aiFromUrl.drafts.length) {
         setDraftList(aiFromUrl.drafts);
         if (aiFromUrl.drafts.length > 1) {
