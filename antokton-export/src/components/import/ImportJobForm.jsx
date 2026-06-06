@@ -344,6 +344,9 @@ const normalizeDraft = (rawText, draft = {}, fallbackUrl = "", jobType = "ofroj"
   const decodedRawText = sanitizeImportedText(rawText);
   const decodedDraft = {
     ...draft,
+    poster_name: "",
+    author_profile_url: "",
+    import_author_profile_url: "",
     title: sanitizeImportedText(draft.title || ""),
     description: sanitizeImportedText(draft.description || ""),
     profession: sanitizeImportedText(draft.profession || ""),
@@ -360,8 +363,8 @@ const normalizeDraft = (rawText, draft = {}, fallbackUrl = "", jobType = "ofroj"
     original_text: decodedRawText || draft.original_text || draft.description || "",
     source_url: draft.source_url || fallbackUrl || "",
     import_source_url: draft.import_source_url || draft.source_url || fallbackUrl || "",
-    author_profile_url: draft.author_profile_url || "",
-    import_author_profile_url: draft.import_author_profile_url || draft.author_profile_url || "",
+    author_profile_url: "",
+    import_author_profile_url: "",
     show_source_url: false,
     show_author_profile_url: false,
     category: draft.category || "pune",
@@ -371,6 +374,28 @@ const normalizeDraft = (rawText, draft = {}, fallbackUrl = "", jobType = "ofroj"
 };
 
 const hasUsefulAiDraft = (draft) => Boolean(draft?.title || draft?.description || draft?.profession || draft?.city || draft?.country);
+
+const removeUrlsFromContactInfo = (contactInfo = "", urls = []) => {
+  const blocked = urls.map((item) => String(item || "").trim()).filter(Boolean);
+  return sanitizeImportedText(contactInfo)
+    .split(/\r?\n/)
+    .filter((line) => {
+      const value = line.trim();
+      if (!value) return false;
+      if (blocked.some((url) => value.includes(url))) return false;
+      return !/facebook\.com\/(?:profile\.php|people|[^/\s]+\/?$)/i.test(value);
+    })
+    .join("\n")
+    .trim();
+};
+
+const getImportErrorMessage = (error) => {
+  const message = String(error?.message || error?.response?.data?.error || error || "");
+  if (/502|bad gateway|timeout|network/i.test(message)) {
+    return "Shërbimi i leximit/AI nuk u përgjigj për momentin. Ngjit tekstin e njoftimit dhe provo përsëri; linku ruhet për gjurmim.";
+  }
+  return message || "Gabim gjatë importimit. Për Facebook përdor tekstin e kopjuar, sepse linku shpesh nuk lexohet nga jashtë.";
+};
 
 export default function ImportJobForm({ user, onDone }) {
   const [url, setUrl] = useState("");
@@ -436,8 +461,6 @@ ${text || importedData.description || importedData.title || ""}`;
                   salary_info: { type: "string" },
                   phone_number: { type: "string" },
                   contact_info: { type: "string" },
-                  poster_name: { type: "string" },
-                  author_profile_url: { type: "string" },
                   required_skills: { type: "string" },
                   contract_type: { type: "string" },
                   experience_level: { type: "string" }
@@ -489,7 +512,7 @@ ${text || importedData.description || importedData.title || ""}`;
 
     try {
       if (cleanText) {
-        const baseDraft = { source_url: cleanUrl, author_profile_url: authorUrl.trim(), import_author_profile_url: authorUrl.trim() };
+        const baseDraft = { source_url: cleanUrl };
         const heuristicDrafts = buildHeuristicDrafts(cleanText, baseDraft, cleanUrl, jobType);
         const aiResult = cleanUrl && isFacebookUrl(cleanUrl)
           ? { drafts: [], warning: "" }
@@ -509,7 +532,7 @@ ${text || importedData.description || importedData.title || ""}`;
         return;
       }
 
-      const aiFromUrl = await extractDraftsWithAi({ text: "", sourceUrl: cleanUrl, importedData: { source_url: cleanUrl, author_profile_url: authorUrl.trim(), import_author_profile_url: authorUrl.trim() }, requireSourceText: true });
+      const aiFromUrl = await extractDraftsWithAi({ text: "", sourceUrl: cleanUrl, importedData: { source_url: cleanUrl }, requireSourceText: true });
       if (aiFromUrl.readSuccess && aiFromUrl.drafts.length) {
         setDraftList(aiFromUrl.drafts);
         if (aiFromUrl.drafts.length > 1) {
@@ -530,7 +553,7 @@ ${text || importedData.description || importedData.title || ""}`;
           setError("Ky link nuk dha tekst të lexueshëm për njoftimin. Për Facebook/grupe private sistemi nuk mund të lexojë postimin vetëm nga linku; ngjit tekstin e postimit ose përdor një link publik që shfaq përmbajtjen pa login.");
           return;
         }
-        const importedBase = { ...res.data.data, author_profile_url: authorUrl.trim() || res.data.data?.author_profile_url || "", import_author_profile_url: authorUrl.trim() || res.data.data?.import_author_profile_url || "" };
+        const importedBase = { ...res.data.data, author_profile_url: "", import_author_profile_url: "" };
         const heuristicDrafts = buildHeuristicDrafts(importedText, importedBase, cleanUrl, jobType).filter(isMeaningfulDraft);
         const aiResult = await extractDraftsWithAi({ text: importedText, sourceUrl: cleanUrl, importedData: importedBase });
         const nextDrafts = heuristicDrafts.length > aiResult.drafts.length
@@ -553,10 +576,10 @@ ${text || importedData.description || importedData.title || ""}`;
         }
         setStep("preview");
       } else {
-        setError(res.data?.error || "Nuk u mundua të importohet njoftimi.");
+        setError(getImportErrorMessage(res.data?.error || "Nuk u mundua të importohet njoftimi."));
       }
     } catch (e) {
-      setError("Gabim gjatë importimit. Për Facebook përdor tekstin e kopjuar, sepse linku shpesh nuk lexohet nga jashtë.");
+      setError(getImportErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -564,6 +587,9 @@ ${text || importedData.description || importedData.title || ""}`;
 
   const saveDraft = async (draft, status) => {
     const prepared = normalizeDraft(draft.import_original_text || draft.original_text || draft.description || "", draft, url.trim(), draft.job_type || jobType);
+    const contactUrl = authorUrl.trim();
+    const sourceUrl = prepared.source_url || url.trim();
+    const platformPosterName = isStaff ? String(draft.poster_name || "").trim() : "";
     const contactInfoWarning = getContactInfoInTextMessage(prepared.description);
     if (contactInfoWarning) {
       throw new Error(contactInfoWarning);
@@ -578,14 +604,16 @@ ${text || importedData.description || importedData.title || ""}`;
     }
     await base44.entities.Job.create({
       ...prepared,
+      poster_name: platformPosterName || undefined,
+      contact_info: removeUrlsFromContactInfo(prepared.contact_info, [contactUrl, sourceUrl]),
       phone_number: phoneNumber || "",
       phone_app: phoneNumber ? (prepared.phone_app || "telefon") : "",
-      source_url: prepared.source_url || url.trim(),
-      author_profile_url: prepared.author_profile_url || "",
-      import_source_url: prepared.import_source_url || prepared.source_url || url.trim(),
-      import_author_profile_url: prepared.import_author_profile_url || prepared.author_profile_url || "",
+      source_url: sourceUrl,
+      author_profile_url: contactUrl,
+      import_source_url: prepared.import_source_url || sourceUrl,
+      import_author_profile_url: contactUrl,
       show_source_url: prepared.show_source_url === true,
-      show_author_profile_url: prepared.show_author_profile_url === true,
+      show_author_profile_url: contactUrl ? prepared.show_author_profile_url === true : false,
       import_original_text: prepared.import_original_text || prepared.original_text || "",
       imported_community_request: true,
       import_type: "job_import_assistant",
@@ -838,19 +866,28 @@ ${text || importedData.description || importedData.title || ""}`;
           </div>
 
           <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
-            <div className="flex items-center gap-2 mb-1"><User className="w-4 h-4 text-[#c084fc]" /><span className="text-white font-semibold text-sm">Dhënësi / Kompania</span></div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><label className="text-white/50 text-xs mb-1 block">Emri</label><Input value={data.poster_name || ""} onChange={(e) => set("poster_name", e.target.value)} className="bg-white/5 border-white/10 text-white" style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }} /></div>
-              <div><label className="text-white/50 text-xs mb-1 block">Linku i kontaktit nga burimi</label><Input value={data.author_profile_url || ""} onChange={(e) => {
-                set("author_profile_url", e.target.value);
-                set("import_author_profile_url", e.target.value);
-              }} className="bg-white/5 border-white/10 text-white" style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }} /></div>
-            </div>
+            <div className="flex items-center gap-2 mb-1"><User className="w-4 h-4 text-[#c084fc]" /><span className="text-white font-semibold text-sm">Linku i kontaktit</span></div>
+            {isStaff && (
+              <div>
+                <label className="text-white/50 text-xs mb-1 block">Emri i postuesit në platformë (opsional)</label>
+                <Input
+                  value={data.poster_name || ""}
+                  onChange={(e) => set("poster_name", e.target.value)}
+                  placeholder="Lëre bosh për ta përdorur emrin e llogarisë"
+                  className="bg-white/5 border-white/10 text-white"
+                  style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }}
+                />
+              </div>
+            )}
+            <p className="text-white/50 text-xs">
+              Linku ruhet nga fusha sipër “Linku i kontaktit nga burimi”: {authorUrl.trim() || "nuk është vendosur"}.
+            </p>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={data.show_author_profile_url === true}
                 onChange={(e) => set("show_author_profile_url", e.target.checked)}
+                disabled={!authorUrl.trim()}
                 className="rounded border-white/20"
                 style={{ accentColor: "#8ab4ff" }}
               />
