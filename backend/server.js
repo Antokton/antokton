@@ -879,14 +879,37 @@ function decodeJsString(value = "") {
   }
 }
 
-function facebookUrlVariants(url) {
+function normalizeImportUrl(value = "") {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (/^(?:www\.|m\.|mbasic\.)?facebook\.com\//i.test(raw)) return `https://${raw}`;
+  if (/^\/?groups\/[^/]+\/(?:permalink|posts)\/[^/]+/i.test(raw)) {
+    return `https://www.facebook.com/${raw.replace(/^\/+/, "")}`;
+  }
+  return raw;
+}
+
+function facebookUrlVariants(inputUrl) {
+  const url = normalizeImportUrl(inputUrl);
   if (!/facebook\.com/i.test(url)) return [url];
   const variants = new Set([url]);
   try {
     const parsed = new URL(url);
+    const path = parsed.pathname.replace(/\/+$/, "");
     for (const host of ["www.facebook.com", "m.facebook.com", "mbasic.facebook.com"]) {
-      parsed.hostname = host;
-      variants.add(parsed.toString());
+      const next = new URL(url);
+      next.hostname = host;
+      variants.add(next.toString());
+    }
+    const permalink = path.match(/^\/groups\/([^/]+)\/(?:permalink|posts)\/([^/]+)/i);
+    if (permalink) {
+      const [, groupId, postId] = permalink;
+      for (const host of ["www.facebook.com", "m.facebook.com", "mbasic.facebook.com"]) {
+        variants.add(`https://${host}/groups/${groupId}/permalink/${postId}/`);
+        variants.add(`https://${host}/groups/${groupId}/posts/${postId}/`);
+        variants.add(`https://${host}/story.php?story_fbid=${postId}&id=${groupId}`);
+      }
     }
   } catch {}
   return [...variants];
@@ -948,8 +971,9 @@ function extractFacebookPublicText(html = "") {
 }
 
 async function scrapeBasicListing(url) {
+  const normalizedUrl = normalizeImportUrl(url);
   const htmlResults = [];
-  for (const targetUrl of facebookUrlVariants(url)) {
+  for (const targetUrl of facebookUrlVariants(normalizedUrl)) {
     try {
       const html = await fetchPublicHtml(targetUrl);
       htmlResults.push({ url: targetUrl, html });
@@ -1007,8 +1031,8 @@ async function scrapeBasicListing(url) {
     import_original_text: descriptionText,
     image_urls: [...new Set(imageUrls)],
     phone_number: phone,
-    source_url: url,
-    import_source_url: url,
+    source_url: normalizedUrl,
+    import_source_url: normalizedUrl,
     show_source_url: false
   };
 }
