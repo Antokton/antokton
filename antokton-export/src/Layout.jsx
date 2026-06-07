@@ -649,6 +649,18 @@ export default function Layout({ children, currentPageName }) {
                     Statuse
                   </Link>
                 )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className={`px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 whitespace-nowrap ${["Events","Bamiresi","Search"].includes(currentPageName)?"text-white bg-white/10":"text-white hover:text-white/60 hover:bg-white/5"}`}>
+                      Më shumë <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-52 bg-[#0b1020] border-white/10">
+                    <DropdownMenuItem asChild><Link to="/Events" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Calendar className="w-4 h-4" /> Ngjarje</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link to="/Bamiresi" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Heart className="w-4 h-4" /> Bamirësi</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link to="/Search" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Search className="w-4 h-4" /> Kërko</Link></DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 </>
               ) : (
                 // ── Static fallback nav ──
@@ -812,6 +824,20 @@ export default function Layout({ children, currentPageName }) {
                     </Link>
                   );
                 })
+              )}
+              {!dynamicNav && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className={`px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 whitespace-nowrap ${["Events","Bamiresi","Search"].includes(currentPageName)?"text-white bg-white/10":"text-white hover:text-white/60 hover:bg-white/5"}`}>
+                      Më shumë <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-52 bg-[#0b1020] border-white/10">
+                    <DropdownMenuItem asChild><Link to="/Events" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Calendar className="w-4 h-4" /> Ngjarje</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link to="/Bamiresi" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Heart className="w-4 h-4" /> Bamirësi</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link to="/Search" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Search className="w-4 h-4" /> Kërko</Link></DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
 

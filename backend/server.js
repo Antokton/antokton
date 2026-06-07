@@ -1355,6 +1355,10 @@ async function handleEntity(req, res, url, segments) {
     return sendError(res, 403, "Admin role required");
   }
 
+  if (entity === "User" && req.method === "DELETE" && !(await requesterHasRole(req, ["admin"]))) {
+    return sendError(res, 403, "Vetëm administratori mund të fshijë anëtarë përfundimisht.");
+  }
+
   if (!entity) return sendError(res, 400, "Missing entity name");
 
   if (entity === "Report" && req.method === "GET" && !(await requesterHasRole(req, ["admin", "moderator", "superadmin"]))) {

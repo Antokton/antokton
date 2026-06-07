@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Search, Ban, UserCheck, Trash2, Clock3, LockKeyhole, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import toast from "react-hot-toast";
 
 const ROLES = [
@@ -26,6 +27,12 @@ export default function UserManager({ allUsers = [] }) {
   const [filter, setFilter] = useState("all");
   const [tempBlocks, setTempBlocks] = useState({});
   const [openUserId, setOpenUserId] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const isAdmin = currentUser?.role === "admin" || currentUser?.member_category === "admin";
+
+  React.useEffect(() => {
+    base44.auth.me().then(setCurrentUser).catch(() => setCurrentUser(null));
+  }, []);
 
   const writeAudit = async (user, actionType, reason, newStatus) => {
     try {
@@ -50,6 +57,28 @@ export default function UserManager({ allUsers = [] }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["allUsersAdmin"] });
       toast.success("Anëtari u përditësua!");
+    }
+  });
+
+  const hardDeleteMutation = useMutation({
+    mutationFn: async (targetUser) => {
+      const actor = await base44.auth.me();
+      if (actor?.role !== "admin" && actor?.member_category !== "admin") {
+        throw new Error("Vetëm administratori mund ta fshijë përfundimisht anëtarin.");
+      }
+      if (targetUser.email === actor.email) {
+        throw new Error("Nuk mund të fshish llogarinë tënde.");
+      }
+      await writeAudit(targetUser, "hard_delete", "Fshirje përfundimtare nga administratori", "hard_deleted");
+      await base44.entities.User.delete(targetUser.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["allUsersAdmin"] });
+      setOpenUserId(null);
+      toast.success("Anëtari u fshi përfundimisht nga lista.");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Fshirja përfundimtare dështoi.");
     }
   });
 
@@ -202,44 +231,46 @@ export default function UserManager({ allUsers = [] }) {
                     </label>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap items-end gap-2">
-                    <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-white/35">
-                      Bllokim i përkohshëm
-                      <input
-                        type="number"
-                        min="1"
-                        value={tempBlocks[u.id]?.amount || 7}
-                        onChange={(e) => setTempBlocks((current) => ({ ...current, [u.id]: { ...(current[u.id] || {}), amount: e.target.value } }))}
-                        className="w-20 rounded border border-white/20 bg-white/10 px-2 py-2 text-xs normal-case text-white"
-                      />
-                    </label>
-                    <select
-                      value={tempBlocks[u.id]?.unit || "days"}
-                      onChange={(e) => setTempBlocks((current) => ({ ...current, [u.id]: { ...(current[u.id] || {}), unit: e.target.value } }))}
-                      className="rounded border border-white/20 bg-white/10 px-2 py-2 text-xs text-white"
-                    >
-                      <option value="days" className="bg-[#0b1020]">ditë</option>
-                      <option value="weeks" className="bg-[#0b1020]">javë</option>
-                      <option value="months" className="bg-[#0b1020]">muaj</option>
-                    </select>
-                    <button
-                      onClick={() => applyModeration(u, {
-                        is_blocked: true,
-                        blocked_until: temporaryBlockUntil(u),
-                        blocked_permanently: false,
-                        status: "temporarily_blocked",
-                        block_reason: "Bllokim i përkohshëm nga administrata",
-                      }, "temporary_block", "Bllokim i përkohshëm", "temporarily_blocked")}
-                      className="inline-flex items-center gap-1 rounded border border-yellow-500/30 bg-yellow-500/10 px-2 py-2 text-xs font-medium text-yellow-300 hover:bg-yellow-500/20"
-                    >
-                      <Clock3 className="w-3 h-3" /> Blloko përkohësisht
-                    </button>
-                  </div>
+                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                    <div className="grid grid-cols-[88px_minmax(92px,1fr)_auto] items-end gap-2">
+                      <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-white/35">
+                        Bllokim
+                        <input
+                          type="number"
+                          min="1"
+                          value={tempBlocks[u.id]?.amount || 7}
+                          onChange={(e) => setTempBlocks((current) => ({ ...current, [u.id]: { ...(current[u.id] || {}), amount: e.target.value } }))}
+                          className="w-full rounded border border-white/20 bg-white/10 px-2 py-2 text-xs normal-case text-white"
+                        />
+                      </label>
+                      <select
+                        value={tempBlocks[u.id]?.unit || "days"}
+                        onChange={(e) => setTempBlocks((current) => ({ ...current, [u.id]: { ...(current[u.id] || {}), unit: e.target.value } }))}
+                        className="rounded border border-white/20 bg-white/10 px-2 py-2 text-xs text-white"
+                        aria-label="Njësia e bllokimit"
+                      >
+                        <option value="days" className="bg-[#0b1020]">ditë</option>
+                        <option value="weeks" className="bg-[#0b1020]">javë</option>
+                        <option value="months" className="bg-[#0b1020]">muaj</option>
+                      </select>
+                      <button
+                        onClick={() => applyModeration(u, {
+                          is_blocked: true,
+                          blocked_until: temporaryBlockUntil(u),
+                          blocked_permanently: false,
+                          status: "temporarily_blocked",
+                          block_reason: "Bllokim i përkohshëm nga administrata",
+                        }, "temporary_block", "Bllokim i përkohshëm", "temporarily_blocked")}
+                        className="inline-flex h-9 items-center justify-center gap-1 rounded border border-yellow-500/30 bg-yellow-500/10 px-2 text-xs font-medium text-yellow-300 hover:bg-yellow-500/20"
+                      >
+                        <Clock3 className="w-3 h-3" /> <span className="hidden sm:inline">Blloko</span>
+                      </button>
+                    </div>
 
-                  <div className="mt-3 flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 sm:justify-end">
                     <button
                       onClick={() => updateUserMutation.mutate({ id: u.id, data: { is_blocked: !u.is_blocked, blocked_until: "", blocked_permanently: false, status: !u.is_blocked ? "blocked" : "active" } })}
-                      className={`inline-flex items-center gap-1 rounded border px-2 py-2 text-xs font-medium transition-colors ${u.is_blocked
+                      className={`inline-flex h-9 items-center gap-1 rounded border px-2 text-xs font-medium transition-colors ${u.is_blocked
                         ? "bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30"
                         : "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30"
                       }`}
@@ -247,50 +278,74 @@ export default function UserManager({ allUsers = [] }) {
                       {u.is_blocked ? <UserCheck className="w-3 h-3" /> : <Ban className="w-3 h-3" />}
                       {u.is_blocked ? "Zhblloko" : "Blloko"}
                     </button>
-                    <button
-                      onClick={() => applyModeration(u, {
-                        is_blocked: true,
-                        blocked_permanently: true,
-                        blocked_until: "",
-                        status: "permanently_blocked",
-                        block_reason: "Bllokim i përhershëm nga administrata",
-                      }, "permanent_block", "Bllokim i përhershëm", "permanently_blocked")}
-                      className="inline-flex items-center gap-1 rounded border border-red-500/30 bg-red-500/10 px-2 py-2 text-xs font-medium text-red-300 hover:bg-red-500/20"
-                    >
-                      <LockKeyhole className="w-3 h-3" /> Blloko përgjithmonë
-                    </button>
-                    <button
-                      onClick={() => {
-                        const until = new Date();
-                        until.setMonth(until.getMonth() + 1);
-                        applyModeration(u, {
-                          registration_block_until: until.toISOString(),
-                          registration_block_reason: "Pamundësim ri-regjistrimi për 1 muaj",
-                        }, "registration_block", "Pamundëso ri-regjistrimin për 1 muaj", "registration_blocked");
-                      }}
-                      className="inline-flex items-center gap-1 rounded border border-orange-500/30 bg-orange-500/10 px-2 py-2 text-xs font-medium text-orange-300 hover:bg-orange-500/20"
-                    >
-                      <Ban className="w-3 h-3" /> Pa ri-regjistrim 1 muaj
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (!confirm("Fshi/blloko këtë anëtar? Ky është soft-delete dhe ruhet për auditim.")) return;
-                        const until = new Date();
-                        until.setMonth(until.getMonth() + 1);
-                        applyModeration(u, {
-                          is_deleted: true,
-                          is_active: false,
-                          is_blocked: true,
-                          blocked_permanently: true,
-                          registration_block_until: until.toISOString(),
-                          status: "deleted",
-                          block_reason: "Anëtari u fshi nga administrata",
-                        }, "delete", "Fshirje e anëtarit me bllokim ri-regjistrimi", "deleted");
-                      }}
-                      className="inline-flex items-center gap-1 rounded border border-red-600/40 bg-red-600/15 px-2 py-2 text-xs font-medium text-red-200 hover:bg-red-600/25"
-                    >
-                      <Trash2 className="w-3 h-3" /> Fshi anëtarin
-                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="inline-flex h-9 items-center gap-1 rounded border border-white/15 bg-white/5 px-2 text-xs font-medium text-white/75 hover:bg-white/10">
+                          <MoreHorizontal className="w-3.5 h-3.5" /> Veprime
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56 bg-[#0b1020] border-white/10">
+                        <DropdownMenuItem
+                          onClick={() => applyModeration(u, {
+                            is_blocked: true,
+                            blocked_permanently: true,
+                            blocked_until: "",
+                            status: "permanently_blocked",
+                            block_reason: "Bllokim i përhershëm nga administrata",
+                          }, "permanent_block", "Bllokim i përhershëm", "permanently_blocked")}
+                          className="cursor-pointer text-red-300 hover:text-red-200"
+                        >
+                          <LockKeyhole className="w-3.5 h-3.5 mr-2" /> Blloko përgjithmonë
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const until = new Date();
+                            until.setMonth(until.getMonth() + 1);
+                            applyModeration(u, {
+                              registration_block_until: until.toISOString(),
+                              registration_block_reason: "Pamundësim ri-regjistrimi për 1 muaj",
+                            }, "registration_block", "Pamundëso ri-regjistrimin për 1 muaj", "registration_blocked");
+                          }}
+                          className="cursor-pointer text-orange-300 hover:text-orange-200"
+                        >
+                          <Ban className="w-3.5 h-3.5 mr-2" /> Pa ri-regjistrim 1 muaj
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            if (!confirm("Fshi/blloko këtë anëtar? Ky është soft-delete dhe ruhet për auditim.")) return;
+                            const until = new Date();
+                            until.setMonth(until.getMonth() + 1);
+                            applyModeration(u, {
+                              is_deleted: true,
+                              is_active: false,
+                              is_blocked: true,
+                              blocked_permanently: true,
+                              registration_block_until: until.toISOString(),
+                              status: "deleted",
+                              block_reason: "Anëtari u fshi nga administrata",
+                            }, "delete", "Fshirje e anëtarit me bllokim ri-regjistrimi", "deleted");
+                          }}
+                          className="cursor-pointer text-red-200 hover:text-red-100"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 mr-2" /> Fshi nga lista
+                        </DropdownMenuItem>
+                        {isAdmin && (
+                          <>
+                            <DropdownMenuSeparator className="bg-white/10" />
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (!confirm("Fshirje përfundimtare: ky anëtar hiqet nga lista dhe nuk ruhet si kontakt. Ky veprim është vetëm për administratorin. Vazhdo?")) return;
+                                hardDeleteMutation.mutate(u);
+                              }}
+                              className="cursor-pointer text-red-400 hover:text-red-300"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 mr-2" /> Fshi përgjithmonë
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    </div>
                   </div>
                 </div>
               )}
