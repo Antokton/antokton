@@ -260,8 +260,10 @@ export default function Layout({ children, currentPageName }) {
     setLanguageState('sq');
     setLanguage('sq');
     localStorage.setItem('theme', 'dark');
+    document.documentElement.classList.add('dark');
     document.documentElement.setAttribute('data-theme', 'dark');
-    document.body.className = 'theme-dark';
+    document.body.classList.remove('theme-light');
+    document.body.classList.add('theme-dark');
   }, []);
 
   const toggleTheme = () => {
@@ -825,7 +827,7 @@ export default function Layout({ children, currentPageName }) {
                   );
                 })
               )}
-              {!dynamicNav && (
+              {!dynNav && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className={`px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 whitespace-nowrap ${["Events","Bamiresi","Search"].includes(currentPageName)?"text-white bg-white/10":"text-white hover:text-white/60 hover:bg-white/5"}`}>

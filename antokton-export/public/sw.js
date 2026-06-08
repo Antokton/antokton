@@ -1,4 +1,4 @@
-const VERSION = "antokton-pwa-2026-06-03-2";
+const VERSION = "antokton-pwa-2026-06-08-1";
 const PRECACHE = `${VERSION}-precache`;
 const RUNTIME = `${VERSION}-runtime`;
 const API_CACHE = `${VERSION}-api`;
@@ -58,6 +58,12 @@ if (DISABLE_LOCAL_PREVIEW_SW) {
     );
   });
 } else {
+  self.addEventListener("message", (event) => {
+    if (event.data?.type === "SKIP_WAITING") {
+      self.skipWaiting();
+    }
+  });
+
   self.addEventListener("install", (event) => {
     self.skipWaiting();
     event.waitUntil(
