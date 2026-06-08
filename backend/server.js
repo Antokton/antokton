@@ -47,7 +47,11 @@ const {
   SESSION_COOKIE_NAME,
   SESSION_COOKIE_SECURE,
   AUTH_BOOTSTRAP_ADMIN_EMAIL,
-  AUTH_BOOTSTRAP_ADMIN_PASSWORD
+  AUTH_BOOTSTRAP_ADMIN_PASSWORD,
+  AUTH_PASSWORD_RESET_TTL_MINUTES,
+  APP_PUBLIC_URL,
+  RESEND_API_KEY,
+  EMAIL_FROM
 } = config;
 const DEV_USER_EMAIL = getDevUserEmail();
 const reportRateLimit = new Map();
@@ -927,6 +931,61 @@ async function fetchPublicHtml(url) {
   return response.text();
 }
 
+function getRequestOrigin(req) {
+  const configured = String(APP_PUBLIC_URL || "").trim();
+  if (configured) return configured.replace(/\/+$/, "");
+  const origin = String(req.headers.origin || "").trim();
+  if (/^https?:\/\//i.test(origin)) return origin.replace(/\/+$/, "");
+  const proto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim() || (req.socket.encrypted ? "https" : "http");
+  const host = String(req.headers["x-forwarded-host"] || req.headers.host || "").split(",")[0].trim();
+  return host ? `${proto}://${host}` : "http://localhost:5179";
+}
+
+function hashResetToken(token) {
+  return crypto.createHash("sha256").update(String(token)).digest("hex");
+}
+
+async function logEmail(payload) {
+  await statements.insertEmail.run(crypto.randomUUID(), JSON.stringify(payload), now());
+}
+
+async function sendTransactionalEmail(payload) {
+  const cleanPayload = {
+    from: payload.from || EMAIL_FROM,
+    to: payload.to,
+    subject: payload.subject,
+    text: payload.text,
+    html: payload.html
+  };
+
+  if (RESEND_API_KEY) {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(cleanPayload)
+    });
+    const responseText = await response.text();
+    await logEmail({
+      ...cleanPayload,
+      provider: "resend",
+      provider_status: response.status,
+      provider_response: responseText.slice(0, 2000)
+    });
+    if (!response.ok) {
+      const error = new Error(`Email provider failed with status ${response.status}`);
+      error.status = 502;
+      throw error;
+    }
+    return { delivered: true, provider: "resend" };
+  }
+
+  await logEmail({ ...cleanPayload, provider: "log_only", delivered: false });
+  return { delivered: false, provider: "log_only" };
+}
+
 function firstMetaContent(html = "", names = []) {
   for (const name of names) {
     const pattern = new RegExp(`<meta[^>]+(?:property|name)=["']${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["'][^>]+content=["']([^"']+)`, "i");
@@ -1539,6 +1598,96 @@ async function handleEntity(req, res, url, segments) {
   return sendError(res, 405, "Method not allowed");
 }
 
+async function createPasswordResetRequest(req, email) {
+  const normalizedEmail = assertEmail(email);
+  const account = await getAuthAccountByEmail(normalizedEmail);
+  if (!account || account.status !== "active") {
+    return { success: true, delivered: false };
+  }
+
+  const token = crypto.randomBytes(32).toString("base64url");
+  const tokenHash = hashResetToken(token);
+  const expiresAt = new Date(Date.now() + AUTH_PASSWORD_RESET_TTL_MINUTES * 60 * 1000).toISOString();
+  await createRecord("PasswordResetToken", {
+    email: normalizedEmail,
+    account_id: account.id,
+    token_hash: tokenHash,
+    expires_at: expiresAt,
+    used_at: "",
+    ip_address: requestIp(req),
+    user_agent: String(req.headers["user-agent"] || "").slice(0, 500)
+  }, normalizedEmail);
+
+  const resetUrl = new URL("/Login", getRequestOrigin(req));
+  resetUrl.searchParams.set("mode", "reset");
+  resetUrl.searchParams.set("token", token);
+  resetUrl.searchParams.set("email", normalizedEmail);
+
+  const emailResult = await sendTransactionalEmail({
+    to: normalizedEmail,
+    subject: "Rivendos fjalëkalimin në Antokton",
+    text: [
+      "Përshëndetje,",
+      "",
+      "Për të vendosur një fjalëkalim të ri në Antokton, hape këtë link:",
+      resetUrl.toString(),
+      "",
+      `Linku skadon pas ${AUTH_PASSWORD_RESET_TTL_MINUTES} minutash.`,
+      "Nëse nuk e kërkove ti, mund ta injorosh këtë email."
+    ].join("\n"),
+    html: `
+      <p>Përshëndetje,</p>
+      <p>Për të vendosur një fjalëkalim të ri në Antokton, kliko linkun më poshtë:</p>
+      <p><a href="${resetUrl.toString()}">Rivendos fjalëkalimin</a></p>
+      <p>Linku skadon pas ${AUTH_PASSWORD_RESET_TTL_MINUTES} minutash.</p>
+      <p>Nëse nuk e kërkove ti, mund ta injorosh këtë email.</p>
+    `
+  });
+
+  return { success: true, delivered: emailResult.delivered, provider: emailResult.provider };
+}
+
+async function resetPasswordWithToken(req, body) {
+  const email = assertEmail(body.email);
+  const token = String(body.token || "").trim();
+  const newPassword = body.new_password || body.newPassword || body.password;
+  assertPassword(newPassword);
+  if (!token) {
+    const error = new Error("Reset token is required");
+    error.status = 400;
+    throw error;
+  }
+
+  const tokenHash = hashResetToken(token);
+  const tokens = (await allRecords("PasswordResetToken"))
+    .filter((record) =>
+      normalizeEmail(record.email) === email &&
+      record.token_hash === tokenHash &&
+      !record.used_at &&
+      Date.parse(record.expires_at) > Date.now()
+    )
+    .sort((a, b) => Date.parse(b.created_date || 0) - Date.parse(a.created_date || 0));
+
+  const resetRecord = tokens[0];
+  if (!resetRecord) {
+    const error = new Error("Linku i rivendosjes ka skaduar ose nuk është i vlefshëm.");
+    error.status = 400;
+    throw error;
+  }
+
+  const account = await getAuthAccountByEmail(email);
+  if (!account || account.id !== resetRecord.account_id) {
+    const error = new Error("Llogaria nuk u gjet.");
+    error.status = 400;
+    throw error;
+  }
+
+  await setPasswordForAccount(account, newPassword, req);
+  await updateRecord("PasswordResetToken", resetRecord.id, { ...resetRecord, used_at: now() });
+  await statements.deleteAuthSessionsByAccountOrEmail.run(account.id, account.email);
+  return { success: true };
+}
+
 async function handleAuth(req, res, segments) {
   const action = segments.slice(4).join("/");
 
@@ -1595,8 +1744,30 @@ async function handleAuth(req, res, segments) {
 
   if (req.method === "POST" && action === "verify-otp") return send(res, 200, { success: true });
   if (req.method === "POST" && action === "resend-otp") return send(res, 200, { success: true });
-  if (req.method === "POST" && action === "reset-password-request") return send(res, 200, { success: true });
-  if (req.method === "POST" && action === "reset-password") return send(res, 200, { success: true });
+  if (req.method === "POST" && action === "reset-password-request") {
+    const body = await readJson(req);
+    const email = normalizeEmail(body.email);
+    const rateLimit = consumeAuthRateLimit("reset-password-request", req, email);
+    if (!rateLimit.allowed) return sendRateLimitError(res, rateLimit);
+    try {
+      const result = await createPasswordResetRequest(req, email);
+      return send(res, 200, config.NODE_ENV === "production" ? { success: true } : result);
+    } catch (error) {
+      if (error.status === 400) return sendError(res, 400, error.message);
+      throw error;
+    }
+  }
+  if (req.method === "POST" && action === "reset-password") {
+    const body = await readJson(req);
+    const email = normalizeEmail(body.email);
+    const rateLimit = consumeAuthRateLimit("reset-password", req, email);
+    if (!rateLimit.allowed) return sendRateLimitError(res, rateLimit);
+    try {
+      return send(res, 200, await resetPasswordWithToken(req, body));
+    } catch (error) {
+      return sendError(res, error.status || 400, error.message || "Rivendosja dështoi.");
+    }
+  }
   if (req.method === "POST" && action === "change-password") {
     const userEmail = await getRequestUserEmail(req);
     if (!userEmail) return sendError(res, 401, "Authentication required");

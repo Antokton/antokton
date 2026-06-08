@@ -8,7 +8,13 @@ import { Lock, Mail, UserPlus, LogIn, AlertCircle, Eye, EyeOff, KeyRound } from 
 
 export default function Login() {
   const [searchParams] = useSearchParams();
-  const [mode, setMode] = useState(() => searchParams.get("mode") === "register" ? "register" : "login");
+  const resetToken = searchParams.get("token") || "";
+  const resetEmail = searchParams.get("email") || "";
+  const [mode, setMode] = useState(() => {
+    if (searchParams.get("mode") === "reset" && resetToken) return "new-password";
+    if (searchParams.get("mode") === "register") return "register";
+    return "login";
+  });
   const [form, setForm] = useState({ email: "", password: "", full_name: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -53,6 +59,13 @@ export default function Login() {
         return;
       }
 
+      if (mode === "new-password") {
+        await base44.auth.resetPassword({ email, token: resetToken, password });
+        setSuccessMessage("Fjalëkalimi u rivendos. Tani mund të hysh me fjalëkalimin e ri.");
+        setMode("login");
+        return;
+      }
+
       let authResult;
       if (mode === "register") {
         if (!acceptedLegal) {
@@ -90,6 +103,8 @@ export default function Login() {
         <div className="w-14 h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center mx-auto mb-5">
           {mode === "register" ? (
             <UserPlus className="w-7 h-7 text-blue-300" />
+          ) : mode === "new-password" ? (
+            <KeyRound className="w-7 h-7 text-blue-300" />
           ) : mode === "reset" ? (
             <KeyRound className="w-7 h-7 text-blue-300" />
           ) : (
@@ -98,13 +113,15 @@ export default function Login() {
         </div>
 
         <h1 className="text-2xl font-bold text-white text-center mb-2">
-          {mode === "register" ? "Krijo llogari" : mode === "reset" ? "Rivendos fjalëkalimin" : "Hyr në Antokton"}
+          {mode === "register" ? "Krijo llogari" : mode === "reset" ? "Rivendos fjalëkalimin" : mode === "new-password" ? "Vendos fjalëkalim të ri" : "Hyr në Antokton"}
         </h1>
         <p className="text-white/50 text-sm text-center mb-6">
           {mode === "register"
             ? "Regjistrohu për beta të kufizuar."
             : mode === "reset"
               ? "Shkruaj emailin e llogarisë për të kërkuar rivendosjen."
+              : mode === "new-password"
+                ? "Shkruaj fjalëkalimin e ri për llogarinë tënde."
               : "Përdor emailin dhe fjalëkalimin tënd."}
         </p>
 
@@ -129,7 +146,8 @@ export default function Login() {
                 ref={emailRef}
                 type="email"
                 required
-                defaultValue={form.email}
+                defaultValue={resetEmail || form.email}
+                readOnly={mode === "new-password" && Boolean(resetEmail)}
                 onChange={(event) => setForm({ ...form, email: event.target.value })}
                 className="border-white/10 h-11 text-white bg-white/10 pl-9"
                 autoComplete="email"
@@ -139,7 +157,7 @@ export default function Login() {
 
           {mode !== "reset" && (
             <div className="space-y-1.5">
-              <Label className="text-white/70 text-sm">Fjalëkalimi</Label>
+              <Label className="text-white/70 text-sm">{mode === "new-password" ? "Fjalëkalimi i ri" : "Fjalëkalimi"}</Label>
               <div className="flex items-stretch gap-2">
                 <Input
                   ref={passwordRef}
@@ -149,7 +167,7 @@ export default function Login() {
                   defaultValue={form.password}
                   onChange={(event) => setForm({ ...form, password: event.target.value })}
                   className="min-w-0 flex-1 border-white/10 h-11 text-white bg-white/10"
-                  autoComplete={mode === "register" ? "new-password" : "current-password"}
+                  autoComplete={mode === "register" || mode === "new-password" ? "new-password" : "current-password"}
                 />
                 <button
                   type="button"
@@ -204,12 +222,12 @@ export default function Login() {
           >
             {mode === "register" ? (
               <UserPlus className="w-4 h-4 mr-2" />
-            ) : mode === "reset" ? (
+            ) : mode === "reset" || mode === "new-password" ? (
               <KeyRound className="w-4 h-4 mr-2" />
             ) : (
               <LogIn className="w-4 h-4 mr-2" />
             )}
-            {loading ? "Duke punuar..." : mode === "register" ? "Regjistrohu" : mode === "reset" ? "Dërgo kërkesën" : "Hyr"}
+            {loading ? "Duke punuar..." : mode === "register" ? "Regjistrohu" : mode === "reset" ? "Dërgo kërkesën" : mode === "new-password" ? "Ruaj fjalëkalimin" : "Hyr"}
           </Button>
         </form>
 
@@ -225,10 +243,10 @@ export default function Login() {
 
         <button
           type="button"
-          onClick={() => switchMode(mode === "register" || mode === "reset" ? "login" : "register")}
+          onClick={() => switchMode(mode === "register" || mode === "reset" || mode === "new-password" ? "login" : "register")}
           className="w-full mt-5 text-sm text-blue-200 hover:text-white"
         >
-          {mode === "register" ? "Ke llogari? Hyr këtu" : mode === "reset" ? "Kthehu te hyrja" : "Nuk ke llogari? Regjistrohu"}
+          {mode === "register" ? "Ke llogari? Hyr këtu" : mode === "reset" || mode === "new-password" ? "Kthehu te hyrja" : "Nuk ke llogari? Regjistrohu"}
         </button>
       </div>
     </div>

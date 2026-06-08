@@ -79,14 +79,52 @@ export default function PartnersManager() {
     }
   };
 
+  const fillMissingLogos = async () => {
+    const targets = partners.filter((partner) => !partner.logo_url && partner.website_url);
+    if (!targets.length) {
+      toast("Nuk ka bashkëpunëtorë me website pa logo.");
+      return;
+    }
+    setMetadataLoading(true);
+    let updated = 0;
+    try {
+      for (const partner of targets) {
+        const res = await base44.functions.invoke("extractWebsiteMetadata", { url: partner.website_url });
+        const meta = res.data || {};
+        const logoUrl = meta.logo_url || meta.image_url || "";
+        if (!meta.success || !logoUrl) continue;
+        await base44.entities.Partner.update(partner.id, {
+          logo_url: logoUrl,
+          description: partner.description || meta.description || "",
+          website_url: partner.website_url || meta.site_url,
+        });
+        updated += 1;
+      }
+      queryClient.invalidateQueries({ queryKey: ["adminPartners"] });
+      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      toast.success(updated ? `U plotësuan ${updated} logo/foto.` : "Nuk u gjet logo e re.");
+    } catch (error) {
+      toast.error(error.message || "Plotësimi i logove dështoi.");
+    } finally {
+      setMetadataLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-white font-semibold">Menaxho Bashkëpunëtorët</h3>
-        <Button onClick={() => { setShowForm(true); setEditingId(null); setForm({ name: "", logo_url: "", description: "", website_url: "", is_main: true, order: partners.length }); }}
-          className="bg-[#8ab4ff]/20 text-[#8ab4ff] border border-[#8ab4ff]/30 hover:bg-[#8ab4ff]/30 h-8 text-xs">
-          <Plus className="w-3.5 h-3.5 mr-1" /> Shto Bashkëpunëtor
-        </Button>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button onClick={fillMissingLogos} disabled={metadataLoading}
+            className="bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 h-8 text-xs">
+            {metadataLoading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : null}
+            Plotëso logot
+          </Button>
+          <Button onClick={() => { setShowForm(true); setEditingId(null); setForm({ name: "", logo_url: "", description: "", website_url: "", is_main: true, order: partners.length }); }}
+            className="bg-[#8ab4ff]/20 text-[#8ab4ff] border border-[#8ab4ff]/30 hover:bg-[#8ab4ff]/30 h-8 text-xs">
+            <Plus className="w-3.5 h-3.5 mr-1" /> Shto Bashkëpunëtor
+          </Button>
+        </div>
       </div>
 
       {showForm && (

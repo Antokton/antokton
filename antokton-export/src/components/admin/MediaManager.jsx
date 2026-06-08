@@ -145,6 +145,37 @@ export default function MediaManager() {
     }
   };
 
+  const fillMissingLogos = async () => {
+    const targets = channels.filter((channel) => !channel.logo_url && (channel.website_url || channel.stream_url));
+    if (!targets.length) {
+      toast("Nuk ka media me website pa logo.");
+      return;
+    }
+    setMetadataLoading(true);
+    let updated = 0;
+    try {
+      for (const channel of targets) {
+        const targetUrl = channel.website_url || channel.stream_url;
+        const res = await base44.functions.invoke("extractWebsiteMetadata", { url: targetUrl });
+        const meta = res.data || {};
+        const logoUrl = meta.logo_url || meta.image_url || "";
+        if (!meta.success || !logoUrl) continue;
+        await base44.entities.MediaChannel.update(channel.id, {
+          logo_url: logoUrl,
+          description: channel.description || meta.description || "",
+          website_url: channel.website_url || meta.site_url || targetUrl,
+        });
+        updated += 1;
+      }
+      queryClient.invalidateQueries({ queryKey: ["mediaChannels"] });
+      toast.success(updated ? `U plotësuan ${updated} logo/foto.` : "Nuk u gjet logo e re.");
+    } catch (error) {
+      toast.error(error.message || "Plotësimi i logove dështoi.");
+    } finally {
+      setMetadataLoading(false);
+    }
+  };
+
   const startEdit = (ch) => {
     setForm({
       name: ch.name, type: ch.type, flag: ch.flag || "", color: ch.color || "#8ab4ff",
@@ -167,10 +198,17 @@ export default function MediaManager() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-white font-semibold">Menaxho Mediat</h3>
-        <Button onClick={() => { setShowForm(true); setEditingId(null); setForm({ ...EMPTY_FORM }); }}
-          className="bg-[#8ab4ff]/20 text-[#8ab4ff] border border-[#8ab4ff]/30 hover:bg-[#8ab4ff]/30 h-8 text-xs">
-          <Plus className="w-3.5 h-3.5 mr-1" /> Shto Kanal
-        </Button>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button onClick={fillMissingLogos} disabled={metadataLoading}
+            className="bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 h-8 text-xs">
+            {metadataLoading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : null}
+            Plotëso logot
+          </Button>
+          <Button onClick={() => { setShowForm(true); setEditingId(null); setForm({ ...EMPTY_FORM }); }}
+            className="bg-[#8ab4ff]/20 text-[#8ab4ff] border border-[#8ab4ff]/30 hover:bg-[#8ab4ff]/30 h-8 text-xs">
+            <Plus className="w-3.5 h-3.5 mr-1" /> Shto Kanal
+          </Button>
+        </div>
       </div>
 
       {showForm && (

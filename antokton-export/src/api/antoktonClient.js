@@ -162,6 +162,12 @@ const auth = {
       body: { email }
     });
   },
+  async resetPassword({ email, token, password }) {
+    return request(`/api/apps/${appId}/auth/reset-password`, {
+      method: 'POST',
+      body: { email, token, password }
+    });
+  },
   redirectToLogin(fromUrl = window.location.href, mode = "login") {
     if (import.meta.env.DEV) {
       const email = import.meta.env.VITE_ANTOKTON_DEV_USER_EMAIL || 'admin@antokton.local';

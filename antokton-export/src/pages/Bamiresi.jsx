@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/antoktonClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Heart, ExternalLink, MapPin, Target, Users, Globe, Mail, HandHeart, Star, ChevronRight, Plus, Edit2, Trash2, X, Check, Calendar, Zap } from "lucide-react";
+import { Heart, ExternalLink, MapPin, Target, Users, Globe, Mail, HandHeart, Star, ChevronRight, Plus, Edit2, Trash2, X, Check, Calendar, Zap, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 // ── Organizata statike ─────────────────────────────────────────────────
@@ -336,6 +336,7 @@ export default function BamiresiFull() {
   const [showOrgModal, setShowOrgModal] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const [editingOrg, setEditingOrg] = useState(null);
+  const [metadataLoading, setMetadataLoading] = useState(false);
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
@@ -437,6 +438,56 @@ export default function BamiresiFull() {
     }
   };
 
+  const fillMissingCharityImages = async () => {
+    setMetadataLoading(true);
+    let projectUpdates = 0;
+    let orgUpdates = 0;
+    try {
+      for (const project of projects.filter((item) => !item.image_url && item.donation_link)) {
+        const res = await base44.functions.invoke("extractWebsiteMetadata", { url: project.donation_link });
+        const meta = res.data || {};
+        const imageUrl = meta.image_url || meta.logo_url || "";
+        if (!meta.success || !imageUrl) continue;
+        await base44.entities.CharityProject.update(project.id, {
+          image_url: imageUrl,
+          short_description: project.short_description || meta.description || "",
+        });
+        projectUpdates += 1;
+      }
+
+      const nextOrgs = [];
+      for (const org of staticOrgs) {
+        if (org.logo_url || !org.url) {
+          nextOrgs.push(org);
+          continue;
+        }
+        const res = await base44.functions.invoke("extractWebsiteMetadata", { url: org.url });
+        const meta = res.data || {};
+        const logoUrl = meta.logo_url || meta.image_url || "";
+        if (!meta.success || !logoUrl) {
+          nextOrgs.push(org);
+          continue;
+        }
+        nextOrgs.push({
+          ...org,
+          logo_url: logoUrl,
+          desc: org.desc || meta.description || "",
+          domain: org.domain || new URL(meta.site_url || org.url).hostname.replace(/^www\./, ""),
+        });
+        orgUpdates += 1;
+      }
+
+      if (orgUpdates) await staticOrgsMutation.mutateAsync(nextOrgs);
+      queryClient.invalidateQueries({ queryKey: ["charityProjects"] });
+      queryClient.invalidateQueries({ queryKey: ["siteConfig"] });
+      window.alert(projectUpdates || orgUpdates ? `U plotësuan ${projectUpdates + orgUpdates} foto/logo.` : "Nuk u gjet foto/logo e re.");
+    } catch (error) {
+      window.alert(error.message || "Plotësimi i fotove/logove dështoi.");
+    } finally {
+      setMetadataLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-16">
 
@@ -475,6 +526,10 @@ export default function BamiresiFull() {
             </div>
             {canAddContent && (
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <button onClick={fillMissingCharityImages} disabled={metadataLoading}
+                  className="flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-bold text-white/75 hover:bg-white/10 disabled:opacity-60 sm:w-auto">
+                  {metadataLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />} Plotëso logo/foto
+                </button>
                 <button onClick={() => { setEditingProject(null); setShowModal(true); }}
                   className="flex w-full items-center justify-center gap-2 whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold text-[#0b1020] sm:w-auto"
                   style={{ background: "linear-gradient(to right,#8ab4ff,#9bffd6)" }}>

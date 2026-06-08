@@ -89,10 +89,14 @@ const AUTH_RATE_LIMIT_WINDOW_MS = readPositiveInteger("AUTH_RATE_LIMIT_WINDOW_MS
 const AUTH_LOGIN_RATE_LIMIT_MAX = readPositiveInteger("AUTH_LOGIN_RATE_LIMIT_MAX", 8);
 const AUTH_REGISTER_RATE_LIMIT_MAX = readPositiveInteger("AUTH_REGISTER_RATE_LIMIT_MAX", 5);
 const AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX = readPositiveInteger("AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX", 5);
+const AUTH_PASSWORD_RESET_TTL_MINUTES = readPositiveInteger("AUTH_PASSWORD_RESET_TTL_MINUTES", 60);
 const SESSION_COOKIE_NAME = validateSingleLine("SESSION_COOKIE_NAME", readString("SESSION_COOKIE_NAME", "antokton_session"));
 const SESSION_COOKIE_SECURE = readBoolean("SESSION_COOKIE_SECURE", NODE_ENV === "production");
 const AUTH_BOOTSTRAP_ADMIN_EMAIL = validateSingleLine("AUTH_BOOTSTRAP_ADMIN_EMAIL", readString("AUTH_BOOTSTRAP_ADMIN_EMAIL", ""));
 const AUTH_BOOTSTRAP_ADMIN_PASSWORD = validateSingleLine("AUTH_BOOTSTRAP_ADMIN_PASSWORD", readString("AUTH_BOOTSTRAP_ADMIN_PASSWORD", ""));
+const APP_PUBLIC_URL = validateSingleLine("APP_PUBLIC_URL", readString("APP_PUBLIC_URL", ""));
+const RESEND_API_KEY = validateSingleLine("RESEND_API_KEY", readString("RESEND_API_KEY", ""));
+const EMAIL_FROM = validateSingleLine("EMAIL_FROM", readString("EMAIL_FROM", "Antokton <no-reply@antokton.com>"));
 const EXPORT_DIR = path.join(ROOT_DIR, "antokton-export");
 const ANTOKTON_SCHEMA_DIR = path.join(EXPORT_DIR, "antokton-reference", "entities");
 const LEGACY_SCHEMA_DIR = path.join(EXPORT_DIR, "base44", "entities");
@@ -125,10 +129,14 @@ const config = {
   AUTH_LOGIN_RATE_LIMIT_MAX,
   AUTH_REGISTER_RATE_LIMIT_MAX,
   AUTH_PASSWORD_CHANGE_RATE_LIMIT_MAX,
+  AUTH_PASSWORD_RESET_TTL_MINUTES,
   SESSION_COOKIE_NAME,
   SESSION_COOKIE_SECURE,
   AUTH_BOOTSTRAP_ADMIN_EMAIL,
-  AUTH_BOOTSTRAP_ADMIN_PASSWORD
+  AUTH_BOOTSTRAP_ADMIN_PASSWORD,
+  APP_PUBLIC_URL,
+  RESEND_API_KEY,
+  EMAIL_FROM
 };
 
 function existsSafe(targetPath) {
@@ -165,6 +173,8 @@ function safeConfigStatus() {
       passwordAuthConfigured: true,
       bootstrapAdminConfigured: Boolean(config.AUTH_BOOTSTRAP_ADMIN_EMAIL && config.AUTH_BOOTSTRAP_ADMIN_PASSWORD),
       tokenTtlHours: config.AUTH_TOKEN_TTL_HOURS,
+      passwordResetTtlMinutes: config.AUTH_PASSWORD_RESET_TTL_MINUTES,
+      emailProviderConfigured: Boolean(config.RESEND_API_KEY),
       rateLimit: {
         mode: "in-memory",
         windowMs: config.AUTH_RATE_LIMIT_WINDOW_MS,
