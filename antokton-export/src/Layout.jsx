@@ -334,6 +334,7 @@ export default function Layout({ children, currentPageName }) {
     { name: "Bileta", page: "Bileta", icon: Plane, hasSubmenu: true, isBileta: true },
     { name: "Ngjarje", page: "Events", icon: Calendar },
     { name: "Statuse", page: "Statuset", icon: Radio },
+    { name: "Media", page: "Media", icon: Tv, hasSubmenu: true, isMedia: true },
     { name: "", page: "Bamiresi", icon: Heart, isIconOnly: true },
     { name: "", page: "Search", icon: Search, isIconOnly: true },
   ];

@@ -40,6 +40,7 @@ export default function CharityAdmin() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState(null); // null = list, 'new' = new, id = edit
   const [form, setForm] = useState(emptyForm);
+  const [metadataLoading, setMetadataLoading] = useState(false);
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ["charityProjectsAdmin"],
@@ -87,6 +88,27 @@ export default function CharityAdmin() {
 
   const toggleField = (project, field) => {
     updateMutation.mutate({ id: project.id, data: { [field]: !project[field] } });
+  };
+
+  const fetchWebsiteMetadata = async () => {
+    const targetUrl = (form.donation_link || form.image_url || "").trim();
+    if (!targetUrl) return;
+    setMetadataLoading(true);
+    try {
+      const res = await base44.functions.invoke("extractWebsiteMetadata", { url: targetUrl });
+      const meta = res.data || {};
+      if (!meta.success) throw new Error(meta.error || "Nuk u gjetën të dhëna.");
+      setForm(prev => ({
+        ...prev,
+        title: prev.title || meta.title || "",
+        short_description: prev.short_description || meta.description || "",
+        image_url: prev.image_url || meta.image_url || meta.logo_url || "",
+      }));
+    } catch (error) {
+      window.alert(error.message || "Nuk u mor dot foto/logo nga linku.");
+    } finally {
+      setMetadataLoading(false);
+    }
   };
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
@@ -152,7 +174,13 @@ export default function CharityAdmin() {
           </div>
 
           <div className="sm:col-span-2 space-y-1.5">
-            <Label className="text-white/70 text-xs">URL e fotos</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-white/70 text-xs">URL e fotos</Label>
+              <button type="button" onClick={fetchWebsiteMetadata} disabled={metadataLoading || !(form.donation_link || form.image_url)}
+                className="rounded-md border border-[#8ab4ff]/25 px-2 py-1 text-[10px] text-[#8ab4ff] hover:bg-[#8ab4ff]/10 disabled:opacity-50">
+                {metadataLoading ? "Duke kërkuar..." : "Gjej nga linku"}
+              </button>
+            </div>
             <Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })}
               placeholder="https://..." className="bg-white/5 border-white/10 text-white" />
           </div>

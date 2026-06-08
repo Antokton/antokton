@@ -13,6 +13,7 @@ export default function PartnersManager() {
   const [editingId, setEditingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", logo_url: "", description: "", website_url: "", is_main: true, order: 0 });
+  const [metadataLoading, setMetadataLoading] = useState(false);
 
   const { data: partners = [], isLoading } = useQuery({
     queryKey: ["adminPartners"],
@@ -52,6 +53,32 @@ export default function PartnersManager() {
     setShowForm(true);
   };
 
+  const fetchWebsiteMetadata = async () => {
+    const targetUrl = form.website_url.trim();
+    if (!targetUrl) {
+      toast.error("Vendos linkun e website-it.");
+      return;
+    }
+    setMetadataLoading(true);
+    try {
+      const res = await base44.functions.invoke("extractWebsiteMetadata", { url: targetUrl });
+      const meta = res.data || {};
+      if (!meta.success) throw new Error(meta.error || "Nuk u gjetën të dhëna.");
+      setForm(prev => ({
+        ...prev,
+        name: prev.name || meta.site_name || meta.title || "",
+        logo_url: prev.logo_url || meta.logo_url || meta.image_url || "",
+        description: prev.description || meta.description || "",
+        website_url: prev.website_url || meta.site_url || targetUrl,
+      }));
+      toast.success("Logo/foto u mor nga website.");
+    } catch (error) {
+      toast.error(error.message || "Nuk u mor dot logo/foto.");
+    } finally {
+      setMetadataLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -79,12 +106,18 @@ export default function PartnersManager() {
             </div>
           </div>
           <div>
-            <label className="text-white/60 text-xs mb-1 block">URL e Logos</label>
-            <Input value={form.logo_url} onChange={e => setForm({...form, logo_url: e.target.value})} placeholder="https://..." className="h-8 text-xs bg-white/5 border-white/10 text-white" />
-          </div>
-          <div>
             <label className="text-white/60 text-xs mb-1 block">Linku (website)</label>
             <Input value={form.website_url} onChange={e => setForm({...form, website_url: e.target.value})} placeholder="https://example.com" className="h-8 text-xs bg-white/5 border-white/10 text-white" />
+          </div>
+          <div>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <label className="text-white/60 text-xs block">URL e Logos</label>
+              <button type="button" onClick={fetchWebsiteMetadata} disabled={metadataLoading}
+                className="rounded-md border border-[#8ab4ff]/25 px-2 py-1 text-[10px] text-[#8ab4ff] hover:bg-[#8ab4ff]/10 disabled:opacity-60">
+                {metadataLoading ? "Duke kërkuar..." : "Gjej nga website"}
+              </button>
+            </div>
+            <Input value={form.logo_url} onChange={e => setForm({...form, logo_url: e.target.value})} placeholder="https://..." className="h-8 text-xs bg-white/5 border-white/10 text-white" />
           </div>
           <div>
             <label className="text-white/60 text-xs mb-1 block">Përshkrimi (opsional)</label>

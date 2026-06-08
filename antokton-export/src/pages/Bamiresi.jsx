@@ -132,6 +132,28 @@ function ProjectModal({ project, onClose, onSave }) {
     goal_amount: project.goal_amount || "",
     raised_amount: project.raised_amount || "",
   } : EMPTY_FORM);
+  const [metadataLoading, setMetadataLoading] = useState(false);
+
+  const fetchWebsiteMetadata = async () => {
+    const targetUrl = (form.donation_link || "").trim();
+    if (!targetUrl) return;
+    setMetadataLoading(true);
+    try {
+      const res = await base44.functions.invoke("extractWebsiteMetadata", { url: targetUrl });
+      const meta = res.data || {};
+      if (!meta.success) throw new Error(meta.error || "Nuk u gjetën të dhëna.");
+      setForm(prev => ({
+        ...prev,
+        image_url: prev.image_url || meta.image_url || meta.logo_url || "",
+        title: prev.title || meta.title || "",
+        short_description: prev.short_description || meta.description || "",
+      }));
+    } catch (error) {
+      window.alert(error.message || "Nuk u mor dot foto/logo nga linku.");
+    } finally {
+      setMetadataLoading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+112px)] pt-[calc(env(safe-area-inset-top)+88px)] sm:items-center sm:p-4" style={{ background: "rgba(0,0,0,0.8)", WebkitOverflowScrolling: "touch" }} onClick={onClose}>
@@ -151,7 +173,6 @@ function ProjectModal({ project, onClose, onSave }) {
             { label: "Vendi", key: "country", type: "text" },
             { label: "Email kontakti", key: "contact_email", type: "email" },
             { label: "Link donacioni", key: "donation_link", type: "url" },
-            { label: "Foto (URL)", key: "image_url", type: "url" },
             { label: "Shuma e synuar (€)", key: "goal_amount", type: "number" },
             { label: "Shuma e mbledhur (€)", key: "raised_amount", type: "number" },
             { label: "Afati", key: "deadline", type: "date" },
@@ -163,6 +184,17 @@ function ProjectModal({ project, onClose, onSave }) {
                 className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none border border-white/10 bg-white/5 focus:border-[#8ab4ff]/50" />
             </div>
           ))}
+          <div>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <label className="block text-xs text-white/50">Foto (URL)</label>
+              <button type="button" onClick={fetchWebsiteMetadata} disabled={metadataLoading || !form.donation_link}
+                className="rounded-md border border-[#8ab4ff]/25 px-2 py-1 text-[10px] text-[#8ab4ff] hover:bg-[#8ab4ff]/10 disabled:opacity-50">
+                {metadataLoading ? "Duke kërkuar..." : "Gjej nga linku"}
+              </button>
+            </div>
+            <input type="url" value={form.image_url || ""} onChange={e => setForm(p => ({ ...p, image_url: e.target.value }))}
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none border border-white/10 bg-white/5 focus:border-[#8ab4ff]/50" />
+          </div>
           <div>
             <label className="block text-xs text-white/50 mb-1">Kategoria</label>
             <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
@@ -208,7 +240,9 @@ function OrgModal({ org, onClose, onSave }) {
     desc: org?.desc || "",
     url: org?.url || "",
     domain: org?.domain || "",
+    logo_url: org?.logo_url || "",
   });
+  const [metadataLoading, setMetadataLoading] = useState(false);
 
   const save = () => {
     const next = {
@@ -217,6 +251,28 @@ function OrgModal({ org, onClose, onSave }) {
     };
     delete next.focusText;
     onSave(next);
+  };
+
+  const fetchWebsiteMetadata = async () => {
+    const targetUrl = (form.url || "").trim();
+    if (!targetUrl) return;
+    setMetadataLoading(true);
+    try {
+      const res = await base44.functions.invoke("extractWebsiteMetadata", { url: targetUrl });
+      const meta = res.data || {};
+      if (!meta.success) throw new Error(meta.error || "Nuk u gjetën të dhëna.");
+      setForm(prev => ({
+        ...prev,
+        name: prev.name || meta.site_name || meta.title || "",
+        desc: prev.desc || meta.description || "",
+        logo_url: prev.logo_url || meta.logo_url || meta.image_url || "",
+        domain: prev.domain || new URL(meta.site_url || targetUrl).hostname.replace(/^www\./, ""),
+      }));
+    } catch (error) {
+      window.alert(error.message || "Nuk u mor dot logo/foto nga website.");
+    } finally {
+      setMetadataLoading(false);
+    }
   };
 
   return (
@@ -237,6 +293,7 @@ function OrgModal({ org, onClose, onSave }) {
             ["Fushat, të ndara me presje", "focusText", "text"],
             ["URL", "url", "url"],
             ["Domain", "domain", "text"],
+            ["Logo (URL)", "logo_url", "url"],
           ].map(([label, key, type]) => (
             <div key={key}>
               <label className="mb-1 block text-xs text-white/50">{label}</label>
@@ -248,6 +305,10 @@ function OrgModal({ org, onClose, onSave }) {
               />
             </div>
           ))}
+          <button type="button" onClick={fetchWebsiteMetadata} disabled={metadataLoading || !form.url}
+            className="rounded-lg border border-[#8ab4ff]/25 px-3 py-2 text-xs font-semibold text-[#8ab4ff] hover:bg-[#8ab4ff]/10 disabled:opacity-50">
+            {metadataLoading ? "Duke kërkuar..." : "Gjej logo/foto nga URL"}
+          </button>
           <div>
             <label className="mb-1 block text-xs text-white/50">Përshkrimi</label>
             <textarea
@@ -492,7 +553,11 @@ export default function BamiresiFull() {
                 </div>
               )}
               <div className="flex items-start gap-3 mb-3">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 border border-white/10" style={{ background: `${org.color}18` }}>{org.flag}</div>
+                <a href={org.url} target="_blank" rel="noopener noreferrer"
+                  className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 border border-white/10 overflow-hidden"
+                  style={{ background: `${org.color}18` }}>
+                  {org.logo_url ? <img src={org.logo_url} alt={org.name} className="h-full w-full object-contain bg-white/85 p-1.5" /> : org.flag}
+                </a>
                 <div>
                   <p className="text-white font-semibold text-sm leading-tight">{org.name}</p>
                   <p className="text-white/35 text-xs mt-0.5">{org.type}</p>

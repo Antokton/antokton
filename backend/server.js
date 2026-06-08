@@ -744,7 +744,7 @@ async function redactImportedRecord(record, canAudit) {
 }
 
 async function redactEntityForRequest(entity, payload, req) {
-  const redactedEntities = new Set(["Job", "Status", "ImportedPost"]);
+  const redactedEntities = new Set(["Job", "Status", "ImportedPost", "Marketplace", "Housing", "Service"]);
   if (!redactedEntities.has(entity)) return payload;
   const canAudit = await requesterCanAuditImports(req);
   if (Array.isArray(payload)) {
@@ -925,6 +925,67 @@ async function fetchPublicHtml(url) {
     signal: AbortSignal.timeout(12000)
   });
   return response.text();
+}
+
+function firstMetaContent(html = "", names = []) {
+  for (const name of names) {
+    const pattern = new RegExp(`<meta[^>]+(?:property|name)=["']${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["'][^>]+content=["']([^"']+)`, "i");
+    const reversePattern = new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["']`, "i");
+    const match = pattern.exec(html) || reversePattern.exec(html);
+    if (match?.[1]) return sanitizeImportedText(match[1]).replace(/\s+/g, " ").trim();
+  }
+  return "";
+}
+
+function resolvePublicUrl(value = "", baseUrl = "") {
+  const raw = sanitizeImportedText(value).trim();
+  if (!raw) return "";
+  try {
+    return new URL(raw, baseUrl).toString();
+  } catch {
+    return raw;
+  }
+}
+
+function extractIconLinks(html = "", baseUrl = "") {
+  const links = [];
+  for (const match of html.matchAll(/<link\b[^>]*>/gi)) {
+    const tag = match[0];
+    const rel = /rel=["']([^"']+)["']/i.exec(tag)?.[1] || "";
+    if (!/(?:apple-touch-icon|shortcut icon|\bicon\b|mask-icon)/i.test(rel)) continue;
+    const href = /href=["']([^"']+)["']/i.exec(tag)?.[1] || "";
+    if (href) links.push(resolvePublicUrl(href, baseUrl));
+  }
+  return [...new Set(links)];
+}
+
+async function extractWebsiteMetadata(payload = {}) {
+  const rawUrl = normalizeImportUrl(payload.url || payload.website_url || payload.site || "");
+  if (!rawUrl) return { success: false, error: "URL is required" };
+
+  try {
+    const html = await fetchPublicHtml(rawUrl);
+    const title = firstMetaContent(html, ["og:title", "twitter:title"]) ||
+      sanitizeImportedText(/<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] || "").replace(/\s+/g, " ").trim();
+    const description = firstMetaContent(html, ["og:description", "twitter:description", "description"]);
+    const imageUrl = resolvePublicUrl(firstMetaContent(html, ["og:image", "twitter:image", "twitter:image:src"]), rawUrl);
+    const logoUrl = extractIconLinks(html, rawUrl)[0] || imageUrl || "";
+    const siteName = firstMetaContent(html, ["og:site_name", "application-name"]) || title;
+
+    return {
+      success: true,
+      url: rawUrl,
+      site_url: rawUrl,
+      title,
+      site_name: siteName,
+      description,
+      logo_url: logoUrl,
+      image_url: imageUrl || logoUrl,
+      icon_urls: extractIconLinks(html, rawUrl)
+    };
+  } catch (error) {
+    return { success: false, error: error.message || "Metadata extraction failed" };
+  }
 }
 
 function hasImportSignal(text = "") {
@@ -1154,6 +1215,10 @@ async function handleFunction(req, res, functionName) {
       } catch (error) {
         result = { success: false, error: error.message || "Import failed", data: null };
       }
+      break;
+    }
+    case "extractWebsiteMetadata": {
+      result = await extractWebsiteMetadata(payload);
       break;
     }
     case "advancedRecruiterSearch": {

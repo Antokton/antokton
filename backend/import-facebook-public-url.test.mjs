@@ -57,6 +57,7 @@ test("importJobPost extracts expected fields from the exact public Facebook post
       country: data.country || "",
       city: data.city || "",
       profession: data.profession || "",
+      professions: data.professions || data.profession_list || data.drafts?.map((draft) => draft.profession).filter(Boolean) || [],
       title: data.title || "",
     };
 
@@ -73,6 +74,10 @@ test("importJobPost extracts expected fields from the exact public Facebook post
     assert.match(rawText, /Glassfaser|fibra optike/i);
     assert.match(rawText, /Elektricist/i);
     assert.match(rawText, /Bagerist|Excavator|eskavator|bager/i);
+    const professionsText = [parsed.profession, ...(Array.isArray(parsed.professions) ? parsed.professions : [])].join("\n");
+    assert.match(professionsText, /Glassfaser Worker|Pun[eë]tor Glassfaser/i);
+    assert.match(professionsText, /Electrician|Elektricist/i);
+    assert.match(professionsText, /Excavator Operator|Bagerist|Operator(?:e|i)?\s+(?:ekskavator|bager)/i);
   } finally {
     child.kill("SIGTERM");
     await wait(300);

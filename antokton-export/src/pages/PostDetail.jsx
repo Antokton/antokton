@@ -920,7 +920,7 @@ export default function PostDetail() {
                          {phoneIcon}
                          {job.phone_number}
                        </a>
-                       {(phoneApp === "whatsapp" || phoneApp === "telefon") && (
+                       {phoneApp === "whatsapp" && (
                          <a
                            href={`https://wa.me/${digitsOnly}`}
                            target="_blank"

@@ -21,13 +21,15 @@ function ChannelRow({ ch, onEdit, onToggle, onDelete, onQuickUpdate }) {
       </div>
       <p className="text-white text-xs font-medium w-28 truncate">{ch.name}</p>
 
-      {/* Inline credibility selector */}
-      <select value={ch.credibility || "e panjohur"}
-        onChange={e => onQuickUpdate(ch.id, { credibility: e.target.value })}
-        className="text-[10px] rounded px-1.5 py-0.5 border outline-none cursor-pointer"
-        style={{ background: "#0b1020", color: CRED_COLORS[ch.credibility] || "#6b7280", borderColor: `${CRED_COLORS[ch.credibility] || "#6b7280"}44` }}>
-        {CRED_OPTIONS.map(v => <option key={v} value={v} style={{ color: "#fff" }}>{v}</option>)}
-      </select>
+      <label className="flex items-center gap-1 text-[10px] text-white/45">
+        <span>Besueshmëria</span>
+        <select value={ch.credibility || "e panjohur"}
+          onChange={e => onQuickUpdate(ch.id, { credibility: e.target.value })}
+          className="text-[10px] rounded px-1.5 py-0.5 border outline-none cursor-pointer"
+          style={{ background: "#0b1020", color: CRED_COLORS[ch.credibility] || "#6b7280", borderColor: `${CRED_COLORS[ch.credibility] || "#6b7280"}44` }}>
+          {CRED_OPTIONS.map(v => <option key={v} value={v} style={{ color: "#fff" }}>{v}</option>)}
+        </select>
+      </label>
 
       {/* Inline religion selector */}
       <select value={ch.religious_orientation || "laik"}
@@ -72,6 +74,7 @@ export default function MediaManager() {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [metadataLoading, setMetadataLoading] = useState(false);
   const EMPTY_FORM = { name: "", type: "tv", flag: "", color: "#8ab4ff", logo_url: "", stream_url: "", website_url: "", description: "", credibility: "e panjohur", programming_type: [], target_age: "te_gjitha", religious_orientation: "laik", order: 0, is_featured: false };
   const [form, setForm] = useState({ ...EMPTY_FORM });
 
@@ -115,6 +118,32 @@ export default function MediaManager() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mediaChannels"] }),
   });
   const handleQuickUpdate = (id, data) => quickUpdateMutation.mutate({ id, data });
+
+  const fetchWebsiteMetadata = async () => {
+    const targetUrl = (form.website_url || form.stream_url || "").trim();
+    if (!targetUrl) {
+      toast.error("Vendos linkun e website-it ose stream-it.");
+      return;
+    }
+    setMetadataLoading(true);
+    try {
+      const res = await base44.functions.invoke("extractWebsiteMetadata", { url: targetUrl });
+      const meta = res.data || {};
+      if (!meta.success) throw new Error(meta.error || "Nuk u gjetën të dhëna.");
+      setForm(prev => ({
+        ...prev,
+        name: prev.name || meta.site_name || meta.title || "",
+        logo_url: prev.logo_url || meta.logo_url || meta.image_url || "",
+        description: prev.description || meta.description || "",
+        website_url: prev.website_url || meta.site_url || targetUrl,
+      }));
+      toast.success("Logo/foto u mor nga website.");
+    } catch (error) {
+      toast.error(error.message || "Nuk u mor dot logo/foto.");
+    } finally {
+      setMetadataLoading(false);
+    }
+  };
 
   const startEdit = (ch) => {
     setForm({
@@ -176,10 +205,16 @@ export default function MediaManager() {
             </div>
           </div>
           <div className="grid grid-cols-1 gap-3">
-            <div>
-              <label className="text-white/60 text-xs mb-1 block">URL e Logos</label>
-              <Input value={form.logo_url} onChange={e => setForm({...form, logo_url: e.target.value})} placeholder="https://..." className="h-8 text-xs bg-white/5 border-white/10 text-white" />
+          <div>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <label className="text-white/60 text-xs block">URL e Logos</label>
+              <button type="button" onClick={fetchWebsiteMetadata} disabled={metadataLoading}
+                className="rounded-md border border-[#8ab4ff]/25 px-2 py-1 text-[10px] text-[#8ab4ff] hover:bg-[#8ab4ff]/10 disabled:opacity-60">
+                {metadataLoading ? "Duke kërkuar..." : "Gjej nga website"}
+              </button>
             </div>
+            <Input value={form.logo_url} onChange={e => setForm({...form, logo_url: e.target.value})} placeholder="https://..." className="h-8 text-xs bg-white/5 border-white/10 text-white" />
+          </div>
             <div>
               <label className="text-white/60 text-xs mb-1 block">URL e Stream / Embed (live ose YouTube/Spotify)</label>
               <Input value={form.stream_url} onChange={e => setForm({...form, stream_url: e.target.value})} placeholder="https://stream.example.com/live" className="h-8 text-xs bg-white/5 border-white/10 text-white" />
