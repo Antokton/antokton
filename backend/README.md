@@ -84,7 +84,7 @@ list=200
 ## Next Production Steps
 
 1. Replace dev auth with real auth (JWT sessions, password hashing, OAuth if needed).
-2. Configure SMTP or an email provider for `Core.SendEmail`.
+2. Configure password reset email with either Resend (`RESEND_API_KEY`, `EMAIL_FROM`) or SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE`, `EMAIL_FROM`).
 3. Implement custom functions: imports, job matching, CV generation, recommendations.
 4. Move high-value entities like `Job`, `User`, `Status`, `Event`, `ChatMessage`
    into normalized tables once the workflows are stable.

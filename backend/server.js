@@ -2,6 +2,8 @@ const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const net = require("node:net");
+const tls = require("node:tls");
 const { URL } = require("node:url");
 const { config, safeConfigStatus } = require("./config");
 const { getDatabaseMode, getDatabaseStatus, initializeAsync, statements } = require("./db");
@@ -51,7 +53,12 @@ const {
   AUTH_PASSWORD_RESET_TTL_MINUTES,
   APP_PUBLIC_URL,
   RESEND_API_KEY,
-  EMAIL_FROM
+  EMAIL_FROM,
+  SMTP_HOST,
+  SMTP_PORT,
+  SMTP_USER,
+  SMTP_PASS,
+  SMTP_SECURE
 } = config;
 const DEV_USER_EMAIL = getDevUserEmail();
 const reportRateLimit = new Map();
@@ -949,6 +956,128 @@ async function logEmail(payload) {
   await statements.insertEmail.run(crypto.randomUUID(), JSON.stringify(payload), now());
 }
 
+function parseEmailAddress(value = "") {
+  const match = /<([^>]+)>/.exec(String(value));
+  return (match?.[1] || value).trim();
+}
+
+function smtpEncodeLine(value = "") {
+  return String(value).replace(/\r?\n/g, "\r\n").replace(/^\./gm, "..");
+}
+
+function createSmtpClient() {
+  let socket;
+  let buffer = "";
+
+  const connect = () => new Promise((resolve, reject) => {
+    const onConnect = () => resolve();
+    const onError = (error) => reject(error);
+    socket = SMTP_SECURE
+      ? tls.connect({ host: SMTP_HOST, port: SMTP_PORT, servername: SMTP_HOST }, onConnect)
+      : net.connect({ host: SMTP_HOST, port: SMTP_PORT }, onConnect);
+    socket.once("error", onError);
+    socket.setTimeout(15000, () => socket.destroy(new Error("SMTP connection timed out")));
+  });
+
+  const readResponse = () => new Promise((resolve, reject) => {
+    const cleanup = () => {
+      socket.off("data", onData);
+      socket.off("error", onError);
+    };
+    const onError = (error) => {
+      cleanup();
+      reject(error);
+    };
+    const onData = (chunk) => {
+      buffer += chunk.toString("utf8");
+      const lines = buffer.split(/\r?\n/);
+      const lastComplete = buffer.endsWith("\n");
+      if (!lastComplete) return;
+      const complete = lines.filter(Boolean);
+      const last = complete[complete.length - 1] || "";
+      if (/^\d{3} /.test(last)) {
+        const response = complete.join("\n");
+        buffer = "";
+        cleanup();
+        resolve(response);
+      }
+    };
+    socket.on("data", onData);
+    socket.once("error", onError);
+  });
+
+  const send = async (line, expected = /^[23]/) => {
+    socket.write(`${line}\r\n`);
+    const response = await readResponse();
+    if (!expected.test(response)) {
+      const error = new Error(`SMTP command failed: ${response.split("\n")[0] || response}`);
+      error.smtpResponse = response;
+      throw error;
+    }
+    return response;
+  };
+
+  const upgradeToTls = async () => {
+    socket = await new Promise((resolve, reject) => {
+      const secureSocket = tls.connect({ socket, servername: SMTP_HOST }, () => resolve(secureSocket));
+      secureSocket.once("error", reject);
+    });
+  };
+
+  const close = () => {
+    try { socket?.end(); } catch {}
+  };
+
+  return { connect, readResponse, send, upgradeToTls, close };
+}
+
+async function sendSmtpEmail(payload) {
+  const client = createSmtpClient();
+  await client.connect();
+  try {
+    const greeting = await client.readResponse();
+    if (!/^220/.test(greeting)) throw new Error(`SMTP greeting failed: ${greeting}`);
+    await client.send(`EHLO ${SMTP_HOST}`);
+    if (!SMTP_SECURE) {
+      await client.send("STARTTLS");
+      await client.upgradeToTls();
+      await client.send(`EHLO ${SMTP_HOST}`);
+    }
+    await client.send("AUTH LOGIN");
+    await client.send(Buffer.from(SMTP_USER).toString("base64"));
+    await client.send(Buffer.from(SMTP_PASS).toString("base64"));
+    await client.send(`MAIL FROM:<${parseEmailAddress(payload.from || EMAIL_FROM)}>`);
+    await client.send(`RCPT TO:<${parseEmailAddress(payload.to)}>`);
+    await client.send("DATA", /^354/);
+    const html = payload.html || "";
+    const text = payload.text || "";
+    const message = [
+      `From: ${payload.from || EMAIL_FROM}`,
+      `To: ${payload.to}`,
+      `Subject: ${payload.subject}`,
+      "MIME-Version: 1.0",
+      "Content-Type: multipart/alternative; boundary=\"antokton-reset-boundary\"",
+      "",
+      "--antokton-reset-boundary",
+      "Content-Type: text/plain; charset=UTF-8",
+      "Content-Transfer-Encoding: 8bit",
+      "",
+      text,
+      "--antokton-reset-boundary",
+      "Content-Type: text/html; charset=UTF-8",
+      "Content-Transfer-Encoding: 8bit",
+      "",
+      html,
+      "--antokton-reset-boundary--",
+      "."
+    ].join("\r\n");
+    await client.send(smtpEncodeLine(message));
+    await client.send("QUIT").catch(() => "");
+  } finally {
+    client.close();
+  }
+}
+
 async function sendTransactionalEmail(payload) {
   const cleanPayload = {
     from: payload.from || EMAIL_FROM,
@@ -980,6 +1109,23 @@ async function sendTransactionalEmail(payload) {
       throw error;
     }
     return { delivered: true, provider: "resend" };
+  }
+
+  if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
+    try {
+      await sendSmtpEmail(cleanPayload);
+      await logEmail({ ...cleanPayload, provider: "smtp", delivered: true });
+      return { delivered: true, provider: "smtp" };
+    } catch (error) {
+      await logEmail({
+        ...cleanPayload,
+        provider: "smtp",
+        delivered: false,
+        provider_response: String(error.smtpResponse || error.message || error).slice(0, 2000)
+      });
+      error.status = 502;
+      throw error;
+    }
   }
 
   await logEmail({ ...cleanPayload, provider: "log_only", delivered: false });

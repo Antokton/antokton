@@ -97,6 +97,11 @@ const AUTH_BOOTSTRAP_ADMIN_PASSWORD = validateSingleLine("AUTH_BOOTSTRAP_ADMIN_P
 const APP_PUBLIC_URL = validateSingleLine("APP_PUBLIC_URL", readString("APP_PUBLIC_URL", ""));
 const RESEND_API_KEY = validateSingleLine("RESEND_API_KEY", readString("RESEND_API_KEY", ""));
 const EMAIL_FROM = validateSingleLine("EMAIL_FROM", readString("EMAIL_FROM", "Antokton <no-reply@antokton.com>"));
+const SMTP_HOST = validateSingleLine("SMTP_HOST", readString("SMTP_HOST", ""));
+const SMTP_PORT = readPort("SMTP_PORT", SMTP_HOST ? 587 : 587);
+const SMTP_USER = validateSingleLine("SMTP_USER", readString("SMTP_USER", ""));
+const SMTP_PASS = validateSingleLine("SMTP_PASS", readString("SMTP_PASS", ""));
+const SMTP_SECURE = readBoolean("SMTP_SECURE", SMTP_PORT === 465);
 const EXPORT_DIR = path.join(ROOT_DIR, "antokton-export");
 const ANTOKTON_SCHEMA_DIR = path.join(EXPORT_DIR, "antokton-reference", "entities");
 const LEGACY_SCHEMA_DIR = path.join(EXPORT_DIR, "base44", "entities");
@@ -136,7 +141,12 @@ const config = {
   AUTH_BOOTSTRAP_ADMIN_PASSWORD,
   APP_PUBLIC_URL,
   RESEND_API_KEY,
-  EMAIL_FROM
+  EMAIL_FROM,
+  SMTP_HOST,
+  SMTP_PORT,
+  SMTP_USER,
+  SMTP_PASS,
+  SMTP_SECURE
 };
 
 function existsSafe(targetPath) {
@@ -174,7 +184,11 @@ function safeConfigStatus() {
       bootstrapAdminConfigured: Boolean(config.AUTH_BOOTSTRAP_ADMIN_EMAIL && config.AUTH_BOOTSTRAP_ADMIN_PASSWORD),
       tokenTtlHours: config.AUTH_TOKEN_TTL_HOURS,
       passwordResetTtlMinutes: config.AUTH_PASSWORD_RESET_TTL_MINUTES,
-      emailProviderConfigured: Boolean(config.RESEND_API_KEY),
+      emailProviderConfigured: Boolean(config.RESEND_API_KEY || (config.SMTP_HOST && config.SMTP_USER && config.SMTP_PASS)),
+      emailProviders: {
+        resend: Boolean(config.RESEND_API_KEY),
+        smtp: Boolean(config.SMTP_HOST && config.SMTP_USER && config.SMTP_PASS)
+      },
       rateLimit: {
         mode: "in-memory",
         windowMs: config.AUTH_RATE_LIMIT_WINDOW_MS,

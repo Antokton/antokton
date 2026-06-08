@@ -42,12 +42,12 @@ export default function Partners() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.03 }}
-                  className="group relative bg-white/5 border border-white/10 rounded-xl p-6 hover:bg-white/10 hover:border-white/20 transition-all duration-300"
+                  className="group relative bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 hover:border-white/20 transition-all duration-300"
                 >
-                  <div className="aspect-[3/2] flex items-center justify-center">
+                  <div className="aspect-[4/3] flex items-center justify-center">
                     {partner.logo_url ? (
                       <img src={partner.logo_url} alt={partner.name}
-                        className="max-w-full max-h-full object-contain opacity-80 group-hover:opacity-100 transition-opacity" />
+                        className="max-w-full max-h-full object-contain rounded-lg bg-white/90 p-2 opacity-90 group-hover:opacity-100 transition-opacity" />
                     ) : (
                       <span className="text-white/40 text-sm font-medium text-center">{partner.name}</span>
                     )}

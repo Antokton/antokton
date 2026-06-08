@@ -189,14 +189,14 @@ export default function UserManager({ allUsers = [] }) {
               </div>
 
               {openUserId === u.id && (
-                <div className="border-t border-white/10 bg-[#0d1424] px-3 py-3">
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <label className="text-[10px] font-semibold uppercase tracking-wide text-white/35">
-                      Roli
+                <div className="border-t border-white/10 bg-[#0d1424] px-3 py-2.5">
+                  <div className="flex flex-wrap items-end gap-2">
+                    <label className="min-w-[118px] flex-1 sm:flex-none text-[9px] font-semibold uppercase tracking-wide text-white/35">
+                      Rol
                       <select
                         value={u.role || "user"}
                         onChange={e => updateUserMutation.mutate({ id: u.id, data: { role: e.target.value } })}
-                        className="mt-1 w-full rounded border border-white/20 bg-white/10 px-2 py-2 text-xs normal-case text-white"
+                        className="mt-1 h-8 w-full rounded-lg border border-white/15 bg-white/[0.06] px-2 text-[11px] normal-case text-white outline-none"
                       >
                         {ROLES.map(r => (
                           <option key={r.value} value={r.value} className="bg-[#0b1020]">{r.label}</option>
@@ -204,12 +204,12 @@ export default function UserManager({ allUsers = [] }) {
                       </select>
                     </label>
 
-                    <label className="text-[10px] font-semibold uppercase tracking-wide text-white/35">
-                      Kategoria
+                    <label className="min-w-[128px] flex-1 sm:flex-none text-[9px] font-semibold uppercase tracking-wide text-white/35">
+                      Kategori
                       <select
                         value={u.member_category || "standard"}
                         onChange={e => updateUserMutation.mutate({ id: u.id, data: { member_category: e.target.value } })}
-                        className="mt-1 w-full rounded border border-white/20 bg-white/10 px-2 py-2 text-xs normal-case text-white"
+                        className="mt-1 h-8 w-full rounded-lg border border-white/15 bg-white/[0.06] px-2 text-[11px] normal-case text-white outline-none"
                       >
                         {["standard","privileged","leader","moderator","inspector","admin"].map(c => (
                           <option key={c} value={c} className="bg-[#0b1020]">{c}</option>
@@ -217,36 +217,34 @@ export default function UserManager({ allUsers = [] }) {
                       </select>
                     </label>
 
-                    <label className="text-[10px] font-semibold uppercase tracking-wide text-white/35">
-                      Flamuri
+                    <label className="min-w-[104px] flex-1 sm:flex-none text-[9px] font-semibold uppercase tracking-wide text-white/35">
+                      Flamur
                       <select
                         value={u.flag_color || ""}
                         onChange={e => updateUserMutation.mutate({ id: u.id, data: { flag_color: e.target.value } })}
-                        className="mt-1 w-full rounded border border-white/20 bg-white/10 px-2 py-2 text-xs normal-case text-white"
+                        className="mt-1 h-8 w-full rounded-lg border border-white/15 bg-white/[0.06] px-2 text-[11px] normal-case text-white outline-none"
                       >
                         {FLAGS.map(f => (
                           <option key={f.value} value={f.value} className="bg-[#0b1020]">{f.label}</option>
                         ))}
                       </select>
                     </label>
-                  </div>
 
-                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-                    <div className="grid grid-cols-[88px_minmax(92px,1fr)_auto] items-end gap-2">
-                      <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-white/35">
-                        Bllokim
+                    <div className="flex flex-wrap items-end gap-1.5 rounded-lg border border-white/10 bg-black/10 p-1.5">
+                      <label className="flex flex-col gap-1 text-[9px] font-semibold uppercase tracking-wide text-white/35">
+                        Blloko
                         <input
                           type="number"
                           min="1"
                           value={tempBlocks[u.id]?.amount || 7}
                           onChange={(e) => setTempBlocks((current) => ({ ...current, [u.id]: { ...(current[u.id] || {}), amount: e.target.value } }))}
-                          className="w-full rounded border border-white/20 bg-white/10 px-2 py-2 text-xs normal-case text-white"
+                          className="h-8 w-14 rounded-lg border border-white/15 bg-white/[0.06] px-2 text-[11px] normal-case text-white outline-none"
                         />
                       </label>
                       <select
                         value={tempBlocks[u.id]?.unit || "days"}
                         onChange={(e) => setTempBlocks((current) => ({ ...current, [u.id]: { ...(current[u.id] || {}), unit: e.target.value } }))}
-                        className="rounded border border-white/20 bg-white/10 px-2 py-2 text-xs text-white"
+                        className="h-8 rounded-lg border border-white/15 bg-white/[0.06] px-2 text-[11px] text-white outline-none"
                         aria-label="Njësia e bllokimit"
                       >
                         <option value="days" className="bg-[#0b1020]">ditë</option>
@@ -261,16 +259,15 @@ export default function UserManager({ allUsers = [] }) {
                           status: "temporarily_blocked",
                           block_reason: "Bllokim i përkohshëm nga administrata",
                         }, "temporary_block", "Bllokim i përkohshëm", "temporarily_blocked")}
-                        className="inline-flex h-9 items-center justify-center gap-1 rounded border border-yellow-500/30 bg-yellow-500/10 px-2 text-xs font-medium text-yellow-300 hover:bg-yellow-500/20"
+                        className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-yellow-500/25 bg-yellow-500/10 px-2 text-[11px] font-medium text-yellow-300 hover:bg-yellow-500/20"
                       >
                         <Clock3 className="w-3 h-3" /> <span className="hidden sm:inline">Blloko</span>
                       </button>
                     </div>
 
-                    <div className="flex flex-wrap gap-2 sm:justify-end">
                     <button
                       onClick={() => updateUserMutation.mutate({ id: u.id, data: { is_blocked: !u.is_blocked, blocked_until: "", blocked_permanently: false, status: !u.is_blocked ? "blocked" : "active" } })}
-                      className={`inline-flex h-9 items-center gap-1 rounded border px-2 text-xs font-medium transition-colors ${u.is_blocked
+                      className={`inline-flex h-8 items-center gap-1 rounded-lg border px-2 text-[11px] font-medium transition-colors ${u.is_blocked
                         ? "bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30"
                         : "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30"
                       }`}
@@ -280,7 +277,7 @@ export default function UserManager({ allUsers = [] }) {
                     </button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button className="inline-flex h-9 items-center gap-1 rounded border border-white/15 bg-white/5 px-2 text-xs font-medium text-white/75 hover:bg-white/10">
+                        <button className="inline-flex h-8 items-center gap-1 rounded-lg border border-white/15 bg-white/5 px-2 text-[11px] font-medium text-white/75 hover:bg-white/10">
                           <MoreHorizontal className="w-3.5 h-3.5" /> Veprime
                         </button>
                       </DropdownMenuTrigger>
@@ -345,7 +342,6 @@ export default function UserManager({ allUsers = [] }) {
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    </div>
                   </div>
                 </div>
               )}

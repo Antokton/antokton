@@ -174,10 +174,10 @@ function ChannelCard({ ch, onPlay, isAdmin, onEdit, onHide, onDelete }) {
       className="group relative flex flex-col rounded-2xl overflow-hidden border border-white/10 hover:border-white/25 transition-all"
       style={{ background: "rgba(255,255,255,0.05)" }}>
       {/* Banner */}
-      <div className="h-20 flex items-center justify-center relative overflow-hidden"
+      <div className="h-28 flex items-center justify-center relative overflow-hidden"
         style={{ background: `linear-gradient(135deg, ${ch.color || "#8ab4ff"}33, ${ch.color || "#8ab4ff"}55)` }}>
         {logoUrl ? (
-          <img src={logoUrl} alt={ch.name} className="relative z-10 max-h-14 max-w-[70%] rounded-lg object-contain bg-white/85 p-1.5" />
+          <img src={logoUrl} alt={ch.name} className="relative z-10 max-h-20 max-w-[86%] rounded-xl object-contain bg-white/90 p-2 shadow-sm" />
         ) : (
           <span className="text-4xl relative z-10">{ch.flag || "📡"}</span>
         )}
@@ -251,8 +251,8 @@ function PubCard({ item, onPlay, isAdmin, onEdit, onHide, onDelete }) {
         </div>
       )}
       <div className="flex items-start gap-3 mb-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 bg-white/5 border border-white/10">
-          {logoUrl ? <img src={logoUrl} alt={item.name || item.title} className="h-8 w-8 object-contain rounded bg-white/85 p-1" /> : item.flag}
+        <div className="w-16 h-16 rounded-xl flex items-center justify-center text-xl flex-shrink-0 bg-white/5 border border-white/10 overflow-hidden">
+          {logoUrl ? <img src={logoUrl} alt={item.name || item.title} className="h-full w-full object-contain rounded bg-white/90 p-2" /> : item.flag}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-white font-semibold text-sm leading-tight">{item.name || item.title}</p>
