@@ -1759,14 +1759,22 @@ async function createPasswordResetRequest(req, email) {
   let account = await getAuthAccountByEmail(normalizedEmail);
 
   if (!account) {
-    const existingUser = await findUserByEmail(normalizedEmail);
-    if (!existingUser || hasActiveUserBlock(existingUser) || existingUser.is_deleted === true) {
+    let existingUser = await findUserByEmail(normalizedEmail);
+    if (existingUser && (hasActiveUserBlock(existingUser) || existingUser.is_deleted === true)) {
       return {
         success: true,
         delivered: false,
         reason: "no_active_account",
         message: "Emaili nuk ka llogari aktive në Antokton."
       };
+    }
+
+    if (!existingUser) {
+      existingUser = await ensureUser(normalizedEmail, {
+        role: "user",
+        member_category: "standard",
+        is_active: true
+      });
     }
 
     account = await createPasswordAccount({
