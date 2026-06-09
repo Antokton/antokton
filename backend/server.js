@@ -1774,7 +1774,8 @@ async function createPasswordResetRequest(req, email) {
       user: existingUser,
       req,
       status: "active",
-      emailVerified: true
+      emailVerified: true,
+      enforceRegistrationBlock: false
     });
   }
 

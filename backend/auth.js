@@ -200,7 +200,6 @@ function futureDate(value) {
 function assertUserCanAuthenticate(user) {
   if (!user) return;
   const blockedUntil = futureDate(user.blocked_until);
-  const registrationBlockedUntil = futureDate(user.registration_block_until);
   const blocked =
     user.is_deleted ||
     user.blocked_permanently ||
@@ -208,8 +207,8 @@ function assertUserCanAuthenticate(user) {
     (String(user.status || "").includes("blocked") && String(user.status || "") !== "temporarily_blocked") ||
     String(user.status || "") === "deleted";
 
-  if (blocked || blockedUntil || registrationBlockedUntil) {
-    const until = blockedUntil || registrationBlockedUntil;
+  if (blocked || blockedUntil) {
+    const until = blockedUntil;
     const error = new Error(
       until
         ? `Llogaria juaj është bllokuar/fshirë dhe nuk mund të përdoret deri më ${until.slice(0, 10)}.`
@@ -256,7 +255,7 @@ async function countAuthAccounts() {
   return Number(row?.count || 0);
 }
 
-async function createPasswordAccount({ email, password, user, req, status = "active", emailVerified = true }) {
+async function createPasswordAccount({ email, password, user, req, status = "active", emailVerified = true, enforceRegistrationBlock = true }) {
   const normalizedEmail = assertEmail(email);
   assertPassword(password);
 
@@ -265,7 +264,7 @@ async function createPasswordAccount({ email, password, user, req, status = "act
     error.status = 409;
     throw error;
   }
-  await assertRegistrationAllowed(normalizedEmail);
+  if (enforceRegistrationBlock) await assertRegistrationAllowed(normalizedEmail);
 
   const timestamp = now();
   const account = {
