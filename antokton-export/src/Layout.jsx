@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "./utils";
 import { base44 } from "@/api/antoktonClient";
-import { Menu, X, Home, Briefcase, PlusCircle, Shield, LogIn, LogOut, User, ChevronDown, ChevronUp, Users, Search, Calendar, Building2, Bell, MessageCircle, ArrowUp, GraduationCap, Wrench, Radio, Plane, Tv, Heart, ShoppingBag } from "lucide-react";
+import { Menu, X, Home, Briefcase, PlusCircle, Shield, LogIn, LogOut, User, ChevronDown, ChevronUp, Users, Search, Calendar, Building2, MessageCircle, ArrowUp, GraduationCap, Wrench, Radio, Plane, Tv, Heart, ShoppingBag } from "lucide-react";
 import ChatButton from "./components/ChatButton";
 import NotificationBell from "./components/NotificationBell";
 import ChatNotificationSystem from "./components/notifications/ChatNotificationSystem";
@@ -849,12 +849,6 @@ export default function Layout({ children, currentPageName }) {
 
               {isAuth ? (
                 <div className="hidden md:flex items-center gap-1">
-                  {/* Cilësimet */}
-                  <Link to={createPageUrl("NotificationSettings")}
-                    className={`p-2 rounded-lg transition-all duration-200 flex items-center justify-center ${currentPageName==="NotificationSettings"?"text-white bg-white/10":"text-white hover:text-white/60 hover:bg-white/5"}`}
-                    title="Cilësimet">
-                    <Bell className="w-4 h-4" />
-                  </Link>
                   {/* Anëtarët - vetëm admin */}
                   {user?.role === "admin" && (
                     <DropdownMenu>

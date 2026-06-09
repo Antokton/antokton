@@ -12,6 +12,36 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import AuthAccessBanner from "@/components/AuthAccessBanner";
 
+const ALBANIAN_CORRECTIONS = new Map([
+  ["per", "për"],
+  ["eshte", "është"],
+  ["nje", "një"],
+  ["te", "të"],
+  ["ne", "në"],
+  ["qe", "që"],
+  ["dhe", "dhe"],
+  ["ju pergezoj", "ju përgëzoj"],
+  ["pergezoj", "përgëzoj"],
+  ["inisiativen", "iniciativën"],
+  ["faleminderit", "faleminderit"],
+  ["shqipetare", "shqiptare"],
+  ["shqiperia", "Shqipëria"],
+  ["mire", "mirë"],
+  ["pershendetje", "përshëndetje"],
+]);
+
+function autocorrectAlbanianText(text = "") {
+  let next = String(text || "");
+  for (const [from, to] of ALBANIAN_CORRECTIONS) {
+    next = next.replace(new RegExp(`\\b${from}\\b`, "gi"), (match) => {
+      if (match === match.toUpperCase()) return to.toUpperCase();
+      if (match[0] === match[0].toUpperCase()) return to.charAt(0).toUpperCase() + to.slice(1);
+      return to;
+    });
+  }
+  return next.replace(/\s+([,.!?;:])/g, "$1");
+}
+
 export default function Messages() {
   const [user, setUser] = useState(null);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -165,6 +195,7 @@ export default function Messages() {
   useEffect(() => {
     if (toEmail && user && !selectedConversation) {
       setSelectedConversation(toEmail);
+      setActiveTab("conversations");
     }
   }, [toEmail, user]);
 
@@ -234,12 +265,13 @@ export default function Messages() {
     : [];
 
   const handleSendMessage = () => {
-    if (!messageText.trim() || !selectedConversation) return;
+    const cleanMessage = autocorrectEnabled ? autocorrectAlbanianText(messageText).trim() : messageText.trim();
+    if (!cleanMessage || !selectedConversation) return;
     
     sendMessageMutation.mutate({
       sender_email: user.email,
       receiver_email: selectedConversation,
-      message: messageText
+      message: cleanMessage
     });
   };
 
@@ -618,6 +650,7 @@ export default function Messages() {
                     <Textarea
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
+                      onBlur={() => autocorrectEnabled && setMessageText((text) => autocorrectAlbanianText(text))}
                       onKeyPress={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
@@ -666,6 +699,7 @@ export default function Messages() {
               <Textarea
                 value={staffMessage}
                 onChange={(e) => setStaffMessage(e.target.value)}
+                onBlur={() => autocorrectEnabled && setStaffMessage((text) => autocorrectAlbanianText(text))}
                 placeholder="Shkruani mesazhin tuaj këtu..."
                 className="bg-white/5 border-white/10 text-white min-h-[120px] mb-2"
                 lang="sq"
@@ -685,10 +719,11 @@ export default function Messages() {
               </div>
               <Button 
                 onClick={() => {
-                  if (staffMessage.trim()) {
+                  const cleanMessage = autocorrectEnabled ? autocorrectAlbanianText(staffMessage).trim() : staffMessage.trim();
+                  if (cleanMessage) {
                     sendStaffMessageMutation.mutate({
                       sender_email: user.email,
-                      message: staffMessage,
+                      message: cleanMessage,
                       is_resolved: false
                     });
                   }

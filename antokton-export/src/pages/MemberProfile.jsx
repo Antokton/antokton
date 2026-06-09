@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/antoktonClient";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { Button } from "@/components/ui/button";
+import { StatusCard } from "./Statuset";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -425,7 +426,7 @@ export default function MemberProfile() {
                 <Button disabled={Boolean(block)} onClick={() => saveConnection.mutate("wide")} className={connection?.circle === "wide" ? "bg-[#9bffd6] text-[#0b1020]" : "bg-white/10 text-white hover:bg-white/15"}>
                   <UserPlus className="mr-2 h-4 w-4" /> Rrethi i gjerë
                 </Button>
-                <Link to="/Messages">
+                <Link to={`/Messages?to=${encodeURIComponent(decodedEmail)}`}>
                   <Button className="w-full bg-white/10 text-white hover:bg-white/15 sm:w-auto">
                     <MessageCircle className="mr-2 h-4 w-4" /> Mesazh
                   </Button>
@@ -465,7 +466,7 @@ export default function MemberProfile() {
         ) : (
           <div className="space-y-3">
             {visibleStatuses.map((status) => (
-              <StatusPreview key={status.id} status={status} comments={comments} />
+              <StatusCard key={status.id} status={status} currentUser={currentUser} />
             ))}
           </div>
         )}

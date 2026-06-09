@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Star, Sparkles, AlertCircle, Building2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { hasEarlyMemberPremiumAccess } from "@/utils/premiumAccess";
 
 export default function Subscriptions() {
   const [user, setUser] = useState(null);
@@ -154,6 +155,21 @@ export default function Subscriptions() {
           >
             <p className="text-blue-300 font-medium">
               ✓ Ju keni një abonim aktiv deri më {new Date(activeSubscription.end_date).toLocaleDateString('sq-AL')}
+            </p>
+          </motion.div>
+        )}
+
+        {user && hasEarlyMemberPremiumAccess(user) && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 rounded-xl border border-[#9bffd6]/30 bg-[#9bffd6]/10 p-4 text-center"
+          >
+            <p className="font-semibold text-[#d8fff1]">
+              Si anëtar i parë i Antokton, ke akses falas në shërbimet Premium gjatë periudhës hyrëse.
+            </p>
+            <p className="mt-1 text-sm text-white/65">
+              Nëse dëshiron të mbështesësh platformën për bamirësi/test, mund të zgjedhësh një pagesë vullnetare më poshtë.
             </p>
           </motion.div>
         )}

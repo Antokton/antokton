@@ -19,6 +19,7 @@ import ApplicationForm from "../components/job/ApplicationForm";
 import CommentItem from "../components/job/CommentItem";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizePhoneForCountry } from "@/lib/phone";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { hasEarlyMemberPremiumAccess, hasPremiumAccess } from "@/utils/premiumAccess";
 
 function SimilarPosts({ currentJobId, category }) {
   const { data: similarJobs = [] } = useQuery({
@@ -138,6 +139,7 @@ export default function PostDetail() {
 
   const queryClient = useQueryClient();
   const canSeePrivateImportFields = user?.role === "admin" || user?.role === "moderator";
+  const premiumAccess = hasPremiumAccess(user, hasActiveSubscription);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -267,7 +269,7 @@ export default function PostDetail() {
   const commentMutation = useMutation({
     mutationFn: async () => {
       // Check comment limit for non-subscribed users
-      if (user.subscription_type === "none") {
+      if (!premiumAccess && user.subscription_type === "none") {
         const userComments = comments.filter(c => c.created_by === user.email);
         if (userComments.length >= 2) {
           throw new Error("Anëtarët e pa-abonuar mund të lënë maksimum 2 komente për njoftim.");
@@ -754,6 +756,12 @@ export default function PostDetail() {
             {isEditing ? editForm.title : job.title}
           </h1>
 
+          {isAuth && hasEarlyMemberPremiumAccess(user) && (
+            <div className="mt-3 rounded-xl border border-[#9bffd6]/25 bg-[#9bffd6]/10 px-3 py-2 text-sm text-[#d8fff1]">
+              Si anëtar i parë, ke akses falas në shërbimet Premium për periudhën hyrëse. Pagesa vullnetare mbetet e mundur te Premium.
+            </div>
+          )}
+
           <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-white">
             {(job.country || job.city) && (() => {
               const isAntokton = job.country === "Antokton";
@@ -785,7 +793,7 @@ export default function PostDetail() {
               {moment(job.created_date).format("D MMMM YYYY")}
             </span>
             {job.poster_name && (() => {
-              const canSeeProfile = isAuth && (hasActiveSubscription || user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'inspector');
+              const canSeeProfile = isAuth && premiumAccess;
               const profileLink = job.created_by ? `/UserProfiles?email=${encodeURIComponent(job.created_by)}` : null;
               const externalLink = (canSeePrivateImportFields || job.show_author_profile_url === true) ? job.author_profile_url || null : null;
               const visibleProfileLink = canSeeProfile ? profileLink : null;
@@ -800,7 +808,7 @@ export default function PostDetail() {
                     <UserAvatar
                       name={job.poster_name || posterProfile?.full_name || posterProfile?.first_name}
                       email={job.created_by}
-                      photoUrl={posterProfile?.profile_photo_url || job.author_photo_url}
+                      photoUrl={job.author_photo_url}
                       size={24}
                     />
                     {job.poster_name}
@@ -812,7 +820,7 @@ export default function PostDetail() {
                   <UserAvatar
                     name={job.poster_name || posterProfile?.full_name || posterProfile?.first_name}
                     email={job.created_by}
-                    photoUrl={posterProfile?.profile_photo_url || job.author_photo_url}
+                    photoUrl={job.author_photo_url}
                     size={24}
                   />
                   {job.poster_name}
@@ -873,7 +881,7 @@ export default function PostDetail() {
           </div>
 
           {(job.contact_info || job.phone_number) && (() => {
-            const canSeeContact = isAuth && (hasActiveSubscription || user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'inspector');
+            const canSeeContact = isAuth && premiumAccess;
             const phoneAppLabels = { telefon: "Telefon", whatsapp: "WhatsApp", viber: "Viber", telegram: "Telegram", bip: "BiP", signal: "Signal", tjeter: "" };
             const phoneAppSvgs = {
               telefon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 flex-shrink-0 text-white/70"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.73 9.5a19.79 19.79 0 01-3.07-8.67A2 2 0 012.64 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.59a16 16 0 006.29 6.29l.96-.96a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>,
@@ -1151,13 +1159,13 @@ export default function PostDetail() {
                 commentLikes={commentLikes}
                 user={user}
                 isAuth={isAuth}
-                canComment={isAuth && (hasActiveSubscription || user?.role === 'admin' || user?.role === 'moderator')}
+                canComment={isAuth && premiumAccess}
                 jobId={jobId}
               />
             </motion.div>
           ))}
 
-          {isAuth && (hasActiveSubscription || user?.role === 'admin' || user?.role === 'moderator') ? (
+          {isAuth && premiumAccess ? (
             <div className="flex max-w-full items-center gap-2 overflow-hidden mt-3 px-1">
               <div
                 className="flex-shrink-0 rounded-full flex items-center justify-center font-bold text-[#0b1020]"

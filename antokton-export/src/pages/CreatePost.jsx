@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import AIJobDescriptionGenerator from "../components/job/AIJobDescriptionGenerator";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizePhoneForCountry } from "@/lib/phone";
 import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
+import { hasEarlyMemberPremiumAccess } from "@/utils/premiumAccess";
 
 const ALL_PROFESSIONS = [
   "3D Artist","Administrator","Agjent Shitjesh","Agjent Sigurimesh","Agjent Udhëtimesh",
@@ -351,7 +352,7 @@ export default function CreatePost() {
     e.preventDefault();
     if (!isAuth) { base44.auth.redirectToLogin(); return; }
 
-    if ((user.posts_remaining || 0) <= 0 && user.subscription_type === "none") {
+    if (!hasEarlyMemberPremiumAccess(user) && (user.posts_remaining || 0) <= 0 && user.subscription_type === "none") {
       alert("Nuk ke njoftime të mbetura. Ju lutem bëj një abonim për të postuar.");
       window.location.href = "/Subscriptions";
       return;
@@ -443,6 +444,7 @@ export default function CreatePost() {
       moderation_status: publishStatus,
       is_halal_compliant: form.is_halal_compliant || false,
       poster_name: displayName,
+      author_photo_url: user?.profile_photo_url || "",
       likes_count: 0, dislikes_count: 0, comments_count: 0,
       halal_standard: form.halal_standard || null,
     });

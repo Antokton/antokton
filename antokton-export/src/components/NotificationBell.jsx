@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { base44 } from "@/api/antoktonClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,6 +10,8 @@ import moment from "moment";
 export default function NotificationBell() {
   const [user, setUser] = useState(null);
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef(null);
+  const panelRef = useRef(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -48,6 +50,17 @@ export default function NotificationBell() {
   const unreadCount = notifications.filter(n => !n.is_read).length;
   const badgeLabel = unreadCount > 99 ? "99+" : String(unreadCount);
   const isStaff = ["admin", "moderator"].includes(String(user?.role || user?.member_category || "").toLowerCase());
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutside = (event) => {
+      const target = event.target;
+      if (panelRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutside, true);
+    return () => document.removeEventListener("pointerdown", closeOnOutside, true);
+  }, [open]);
 
   const openNotification = (notif) => {
     if (!notif.is_read) markAsReadMutation.mutate(notif.id);
@@ -92,11 +105,8 @@ export default function NotificationBell() {
     <AnimatePresence>
       {open && (
         <>
-          <div
-            className="fixed inset-0 z-[99998]"
-            onClick={() => setOpen(false)}
-          />
           <motion.div
+            ref={panelRef}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -205,6 +215,7 @@ export default function NotificationBell() {
   return (
     <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen(current => !current)}
         className="relative p-2 text-white/60 hover:text-white transition-colors"

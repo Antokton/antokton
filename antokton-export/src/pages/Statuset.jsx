@@ -1413,7 +1413,7 @@ function CommentMenu({ comment, currentUser, statusId }) {
 }
 
 /* ─── STATUS CARD ─── */
-function StatusCard({ status, currentUser }) {
+export function StatusCard({ status, currentUser }) {
   const queryClient = useQueryClient();
   const [showComments, setShowComments] = useState(false);
   const [showDetailPage, setShowDetailPage] = useState(false);
