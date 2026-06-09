@@ -439,6 +439,18 @@ function hasActiveUserBlock(user) {
   );
 }
 
+function isDeletedUserForPasswordReset(user) {
+  if (!user) return false;
+  const status = String(user.status || "").toLowerCase();
+  const accountStatus = String(user.account_status || "").toLowerCase();
+  return Boolean(
+    user.is_deleted === true ||
+    status === "deleted" ||
+    status === "deleted_public" ||
+    accountStatus === "deleted"
+  );
+}
+
 function publicUserFields(body = {}) {
   const allowed = [
     "full_name",
@@ -1760,7 +1772,7 @@ async function createPasswordResetRequest(req, email) {
 
   if (!account) {
     let existingUser = await findUserByEmail(normalizedEmail);
-    if (existingUser && (hasActiveUserBlock(existingUser) || existingUser.is_deleted === true)) {
+    if (existingUser && isDeletedUserForPasswordReset(existingUser)) {
       return {
         success: true,
         delivered: false,
