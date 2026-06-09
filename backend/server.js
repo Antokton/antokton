@@ -323,7 +323,7 @@ async function findUserByEmail(email) {
   if (!normalizedEmail) return null;
   return (await statements.listEntity.all(APP_ID, "User"))
     .map(recordFromRow)
-    .find((user) => {
+    .filter((user) => {
       const candidates = [
         user.email,
         user.user_email,
@@ -333,7 +333,36 @@ async function findUserByEmail(email) {
         String(user.id || "").includes("@") ? user.id : "",
       ];
       return candidates.some((candidate) => normalizeEmail(candidate) === normalizedEmail);
-    }) || null;
+    })
+    .sort(preferUsableUserRecord)[0] || null;
+}
+
+function userAccessBlockedForLookup(user) {
+  const status = String(user?.status || "").toLowerCase();
+  const accountStatus = String(user?.account_status || "").toLowerCase();
+  const blockedUntil = Date.parse(user?.blocked_until || "");
+  return Boolean(
+    user?.is_deleted ||
+    user?.is_disabled ||
+    user?.blocked_permanently ||
+    (Number.isFinite(blockedUntil) && blockedUntil > Date.now()) ||
+    (user?.is_blocked === true && status !== "temporarily_blocked") ||
+    (status.includes("blocked") && status !== "temporarily_blocked") ||
+    status === "deleted" ||
+    status === "disabled" ||
+    accountStatus === "deleted" ||
+    accountStatus === "disabled"
+  );
+}
+
+function preferUsableUserRecord(a, b) {
+  const aBlocked = userAccessBlockedForLookup(a);
+  const bBlocked = userAccessBlockedForLookup(b);
+  if (aBlocked !== bBlocked) return aBlocked ? 1 : -1;
+  const aActive = a?.is_active !== false;
+  const bActive = b?.is_active !== false;
+  if (aActive !== bActive) return aActive ? -1 : 1;
+  return Date.parse(b?.updated_date || b?.created_date || 0) - Date.parse(a?.updated_date || a?.created_date || 0);
 }
 
 function isPrivilegedUser(user) {

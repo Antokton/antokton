@@ -175,21 +175,48 @@ function parseEntityRow(row) {
   if (!row) return null;
   try {
     const data = typeof row.data === "string" ? JSON.parse(row.data) : row.data;
-    return { id: row.id, ...data };
+    return { id: row.id, created_date: row.created_date, updated_date: row.updated_date, ...data };
   } catch {
     return null;
   }
+}
+
+function userAccessBlockedForLookup(user) {
+  const status = String(user?.status || "").toLowerCase();
+  const accountStatus = String(user?.account_status || "").toLowerCase();
+  const blockedUntil = futureDate(user?.blocked_until);
+  return Boolean(
+    user?.is_deleted ||
+    user?.is_disabled ||
+    user?.blocked_permanently ||
+    blockedUntil ||
+    (user?.is_blocked === true && status !== "temporarily_blocked") ||
+    (status.includes("blocked") && status !== "temporarily_blocked") ||
+    status === "deleted" ||
+    status === "disabled" ||
+    accountStatus === "deleted" ||
+    accountStatus === "disabled"
+  );
+}
+
+function preferUsableUserRecord(a, b) {
+  const aBlocked = userAccessBlockedForLookup(a);
+  const bBlocked = userAccessBlockedForLookup(b);
+  if (aBlocked !== bBlocked) return aBlocked ? 1 : -1;
+  const aActive = a?.is_active !== false;
+  const bActive = b?.is_active !== false;
+  if (aActive !== bActive) return aActive ? -1 : 1;
+  return Date.parse(b?.updated_date || b?.created_date || 0) - Date.parse(a?.updated_date || a?.created_date || 0);
 }
 
 async function getUserRecordByEmail(email) {
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) return null;
   const rows = await statements.listEntity.all(config.APP_ID, "User");
-  for (const row of rows) {
-    const user = parseEntityRow(row);
-    if (normalizeEmail(user?.email) === normalizedEmail) return user;
-  }
-  return null;
+  return rows
+    .map(parseEntityRow)
+    .filter((user) => normalizeEmail(user?.email) === normalizedEmail)
+    .sort(preferUsableUserRecord)[0] || null;
 }
 
 function futureDate(value) {
