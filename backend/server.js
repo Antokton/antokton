@@ -482,6 +482,28 @@ function sanitizeSelfUserPatch(body = {}) {
   return clean;
 }
 
+function normalizeUserAccessPatch(patch = {}) {
+  if (!patch || typeof patch !== "object") return patch;
+  const status = String(patch.status || "").toLowerCase();
+  const accountStatus = String(patch.account_status || "").toLowerCase();
+  const restoringAccess = patch.is_blocked === false || status === "active" || accountStatus === "active";
+  if (!restoringAccess) return patch;
+  return {
+    ...patch,
+    is_active: patch.is_active ?? true,
+    is_deleted: false,
+    is_disabled: false,
+    is_blocked: false,
+    blocked_until: "",
+    blocked_permanently: false,
+    registration_block_until: "",
+    registration_block_reason: "",
+    account_status: "active",
+    status: "active",
+    block_reason: ""
+  };
+}
+
 async function ensureUser(email = DEV_USER_EMAIL, overrides = {}) {
   const normalizedEmail = normalizeEmail(email);
   const existing = await findUserByEmail(normalizedEmail);
@@ -518,7 +540,8 @@ async function updateRecord(entity, id, patch) {
   const row = (await statements.getEntity.get(APP_ID, entity, id)) || (await findRecordRowByNaturalId(entity, id));
   if (!row) return null;
   const existing = recordFromRow(row);
-  const next = stripMeta(coerceSchemaTypes(entity, applySchemaDefaults(entity, { ...existing, ...patch })));
+  const normalizedPatch = entity === "User" ? normalizeUserAccessPatch(patch) : patch;
+  const next = stripMeta(coerceSchemaTypes(entity, applySchemaDefaults(entity, { ...existing, ...normalizedPatch })));
   await statements.updateEntity.run(JSON.stringify(next), now(), APP_ID, entity, row.id);
   return recordFromRow(await statements.getEntity.get(APP_ID, entity, row.id));
 }

@@ -29,6 +29,40 @@ function passwordResetToastMessage(result, email) {
   return "Nuk u konfirmua dërgimi i email-it.";
 }
 
+function restoreUserAccessData() {
+  return {
+    is_active: true,
+    is_deleted: false,
+    is_disabled: false,
+    is_blocked: false,
+    blocked_until: "",
+    blocked_permanently: false,
+    registration_block_until: "",
+    registration_block_reason: "",
+    account_status: "active",
+    status: "active",
+    block_reason: "",
+  };
+}
+
+function hasAccessBlock(user) {
+  const status = String(user?.status || "").toLowerCase();
+  const accountStatus = String(user?.account_status || "").toLowerCase();
+  const blockedUntil = Date.parse(user?.blocked_until || "");
+  return Boolean(
+    user?.is_deleted ||
+    user?.is_disabled ||
+    user?.is_blocked ||
+    user?.blocked_permanently ||
+    (Number.isFinite(blockedUntil) && blockedUntil > Date.now()) ||
+    status.includes("blocked") ||
+    status === "deleted" ||
+    status === "disabled" ||
+    accountStatus === "deleted" ||
+    accountStatus === "disabled"
+  );
+}
+
 export default function UserManager({ allUsers = [] }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -295,14 +329,20 @@ export default function UserManager({ allUsers = [] }) {
                     </div>
 
                     <button
-                      onClick={() => updateUserMutation.mutate({ id: u.id, data: { is_blocked: !u.is_blocked, blocked_until: "", blocked_permanently: false, status: !u.is_blocked ? "blocked" : "active" } })}
-                      className={`inline-flex h-8 items-center gap-1 rounded-lg border px-2 text-[11px] font-medium transition-colors ${u.is_blocked
+                      onClick={() => {
+                        if (hasAccessBlock(u)) {
+                          updateUserMutation.mutate({ id: u.id, data: restoreUserAccessData() });
+                          return;
+                        }
+                        updateUserMutation.mutate({ id: u.id, data: { is_blocked: true, status: "blocked", block_reason: "Bllokim nga administrata" } });
+                      }}
+                      className={`inline-flex h-8 items-center gap-1 rounded-lg border px-2 text-[11px] font-medium transition-colors ${hasAccessBlock(u)
                         ? "bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30"
                         : "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30"
                       }`}
                     >
-                      {u.is_blocked ? <UserCheck className="w-3 h-3" /> : <Ban className="w-3 h-3" />}
-                      {u.is_blocked ? "Zhblloko" : "Blloko"}
+                      {hasAccessBlock(u) ? <UserCheck className="w-3 h-3" /> : <Ban className="w-3 h-3" />}
+                      {hasAccessBlock(u) ? "Rikthe aksesin" : "Blloko"}
                     </button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
