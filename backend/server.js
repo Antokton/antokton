@@ -1760,7 +1760,7 @@ async function createPasswordResetRequest(req, email) {
 
   if (!account) {
     const existingUser = await findUserByEmail(normalizedEmail);
-    if (!existingUser || hasActiveUserBlock(existingUser) || existingUser.is_deleted === true || existingUser.is_active === false) {
+    if (!existingUser || hasActiveUserBlock(existingUser) || existingUser.is_deleted === true) {
       return {
         success: true,
         delivered: false,
