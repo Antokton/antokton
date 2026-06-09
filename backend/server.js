@@ -323,17 +323,7 @@ async function findUserByEmail(email) {
   if (!normalizedEmail) return null;
   return (await statements.listEntity.all(APP_ID, "User"))
     .map(recordFromRow)
-    .filter((user) => {
-      const candidates = [
-        user.email,
-        user.user_email,
-        user.contact_email,
-        user.login_email,
-        user.account_email,
-        String(user.id || "").includes("@") ? user.id : "",
-      ];
-      return candidates.some((candidate) => normalizeEmail(candidate) === normalizedEmail);
-    })
+    .filter((user) => userEmailCandidates(user).includes(normalizedEmail))
     .sort(preferUsableUserRecord)[0] || null;
 }
 
@@ -513,10 +503,7 @@ function sanitizeSelfUserPatch(body = {}) {
 
 function normalizeUserAccessPatch(patch = {}) {
   if (!patch || typeof patch !== "object") return patch;
-  const status = String(patch.status || "").toLowerCase();
-  const accountStatus = String(patch.account_status || "").toLowerCase();
-  const restoringAccess = patch.is_blocked === false || status === "active" || accountStatus === "active";
-  if (!restoringAccess) return patch;
+  if (!isRestoringUserAccessPatch(patch)) return patch;
   return {
     ...patch,
     is_active: patch.is_active ?? true,
@@ -531,6 +518,24 @@ function normalizeUserAccessPatch(patch = {}) {
     status: "active",
     block_reason: ""
   };
+}
+
+function isRestoringUserAccessPatch(patch = {}) {
+  if (!patch || typeof patch !== "object") return false;
+  const status = String(patch.status || "").toLowerCase();
+  const accountStatus = String(patch.account_status || "").toLowerCase();
+  return patch.is_blocked === false || status === "active" || accountStatus === "active";
+}
+
+function userEmailCandidates(user = {}) {
+  return [
+    user.email,
+    user.user_email,
+    user.contact_email,
+    user.login_email,
+    user.account_email,
+    String(user.id || "").includes("@") ? user.id : "",
+  ].map(normalizeEmail).filter(Boolean);
 }
 
 async function ensureUser(email = DEV_USER_EMAIL, overrides = {}) {
@@ -572,6 +577,24 @@ async function updateRecord(entity, id, patch) {
   const normalizedPatch = entity === "User" ? normalizeUserAccessPatch(patch) : patch;
   const next = stripMeta(coerceSchemaTypes(entity, applySchemaDefaults(entity, { ...existing, ...normalizedPatch })));
   await statements.updateEntity.run(JSON.stringify(next), now(), APP_ID, entity, row.id);
+
+  if (entity === "User" && isRestoringUserAccessPatch(patch)) {
+    const targetEmails = new Set(userEmailCandidates({ ...existing, ...next }));
+    if (targetEmails.size > 0) {
+      const rows = await statements.listEntity.all(APP_ID, "User");
+      for (const candidateRow of rows) {
+        if (candidateRow.id === row.id) continue;
+        const candidate = recordFromRow(candidateRow);
+        if (!userEmailCandidates(candidate).some((email) => targetEmails.has(email))) continue;
+        const candidateNext = stripMeta(coerceSchemaTypes(entity, applySchemaDefaults(entity, {
+          ...candidate,
+          ...normalizeUserAccessPatch({ ...normalizedPatch, email: candidate.email || next.email })
+        })));
+        await statements.updateEntity.run(JSON.stringify(candidateNext), now(), APP_ID, entity, candidateRow.id);
+      }
+    }
+  }
+
   return recordFromRow(await statements.getEntity.get(APP_ID, entity, row.id));
 }
 

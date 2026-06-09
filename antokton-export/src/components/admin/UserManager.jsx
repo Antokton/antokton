@@ -171,7 +171,7 @@ export default function UserManager({ allUsers = [] }) {
       filter === "all" ||
       (filter === "admin" && (u.role === "admin" || u.role === "moderator")) ||
       (filter === "flagged" && (u.flag_color === "yellow" || u.flag_color === "red")) ||
-      (filter === "blocked" && u.is_blocked);
+      (filter === "blocked" && hasAccessBlock(u));
     return matchSearch && matchFilter;
   });
 
@@ -211,7 +211,7 @@ export default function UserManager({ allUsers = [] }) {
               ({f === "all" ? allUsers.length :
                 f === "admin" ? allUsers.filter(u => u.role === "admin" || u.role === "moderator").length :
                 f === "flagged" ? allUsers.filter(u => u.flag_color).length :
-                allUsers.filter(u => u.is_blocked).length})
+                allUsers.filter(hasAccessBlock).length})
             </span>
           </Button>
         ))}
@@ -232,10 +232,10 @@ export default function UserManager({ allUsers = [] }) {
                     <Badge className={`${roleBadgeClass(u)} text-[10px]`}>
                       {roleLabel(u)}
                     </Badge>
-                    {u.is_blocked && (
+                    {hasAccessBlock(u) && (
                       <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]">Bllokuar</Badge>
                     )}
-                    {!u.is_blocked && (
+                    {!hasAccessBlock(u) && (
                       <Badge className="bg-green-500/15 text-green-300 border-green-500/25 text-[10px]">Aktiv</Badge>
                     )}
                   </div>
