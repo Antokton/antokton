@@ -6,6 +6,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, Mail, UserPlus, LogIn, AlertCircle, Eye, EyeOff, KeyRound } from "lucide-react";
 
+function passwordResetStatusMessage(result) {
+  if (result?.delivered === true) {
+    return `Emaili i rivendosjes u dërgua te ${result.to || "adresa e kërkuar"}. Kontrollo edhe Spam/Junk.`;
+  }
+  if (result?.reason === "no_active_account") {
+    return "Emaili nuk u dërgua: kjo adresë nuk ka llogari aktive në Antokton.";
+  }
+  if (result?.reason === "inactive_auth_account") {
+    return "Emaili nuk u dërgua: llogaria ekziston, por nuk është aktive për hyrje.";
+  }
+  if (result?.reason === "email_provider_not_configured") {
+    return "Emaili nuk u dërgua: shërbimi i email-it nuk është konfiguruar në server.";
+  }
+  return "Kërkesa u pranua, por serveri nuk konfirmoi dërgimin e email-it.";
+}
+
 export default function Login() {
   const [searchParams] = useSearchParams();
   const resetToken = searchParams.get("token") || "";
@@ -54,8 +70,10 @@ export default function Login() {
       const password = passwordRef.current?.value ?? form.password;
 
       if (mode === "reset") {
-        await base44.auth.requestPasswordReset(email);
-        setSuccessMessage("Nëse ky email ekziston, do të dërgohen udhëzimet për rivendosjen e fjalëkalimit.");
+        const result = await base44.auth.requestPasswordReset(email);
+        const message = passwordResetStatusMessage({ ...result, to: email });
+        if (result?.delivered === true) setSuccessMessage(message);
+        else setError(message);
         return;
       }
 

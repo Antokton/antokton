@@ -1751,7 +1751,12 @@ async function createPasswordResetRequest(req, email) {
   if (!account) {
     const existingUser = await findUserByEmail(normalizedEmail);
     if (!existingUser || hasActiveUserBlock(existingUser) || existingUser.is_deleted === true || existingUser.is_active === false) {
-      return { success: true, delivered: false };
+      return {
+        success: true,
+        delivered: false,
+        reason: "no_active_account",
+        message: "Emaili nuk ka llogari aktive në Antokton."
+      };
     }
 
     account = await createPasswordAccount({
@@ -1765,7 +1770,12 @@ async function createPasswordResetRequest(req, email) {
   }
 
   if (account.status !== "active") {
-    return { success: true, delivered: false };
+    return {
+      success: true,
+      delivered: false,
+      reason: "inactive_auth_account",
+      message: "Llogaria ekziston, por nuk është aktive për hyrje."
+    };
   }
 
   const token = crypto.randomBytes(32).toString("base64url");
@@ -1807,7 +1817,15 @@ async function createPasswordResetRequest(req, email) {
     `
   });
 
-  return { success: true, delivered: emailResult.delivered, provider: emailResult.provider };
+  return {
+    success: true,
+    delivered: emailResult.delivered,
+    provider: emailResult.provider,
+    reason: emailResult.delivered ? "sent" : "email_provider_not_configured",
+    message: emailResult.delivered
+      ? "Emaili i rivendosjes u pranua nga shërbimi i email-it."
+      : "Emaili nuk u dërgua sepse shërbimi i email-it nuk është konfiguruar."
+  };
 }
 
 async function resetPasswordWithToken(req, body) {
@@ -1914,7 +1932,7 @@ async function handleAuth(req, res, segments) {
     if (!rateLimit.allowed) return sendRateLimitError(res, rateLimit);
     try {
       const result = await createPasswordResetRequest(req, email);
-      return send(res, 200, config.NODE_ENV === "production" ? { success: true } : result);
+      return send(res, 200, result);
     } catch (error) {
       if (error.status === 400) return sendError(res, 400, error.message);
       throw error;
