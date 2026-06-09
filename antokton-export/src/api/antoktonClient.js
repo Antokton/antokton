@@ -1,6 +1,7 @@
 import { appParams } from '@/lib/app-params';
 
 const appId = appParams.appId || import.meta.env.VITE_ANTOKTON_APP_ID || '6991d40eddf82cc25ec834a7';
+const DEV_LOGGED_OUT_KEY = 'antokton_dev_logged_out';
 
 function getToken() {
   const storedToken = localStorage.getItem('antokton_access_token') ||
@@ -8,12 +9,14 @@ function getToken() {
     localStorage.getItem('token');
 
   if (storedToken) return storedToken;
+  if (localStorage.getItem(DEV_LOGGED_OUT_KEY) === 'true') return null;
   if (import.meta.env.DEV) return `dev:${import.meta.env.VITE_ANTOKTON_DEV_USER_EMAIL || 'admin@antokton.local'}`;
   return null;
 }
 
 function setToken(token) {
   if (!token) return;
+  localStorage.removeItem(DEV_LOGGED_OUT_KEY);
   localStorage.setItem('antokton_access_token', token);
   localStorage.setItem('base44_access_token', token);
   localStorage.setItem('token', token);
@@ -23,6 +26,7 @@ function clearToken() {
   localStorage.removeItem('antokton_access_token');
   localStorage.removeItem('base44_access_token');
   localStorage.removeItem('token');
+  if (import.meta.env.DEV) localStorage.setItem(DEV_LOGGED_OUT_KEY, 'true');
 }
 
 function hasToken() {
@@ -169,7 +173,7 @@ const auth = {
     });
   },
   redirectToLogin(fromUrl = window.location.href, mode = "login") {
-    if (import.meta.env.DEV) {
+    if (import.meta.env.DEV && localStorage.getItem(DEV_LOGGED_OUT_KEY) !== 'true') {
       const email = import.meta.env.VITE_ANTOKTON_DEV_USER_EMAIL || 'admin@antokton.local';
       setToken(`dev:${email}`);
       window.location.href = fromUrl;
@@ -182,9 +186,19 @@ const auth = {
     window.location.href = target.toString();
   },
   logout(fromUrl) {
-    request(`/api/apps/${appId}/auth/logout`, { method: 'POST', body: {} }).catch(() => {});
+    const token = getToken();
+    fetch(`/api/apps/${appId}/auth/logout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      credentials: 'same-origin',
+      keepalive: true,
+      body: '{}'
+    }).catch(() => {});
     clearToken();
-    if (fromUrl) window.location.href = fromUrl;
+    window.location.replace(fromUrl || '/Login');
   },
   hasToken,
   setToken
