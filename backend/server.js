@@ -1746,8 +1746,25 @@ async function handleEntity(req, res, url, segments) {
 
 async function createPasswordResetRequest(req, email) {
   const normalizedEmail = assertEmail(email);
-  const account = await getAuthAccountByEmail(normalizedEmail);
-  if (!account || account.status !== "active") {
+  let account = await getAuthAccountByEmail(normalizedEmail);
+
+  if (!account) {
+    const existingUser = await findUserByEmail(normalizedEmail);
+    if (!existingUser || hasActiveUserBlock(existingUser) || existingUser.is_deleted === true || existingUser.is_active === false) {
+      return { success: true, delivered: false };
+    }
+
+    account = await createPasswordAccount({
+      email: normalizedEmail,
+      password: crypto.randomBytes(24).toString("base64url"),
+      user: existingUser,
+      req,
+      status: "active",
+      emailVerified: true
+    });
+  }
+
+  if (account.status !== "active") {
     return { success: true, delivered: false };
   }
 
