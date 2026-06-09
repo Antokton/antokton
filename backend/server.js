@@ -323,7 +323,17 @@ async function findUserByEmail(email) {
   if (!normalizedEmail) return null;
   return (await statements.listEntity.all(APP_ID, "User"))
     .map(recordFromRow)
-    .find((user) => normalizeEmail(user.email) === normalizedEmail) || null;
+    .find((user) => {
+      const candidates = [
+        user.email,
+        user.user_email,
+        user.contact_email,
+        user.login_email,
+        user.account_email,
+        String(user.id || "").includes("@") ? user.id : "",
+      ];
+      return candidates.some((candidate) => normalizeEmail(candidate) === normalizedEmail);
+    }) || null;
 }
 
 function isPrivilegedUser(user) {

@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Ban, UserCheck, Trash2, Clock3, LockKeyhole, MoreHorizontal } from "lucide-react";
+import { Search, Ban, UserCheck, Trash2, Clock3, LockKeyhole, MoreHorizontal, KeyRound } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import toast from "react-hot-toast";
 
@@ -20,6 +20,14 @@ const FLAGS = [
   { value: "yellow", label: "⚠️ Verdhë", color: "bg-yellow-500/20 text-yellow-400" },
   { value: "red", label: "🚩 Kuq", color: "bg-red-500/20 text-red-400" },
 ];
+
+function passwordResetToastMessage(result, email) {
+  if (result?.delivered === true) return `Linku i reset-it u dërgua te ${email}.`;
+  if (result?.reason === "no_active_account") return `Nuk u dërgua: ${email} nuk ka llogari aktive.`;
+  if (result?.reason === "inactive_auth_account") return `Nuk u dërgua: llogaria e ${email} nuk është aktive.`;
+  if (result?.reason === "email_provider_not_configured") return "Nuk u dërgua: shërbimi i email-it nuk është konfiguruar.";
+  return "Nuk u konfirmua dërgimi i email-it.";
+}
 
 export default function UserManager({ allUsers = [] }) {
   const queryClient = useQueryClient();
@@ -87,6 +95,27 @@ export default function UserManager({ allUsers = [] }) {
     await writeAudit(user, actionType, reason, newStatus);
     queryClient.invalidateQueries({ queryKey: ["allUsersAdmin"] });
     toast.success("Veprimi u ruajt!");
+  };
+
+  const sendPasswordReset = async (user) => {
+    const email = String(user.email || "").trim().toLowerCase();
+    if (!email) {
+      toast.error("Ky anëtar nuk ka email.");
+      return;
+    }
+    try {
+      const result = await base44.auth.requestPasswordReset(email);
+      await writeAudit(
+        user,
+        "password_reset_request",
+        result?.delivered ? "Dërgim linku reset nga administrata" : passwordResetToastMessage(result, email),
+        result?.delivered ? "reset_email_sent" : "reset_email_not_sent"
+      );
+      if (result?.delivered === true) toast.success(passwordResetToastMessage(result, email));
+      else toast.error(passwordResetToastMessage(result, email));
+    } catch (error) {
+      toast.error(error.message || "Dërgimi i reset-it dështoi.");
+    }
   };
 
   const temporaryBlockUntil = (user) => {
@@ -282,6 +311,13 @@ export default function UserManager({ allUsers = [] }) {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56 bg-[#0b1020] border-white/10">
+                        <DropdownMenuItem
+                          onClick={() => sendPasswordReset(u)}
+                          className="cursor-pointer text-[#8ab4ff] hover:text-[#9bffd6]"
+                        >
+                          <KeyRound className="w-3.5 h-3.5 mr-2" /> Dërgo link reset
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-white/10" />
                         <DropdownMenuItem
                           onClick={() => applyModeration(u, {
                             is_blocked: true,

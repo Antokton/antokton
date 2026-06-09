@@ -16,7 +16,10 @@ function now() {
 }
 
 function normalizeEmail(email) {
-  return String(email || "").trim().toLowerCase();
+  return String(email || "")
+    .replace(/[\s\u200B-\u200D\uFEFF]/g, "")
+    .trim()
+    .toLowerCase();
 }
 
 function isValidEmail(email) {
