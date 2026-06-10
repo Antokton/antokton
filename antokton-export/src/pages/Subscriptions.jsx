@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Building2, Check, Crown, Heart, Sparkles, Star } from "lucide-react";
+import { Building2, Check, Crown, Heart, Sparkles, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import { createPageUrl } from "../utils";
 
@@ -18,6 +18,7 @@ export default function Subscriptions() {
   const [supportError, setSupportError] = useState("");
   const [checkoutLoadingPlan, setCheckoutLoadingPlan] = useState("");
   const [businessInterestOpen, setBusinessInterestOpen] = useState(false);
+  const [supportInfoOpen, setSupportInfoOpen] = useState(false);
   const supportAmountRef = useRef(null);
 
   useEffect(() => {
@@ -41,7 +42,14 @@ export default function Subscriptions() {
   });
 
   const supportInfo = paymentConfig?.support || {};
-  const hasBankSupport = Boolean(supportInfo.iban || supportInfo.contact || supportInfo.bankName);
+  const onlineSupportEnabled = Boolean(paymentConfig?.checkoutConfigured);
+  const hasBankSupport = Boolean(
+    supportInfo.iban ||
+    supportInfo.contact ||
+    supportInfo.bankName ||
+    supportInfo.paymentReference ||
+    supportInfo.transparencyNote
+  );
 
   const handleSupportCheckout = async () => {
     if (!user) {
@@ -119,11 +127,12 @@ export default function Subscriptions() {
       badge: "Opsionale",
       customAmount: true,
       features: [
+        "Antoktoni është në fazë beta publike. Kontributi vullnetar ndihmon zhvillimin, mirëmbajtjen dhe testimin publik të platformës.",
         "Kontribut vullnetar për zhvillimin, mirëmbajtjen dhe testimin publik të platformës Antokton.",
-        "Ky kontribut nuk kërkohet për aksesin hyrës falas dhe nuk jep privilegje të veçanta.",
-        "Shumën e vendosni vetë.",
+        "Ky kontribut është vullnetar, nuk kërkohet për përdorimin bazë falas dhe nuk jep akses apo shërbime shtesë.",
+        onlineSupportEnabled ? "Kur pagesa online është aktive, shumën e vendosni vetë." : "Pagesa online nuk është ende aktive gjatë kësaj faze.",
       ],
-      cta: "Mbështet vullnetarisht",
+      cta: onlineSupportEnabled ? "Mbështet vullnetarisht" : "Merr të dhënat e kontributit",
     },
     {
       name: "Biznes — së shpejti",
@@ -216,22 +225,29 @@ export default function Subscriptions() {
 
                   {plan.customAmount && (
                     <div className="space-y-3">
-                      <label className="block space-y-1.5">
-                        <span className="text-xs font-medium text-white/60">Shuma vullnetare (EUR)</span>
-                        <input
-                          type="number"
-                          min="1"
-                          step="0.5"
-                          value={supportAmount}
-                          ref={supportAmountRef}
-                          onChange={(event) => {
-                            setSupportAmount(event.target.value);
-                            if (supportError) setSupportError("");
-                          }}
-                          placeholder="p.sh. 3, 10, 25"
-                          className={`h-10 w-full rounded-lg border bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#8ab4ff]/60 ${supportError ? "border-red-400/70" : "border-white/10"}`}
-                        />
-                      </label>
+                      {onlineSupportEnabled && (
+                        <label className="block space-y-1.5">
+                          <span className="text-xs font-medium text-white/60">Shuma vullnetare (EUR)</span>
+                          <input
+                            type="number"
+                            min="1"
+                            step="0.5"
+                            value={supportAmount}
+                            ref={supportAmountRef}
+                            onChange={(event) => {
+                              setSupportAmount(event.target.value);
+                              if (supportError) setSupportError("");
+                            }}
+                            placeholder="p.sh. 3, 10, 25"
+                            className={`h-10 w-full rounded-lg border bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#8ab4ff]/60 ${supportError ? "border-red-400/70" : "border-white/10"}`}
+                          />
+                        </label>
+                      )}
+                      {!onlineSupportEnabled && (
+                        <div className="rounded-lg border border-[#9bffd6]/25 bg-[#9bffd6]/10 px-3 py-2 text-xs leading-relaxed text-[#d8fff1]">
+                          Pagesat online nuk janë ende aktive. Nëse dëshironi ta mbështesni Antoktonin gjatë fazës beta, mund ta bëni me transfertë bankare ose duke na kontaktuar.
+                        </div>
+                      )}
                       {supportError && (
                         <div className="rounded-lg border border-yellow-400/30 bg-yellow-400/10 px-3 py-2 text-xs leading-relaxed text-yellow-100">
                           {supportError}
@@ -240,9 +256,12 @@ export default function Subscriptions() {
                       {hasBankSupport && (
                         <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs text-white/70">
                           <p className="font-semibold text-white/85">Mbështetje me transfertë bankare</p>
-                          {supportInfo.bankName && <p className="mt-1">Banka: {supportInfo.bankName}</p>}
                           {supportInfo.iban && <p className="mt-1 break-all">IBAN: {supportInfo.iban}</p>}
+                          {supportInfo.bankName && <p className="mt-1">Banka: {supportInfo.bankName}</p>}
+                          {supportInfo.paymentReference && <p className="mt-1 break-all">Referenca: {supportInfo.paymentReference}</p>}
                           {supportInfo.contact && <p className="mt-1 break-all">Kontakt: {supportInfo.contact}</p>}
+                          {supportInfo.accountHolder && <p className="mt-1 break-words">Përfituesi: {supportInfo.accountHolder}</p>}
+                          {supportInfo.transparencyNote && <p className="mt-2 border-t border-white/10 pt-2 leading-relaxed text-white/60">{supportInfo.transparencyNote}</p>}
                         </div>
                       )}
                     </div>
@@ -250,7 +269,10 @@ export default function Subscriptions() {
 
                   <Button
                     onClick={() => {
-                      if (plan.planType === "support") handleSupportCheckout();
+                      if (plan.planType === "support") {
+                        if (onlineSupportEnabled) handleSupportCheckout();
+                        else setSupportInfoOpen(true);
+                      }
                       else if (plan.businessInterest) setBusinessInterestOpen(true);
                     }}
                     disabled={plan.disabled || checkoutLoadingPlan === plan.planType || (plan.comingSoon && !plan.businessInterest)}
@@ -285,6 +307,49 @@ export default function Subscriptions() {
             <div className="mt-6 flex flex-col gap-2 sm:flex-row">
               <Button
                 onClick={() => setBusinessInterestOpen(false)}
+                variant="outline"
+                className="flex-1 border-white/15 text-white hover:bg-white/10"
+              >
+                Mbyll
+              </Button>
+              <Button asChild className="flex-1 bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020]">
+                <Link to={createPageUrl("Contact")}>Kontakto</Link>
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {supportInfoOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#0b1020] p-6 text-white shadow-2xl"
+          >
+            <h3 className="text-xl font-bold">Mbështetje vullnetare</h3>
+            <p className="mt-3 text-sm leading-relaxed text-white/72">
+              Pagesat online nuk janë ende aktive. Nëse dëshironi ta mbështesni Antoktonin gjatë fazës beta, mund ta bëni me transfertë bankare ose duke na kontaktuar.
+            </p>
+
+            {hasBankSupport ? (
+              <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.04] p-4 text-sm text-white/75">
+                {supportInfo.iban && <p className="break-all"><span className="font-semibold text-white">IBAN:</span> {supportInfo.iban}</p>}
+                {supportInfo.bankName && <p className="mt-2 break-words"><span className="font-semibold text-white">Banka:</span> {supportInfo.bankName}</p>}
+                {supportInfo.paymentReference && <p className="mt-2 break-words"><span className="font-semibold text-white">Referenca:</span> {supportInfo.paymentReference}</p>}
+                {supportInfo.contact && <p className="mt-2 break-all"><span className="font-semibold text-white">Kontakt:</span> {supportInfo.contact}</p>}
+                {supportInfo.accountHolder && <p className="mt-2 break-words"><span className="font-semibold text-white">Përfituesi:</span> {supportInfo.accountHolder}</p>}
+                {supportInfo.transparencyNote && <p className="mt-3 border-t border-white/10 pt-3 text-xs leading-relaxed text-white/60">{supportInfo.transparencyNote}</p>}
+              </div>
+            ) : (
+              <div className="mt-5 rounded-xl border border-yellow-400/25 bg-yellow-400/10 p-4 text-sm leading-relaxed text-yellow-100">
+                Të dhënat e kontributit nuk janë publikuar ende. Mund të na kontaktoni për mënyrën e mbështetjes gjatë fazës beta publike.
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+              <Button
+                onClick={() => setSupportInfoOpen(false)}
                 variant="outline"
                 className="flex-1 border-white/15 text-white hover:bg-white/10"
               >

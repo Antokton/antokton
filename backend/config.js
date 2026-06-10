@@ -82,9 +82,13 @@ const STRIPE_PUBLISHABLE_KEY = validateSingleLine("STRIPE_PUBLISHABLE_KEY", read
 const STRIPE_SECRET_KEY = validateSingleLine("STRIPE_SECRET_KEY", readString("STRIPE_SECRET_KEY", ""));
 const STRIPE_WEBHOOK_SECRET = validateSingleLine("STRIPE_WEBHOOK_SECRET", readString("STRIPE_WEBHOOK_SECRET", ""));
 const STRIPE_FALLBACK_URL = validateSingleLine("STRIPE_FALLBACK_URL", readString("STRIPE_FALLBACK_URL", ""));
-const SUPPORT_IBAN = validateSingleLine("SUPPORT_IBAN", readString("SUPPORT_IBAN", ""));
+const SUPPORT_IBAN = validateSingleLine("SUPPORT_IBAN", readString("SUPPORT_IBAN", "BE97 9675 9290 1449"));
 const SUPPORT_BANK_NAME = validateSingleLine("SUPPORT_BANK_NAME", readString("SUPPORT_BANK_NAME", ""));
 const SUPPORT_PAYMENT_CONTACT = validateSingleLine("SUPPORT_PAYMENT_CONTACT", readString("SUPPORT_PAYMENT_CONTACT", ""));
+const SUPPORT_ACCOUNT_HOLDER = validateSingleLine("SUPPORT_ACCOUNT_HOLDER", readString("SUPPORT_ACCOUNT_HOLDER", ""));
+const SUPPORT_SHOW_ACCOUNT_HOLDER = readBoolean("SUPPORT_SHOW_ACCOUNT_HOLDER", false);
+const SUPPORT_PAYMENT_REFERENCE = validateSingleLine("SUPPORT_PAYMENT_REFERENCE", readString("SUPPORT_PAYMENT_REFERENCE", ""));
+const SUPPORT_TRANSPARENCY_NOTE = validateSingleLine("SUPPORT_TRANSPARENCY_NOTE", readString("SUPPORT_TRANSPARENCY_NOTE", ""));
 const ALLOW_DEV_AUTH = readBoolean("ALLOW_DEV_AUTH", NODE_ENV !== "production");
 const AUTH_TOKEN_TTL_HOURS = readPositiveInteger("AUTH_TOKEN_TTL_HOURS", DEFAULT_AUTH_TOKEN_TTL_HOURS);
 const AUTH_PASSWORD_MIN_LENGTH = readPositiveInteger("AUTH_PASSWORD_MIN_LENGTH", 10);
@@ -133,6 +137,10 @@ const config = {
   SUPPORT_IBAN,
   SUPPORT_BANK_NAME,
   SUPPORT_PAYMENT_CONTACT,
+  SUPPORT_ACCOUNT_HOLDER,
+  SUPPORT_SHOW_ACCOUNT_HOLDER,
+  SUPPORT_PAYMENT_REFERENCE,
+  SUPPORT_TRANSPARENCY_NOTE,
   ALLOW_DEV_AUTH,
   AUTH_TOKEN_TTL_HOURS,
   AUTH_PASSWORD_MIN_LENGTH,
@@ -187,9 +195,13 @@ function safeConfigStatus() {
       fallbackDeprecated: true
     },
     supportPayments: {
-      bankTransferConfigured: Boolean(config.SUPPORT_IBAN || config.SUPPORT_PAYMENT_CONTACT),
-      ibanConfigured: Boolean(config.SUPPORT_IBAN),
-      contactConfigured: Boolean(config.SUPPORT_PAYMENT_CONTACT)
+      supportPaymentConfigured: Boolean(config.SUPPORT_IBAN || config.SUPPORT_PAYMENT_CONTACT),
+      supportIbanConfigured: Boolean(config.SUPPORT_IBAN),
+      supportContactConfigured: Boolean(config.SUPPORT_PAYMENT_CONTACT),
+      supportAccountHolderConfigured: Boolean(config.SUPPORT_ACCOUNT_HOLDER),
+      supportAccountHolderPublic: Boolean(config.SUPPORT_SHOW_ACCOUNT_HOLDER && config.SUPPORT_ACCOUNT_HOLDER),
+      supportReferenceConfigured: Boolean(config.SUPPORT_PAYMENT_REFERENCE),
+      supportTransparencyNoteConfigured: Boolean(config.SUPPORT_TRANSPARENCY_NOTE)
     },
     auth: {
       devAuthActive: config.NODE_ENV !== "production" && config.ALLOW_DEV_AUTH && Boolean(config.ANTOKTON_DEV_USER_EMAIL),

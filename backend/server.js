@@ -48,6 +48,10 @@ const {
   SUPPORT_IBAN,
   SUPPORT_BANK_NAME,
   SUPPORT_PAYMENT_CONTACT,
+  SUPPORT_ACCOUNT_HOLDER,
+  SUPPORT_SHOW_ACCOUNT_HOLDER,
+  SUPPORT_PAYMENT_REFERENCE,
+  SUPPORT_TRANSPARENCY_NOTE,
   AUTH_TOKEN_TTL_HOURS,
   SESSION_COOKIE_NAME,
   SESSION_COOKIE_SECURE,
@@ -1799,7 +1803,10 @@ async function handleFunction(req, res, functionName) {
         support: {
           iban: SUPPORT_IBAN || "",
           bankName: SUPPORT_BANK_NAME || "",
-          contact: SUPPORT_PAYMENT_CONTACT || ""
+          contact: SUPPORT_PAYMENT_CONTACT || "",
+          accountHolder: SUPPORT_SHOW_ACCOUNT_HOLDER ? SUPPORT_ACCOUNT_HOLDER || "" : "",
+          paymentReference: SUPPORT_PAYMENT_REFERENCE || "",
+          transparencyNote: SUPPORT_TRANSPARENCY_NOTE || ""
         }
       };
       break;
