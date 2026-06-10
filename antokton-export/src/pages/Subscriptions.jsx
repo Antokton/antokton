@@ -254,14 +254,9 @@ export default function Subscriptions() {
                         </div>
                       )}
                       {hasBankSupport && (
-                        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs text-white/70">
-                          <p className="font-semibold text-white/85">Mbështetje me transfertë bankare</p>
-                          {supportInfo.iban && <p className="mt-1 break-all">IBAN: {supportInfo.iban}</p>}
-                          {supportInfo.bankName && <p className="mt-1">Banka: {supportInfo.bankName}</p>}
-                          {supportInfo.paymentReference && <p className="mt-1 break-all">Referenca: {supportInfo.paymentReference}</p>}
-                          {supportInfo.contact && <p className="mt-1 break-all">Kontakt: {supportInfo.contact}</p>}
-                          {supportInfo.accountHolder && <p className="mt-1 break-words">Përfituesi: {supportInfo.accountHolder}</p>}
-                          {supportInfo.transparencyNote && <p className="mt-2 border-t border-white/10 pt-2 leading-relaxed text-white/60">{supportInfo.transparencyNote}</p>}
+                        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs leading-relaxed text-white/70">
+                          <p className="font-semibold text-white/85">Të dhënat e kontributit janë të disponueshme.</p>
+                          <p className="mt-1">Kliko butonin për t'i parë mënyrat e mbështetjes gjatë fazës beta publike.</p>
                         </div>
                       )}
                     </div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "./utils";
 import { base44 } from "@/api/antoktonClient";
-import { Menu, X, Home, Briefcase, PlusCircle, Shield, LogIn, LogOut, User, ChevronDown, ChevronUp, Users, Search, Calendar, Building2, MessageCircle, ArrowUp, GraduationCap, Wrench, Radio, Plane, Tv, Heart, ShoppingBag } from "lucide-react";
+import { Menu, X, Home, Briefcase, PlusCircle, Shield, LogIn, LogOut, User, ChevronDown, ChevronUp, Users, Search, Calendar, Building2, MessageCircle, ArrowUp, GraduationCap, Wrench, Radio, Plane, Tv, Heart, ShoppingBag, Train, Bus, Truck, Car, Ship, Package, MonitorPlay } from "lucide-react";
 import ChatButton from "./components/ChatButton";
 import NotificationBell from "./components/NotificationBell";
 import ChatNotificationSystem from "./components/notifications/ChatNotificationSystem";
@@ -20,23 +20,23 @@ import { hasEarlyMemberPremiumAccess } from "@/utils/premiumAccess";
 import { getUserDisplayName } from "@/lib/userDisplay";
 
 const BILETA_NAV_SUBMENU = [
-  { id: "avion", label: "Avion", url: "/Bileta?type=avion#kerkese-bilete", visible: true },
-  { id: "tren", label: "Tren", url: "/Bileta?type=tren#kerkese-bilete", visible: true },
-  { id: "autobus", label: "Autobus", url: "/Bileta?type=autobus#kerkese-bilete", visible: true },
-  { id: "furgon", label: "Furgon", url: "/Bileta?type=furgon#kerkese-bilete", visible: true },
-  { id: "taksi", label: "Taksi", url: "/Bileta?type=taksi#kerkese-bilete", visible: true },
-  { id: "traget", label: "Traget", url: "/Bileta?type=traget#kerkese-bilete", visible: true },
-  { id: "paketa", label: "Paketa turistike", url: "/Bileta?type=paketa#kerkese-bilete", visible: true },
-  { id: "umre", label: "Umre", url: "/Bileta?type=umre#kerkese-bilete", visible: true },
-  { id: "agjenci", label: "Oferta agjencish", url: "/Bileta?type=agjenci#kerkese-bilete", visible: true },
-  { id: "mallra", label: "Transport mallrash", url: "/Bileta?type=mallra#kerkese-bilete", visible: true },
-  { id: "makina", label: "Transport makinash", url: "/Bileta?type=makina#kerkese-bilete", visible: true }
+  { id: "avion", label: "Avion", url: "/Bileta?type=avion#kerkese-bilete", icon: Plane, visible: true },
+  { id: "tren", label: "Tren", url: "/Bileta?type=tren#kerkese-bilete", icon: Train, visible: true },
+  { id: "autobus", label: "Autobus", url: "/Bileta?type=autobus#kerkese-bilete", icon: Bus, visible: true },
+  { id: "furgon", label: "Furgon", url: "/Bileta?type=furgon#kerkese-bilete", icon: Truck, visible: true },
+  { id: "taksi", label: "Taksi", url: "/Bileta?type=taksi#kerkese-bilete", icon: Car, visible: true },
+  { id: "traget", label: "Traget", url: "/Bileta?type=traget#kerkese-bilete", icon: Ship, visible: true },
+  { id: "paketa", label: "Paketa turistike", url: "/Bileta?type=paketa#kerkese-bilete", icon: Package, visible: true },
+  { id: "umre", label: "Umre", url: "/Bileta?type=umre#kerkese-bilete", icon: Heart, visible: true },
+  { id: "agjenci", label: "Oferta agjencish", url: "/Bileta?type=agjenci#kerkese-bilete", icon: Building2, visible: true },
+  { id: "mallra", label: "Transport mallrash", url: "/Bileta?type=mallra#kerkese-bilete", icon: Truck, visible: true },
+  { id: "makina", label: "Transport makinash", url: "/Bileta?type=makina#kerkese-bilete", icon: Car, visible: true }
 ];
 
 const EDUKIM_NAV_SUBMENU = [
-  { id: "trajnime", label: "Trajnime profesionale", url: "/Feed?category=edukim&sub=trajnime", visible: true },
-  { id: "shkolla", label: "Shkolla", url: "/Feed?category=edukim&sub=shkolla", visible: true },
-  { id: "kurse", label: "Kurse online", url: "/Feed?category=edukim&sub=kurse", visible: true }
+  { id: "trajnime", label: "Trajnime profesionale", url: "/Feed?category=edukim&sub=trajnime", icon: Wrench, visible: true },
+  { id: "shkolla", label: "Shkolla", url: "/Feed?category=edukim&sub=shkolla", icon: GraduationCap, visible: true },
+  { id: "kurse", label: "Kurse online", url: "/Feed?category=edukim&sub=kurse", icon: MonitorPlay, visible: true }
 ];
 
 const PAZAR_NAV_GROUPS = [
@@ -317,6 +317,14 @@ export default function Layout({ children, currentPageName }) {
       const page = String(item.page || "").toLowerCase();
       const url = String(item.url || "").toLowerCase();
       return item.visible !== false && (page === "statuset" || url.includes("/statuset"));
+    });
+  }, [dynNav]);
+  const dynNavHasEvents = React.useMemo(() => {
+    if (!Array.isArray(dynNav)) return false;
+    return dynNav.some((item) => {
+      const page = String(item.page || "").toLowerCase();
+      const url = String(item.url || "").toLowerCase();
+      return item.visible !== false && (page === "events" || url.includes("/events"));
     });
   }, [dynNav]);
 
@@ -646,17 +654,13 @@ export default function Layout({ children, currentPageName }) {
                     Statuse
                   </Link>
                 )}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className={`px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 whitespace-nowrap ${["Events","Bamiresi","Search"].includes(currentPageName)?"text-white bg-white/10":"text-white hover:text-white/60 hover:bg-white/5"}`}>
-                      Më shumë <ChevronDown className="w-3.5 h-3.5" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-52 bg-[#0b1020] border-white/10">
-                    <DropdownMenuItem asChild><Link to="/Events" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Calendar className="w-4 h-4" /> Ngjarje</Link></DropdownMenuItem>
-                    <DropdownMenuItem asChild><Link to="/Bamiresi" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Heart className="w-4 h-4" /> Bamirësi</Link></DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {!dynNavHasEvents && (
+                  <Link to="/Events"
+                    className={`px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-200 whitespace-nowrap
+                      ${currentPageName==="Events"?"text-white bg-white/10":"text-white hover:text-white/60 hover:bg-white/5"}`}>
+                    Ngjarje
+                  </Link>
+                )}
                 </>
               ) : (
                 // ── Static fallback nav ──
@@ -747,9 +751,16 @@ export default function Layout({ children, currentPageName }) {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-52 bg-[#0b1020] border-white/10">
-                          <DropdownMenuItem asChild><Link to="/Feed?category=edukim&sub=trajnime" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><GraduationCap className="w-4 h-4" /> Trajnime profesionale</Link></DropdownMenuItem>
-                          <DropdownMenuItem asChild><Link to="/Feed?category=edukim&sub=shkolla" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><GraduationCap className="w-4 h-4" /> Shkolla</Link></DropdownMenuItem>
-                          <DropdownMenuItem asChild><Link to="/Feed?category=edukim&sub=kurse" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><GraduationCap className="w-4 h-4" /> Kurse online</Link></DropdownMenuItem>
+                          {EDUKIM_NAV_SUBMENU.map((sub) => {
+                            const SubIcon = sub.icon || GraduationCap;
+                            return (
+                              <DropdownMenuItem key={sub.id} asChild>
+                                <Link to={sub.url} className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white">
+                                  <SubIcon className="w-4 h-4" /> {sub.label}
+                                </Link>
+                              </DropdownMenuItem>
+                            );
+                          })}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     );
@@ -774,21 +785,16 @@ export default function Layout({ children, currentPageName }) {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-52 bg-[#0b1020] border-white/10">
-                          {[
-                            {key:"avion",label:"Avion"},
-                            {key:"tren",label:"Tren"},
-                            {key:"autobus",label:"Autobus"},
-                            {key:"furgon",label:"Furgon"},
-                            {key:"taksi",label:"Taksi"},
-                            {key:"traget",label:"Traget"},
-                            {key:"paketa",label:"Paketa turistike"},
-                            {key:"umre",label:"Umre"},
-                            {key:"agjenci",label:"Oferta agjencish"},
-                            {key:"mallra",label:"Transport mallrash"},
-                            {key:"makina",label:"Transport makinash"}
-                          ].map(b => (
-                            <DropdownMenuItem key={b.key} asChild><Link to={`/Bileta?type=${b.key}#kerkese-bilete`} className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Plane className="w-4 h-4" /> {b.label}</Link></DropdownMenuItem>
-                          ))}
+                          {BILETA_NAV_SUBMENU.map((b) => {
+                            const TicketIcon = b.icon || Plane;
+                            return (
+                              <DropdownMenuItem key={b.id} asChild>
+                                <Link to={b.url} className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white">
+                                  <TicketIcon className="w-4 h-4" /> {b.label}
+                                </Link>
+                              </DropdownMenuItem>
+                            );
+                          })}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     );
@@ -820,19 +826,6 @@ export default function Layout({ children, currentPageName }) {
                     </Link>
                   );
                 })
-              )}
-              {!dynNav && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className={`px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 whitespace-nowrap ${["Events","Bamiresi","Search"].includes(currentPageName)?"text-white bg-white/10":"text-white hover:text-white/60 hover:bg-white/5"}`}>
-                      Më shumë <ChevronDown className="w-3.5 h-3.5" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-52 bg-[#0b1020] border-white/10">
-                    <DropdownMenuItem asChild><Link to="/Events" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Calendar className="w-4 h-4" /> Ngjarje</Link></DropdownMenuItem>
-                    <DropdownMenuItem asChild><Link to="/Bamiresi" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Heart className="w-4 h-4" /> Bamirësi</Link></DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               )}
             </div>
 
@@ -1142,23 +1135,14 @@ export default function Layout({ children, currentPageName }) {
                     </div>
                     {mobileSubmenuOpen.bileta && (
                       <div className="ml-5 mt-0.5 space-y-0.5">
-                        {[
-                          {key:"avion",label:"Avion"},
-                          {key:"tren",label:"Tren"},
-                          {key:"autobus",label:"Autobus"},
-                          {key:"furgon",label:"Furgon"},
-                          {key:"taksi",label:"Taksi"},
-                          {key:"traget",label:"Traget"},
-                          {key:"paketa",label:"Paketa turistike"},
-                          {key:"umre",label:"Umre"},
-                          {key:"agjenci",label:"Oferta agjencish"},
-                          {key:"mallra",label:"Transport mallrash"},
-                          {key:"makina",label:"Transport makinash"}
-                        ].map(type => (
-                          <Link key={type.key} to={`/Bileta?type=${type.key}#kerkese-bilete`} onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white/60 hover:text-white">
-                            <Plane className="w-3 h-3" /> {type.label}
-                          </Link>
-                        ))}
+                        {BILETA_NAV_SUBMENU.map((type) => {
+                          const TicketIcon = type.icon || Plane;
+                          return (
+                            <Link key={type.id} to={type.url} onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white/60 hover:text-white">
+                              <TicketIcon className="w-3 h-3" /> {type.label}
+                            </Link>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -1173,9 +1157,14 @@ export default function Layout({ children, currentPageName }) {
                     </div>
                     {mobileSubmenuOpen.edukim && (
                       <div className="ml-5 mt-0.5 space-y-0.5">
-                        <Link to="/Feed?category=edukim&sub=shkolla" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:text-white/60"><GraduationCap className="w-3 h-3" /> Shkolla</Link>
-                        <Link to="/Feed?category=edukim&sub=trajnime" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:text-white/60"><GraduationCap className="w-3 h-3" /> Trajnime profesionale</Link>
-                        <Link to="/Feed?category=edukim&sub=kurse" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:text-white/60"><GraduationCap className="w-3 h-3" /> Kurse online</Link>
+                        {EDUKIM_NAV_SUBMENU.map((sub) => {
+                          const EduIcon = sub.icon || GraduationCap;
+                          return (
+                            <Link key={sub.id} to={sub.url} onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:text-white/60">
+                              <EduIcon className="w-3 h-3" /> {sub.label}
+                            </Link>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
