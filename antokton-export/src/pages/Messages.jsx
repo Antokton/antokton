@@ -31,6 +31,7 @@ export default function Messages() {
 
   const urlParams = new URLSearchParams(window.location.search);
   const toEmail = urlParams.get("to");
+  const toName = urlParams.get("name") || "";
 
   useEffect(() => {
     const loadUser = async () => {
@@ -218,12 +219,12 @@ export default function Messages() {
   const conversationList = Object.entries(conversations).map(([email, msgs]) => {
     const latestMsg = msgs[0];
     const unreadCount = msgs.filter(m => m.receiver_email === user.email && !m.is_read).length;
-    const otherUser = allUsers.find(u => u.email === email);
+    const otherUser = allUsers.find(u => String(u.email || "").toLowerCase() === email.toLowerCase());
     return { email, messages: msgs, latestMessage: latestMsg, unreadCount, otherUser };
   }).sort((a, b) => new Date(b.latestMessage.created_date) - new Date(a.latestMessage.created_date));
 
   if (toEmail && !conversationList.some((conv) => conv.email === toEmail)) {
-    const otherUser = allUsers.find((u) => u.email === toEmail);
+    const otherUser = allUsers.find((u) => String(u.email || "").toLowerCase() === toEmail.toLowerCase());
     conversationList.unshift({
       email: toEmail,
       messages: [],
@@ -234,7 +235,8 @@ export default function Messages() {
         receiver_email: user.email
       },
       unreadCount: 0,
-      otherUser
+      otherUser,
+      fallbackName: toName
     });
   }
 
@@ -244,22 +246,24 @@ export default function Messages() {
   const displayConversations = showArchived ? archivedConvList : activeConversations;
   
   const filteredConversations = displayConversations.filter(conv => 
-    !searchQuery || conv.email.toLowerCase().includes(searchQuery.toLowerCase())
+    !searchQuery ||
+    conv.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    getUserDisplayName(conv.otherUser, conv.fallbackName || conv.email).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const selectedMessages = selectedConversation 
     ? (conversations[selectedConversation]?.sort((a, b) => new Date(a.created_date) - new Date(b.created_date)) || [])
         .filter(msg => !messageSearchQuery || msg.message.toLowerCase().includes(messageSearchQuery.toLowerCase()))
     : [];
-  const selectedUser = selectedConversation ? allUsers.find((u) => u.email === selectedConversation) : null;
-  const selectedConversationName = selectedConversation ? getUserDisplayName(selectedUser, selectedConversation) : "";
+  const selectedUser = selectedConversation ? allUsers.find((u) => String(u.email || "").toLowerCase() === selectedConversation.toLowerCase()) : null;
+  const selectedConversationName = selectedConversation ? getUserDisplayName(selectedUser, toName || selectedConversation) : "";
 
   const updateMessageText = (value) => {
     setMessageText(autocorrectEnabled ? autocorrectAlbanianDraft(value) : value);
   };
 
   const updateStaffMessage = (value) => {
-    setStaffMessage(autocorrectEnabled ? autocorrectAlbanianDraft(value) : value);
+    setStaffMessage(autocorrectAlbanianDraft(value));
   };
 
   const handleSendMessage = () => {
@@ -695,7 +699,7 @@ export default function Messages() {
               <Textarea
                 value={staffMessage}
                 onChange={(e) => updateStaffMessage(e.target.value)}
-                onBlur={() => autocorrectEnabled && setStaffMessage((text) => autocorrectAlbanianText(text))}
+                onBlur={() => setStaffMessage((text) => autocorrectAlbanianText(text))}
                 placeholder="Shkruani mesazhin tuaj këtu..."
                 className="bg-white/5 border-white/10 text-white min-h-[120px] mb-2"
                 lang="sq"
@@ -704,18 +708,18 @@ export default function Messages() {
               <div className="flex items-center gap-2 mb-4">
                 <input 
                   type="checkbox" 
-                  checked={autocorrectEnabled} 
-                  onChange={(e) => setAutocorrectEnabled(e.target.checked)}
+                  checked
+                  readOnly
                   className="w-4 h-4" 
                   id="autocorrect-staff" 
                 />
                 <label htmlFor="autocorrect-staff" className="text-white/40 text-xs cursor-pointer">
-                  Autocorrect në shqip
+                  Autocorrect në shqip aktiv
                 </label>
               </div>
               <Button 
                 onClick={() => {
-                  const cleanMessage = autocorrectEnabled ? autocorrectAlbanianText(staffMessage).trim() : staffMessage.trim();
+                  const cleanMessage = autocorrectAlbanianText(staffMessage).trim();
                   if (cleanMessage) {
                     sendStaffMessageMutation.mutate({
                       sender_email: user.email,
@@ -775,7 +779,7 @@ export default function Messages() {
                       <Button
                         onClick={() => {
                           const input = document.getElementById(`response-${msg.id}`);
-                          const response = autocorrectEnabled ? autocorrectAlbanianText(input.value).trim() : input.value.trim();
+                          const response = autocorrectAlbanianText(input.value).trim();
                           if (response) {
                             input.value = response;
                             resolveStaffMessageMutation.mutate({ id: msg.id, response });

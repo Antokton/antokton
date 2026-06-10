@@ -426,7 +426,7 @@ export default function MemberProfile() {
                 <Button disabled={Boolean(block)} onClick={() => saveConnection.mutate("wide")} className={connection?.circle === "wide" ? "bg-[#9bffd6] text-[#0b1020]" : "bg-white/10 text-white hover:bg-white/15"}>
                   <UserPlus className="mr-2 h-4 w-4" /> Rrethi i gjerë
                 </Button>
-                <Link to={`/Messages?to=${encodeURIComponent(decodedEmail)}`}>
+                <Link to={`/Messages?to=${encodeURIComponent(decodedEmail)}&name=${encodeURIComponent(displayName)}`}>
                   <Button className="w-full bg-white/10 text-white hover:bg-white/15 sm:w-auto">
                     <MessageCircle className="mr-2 h-4 w-4" /> Mesazh
                   </Button>

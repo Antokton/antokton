@@ -1200,7 +1200,6 @@ export default function Layout({ children, currentPageName }) {
                   </div>
                   <Link to="/Events" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white hover:text-white/60 hover:bg-white/5 transition-all"><Calendar className="w-3.5 h-3.5" /><span className="text-sm font-medium">Ngjarje</span></Link>
                   <Link to="/Bamiresi" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white hover:text-white/60 hover:bg-white/5 transition-all"><Heart className="w-3.5 h-3.5" /><span className="text-sm font-medium">Bamirësi</span></Link>
-                  <Link to="/Search" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white hover:text-white/60 hover:bg-white/5 transition-all"><Search className="w-3.5 h-3.5" /><span className="text-sm font-medium">Kërko</span></Link>
                   {isAuth && (
                     <>
                       <div className="border-t border-white/10 my-1" />

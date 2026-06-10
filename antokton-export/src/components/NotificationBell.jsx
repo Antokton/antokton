@@ -40,6 +40,17 @@ export default function NotificationBell() {
     }
   });
 
+  const markAllAsReadMutation = useMutation({
+    mutationFn: async (items) => {
+      await Promise.all(items.filter((item) => !item.is_read).map((item) => (
+        base44.entities.Notification.update(item.id, { is_read: true })
+      )));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    }
+  });
+
   const deleteNotificationMutation = useMutation({
     mutationFn: (id) => base44.entities.Notification.delete(id),
     onSuccess: () => {
@@ -48,11 +59,16 @@ export default function NotificationBell() {
   });
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
-  const badgeLabel = unreadCount > 99 ? "99+" : String(unreadCount);
+  const visibleUnreadCount = open ? 0 : unreadCount;
+  const badgeLabel = visibleUnreadCount > 99 ? "99+" : String(visibleUnreadCount);
   const isStaff = ["admin", "moderator"].includes(String(user?.role || user?.member_category || "").toLowerCase());
 
   useEffect(() => {
     if (!open) return;
+    const unreadItems = notifications.filter((item) => !item.is_read);
+    if (unreadItems.length && !markAllAsReadMutation.isPending) {
+      markAllAsReadMutation.mutate(unreadItems);
+    }
     const closeOnOutside = (event) => {
       const target = event.target;
       if (panelRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
@@ -60,7 +76,7 @@ export default function NotificationBell() {
     };
     document.addEventListener("pointerdown", closeOnOutside, true);
     return () => document.removeEventListener("pointerdown", closeOnOutside, true);
-  }, [open]);
+  }, [open, notifications]);
 
   const openNotification = (notif) => {
     if (!notif.is_read) markAsReadMutation.mutate(notif.id);
@@ -115,7 +131,7 @@ export default function NotificationBell() {
             <div className="p-4 border-b border-white/10 flex items-center justify-between">
               <h3 className="text-white font-semibold">Njoftime</h3>
               <div className="flex items-center gap-2">
-                {unreadCount > 0 && (
+                {!open && unreadCount > 0 && (
                   <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
                     {unreadCount} të palexuara
                   </Badge>
@@ -223,7 +239,7 @@ export default function NotificationBell() {
         aria-expanded={open}
       >
         <Bell className="w-5 h-5" />
-        {unreadCount > 0 && (
+        {visibleUnreadCount > 0 && (
           <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
             {badgeLabel}
           </span>

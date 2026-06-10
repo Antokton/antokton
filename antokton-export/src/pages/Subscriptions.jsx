@@ -11,6 +11,7 @@ import { hasEarlyMemberPremiumAccess } from "@/utils/premiumAccess";
 export default function Subscriptions() {
   const [user, setUser] = useState(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [supportAmount, setSupportAmount] = useState("");
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -52,23 +53,32 @@ export default function Subscriptions() {
     }
   });
 
-  const handleCheckout = async (planType) => {
+  const parsedSupportAmount = Number(String(supportAmount).replace(",", "."));
+
+  const handleCheckout = async (planType, amount) => {
     if (!user) {
       base44.auth.redirectToLogin();
+      return;
+    }
+    const parsedAmount = Number(String(amount || "").replace(",", "."));
+    if (planType === "support" && (!parsedAmount || parsedAmount <= 0)) {
+      alert("Vendosni shumën që dëshironi të dhuroni.");
       return;
     }
     
     try {
       const response = await base44.functions.invoke('createPremiumCheckout', {
         planType,
-        userEmail: user.email
+        userEmail: user.email,
+        amount: planType === "support" ? parsedAmount : undefined,
+        currency: "eur"
       });
       
       if (response.data?.url) {
         window.location.href = response.data.url;
       }
     } catch (error) {
-      alert("Ka ndodhur një gabim. Ju lutemi provoni përsëri.");
+      alert(error.message || "Ka ndodhur një gabim. Ju lutemi provoni përsëri.");
     }
   };
 
@@ -112,13 +122,14 @@ export default function Subscriptions() {
     {
       name: "Mbështetje vullnetare",
       subtitle: "Për bamirësi/test",
-      price: "2-5 EUR",
+      price: "Vendose vetë",
       period: "",
       icon: Heart,
       planType: "support",
       badge: "Opsionale",
+      customAmount: true,
       features: [
-        "Pagesë e vogël vullnetare",
+        "Pagesë vullnetare me shumën që zgjidhni vetë",
         "Nuk kërkohet për aksesin hyrës falas",
         "Ndihmon testimin dhe zhvillimin e platformës",
         "E përshtatshme për ata që duan ta mbështesin projektin"
@@ -185,7 +196,9 @@ export default function Subscriptions() {
             <p className="font-semibold text-[#d8fff1]">
               Për anëtarët e parë, kemi dhënë akses falas në shërbimet Premium për periudhën hyrëse.
             </p>
-            <p className="mt-1 text-sm text-white/65">Pagesa vullnetare mbetet e mundur te Premium duke klikuar "këtu".</p>
+            <p className="mt-1 text-sm text-white/65">
+              Pagesa vullnetare mbetet e mundur duke zgjedhur vetë shumën te karta “Mbështetje vullnetare”.
+            </p>
           </motion.div>
         )}
 
@@ -227,9 +240,23 @@ export default function Subscriptions() {
                       </li>
                     ))}
                   </ul>
+                  {plan.customAmount && (
+                    <label className="block space-y-1.5">
+                      <span className="text-xs font-medium text-white/60">Shuma vullnetare (EUR)</span>
+                      <input
+                        type="number"
+                        min="1"
+                        step="0.5"
+                        value={supportAmount}
+                        onChange={(event) => setSupportAmount(event.target.value)}
+                        placeholder="p.sh. 3, 10, 25"
+                        className="h-10 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#8ab4ff]/60"
+                      />
+                    </label>
+                  )}
                   <Button
-                    onClick={() => plan.planType && handleCheckout(plan.planType)}
-                    disabled={plan.disabled || plan.current}
+                    onClick={() => plan.planType && handleCheckout(plan.planType, plan.customAmount ? supportAmount : undefined)}
+                    disabled={plan.disabled || plan.current || (plan.customAmount && (!parsedSupportAmount || parsedSupportAmount <= 0))}
                     className={`w-full ${
                       plan.popular
                         ? 'bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] hover:opacity-90'

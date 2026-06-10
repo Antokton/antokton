@@ -71,12 +71,22 @@ export default function MobileBottomNav() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] })
   });
 
+  const markAllAsReadMutation = useMutation({
+    mutationFn: async (items) => {
+      await Promise.all(items.filter((item) => !item.is_read).map((item) => (
+        base44.entities.Notification.update(item.id, { is_read: true })
+      )));
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] })
+  });
+
   const deleteNotificationMutation = useMutation({
     mutationFn: (id) => base44.entities.Notification.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] })
   });
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
+  const visibleUnreadCount = bellOpen ? 0 : unreadCount;
 
   const { data: unreadMessages = [] } = useQuery({
     queryKey: ["unreadMessages", user?.email],
@@ -87,6 +97,14 @@ export default function MobileBottomNav() {
   });
 
   const unreadMsgCount = unreadMessages.length;
+
+  useEffect(() => {
+    if (!bellOpen) return;
+    const unreadItems = notifications.filter((item) => !item.is_read);
+    if (unreadItems.length && !markAllAsReadMutation.isPending) {
+      markAllAsReadMutation.mutate(unreadItems);
+    }
+  }, [bellOpen, notifications]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -162,9 +180,9 @@ export default function MobileBottomNav() {
               <div className="p-4 border-b border-white/10 flex items-center justify-between">
                 <h3 className="text-white font-semibold">Njoftimet</h3>
                 <div className="flex items-center gap-2">
-                  {unreadCount > 0 && (
+                  {!bellOpen && unreadCount > 0 && (
                     <span className="bg-red-500/20 text-red-400 text-xs px-2 py-0.5 rounded-full border border-red-500/30">
-                      {unreadCount} të palexuara
+                    {unreadCount} të palexuara
                     </span>
                   )}
                   <button onClick={() => setBellOpen(false)} className="text-white/40 hover:text-white p-1">
@@ -219,6 +237,11 @@ export default function MobileBottomNav() {
                 {tab.path === '/Messages' && unreadMsgCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[9px] font-bold px-0.5">
                     {unreadMsgCount > 9 ? '9+' : unreadMsgCount}
+                  </span>
+                )}
+                {tab.path === '/NotificationCenter' && visibleUnreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[9px] font-bold px-0.5">
+                    {visibleUnreadCount > 9 ? '9+' : visibleUnreadCount}
                   </span>
                 )}
               </div>

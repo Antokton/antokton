@@ -44,6 +44,7 @@ const {
   APP_ID,
   MAX_REMOTE_ASSET_BYTES,
   STRIPE_PUBLISHABLE_KEY,
+  STRIPE_SECRET_KEY,
   STRIPE_FALLBACK_URL,
   AUTH_TOKEN_TTL_HOURS,
   SESSION_COOKIE_NAME,
@@ -1082,6 +1083,69 @@ async function logEmail(payload) {
   await statements.insertEmail.run(crypto.randomUUID(), JSON.stringify(payload), now());
 }
 
+function checkoutAmountForPlan(planType, payload = {}) {
+  if (planType === "support") {
+    const amount = Number(String(payload.amount || payload.supportAmount || payload.price || 0).replace(",", "."));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      const error = new Error("Vendosni një shumë vullnetare të vlefshme.");
+      error.status = 400;
+      throw error;
+    }
+    return Math.round(amount * 100);
+  }
+  if (planType === "business") return 1000;
+  if (planType === "yearly") return 8000;
+  return 1000;
+}
+
+function checkoutLabelForPlan(planType) {
+  if (planType === "support") return "Mbështetje vullnetare për Antokton";
+  if (planType === "business") return "Antokton Biznes";
+  if (planType === "yearly") return "Antokton Premium vjetor";
+  return "Antokton Premium";
+}
+
+async function createStripeCheckoutSession({ req, payload, subscriptionId, user }) {
+  if (!STRIPE_SECRET_KEY) {
+    const error = new Error("Pagesat nuk janë konfiguruar në server.");
+    error.status = 503;
+    throw error;
+  }
+
+  const planType = payload.planType || payload.plan_type || "monthly";
+  const amountCents = checkoutAmountForPlan(planType, payload);
+  const origin = getRequestOrigin(req);
+  const params = new URLSearchParams();
+  params.set("mode", "payment");
+  params.set("success_url", `${origin}/Subscriptions?checkout=success&checkout_id=${encodeURIComponent(subscriptionId)}`);
+  params.set("cancel_url", `${origin}/Subscriptions?checkout=cancelled&checkout_id=${encodeURIComponent(subscriptionId)}`);
+  params.set("customer_email", normalizeEmail(payload.userEmail || user?.email || ""));
+  params.set("client_reference_id", subscriptionId);
+  params.set("metadata[subscription_id]", subscriptionId);
+  params.set("metadata[user_email]", normalizeEmail(payload.userEmail || user?.email || ""));
+  params.set("metadata[plan_type]", planType);
+  params.set("line_items[0][quantity]", "1");
+  params.set("line_items[0][price_data][currency]", String(payload.currency || "eur").toLowerCase());
+  params.set("line_items[0][price_data][unit_amount]", String(amountCents));
+  params.set("line_items[0][price_data][product_data][name]", checkoutLabelForPlan(planType));
+
+  const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: params
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.url) {
+    const error = new Error(data?.error?.message || "Stripe checkout nuk u krijua.");
+    error.status = 502;
+    throw error;
+  }
+  return data;
+}
+
 function parseEmailAddress(value = "") {
   const match = /<([^>]+)>/.exec(String(value));
   return (match?.[1] || value).trim();
@@ -1685,13 +1749,27 @@ async function handleFunction(req, res, functionName) {
     case "createCheckout":
     case "createSubscriptionCheckout":
     case "createFeaturedCheckout": {
+      const planType = payload.planType || payload.plan_type || "monthly";
+      const amountCents = checkoutAmountForPlan(planType, payload);
       const subscription = await createRecord("PremiumSubscription", {
         user_email: payload.userEmail || user.email,
-        plan_type: payload.planType || payload.plan_type || "monthly",
+        plan_type: planType,
+        amount_cents: amountCents,
+        currency: String(payload.currency || "eur").toLowerCase(),
         status: "pending",
         checkout_type: functionName
       }, userEmail);
-      result = { url: STRIPE_FALLBACK_URL || `/Subscriptions?checkout_id=${subscription.id}` };
+      if (STRIPE_FALLBACK_URL && !STRIPE_SECRET_KEY) {
+        result = { url: STRIPE_FALLBACK_URL, checkoutId: subscription.id, fallback: true };
+        break;
+      }
+      const session = await createStripeCheckoutSession({ req, payload: { ...payload, planType }, subscriptionId: subscription.id, user });
+      await updateRecord("PremiumSubscription", subscription.id, {
+        stripe_checkout_session_id: session.id,
+        stripe_checkout_url: session.url,
+        status: "checkout_created"
+      });
+      result = { url: session.url, checkoutId: subscription.id };
       break;
     }
     case "publishToFacebook":
