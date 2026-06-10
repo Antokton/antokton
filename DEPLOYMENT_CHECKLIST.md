@@ -90,7 +90,8 @@ DATA_DIR=/data
 DB_PATH=/data/antokton.sqlite
 UPLOAD_DIR=/data/uploads
 MAX_REMOTE_ASSET_BYTES=78643200
-STRIPE_FALLBACK_URL=/Subscriptions
+STRIPE_PUBLISHABLE_KEY=<pk_live_or_pk_test_from_stripe>
+STRIPE_SECRET_KEY=<sk_live_or_sk_test_from_stripe>
 AUTH_TOKEN_TTL_HOURS=336
 AUTH_PASSWORD_MIN_LENGTH=10
 AUTH_RATE_LIMIT_WINDOW_MS=900000
@@ -109,6 +110,8 @@ AUTH_BOOTSTRAP_ADMIN_PASSWORD=<strong temporary password>
 ```
 
 Only set the bootstrap values in the host secret manager. Do not commit them. The backend creates a pre-auth SQLite backup the first time auth tables are added.
+
+Stripe checkout is considered configured only when `STRIPE_SECRET_KEY` is present. `STRIPE_FALLBACK_URL` is deprecated and must not be used as a fake checkout URL.
 
 Render admin bootstrap steps:
 

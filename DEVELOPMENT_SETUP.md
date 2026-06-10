@@ -63,10 +63,10 @@ Use `.env.example` as the reference. Do not commit a real `.env`.
 | `UPLOAD_DIR` | `backend/config.js`, `backend/server.js`, `backend/import-live-data.js` | Local upload directory. |
 | `DB_PATH` | `backend/config.js`, `backend/server.js`, `backend/localize-assets.js`, `backend/import-live-data.js` | SQLite file path. |
 | `MAX_REMOTE_ASSET_BYTES` | `backend/config.js`, `backend/server.js`, `backend/import-live-data.js` | Remote asset localization limit. |
-| `STRIPE_PUBLISHABLE_KEY` | `backend/config.js`, `backend/server.js` | Returned by local `getStripeConfig` placeholder. |
-| `STRIPE_SECRET_KEY` | `backend/config.js` | Validated/documented for future Stripe server work; not exposed by health endpoints. |
-| `STRIPE_WEBHOOK_SECRET` | `backend/config.js` | Validated/documented for future Stripe webhook work; not exposed by health endpoints. |
-| `STRIPE_FALLBACK_URL` | `backend/config.js`, `backend/server.js` | Fallback checkout URL for local placeholder checkout functions. |
+| `STRIPE_PUBLISHABLE_KEY` | `backend/config.js`, `backend/server.js` | Public Stripe key for client/config status. |
+| `STRIPE_SECRET_KEY` | `backend/config.js`, `backend/server.js` | Required server-side key for Premium/support Stripe Checkout Sessions. Never commit it. |
+| `STRIPE_WEBHOOK_SECRET` | `backend/config.js` | Optional webhook signing secret for Stripe webhook verification. |
+| `STRIPE_FALLBACK_URL` | `backend/config.js` | Deprecated compatibility variable; checkout no longer uses a fake fallback URL. |
 | `NODE_NO_WARNINGS` | start scripts/smoke test | Suppresses local Node warnings in helper scripts. |
 
 `backend/config.js` validates these values at backend startup while keeping backward-compatible local defaults. It does not expose secret values.
@@ -100,13 +100,15 @@ Use `AUTH_BOOTSTRAP_ADMIN_EMAIL` and `AUTH_BOOTSTRAP_ADMIN_PASSWORD` only as dep
 | `LIVE_IMPORT_LIMIT` | `backend/import-live-data.js` | Import batch limit. |
 | `LIVE_IMPORT_PORT` | `backend/live-import-login-server.js` | Login helper port. Default `8790`. |
 
+### Stripe checkout variables
+
+The active local Node backend creates Stripe Checkout Sessions through `backend/server.js`.
+Set `STRIPE_SECRET_KEY` before testing Premium or voluntary support payments. `STRIPE_PUBLISHABLE_KEY` is optional for the current redirect flow but should be configured in production for completeness. `/health/config` reports only booleans such as `stripe.checkoutConfigured`; it never exposes key values.
+
 ### Exported Base44 function reference variables
 
 These are in `antokton-export/antokton-reference/functions` and are not active in the local Node backend yet:
 
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
-- `STRIPE_PUBLISHABLE_KEY`
 - `BASE44_APP_ID`
 - `FACEBOOK_PAGE_ACCESS_TOKEN`
 

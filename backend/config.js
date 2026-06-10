@@ -173,10 +173,12 @@ function safeConfigStatus() {
       remoteDirectoryExists: existsSafe(config.REMOTE_ASSET_DIR)
     },
     stripe: {
+      checkoutConfigured: Boolean(config.STRIPE_SECRET_KEY),
       publishableKeyConfigured: Boolean(config.STRIPE_PUBLISHABLE_KEY),
       secretKeyConfigured: Boolean(config.STRIPE_SECRET_KEY),
       webhookSecretConfigured: Boolean(config.STRIPE_WEBHOOK_SECRET),
-      fallbackUrlConfigured: Boolean(config.STRIPE_FALLBACK_URL)
+      fallbackUrlConfigured: Boolean(config.STRIPE_FALLBACK_URL),
+      fallbackDeprecated: true
     },
     auth: {
       devAuthActive: config.NODE_ENV !== "production" && config.ALLOW_DEV_AUTH && Boolean(config.ANTOKTON_DEV_USER_EMAIL),
