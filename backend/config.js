@@ -82,6 +82,9 @@ const STRIPE_PUBLISHABLE_KEY = validateSingleLine("STRIPE_PUBLISHABLE_KEY", read
 const STRIPE_SECRET_KEY = validateSingleLine("STRIPE_SECRET_KEY", readString("STRIPE_SECRET_KEY", ""));
 const STRIPE_WEBHOOK_SECRET = validateSingleLine("STRIPE_WEBHOOK_SECRET", readString("STRIPE_WEBHOOK_SECRET", ""));
 const STRIPE_FALLBACK_URL = validateSingleLine("STRIPE_FALLBACK_URL", readString("STRIPE_FALLBACK_URL", ""));
+const SUPPORT_IBAN = validateSingleLine("SUPPORT_IBAN", readString("SUPPORT_IBAN", ""));
+const SUPPORT_BANK_NAME = validateSingleLine("SUPPORT_BANK_NAME", readString("SUPPORT_BANK_NAME", ""));
+const SUPPORT_PAYMENT_CONTACT = validateSingleLine("SUPPORT_PAYMENT_CONTACT", readString("SUPPORT_PAYMENT_CONTACT", ""));
 const ALLOW_DEV_AUTH = readBoolean("ALLOW_DEV_AUTH", NODE_ENV !== "production");
 const AUTH_TOKEN_TTL_HOURS = readPositiveInteger("AUTH_TOKEN_TTL_HOURS", DEFAULT_AUTH_TOKEN_TTL_HOURS);
 const AUTH_PASSWORD_MIN_LENGTH = readPositiveInteger("AUTH_PASSWORD_MIN_LENGTH", 10);
@@ -127,6 +130,9 @@ const config = {
   STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET,
   STRIPE_FALLBACK_URL,
+  SUPPORT_IBAN,
+  SUPPORT_BANK_NAME,
+  SUPPORT_PAYMENT_CONTACT,
   ALLOW_DEV_AUTH,
   AUTH_TOKEN_TTL_HOURS,
   AUTH_PASSWORD_MIN_LENGTH,
@@ -179,6 +185,11 @@ function safeConfigStatus() {
       webhookSecretConfigured: Boolean(config.STRIPE_WEBHOOK_SECRET),
       fallbackUrlConfigured: Boolean(config.STRIPE_FALLBACK_URL),
       fallbackDeprecated: true
+    },
+    supportPayments: {
+      bankTransferConfigured: Boolean(config.SUPPORT_IBAN || config.SUPPORT_PAYMENT_CONTACT),
+      ibanConfigured: Boolean(config.SUPPORT_IBAN),
+      contactConfigured: Boolean(config.SUPPORT_PAYMENT_CONTACT)
     },
     auth: {
       devAuthActive: config.NODE_ENV !== "production" && config.ALLOW_DEV_AUTH && Boolean(config.ANTOKTON_DEV_USER_EMAIL),

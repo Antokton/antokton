@@ -1806,7 +1806,7 @@ function SponsoredAd() {
           <div className="w-10 h-10 rounded-full flex items-center justify-center font-black text-[#0b1020] text-sm shrink-0"
             style={{ background: "linear-gradient(135deg, #8ab4ff, #9bffd6)" }}>A</div>
           <div>
-            <p className="text-white font-bold text-sm">Antokton Premium</p>
+            <p className="text-white font-bold text-sm">Beta Publike</p>
             <p className="text-white/40 text-xs flex items-center gap-1">Sponsorizuar · <Globe className="w-3 h-3" /></p>
           </div>
         </div>
@@ -1815,12 +1815,12 @@ function SponsoredAd() {
         </button>
       </div>
       <p className="px-4 pb-3 text-white/80 text-[15px]">
-        🚀 Posto njoftime dhe arrini diasporën shqiptare kudo në botë. Abonohu Premium dhe merrni <span className="text-[#9bffd6] font-bold">30% ulje</span>!
+        Antoktoni është në fazë beta publike. Aksesi bazë është falas; mbështetja vullnetare ndihmon zhvillimin dhe mirëmbajtjen e platformës.
       </p>
       <div className="flex items-center justify-between px-4 py-3 border-t border-white/8">
         <p className="text-white/30 text-xs">antokton.com</p>
         <Link to={createPageUrl("Subscriptions")} className="text-sm font-bold px-5 py-2 rounded-lg text-[#0b1020]"
-          style={{ background: "linear-gradient(to right, #8ab4ff, #9bffd6)" }}>Abonohu</Link>
+          style={{ background: "linear-gradient(to right, #8ab4ff, #9bffd6)" }}>Mbështet</Link>
       </div>
     </div>
   );
@@ -1871,7 +1871,7 @@ function RightSidebar() {
             <Link to={createPageUrl("Subscriptions")}
               className="mt-3 block text-center text-xs font-bold px-4 py-2 rounded-lg text-[#0b1020]"
               style={{ background: "linear-gradient(to right, #8ab4ff, #9bffd6)" }}>
-              Abonohu Premium
+              Mbështet Antoktonin
             </Link>
           </div>
         </div>

@@ -1,21 +1,24 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { base44 } from "@/api/antoktonClient";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Crown, Star, Sparkles, AlertCircle, Building2, Heart } from "lucide-react";
+import { AlertCircle, Building2, Check, Crown, Heart, Sparkles, Star } from "lucide-react";
 import { motion } from "framer-motion";
-import { hasEarlyMemberPremiumAccess } from "@/utils/premiumAccess";
+import { createPageUrl } from "../utils";
+
+const BETA_PAYMENT_MESSAGE =
+  "Pagesa online nuk është ende aktive. Për momentin mund ta mbështesni Antoktonin me transfertë bankare ose të provoni përsëri më vonë.";
 
 export default function Subscriptions() {
   const [user, setUser] = useState(null);
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [supportAmount, setSupportAmount] = useState("");
   const [supportError, setSupportError] = useState("");
   const [checkoutLoadingPlan, setCheckoutLoadingPlan] = useState("");
+  const [businessInterestOpen, setBusinessInterestOpen] = useState(false);
   const supportAmountRef = useRef(null);
-  const queryClient = useQueryClient();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -28,61 +31,47 @@ export default function Subscriptions() {
     loadUser();
   }, []);
 
-  const { data: activeSubscription } = useQuery({
-    queryKey: ["activeSubscription", user?.email],
+  const { data: paymentConfig } = useQuery({
+    queryKey: ["stripeSupportConfig"],
     queryFn: async () => {
-      const subs = await base44.entities.PremiumSubscription.filter({
-        user_email: user.email,
-        is_active: true
-      });
-      const now = new Date();
-      return subs.find(s => new Date(s.end_date) > now) || null;
+      const response = await base44.functions.invoke("getStripeConfig", {});
+      return response.data || {};
     },
-    enabled: !!user
+    staleTime: 60 * 1000,
   });
 
-  const cancelMutation = useMutation({
-    mutationFn: async () => {
-      if (activeSubscription) {
-        await base44.entities.PremiumSubscription.update(activeSubscription.id, {
-          is_active: false
-        });
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["activeSubscription"] });
-      setCancelDialogOpen(false);
-      alert("Abonimet u anulua. Do të mbeteni Premium deri në fund të periudhës.");
-    }
-  });
+  const supportInfo = paymentConfig?.support || {};
+  const hasBankSupport = Boolean(supportInfo.iban || supportInfo.contact || supportInfo.bankName);
 
-  const handleCheckout = async (planType, amount) => {
+  const handleSupportCheckout = async () => {
     if (!user) {
       base44.auth.redirectToLogin();
       return;
     }
-    const parsedAmount = Number(String(amount || "").replace(",", "."));
-    if (planType === "support" && (!parsedAmount || parsedAmount <= 0)) {
+    const parsedAmount = Number(String(supportAmount || "").replace(",", "."));
+    if (!parsedAmount || parsedAmount <= 0) {
       setSupportError("Vendosni shumën që dëshironi të dhuroni.");
       supportAmountRef.current?.focus();
       return;
     }
+
     setSupportError("");
-    
+    setCheckoutLoadingPlan("support");
     try {
-      setCheckoutLoadingPlan(planType);
-      const response = await base44.functions.invoke('createPremiumCheckout', {
-        planType,
+      const response = await base44.functions.invoke("createPremiumCheckout", {
+        planType: "support",
         userEmail: user.email,
-        amount: planType === "support" ? parsedAmount : undefined,
-        currency: "eur"
+        amount: parsedAmount,
+        currency: "eur",
       });
-      
+
       if (response.data?.url) {
         window.location.href = response.data.url;
+        return;
       }
+      setSupportError(BETA_PAYMENT_MESSAGE);
     } catch (error) {
-      alert(error.message || "Ka ndodhur një gabim. Ju lutemi provoni përsëri.");
+      setSupportError(error.message || BETA_PAYMENT_MESSAGE);
     } finally {
       setCheckoutLoadingPlan("");
     }
@@ -95,118 +84,96 @@ export default function Subscriptions() {
       period: "",
       icon: Star,
       features: [
-        "1 javë shfaqje e kontakteve",
-        "2 aplikime për javë",
+        "Akses bazë falas gjatë fazës beta publike",
+        "Publikim dhe kërkim njoftimesh bazike",
         "Profil bazik",
         "Pjesëmarrje në ngjarje publike",
-        "Komentime të kufizuara"
+        "Përdorim i platformës pa pagesë të detyrueshme",
       ],
-      current: !activeSubscription,
+      current: true,
       cta: "Plani aktual",
-      disabled: true
+      disabled: true,
     },
     {
-      name: "Anëtar Premium",
-      subtitle: "10 EUR/muaj",
-      price: "10 EUR",
-      period: "/muaj",
+      name: "Premium — së shpejti",
+      subtitle: "Jo aktiv gjatë beta publike",
+      price: "Së shpejti",
+      period: "",
       icon: Sparkles,
-      planType: "monthly",
-      popular: true,
+      badge: "Beta Publike",
+      comingSoon: true,
       features: [
-        "Shiko të gjitha kontaktet",
-        "9 aplikime në muaj",
-        "Mesazhe direkte me punëdhënësit",
-        "Profil i theksuar në kërkime",
-        "Komentim në njoftime",
-        "Badge 'Premium'",
-        "Akses në ngjarje ekskluzive për anëtarë"
+        "Shërbimet Premium do të aktivizohen pas përfundimit të fazës testuese publike.",
+        "Përfitimet e planifikuara do të publikohen para hapjes zyrtare.",
+        "Asnjë pagesë Premium nuk kërkohet gjatë kësaj faze.",
       ],
-      current: activeSubscription?.plan_type === "monthly" || activeSubscription?.plan_type === "yearly",
-      cta: (activeSubscription?.plan_type === "monthly" || activeSubscription?.plan_type === "yearly") ? "Plani aktual" : "Zgjidh Planin"
+      cta: "Njoftomë kur të hapet",
     },
     {
       name: "Mbështetje vullnetare",
-      subtitle: "Për bamirësi/test",
-      price: "Vendose vetë",
+      subtitle: "Kontribut vullnetar",
+      price: "Mbështet Antoktonin",
       period: "",
       icon: Heart,
       planType: "support",
       badge: "Opsionale",
       customAmount: true,
       features: [
-        "Pagesë vullnetare me shumën që zgjidhni vetë",
-        "Nuk kërkohet për aksesin hyrës falas",
-        "Ndihmon testimin dhe zhvillimin e platformës",
-        "E përshtatshme për ata që duan ta mbështesin projektin"
+        "Kontribut vullnetar për zhvillimin, mirëmbajtjen dhe testimin publik të platformës Antokton.",
+        "Ky kontribut nuk kërkohet për aksesin hyrës falas dhe nuk jep privilegje të veçanta.",
+        "Shumën e vendosni vetë.",
       ],
-      current: false,
-      cta: "Mbështet vullnetarisht"
+      cta: "Mbështet vullnetarisht",
     },
     {
-      name: "Anëtar Biznesi",
-      subtitle: "10 EUR/muaj ose 80 EUR/vit",
-      price: "10-80 EUR",
-      period: "/muaj ose /vit",
+      name: "Biznes — së shpejti",
+      subtitle: "Regjistrimet nuk janë hapur ende",
+      price: "Së shpejti",
+      period: "",
       icon: Building2,
-      planType: "business",
       badge: "Për Kompani",
+      comingSoon: true,
+      businessInterest: true,
       features: [
-        "Të gjitha benefitet e Premium +",
-        "Postim njoftimesh të pakufizuara",
-        "Profil kompanie i zgjeruar",
-        "Statistika të avancuara të postimeve",
-        "Etiketë 'Biznes Verifikuar'",
-        "Prioritet në kërkime",
-        "Akses në Rekrutim AI të Avancuar"
+        "Regjistrimet për bizneset do të hapen pas përfundimit të testimeve publike.",
+        "Përfitimet e biznesit do të mbeten informuese deri në hapjen zyrtare.",
+        "Nuk ka pagesë Biznes aktive gjatë fazës beta publike.",
       ],
-      current: activeSubscription?.plan_type === "business",
-      cta: activeSubscription?.plan_type === "business" ? "Plani aktual" : "Zgjidh Planin"
-    }
+      cta: "Regjistro interesin",
+    },
   ];
 
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             className="inline-flex items-center gap-2 bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] px-4 py-2 rounded-full text-sm font-medium mb-4"
           >
             <Crown className="w-4 h-4" />
-            Plane Antokton
+            Beta Publike
           </motion.div>
-          <h1 className="text-4xl font-black text-white mb-4 uppercase tracking-wide">Zgjidh planin tënd</h1>
-          <p className="text-white text-lg">Gjej planin perfekt për karrierën tënde profesionale</p>
+          <h1 className="text-4xl font-black text-white mb-4 uppercase tracking-wide">Planet e Antoktonit</h1>
+          <p className="mx-auto max-w-3xl text-white/72 text-base leading-relaxed">
+            Antoktoni është në fazë beta publike. Aksesi bazë është falas. Pagesat Premium dhe Biznes do të hapen më vonë.
+            Për momentin mund të kontribuoni vetëm vullnetarisht për mirëmbajtjen dhe zhvillimin e platformës.
+          </p>
         </div>
 
-        {activeSubscription && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mb-8 text-center"
-          >
-            <p className="text-blue-300 font-medium">
-              ✓ Ju keni një abonim aktiv deri më {new Date(activeSubscription.end_date).toLocaleDateString('sq-AL')}
-            </p>
-          </motion.div>
-        )}
-
-        {user && hasEarlyMemberPremiumAccess(user) && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8 rounded-xl border border-[#9bffd6]/30 bg-[#9bffd6]/10 p-4 text-center"
-          >
-            <p className="font-semibold text-[#d8fff1]">
-              Për anëtarët e parë, kemi dhënë akses falas në shërbimet Premium për periudhën hyrëse.
-            </p>
-            <p className="mt-1 text-sm text-white/65">
-              Pagesa vullnetare mbetet e mundur duke zgjedhur vetë shumën te karta “Mbështetje vullnetare”.
-            </p>
-          </motion.div>
-        )}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 rounded-xl border border-[#9bffd6]/30 bg-[#9bffd6]/10 p-4 text-center"
+        >
+          <p className="font-semibold text-[#d8fff1]">
+            Përdorimi bazë i platformës është falas për të gjithë gjatë fazës beta publike.
+          </p>
+          <p className="mt-1 text-sm text-white/65">
+            Nëse dëshironi, mund ta mbështesni vullnetarisht zhvillimin dhe mirëmbajtjen e projektit.
+          </p>
+        </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-12">
           {plans.map((plan, i) => (
@@ -216,7 +183,7 @@ export default function Subscriptions() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
             >
-              <Card className={`relative bg-white/5 ${plan.popular ? 'border-2 border-[#8ab4ff] shadow-lg shadow-[#8ab4ff]/20' : 'border-white/10'} h-full`}>
+              <Card className={`relative h-full bg-white/5 ${plan.planType === "support" ? "border-2 border-[#9bffd6]/55 shadow-lg shadow-[#9bffd6]/10" : "border-white/10"} ${plan.comingSoon ? "opacity-85" : ""}`}>
                 {plan.badge && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <Badge className="bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] border-0">
@@ -226,11 +193,11 @@ export default function Subscriptions() {
                 )}
                 <CardHeader>
                   <div className="flex items-center gap-2 mb-2">
-                    <plan.icon className={`w-6 h-6 ${plan.popular ? 'text-[#8ab4ff]' : 'text-white'}`} />
+                    <plan.icon className={`w-6 h-6 ${plan.planType === "support" ? "text-[#9bffd6]" : "text-white/80"}`} />
                     <CardTitle className="text-white text-lg">{plan.name}</CardTitle>
                   </div>
                   {plan.subtitle && (
-                    <p className="text-white text-xs mb-2 font-medium">{plan.subtitle}</p>
+                    <p className="text-white/62 text-xs mb-2 font-medium">{plan.subtitle}</p>
                   )}
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-bold text-white">{plan.price}</span>
@@ -242,40 +209,57 @@ export default function Subscriptions() {
                     {plan.features.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-2">
                         <Check className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />
-                        <span className="text-white text-sm">{feature}</span>
+                        <span className="text-white/78 text-sm">{feature}</span>
                       </li>
                     ))}
                   </ul>
+
                   {plan.customAmount && (
-                    <label className="block space-y-1.5">
-                      <span className="text-xs font-medium text-white/60">Shuma vullnetare (EUR)</span>
-                      <input
-                        type="number"
-                        min="1"
-                        step="0.5"
-                        value={supportAmount}
-                        ref={supportAmountRef}
-                        onChange={(event) => {
-                          setSupportAmount(event.target.value);
-                          if (supportError) setSupportError("");
-                        }}
-                        placeholder="p.sh. 3, 10, 25"
-                        className={`h-10 w-full rounded-lg border bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#8ab4ff]/60 ${supportError ? 'border-red-400/70' : 'border-white/10'}`}
-                      />
+                    <div className="space-y-3">
+                      <label className="block space-y-1.5">
+                        <span className="text-xs font-medium text-white/60">Shuma vullnetare (EUR)</span>
+                        <input
+                          type="number"
+                          min="1"
+                          step="0.5"
+                          value={supportAmount}
+                          ref={supportAmountRef}
+                          onChange={(event) => {
+                            setSupportAmount(event.target.value);
+                            if (supportError) setSupportError("");
+                          }}
+                          placeholder="p.sh. 3, 10, 25"
+                          className={`h-10 w-full rounded-lg border bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#8ab4ff]/60 ${supportError ? "border-red-400/70" : "border-white/10"}`}
+                        />
+                      </label>
                       {supportError && (
-                        <span className="block text-xs font-medium text-red-300">{supportError}</span>
+                        <div className="rounded-lg border border-yellow-400/30 bg-yellow-400/10 px-3 py-2 text-xs leading-relaxed text-yellow-100">
+                          {supportError}
+                        </div>
                       )}
-                    </label>
+                      {hasBankSupport && (
+                        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs text-white/70">
+                          <p className="font-semibold text-white/85">Mbështetje me transfertë bankare</p>
+                          {supportInfo.bankName && <p className="mt-1">Banka: {supportInfo.bankName}</p>}
+                          {supportInfo.iban && <p className="mt-1 break-all">IBAN: {supportInfo.iban}</p>}
+                          {supportInfo.contact && <p className="mt-1 break-all">Kontakt: {supportInfo.contact}</p>}
+                        </div>
+                      )}
+                    </div>
                   )}
+
                   <Button
-                    onClick={() => plan.planType && handleCheckout(plan.planType, plan.customAmount ? supportAmount : undefined)}
-                    disabled={plan.disabled || plan.current || checkoutLoadingPlan === plan.planType}
+                    onClick={() => {
+                      if (plan.planType === "support") handleSupportCheckout();
+                      else if (plan.businessInterest) setBusinessInterestOpen(true);
+                    }}
+                    disabled={plan.disabled || checkoutLoadingPlan === plan.planType || (plan.comingSoon && !plan.businessInterest)}
                     className={`w-full ${
-                      plan.popular
-                        ? 'bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] hover:opacity-90'
-                        : plan.current
-                        ? 'bg-white/10 text-white/50 cursor-not-allowed'
-                        : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
+                      plan.planType === "support"
+                        ? "bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] hover:opacity-90"
+                        : plan.current || plan.comingSoon
+                        ? "bg-white/10 text-white/60 cursor-default"
+                        : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
                     }`}
                   >
                     {checkoutLoadingPlan === plan.planType ? "Duke hapur pagesën..." : plan.cta}
@@ -285,55 +269,34 @@ export default function Subscriptions() {
             </motion.div>
           ))}
         </div>
-
-        {activeSubscription && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center"
-          >
-            <Button
-              variant="outline"
-              onClick={() => setCancelDialogOpen(true)}
-              className="border-red-500/30 text-red-400 hover:bg-red-500/10"
-            >
-              <AlertCircle className="w-4 h-4 mr-2" />
-              Anulo Abonimin
-            </Button>
-          </motion.div>
-        )}
-
-        {cancelDialogOpen && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-[#0b1020] border border-white/10 rounded-2xl p-6 max-w-md w-full"
-            >
-              <h3 className="text-xl font-bold text-white mb-4">Anulo Abonimin?</h3>
-              <p className="text-white mb-6">
-                A jeni i sigurt? Abonimet mbeten aktive deri në fund të periudhës së paguar.
-              </p>
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setCancelDialogOpen(false)}
-                  className="flex-1 border-white/10 text-white hover:bg-white/5"
-                >
-                  Jo, kthehu
-                </Button>
-                <Button
-                  onClick={() => cancelMutation.mutate()}
-                  disabled={cancelMutation.isPending}
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-white"
-                >
-                  Po, anulo
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
       </div>
+
+      {businessInterestOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b1020] p-6 text-white shadow-2xl"
+          >
+            <h3 className="text-xl font-bold">Biznes — së shpejti</h3>
+            <p className="mt-3 text-sm leading-relaxed text-white/70">
+              Regjistrimet për bizneset do të hapen pas përfundimit të testimeve publike. Për interes të hershëm, mund të na shkruani nga faqja e kontaktit.
+            </p>
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+              <Button
+                onClick={() => setBusinessInterestOpen(false)}
+                variant="outline"
+                className="flex-1 border-white/15 text-white hover:bg-white/10"
+              >
+                Mbyll
+              </Button>
+              <Button asChild className="flex-1 bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020]">
+                <Link to={createPageUrl("Contact")}>Kontakto</Link>
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

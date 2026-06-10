@@ -51,8 +51,8 @@ export default function Terms() {
             <section>
               <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-wide">4. Abonimet dhe pagesat</h2>
               <p className="leading-relaxed">
-                Abonimet Premium janë të pagueshme dhe rinovohen automatikisht nëse nuk anulohen. 
-                Të gjitha pagesat janë përfundimtare dhe të pa-rikthyeshme, përveç rasteve të garantuara nga ligji.
+                Gjatë fazës beta publike, Premium dhe Biznes nuk janë shërbime aktive me pagesë.
+                Aksesi bazë është falas, ndërsa mbështetja vullnetare është opsionale dhe nuk jep privilegje të veçanta.
               </p>
             </section>
 

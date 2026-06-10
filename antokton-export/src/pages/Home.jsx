@@ -172,10 +172,10 @@ function EarlyPremiumOfferCard({ onDismiss }) {
     <div className="rounded-xl border border-[#9bffd6]/25 bg-[#101b2d]/95 p-3 text-white shadow-lg backdrop-blur">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-bold text-[#d8fff1]">Ofertë hyrëse për anëtarët e parë</p>
+          <p className="text-sm font-bold text-[#d8fff1]">Beta Publike</p>
           <p className="mt-1 text-xs leading-relaxed text-white/72">
-            Për anëtarët e parë, kemi dhënë akses falas në shërbimet Premium për periudhën hyrëse.
-            Pagesa vullnetare mbetet e mundur te Premium duke klikuar{" "}
+            Antoktoni është në fazë beta publike. Përdorimi bazë i platformës është falas për të gjithë.
+            Nëse dëshironi, mund ta mbështesni vullnetarisht zhvillimin dhe mirëmbajtjen e projektit duke klikuar{" "}
             <Link to={createPageUrl("Subscriptions")} className="font-semibold text-[#9bffd6] underline underline-offset-2">
               këtu
             </Link>.
@@ -194,7 +194,7 @@ function EarlyPremiumOfferCard({ onDismiss }) {
         to={createPageUrl("Subscriptions")}
         className="mt-3 inline-flex rounded-lg bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] px-4 py-2 text-xs font-bold text-[#0b1020] transition hover:opacity-90"
       >
-        Premium
+        Mbështet Antoktonin
       </Link>
     </div>
   );
@@ -679,13 +679,13 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
                     <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
                   </div>
                   <div>
-                    <div className="text-white font-bold text-sm mb-0.5">Platforma jonë po rritet!</div>
-                    <div className="text-yellow-100/80 text-xs">Abonohu si i pari dhe merrni <span className="font-bold text-yellow-300">30% ulje</span> në planin Premium. Mos humbisni këtë mundësi ekskluzive!</div>
+                    <div className="text-white font-bold text-sm mb-0.5">Beta Publike</div>
+                    <div className="text-yellow-100/80 text-xs">Aksesi bazë është falas. Nëse dëshironi, mund ta mbështesni vullnetarisht zhvillimin e Antoktonit.</div>
                   </div>
                 </div>
                 <Link to={createPageUrl("Subscriptions")}
                   className="block w-full text-center py-2 rounded-lg bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 font-bold text-sm hover:opacity-90 transition-opacity">
-                  Abonohu Tani
+                  Mbështet Antoktonin
                 </Link>
               </div>
             )}
@@ -800,12 +800,12 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
                     <Sparkles className="w-3 h-3 text-yellow-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-white font-bold text-xs">Platforma jonë po rritet! </span>
-                    <span className="text-yellow-100/80 text-xs">Abonohu si i pari dhe merr <span className="font-bold text-yellow-300">30% ulje</span> në Premium.</span>
+                    <span className="text-white font-bold text-xs">Beta Publike. </span>
+                    <span className="text-yellow-100/80 text-xs">Aksesi bazë është falas; mbështetja vullnetare mbetet opsionale.</span>
                   </div>
                   <Link to={createPageUrl("Subscriptions")}
                     className="flex-shrink-0 text-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 font-semibold text-xs hover:opacity-90 transition-opacity">
-                    Abonohu Tani
+                    Mbështet
                   </Link>
                 </div>
                 <button onClick={onDismissBanner} className="absolute top-2 right-2 text-yellow-200/60 hover:text-yellow-200 transition-colors">
@@ -1092,7 +1092,7 @@ export default function Home() {
                   >
                     {isFeatured && (
                       <div className="absolute -top-2 -right-2 z-10 bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg">
-                        ★ Premium
+                        ★ I veçuar
                       </div>
                     )}
                     <JobCard job={job} />

@@ -760,7 +760,7 @@ export default function PostDetail() {
 
           {isAuth && hasEarlyMemberPremiumAccess(user) && (
             <div className="mt-3 rounded-xl border border-[#9bffd6]/25 bg-[#9bffd6]/10 px-3 py-2 text-sm text-[#d8fff1]">
-              Për anëtarët e parë, kemi dhënë akses falas në shërbimet Premium për periudhën hyrëse. Pagesa vullnetare mbetet e mundur te Premium duke klikuar{" "}
+              Antoktoni është në fazë beta publike. Përdorimi bazë i platformës është falas për të gjithë. Nëse dëshironi, mund ta mbështesni vullnetarisht zhvillimin dhe mirëmbajtjen e projektit duke klikuar{" "}
               <Link to={createPageUrl("Subscriptions")} className="font-semibold text-[#9bffd6] underline underline-offset-2">këtu</Link>.
             </div>
           )}
@@ -1010,10 +1010,10 @@ export default function PostDetail() {
                   <div className="space-y-3">
                     <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
                       <p className="text-yellow-300 text-sm font-medium mb-2">🔒 Kontaktet e plota janë të fshehura</p>
-                      <p className="text-white text-xs">Bëhu Premium për të parë numrin e telefonit dhe emailin e plotë të postuesit</p>
+                      <p className="text-white text-xs">Gjatë beta publike, disa kontakte mund të jenë të kufizuara për arsye sigurie dhe moderimi.</p>
                     </div>
                     <Link to={createPageUrl("Subscriptions")} className="inline-block w-full text-center px-4 py-3 bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] rounded-lg text-sm font-semibold hover:opacity-90">
-                      Bëhu Premium
+                      Mëso për fazën beta
                     </Link>
                   </div>
                 )}
@@ -1240,9 +1240,9 @@ export default function PostDetail() {
                 </p>
               ) : (
                 <div className="flex items-center justify-center gap-2">
-                  <span className="text-white/40 text-xs">🔒 Vetëm anëtarët Premium mund të komentojnë</span>
+                  <span className="text-white/40 text-xs">Komentimi është i kufizuar gjatë fazës beta publike</span>
                   <Link to={createPageUrl("Subscriptions")} className="text-[#8ab4ff] text-xs font-semibold hover:underline">
-                    Bëhu Premium
+                    Mëso më shumë
                   </Link>
                 </div>
               )}

@@ -93,7 +93,7 @@ export default function Referime() {
             <CardContent className="p-6 text-center">
               <Crown className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
               <div className="text-3xl font-bold text-white mb-1">{earnedRewards}</div>
-              <p className="text-white/60 text-sm">Muaj Premium Fituar</p>
+              <p className="text-white/60 text-sm">Kontribute komunitare</p>
             </CardContent>
           </Card>
         </div>
@@ -170,8 +170,8 @@ export default function Referime() {
                 <span className="text-white font-bold">3</span>
               </div>
               <div>
-                <p className="font-medium text-white">Fito shpërblime</p>
-                <p className="text-white/60">Për çdo 3 miq të regjistruar, fito 1 muaj Premium FALAS!</p>
+                <p className="font-medium text-white">Ndihmo rritjen e komunitetit</p>
+                <p className="text-white/60">Gjatë beta publike, referimet ndihmojnë testimin dhe zgjerimin e Antoktonit.</p>
               </div>
             </div>
           </CardContent>

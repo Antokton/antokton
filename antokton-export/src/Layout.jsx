@@ -1272,15 +1272,15 @@ export default function Layout({ children, currentPageName }) {
           <div className="mx-auto mb-4 max-w-5xl px-4 pt-4 sm:px-6">
             <div className="flex flex-col gap-3 rounded-xl border border-[#9bffd6]/25 bg-[#101b2d]/95 p-4 text-white shadow-lg sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <p className="text-sm font-bold text-[#d8fff1]">Ofertë hyrëse për anëtarët e parë</p>
+                <p className="text-sm font-bold text-[#d8fff1]">Beta Publike</p>
                 <p className="mt-1 text-xs leading-relaxed text-white/70">
-                  Për anëtarët e parë, kemi dhënë akses falas në shërbimet Premium për periudhën hyrëse. Pagesa vullnetare mbetet e mundur te Premium duke klikuar{" "}
+                  Antoktoni është në fazë beta publike. Përdorimi bazë i platformës është falas për të gjithë. Nëse dëshironi, mund ta mbështesni vullnetarisht zhvillimin dhe mirëmbajtjen e projektit duke klikuar{" "}
                   <Link to={createPageUrl("Subscriptions")} className="font-semibold text-[#9bffd6] underline underline-offset-2">këtu</Link>.
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <Link to={createPageUrl("Subscriptions")} className="rounded-lg bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] px-3 py-2 text-xs font-bold text-[#0b1020]">
-                  Premium
+                  Mbështet Antoktonin
                 </Link>
                 <button
                   type="button"
@@ -1379,7 +1379,7 @@ export default function Layout({ children, currentPageName }) {
             <div>
               <h4 style={{ color: '#ffffff' }} className="text-xs font-bold uppercase tracking-wider mb-4">Platforma</h4>
               <div className="space-y-2.5">
-                <Link to={createPageUrl("Subscriptions")} className="block text-sm text-white hover:text-white/60 transition-colors">Abonim Premium</Link>
+                <Link to={createPageUrl("Subscriptions")} className="block text-sm text-white hover:text-white/60 transition-colors">Mbështet Antoktonin</Link>
                 <Link to={createPageUrl("About")} className="block text-sm text-white hover:text-white/60 transition-colors">Rreth Nesh</Link>
                 <Link to={createPageUrl("Contact")} className="block text-sm text-white hover:text-white/60 transition-colors">Kontakto</Link>
                 <Link to={createPageUrl("Home")} className="block text-sm text-white hover:text-white/60 transition-colors">Faqja Kryesore</Link>

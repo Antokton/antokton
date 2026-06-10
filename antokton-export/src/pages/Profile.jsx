@@ -868,7 +868,7 @@ export default function Profile() {
         {hasActiveSubscription && (
           <div className="flex w-fit shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 px-4 py-2 font-semibold text-white">
             <Crown className="w-4 h-4" />
-            Premium
+            Mbështetës
           </div>
         )}
       </div>
@@ -2102,7 +2102,7 @@ export default function Profile() {
                   <div key={payment.id} className="flex flex-col gap-3 rounded-lg border border-white/20 bg-white/10 p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
                       <p className="text-white font-semibold">
-                        {payment.plan_type === 'monthly' ? 'Premium Mujor' : 'Premium Vjetor'}
+                        {payment.plan_type === 'support' ? 'Mbështetje vullnetare' : 'Plan i mëparshëm'}
                       </p>
                       <p className="text-white text-sm">
                          {new Date(payment.created_date).toLocaleDateString('sq-AL', { day: '2-digit', month: '2-digit', year: 'numeric' })}

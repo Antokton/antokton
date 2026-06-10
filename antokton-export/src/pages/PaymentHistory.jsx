@@ -53,7 +53,7 @@ export default function PaymentHistory() {
     ...(subscriptions || []).map(s => ({
       id: s.id,
       type: 'subscription',
-      description: `Abonim ${s.subscription_type}`,
+      description: s.plan_type === "support" ? "Mbështetje vullnetare" : "Pagesë e mëparshme",
       amount: s.amount_paid,
       date: s.created_date,
       status: s.is_active ? 'active' : 'expired'

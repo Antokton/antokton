@@ -45,6 +45,9 @@ const {
   MAX_REMOTE_ASSET_BYTES,
   STRIPE_PUBLISHABLE_KEY,
   STRIPE_SECRET_KEY,
+  SUPPORT_IBAN,
+  SUPPORT_BANK_NAME,
+  SUPPORT_PAYMENT_CONTACT,
   AUTH_TOKEN_TTL_HOURS,
   SESSION_COOKIE_NAME,
   SESSION_COOKIE_SECURE,
@@ -1083,6 +1086,11 @@ async function logEmail(payload) {
 }
 
 function checkoutAmountForPlan(planType, payload = {}) {
+  if (planType !== "support") {
+    const error = new Error("Ky plan do të hapet pas fazës beta publike.");
+    error.status = 400;
+    throw error;
+  }
   if (planType === "support") {
     const amount = Number(String(payload.amount || payload.supportAmount || payload.price || 0).replace(",", "."));
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -1092,21 +1100,17 @@ function checkoutAmountForPlan(planType, payload = {}) {
     }
     return Math.round(amount * 100);
   }
-  if (planType === "business") return 1000;
-  if (planType === "yearly") return 8000;
-  return 1000;
+  return 0;
 }
 
 function checkoutLabelForPlan(planType) {
   if (planType === "support") return "Mbështetje vullnetare për Antokton";
-  if (planType === "business") return "Antokton Biznes";
-  if (planType === "yearly") return "Antokton Premium vjetor";
-  return "Antokton Premium";
+  return "Antokton";
 }
 
 async function createStripeCheckoutSession({ req, payload, subscriptionId, user }) {
   if (!STRIPE_SECRET_KEY) {
-    const error = new Error("Pagesat nuk janë konfiguruar në server.");
+    const error = new Error("Pagesa online nuk është ende aktive. Për momentin mund ta mbështesni Antoktonin me transfertë bankare ose të provoni përsëri më vonë.");
     error.status = 503;
     throw error;
   }
@@ -1749,11 +1753,17 @@ async function handleFunction(req, res, functionName) {
     case "createSubscriptionCheckout":
     case "createFeaturedCheckout": {
       const planType = payload.planType || payload.plan_type || "monthly";
+      if (planType !== "support") {
+        const error = new Error("Premium dhe Biznes do të hapen pas përfundimit të fazës testuese publike.");
+        error.status = 400;
+        throw error;
+      }
       const amountCents = checkoutAmountForPlan(planType, payload);
       const subscription = await createRecord("PremiumSubscription", {
         user_email: payload.userEmail || user.email,
         plan_type: planType,
         amount_cents: amountCents,
+        amount_paid: amountCents / 100,
         currency: String(payload.currency || "eur").toLowerCase(),
         status: "pending",
         checkout_type: functionName
@@ -1783,7 +1793,15 @@ async function handleFunction(req, res, functionName) {
       result = await createRecord("UserActivity", { user_email: user?.email || null, ...payload }, userEmail);
       break;
     case "getStripeConfig":
-      result = { publishableKey: STRIPE_PUBLISHABLE_KEY || "" };
+      result = {
+        publishableKey: STRIPE_PUBLISHABLE_KEY || "",
+        checkoutConfigured: Boolean(STRIPE_SECRET_KEY),
+        support: {
+          iban: SUPPORT_IBAN || "",
+          bankName: SUPPORT_BANK_NAME || "",
+          contact: SUPPORT_PAYMENT_CONTACT || ""
+        }
+      };
       break;
     case "moderateContent":
       result = { approved: true, status: "approved", reasons: [] };

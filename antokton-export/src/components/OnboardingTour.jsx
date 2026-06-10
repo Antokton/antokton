@@ -21,9 +21,9 @@ export default function OnboardingTour({ onComplete }) {
     },
     {
       icon: Crown,
-      title: "Bëhu Premium",
-      description: "Hap të gjitha kontaktet, apliko pa limit, mesazhe direkte dhe badge Premium",
-      highlight: "Vetëm 2 EUR/muaj ose 15 EUR/vit"
+      title: "Beta Publike",
+      description: "Aksesi bazë është falas; Premium dhe Biznes do të hapen pas fazës testuese",
+      highlight: "Mbështetja vullnetare është opsionale"
     },
     {
       icon: Calendar,
