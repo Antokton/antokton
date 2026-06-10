@@ -27,7 +27,6 @@ const AVAILABLE_PATHS = [
   { label: "Edukim", path: "/Edukim" },
   { label: "Partnerë", path: "/Partners" },
   { label: "Njoftimet", path: "/NotificationCenter" },
-  { label: "Cilësimet", path: "/NotificationSettings" },
   { label: "Pazar", path: "/Pazar" },
   { label: "Punë (Feed)", path: "/Feed?category=pune" },
   { label: "Prona (Feed)", path: "/Feed?category=prona" },

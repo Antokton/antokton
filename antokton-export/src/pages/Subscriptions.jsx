@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Crown, Star, Sparkles, AlertCircle, Building2 } from "lucide-react";
+import { Check, Crown, Star, Sparkles, AlertCircle, Building2, Heart } from "lucide-react";
 import { motion } from "framer-motion";
 import { hasEarlyMemberPremiumAccess } from "@/utils/premiumAccess";
 
@@ -110,6 +110,23 @@ export default function Subscriptions() {
       cta: (activeSubscription?.plan_type === "monthly" || activeSubscription?.plan_type === "yearly") ? "Plani aktual" : "Zgjidh Planin"
     },
     {
+      name: "Mbështetje vullnetare",
+      subtitle: "Për bamirësi/test",
+      price: "2-5 EUR",
+      period: "",
+      icon: Heart,
+      planType: "support",
+      badge: "Opsionale",
+      features: [
+        "Pagesë e vogël vullnetare",
+        "Nuk kërkohet për aksesin hyrës falas",
+        "Ndihmon testimin dhe zhvillimin e platformës",
+        "E përshtatshme për ata që duan ta mbështesin projektin"
+      ],
+      current: false,
+      cta: "Mbështet vullnetarisht"
+    },
+    {
       name: "Anëtar Biznesi",
       subtitle: "10 EUR/muaj ose 80 EUR/vit",
       price: "10-80 EUR",
@@ -174,7 +191,7 @@ export default function Subscriptions() {
           </motion.div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-12">
           {plans.map((plan, i) => (
             <motion.div
               key={plan.name}

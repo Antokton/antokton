@@ -74,7 +74,6 @@ import JobMatches from './pages/JobMatches';
 import Members from './pages/Members';
 import Messages from './pages/Messages';
 import NotificationCenter from './pages/NotificationCenter';
-import NotificationSettings from './pages/NotificationSettings';
 import Partners from './pages/Partners';
 import PaymentHistory from './pages/PaymentHistory';
 import PostDetail from './pages/PostDetail';
@@ -126,7 +125,6 @@ export const PAGES = {
     "Members": Members,
     "Messages": Messages,
     "NotificationCenter": NotificationCenter,
-    "NotificationSettings": NotificationSettings,
     "Partners": Partners,
     "PaymentHistory": PaymentHistory,
     "PostDetail": PostDetail,

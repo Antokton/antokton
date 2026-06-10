@@ -16,6 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSiteConfig } from "./lib/useSiteConfig";
 import { t, getLanguage, setLanguage } from "./lib/translations";
 import { CONTACT_EMAIL } from "@/lib/publicConfig";
+import { EARLY_MEMBER_PREMIUM_UNTIL, hasEarlyMemberPremiumAccess } from "@/utils/premiumAccess";
 
 const BILETA_NAV_SUBMENU = [
   { id: "avion", label: "Avion", url: "/Bileta?type=avion#kerkese-bilete", visible: true },
@@ -140,6 +141,7 @@ export default function Layout({ children, currentPageName }) {
   const [language, setLanguageState] = useState(getLanguage());
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [promoBanner, setPromoBanner] = useState(true); // Gjithmonë shfaqet për vizitorët e paloguar
+  const [earlyPremiumBanner, setEarlyPremiumBanner] = useState(() => localStorage.getItem("earlyPremiumBannerDismissed") !== "true");
   // Mos shfaq promo banner në faqet funksionale ku bllokon ndërveprimet
   const noBannerPages = ["Pazar", "CreatePost", "Messages", "Feed", "Statuset"];
   const shouldShowBanner = promoBanner && !isAuth && !noBannerPages.includes(currentPageName);
@@ -309,6 +311,8 @@ export default function Layout({ children, currentPageName }) {
 
   const hasPostedJobs = userJobsData?.hasPostedJobs || false;
   const hasActiveSubscription = userJobsData?.hasActiveSubscription || false;
+  const showEarlyPremiumBanner = isAuth && user && !hasActiveSubscription && hasEarlyMemberPremiumAccess(user) && earlyPremiumBanner;
+  const earlyPremiumUntil = new Date(EARLY_MEMBER_PREMIUM_UNTIL).toLocaleDateString("sq-AL", { day: "2-digit", month: "long", year: "numeric" });
 
   // Dynamic nav from SiteConfig
   const { get: getSiteConfig } = useSiteConfig();
@@ -661,7 +665,6 @@ export default function Layout({ children, currentPageName }) {
                   <DropdownMenuContent align="start" className="w-52 bg-[#0b1020] border-white/10">
                     <DropdownMenuItem asChild><Link to="/Events" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Calendar className="w-4 h-4" /> Ngjarje</Link></DropdownMenuItem>
                     <DropdownMenuItem asChild><Link to="/Bamiresi" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Heart className="w-4 h-4" /> Bamirësi</Link></DropdownMenuItem>
-                    <DropdownMenuItem asChild><Link to="/Search" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Search className="w-4 h-4" /> Kërko</Link></DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 </>
@@ -838,7 +841,6 @@ export default function Layout({ children, currentPageName }) {
                   <DropdownMenuContent align="start" className="w-52 bg-[#0b1020] border-white/10">
                     <DropdownMenuItem asChild><Link to="/Events" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Calendar className="w-4 h-4" /> Ngjarje</Link></DropdownMenuItem>
                     <DropdownMenuItem asChild><Link to="/Bamiresi" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Heart className="w-4 h-4" /> Bamirësi</Link></DropdownMenuItem>
-                    <DropdownMenuItem asChild><Link to="/Search" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Search className="w-4 h-4" /> Kërko</Link></DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -1277,6 +1279,34 @@ export default function Layout({ children, currentPageName }) {
           paddingBottom: 'calc(100px + env(safe-area-inset-bottom))'
         }}
       >
+        {showEarlyPremiumBanner && (
+          <div className="mx-auto mb-4 max-w-5xl px-4 pt-4 sm:px-6">
+            <div className="flex flex-col gap-3 rounded-xl border border-[#9bffd6]/25 bg-[#101b2d]/95 p-4 text-white shadow-lg sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-[#d8fff1]">Ofertë hyrëse për anëtarët e parë</p>
+                <p className="mt-1 text-xs leading-relaxed text-white/70">
+                  Deri më {earlyPremiumUntil}, ke akses falas në shërbimet Premium. Nëse dëshiron të mbështesësh Antokton për bamirësi/test, mund të bësh një pagesë të vogël vullnetare.
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Link to={createPageUrl("Subscriptions")} className="rounded-lg bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] px-3 py-2 text-xs font-bold text-[#0b1020]">
+                  Mbështet vullnetarisht
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.setItem("earlyPremiumBannerDismissed", "true");
+                    setEarlyPremiumBanner(false);
+                  }}
+                  className="rounded-lg border border-white/10 px-2.5 py-2 text-xs text-white/55 hover:bg-white/10 hover:text-white"
+                  aria-label="Mbyll ofertën hyrëse"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {children}
       </main>
 

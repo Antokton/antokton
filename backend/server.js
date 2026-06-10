@@ -578,6 +578,10 @@ async function updateRecord(entity, id, patch) {
   const next = stripMeta(coerceSchemaTypes(entity, applySchemaDefaults(entity, { ...existing, ...normalizedPatch })));
   await statements.updateEntity.run(JSON.stringify(next), now(), APP_ID, entity, row.id);
 
+  if (entity === "User" && Object.prototype.hasOwnProperty.call(normalizedPatch || {}, "profile_photo_url")) {
+    await propagateUserProfilePhoto(existing, next);
+  }
+
   if (entity === "User" && isRestoringUserAccessPatch(patch)) {
     const targetEmails = new Set(userEmailCandidates({ ...existing, ...next }));
     if (targetEmails.size > 0) {
@@ -596,6 +600,43 @@ async function updateRecord(entity, id, patch) {
   }
 
   return recordFromRow(await statements.getEntity.get(APP_ID, entity, row.id));
+}
+
+async function propagateUserProfilePhoto(previousUser = {}, nextUser = {}) {
+  const nextPhoto = String(nextUser.profile_photo_url || "").trim();
+  const previousPhoto = String(previousUser.profile_photo_url || "").trim();
+  if (nextPhoto === previousPhoto) return;
+
+  const emails = new Set(userEmailCandidates({ ...previousUser, ...nextUser }));
+  if (emails.size === 0) return;
+
+  const entityPhotoRules = {
+    Job: [{ email: "created_by", photo: "author_photo_url" }, { email: "author_email", photo: "author_photo_url" }],
+    Marketplace: [{ email: "created_by", photo: "author_photo_url" }, { email: "author_email", photo: "author_photo_url" }],
+    Housing: [{ email: "created_by", photo: "author_photo_url" }, { email: "author_email", photo: "author_photo_url" }],
+    Service: [{ email: "created_by", photo: "author_photo_url" }, { email: "author_email", photo: "author_photo_url" }],
+    Event: [{ email: "created_by", photo: "author_photo_url" }, { email: "author_email", photo: "author_photo_url" }],
+    Status: [{ email: "author_email", photo: "author_photo_url" }, { email: "created_by", photo: "author_photo_url" }],
+    StatusComment: [{ email: "author_email", photo: "author_photo_url" }, { email: "created_by", photo: "author_photo_url" }],
+    UserConnection: [{ email: "contact_email", photo: "contact_photo_url" }],
+    UserBlock: [{ email: "blocked_email", photo: "blocked_photo_url" }]
+  };
+
+  for (const [targetEntity, rules] of Object.entries(entityPhotoRules)) {
+    const rows = await statements.listEntity.all(APP_ID, targetEntity);
+    for (const targetRow of rows) {
+      const record = recordFromRow(targetRow);
+      const updates = {};
+      for (const rule of rules) {
+        if (emails.has(normalizeEmail(record[rule.email] || ""))) {
+          updates[rule.photo] = nextPhoto;
+        }
+      }
+      if (Object.keys(updates).length === 0) continue;
+      const nextRecord = stripMeta(coerceSchemaTypes(targetEntity, applySchemaDefaults(targetEntity, { ...record, ...updates })));
+      await statements.updateEntity.run(JSON.stringify(nextRecord), now(), APP_ID, targetEntity, targetRow.id);
+    }
+  }
 }
 
 async function deleteRecord(entity, id) {

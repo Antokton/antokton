@@ -23,6 +23,10 @@ const ALBANIAN_CORRECTIONS = new Map([
   ["ju pergezoj", "ju përgëzoj"],
   ["pergezoj", "përgëzoj"],
   ["inisiativen", "iniciativën"],
+  ["iniciativen", "iniciativën"],
+  ["pergezime", "përgëzime"],
+  ["shume", "shumë"],
+  ["eshte", "është"],
   ["faleminderit", "faleminderit"],
   ["shqipetare", "shqiptare"],
   ["shqiperia", "Shqipëria"],
@@ -40,6 +44,11 @@ function autocorrectAlbanianText(text = "") {
     });
   }
   return next.replace(/\s+([,.!?;:])/g, "$1");
+}
+
+function applyForcedAlbanianAutocorrect(value, setter, enabled) {
+  const raw = String(value || "");
+  setter(enabled ? autocorrectAlbanianText(raw) : raw);
 }
 
 export default function Messages() {
@@ -249,6 +258,22 @@ export default function Messages() {
     const otherUser = allUsers.find(u => u.email === email);
     return { email, messages: msgs, latestMessage: latestMsg, unreadCount, otherUser };
   }).sort((a, b) => new Date(b.latestMessage.created_date) - new Date(a.latestMessage.created_date));
+
+  if (toEmail && !conversationList.some((conv) => conv.email === toEmail)) {
+    const otherUser = allUsers.find((u) => u.email === toEmail);
+    conversationList.unshift({
+      email: toEmail,
+      messages: [],
+      latestMessage: {
+        message: "Bisedë e re",
+        created_date: new Date().toISOString(),
+        sender_email: toEmail,
+        receiver_email: user.email
+      },
+      unreadCount: 0,
+      otherUser
+    });
+  }
 
   const activeConversations = conversationList.filter(conv => !archivedConversations.includes(conv.email));
   const archivedConvList = conversationList.filter(conv => archivedConversations.includes(conv.email));
@@ -649,7 +674,7 @@ export default function Messages() {
                     </label>
                     <Textarea
                       value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
+                      onChange={(e) => applyForcedAlbanianAutocorrect(e.target.value, setMessageText, autocorrectEnabled)}
                       onBlur={() => autocorrectEnabled && setMessageText((text) => autocorrectAlbanianText(text))}
                       onKeyPress={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
@@ -698,7 +723,7 @@ export default function Messages() {
               <h3 className="text-white font-semibold mb-3">Dërgo një mesazh te stafi</h3>
               <Textarea
                 value={staffMessage}
-                onChange={(e) => setStaffMessage(e.target.value)}
+                onChange={(e) => applyForcedAlbanianAutocorrect(e.target.value, setStaffMessage, autocorrectEnabled)}
                 onBlur={() => autocorrectEnabled && setStaffMessage((text) => autocorrectAlbanianText(text))}
                 placeholder="Shkruani mesazhin tuaj këtu..."
                 className="bg-white/5 border-white/10 text-white min-h-[120px] mb-2"
