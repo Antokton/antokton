@@ -16,7 +16,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useSiteConfig } from "./lib/useSiteConfig";
 import { t, getLanguage, setLanguage } from "./lib/translations";
 import { CONTACT_EMAIL } from "@/lib/publicConfig";
-import { EARLY_MEMBER_PREMIUM_UNTIL, hasEarlyMemberPremiumAccess } from "@/utils/premiumAccess";
+import { hasEarlyMemberPremiumAccess } from "@/utils/premiumAccess";
+import { getUserDisplayName } from "@/lib/userDisplay";
 
 const BILETA_NAV_SUBMENU = [
   { id: "avion", label: "Avion", url: "/Bileta?type=avion#kerkese-bilete", visible: true },
@@ -274,17 +275,7 @@ export default function Layout({ children, currentPageName }) {
 
   const getThemeIcon = () => '🌙';
 
-  const getDisplayName = (user) => {
-    if (!user) return "";
-    
-    // Emër Mbiemër (custom fields)
-    if (user.first_name && user.surname) {
-      return `${user.first_name} ${user.surname}`;
-    }
-    
-    // Fallback to first_name, full_name (built-in), or email
-    return user.first_name || user.full_name || user.email?.split('@')[0] || user.email;
-  };
+  const getDisplayName = (user) => getUserDisplayName(user, user?.email);
 
   const { data: userJobsData } = useQuery({
     queryKey: ['userJobs', user?.email],
@@ -312,7 +303,6 @@ export default function Layout({ children, currentPageName }) {
   const hasPostedJobs = userJobsData?.hasPostedJobs || false;
   const hasActiveSubscription = userJobsData?.hasActiveSubscription || false;
   const showEarlyPremiumBanner = isAuth && user && !hasActiveSubscription && hasEarlyMemberPremiumAccess(user) && earlyPremiumBanner;
-  const earlyPremiumUntil = new Date(EARLY_MEMBER_PREMIUM_UNTIL).toLocaleDateString("sq-AL", { day: "2-digit", month: "long", year: "numeric" });
 
   // Dynamic nav from SiteConfig
   const { get: getSiteConfig } = useSiteConfig();
@@ -1285,12 +1275,13 @@ export default function Layout({ children, currentPageName }) {
               <div className="min-w-0">
                 <p className="text-sm font-bold text-[#d8fff1]">Ofertë hyrëse për anëtarët e parë</p>
                 <p className="mt-1 text-xs leading-relaxed text-white/70">
-                  Deri më {earlyPremiumUntil}, ke akses falas në shërbimet Premium. Nëse dëshiron të mbështesësh Antokton për bamirësi/test, mund të bësh një pagesë të vogël vullnetare.
+                  Për anëtarët e parë, kemi dhënë akses falas në shërbimet Premium për periudhën hyrëse. Pagesa vullnetare mbetet e mundur te Premium duke klikuar{" "}
+                  <Link to={createPageUrl("Subscriptions")} className="font-semibold text-[#9bffd6] underline underline-offset-2">këtu</Link>.
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <Link to={createPageUrl("Subscriptions")} className="rounded-lg bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] px-3 py-2 text-xs font-bold text-[#0b1020]">
-                  Mbështet vullnetarisht
+                  Premium
                 </Link>
                 <button
                   type="button"

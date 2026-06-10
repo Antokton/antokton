@@ -98,10 +98,11 @@ export default function UserSearch() {
             </div>
             <button
               onClick={() => setSearchTerm(searchTerm)}
-              className="px-6 h-12 rounded-lg bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] font-semibold hover:opacity-90 transition-opacity flex items-center gap-2"
+              className="h-12 w-12 rounded-lg bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] font-semibold hover:opacity-90 transition-opacity flex items-center justify-center"
+              aria-label="Kërko"
+              title="Kërko"
             >
               <Search className="w-4 h-4" />
-              Kërko
             </button>
           </div>
         </CardContent>

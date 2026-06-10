@@ -183,11 +183,9 @@ export default function Subscriptions() {
             className="mb-8 rounded-xl border border-[#9bffd6]/30 bg-[#9bffd6]/10 p-4 text-center"
           >
             <p className="font-semibold text-[#d8fff1]">
-              Si anëtar i parë i Antokton, ke akses falas në shërbimet Premium gjatë periudhës hyrëse.
+              Për anëtarët e parë, kemi dhënë akses falas në shërbimet Premium për periudhën hyrëse.
             </p>
-            <p className="mt-1 text-sm text-white/65">
-              Nëse dëshiron të mbështesësh platformën për bamirësi/test, mund të zgjedhësh një pagesë vullnetare më poshtë.
-            </p>
+            <p className="mt-1 text-sm text-white/65">Pagesa vullnetare mbetet e mundur te Premium duke klikuar "këtu".</p>
           </motion.div>
         )}
 

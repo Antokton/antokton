@@ -8,32 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Send, CheckCircle, User } from "lucide-react";
 import { format } from "date-fns";
-
-const ALBANIAN_CORRECTIONS = new Map([
-  ["per", "për"],
-  ["eshte", "është"],
-  ["nje", "një"],
-  ["te", "të"],
-  ["ne", "në"],
-  ["qe", "që"],
-  ["ju pergezoj", "ju përgëzoj"],
-  ["pergezoj", "përgëzoj"],
-  ["inisiativen", "iniciativën"],
-  ["mire", "mirë"],
-  ["pershendetje", "përshëndetje"],
-]);
-
-function autocorrectAlbanianText(text = "") {
-  let next = String(text || "");
-  for (const [from, to] of ALBANIAN_CORRECTIONS) {
-    next = next.replace(new RegExp(`\\b${from}\\b`, "gi"), (match) => {
-      if (match === match.toUpperCase()) return to.toUpperCase();
-      if (match[0] === match[0].toUpperCase()) return to.charAt(0).toUpperCase() + to.slice(1);
-      return to;
-    });
-  }
-  return next.replace(/\s+([,.!?;:])/g, "$1");
-}
+import { autocorrectAlbanianDraft, autocorrectAlbanianText } from "@/lib/albanianAutocorrect";
 
 export default function StaffChat() {
   const [user, setUser] = useState(null);
@@ -132,7 +107,7 @@ export default function StaffChat() {
             <CardContent className="p-6">
               <Textarea
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                onChange={(e) => setNewMessage(autocorrectAlbanianDraft(e.target.value))}
                 onBlur={() => setNewMessage((text) => autocorrectAlbanianText(text))}
                 placeholder="Shkruani mesazhin tuaj këtu..."
                 className="bg-white/5 border-white/10 text-white min-h-[120px] mb-4"
@@ -203,8 +178,12 @@ export default function StaffChat() {
                       />
                       <Button
                         onClick={() => {
-                          const response = document.getElementById(`response-${msg.id}`).value;
-                          if (response.trim()) handleResolve(msg.id, response);
+                          const input = document.getElementById(`response-${msg.id}`);
+                          const response = autocorrectAlbanianText(input.value).trim();
+                          if (response) {
+                            input.value = response;
+                            handleResolve(msg.id, response);
+                          }
                         }}
                         size="sm"
                         className="bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020]"

@@ -20,6 +20,7 @@ import CommentItem from "../components/job/CommentItem";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizePhoneForCountry } from "@/lib/phone";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { hasEarlyMemberPremiumAccess, hasPremiumAccess } from "@/utils/premiumAccess";
+import { isStaffUser } from "@/lib/userDisplay";
 
 function SimilarPosts({ currentJobId, category }) {
   const { data: similarJobs = [] } = useQuery({
@@ -136,6 +137,7 @@ export default function PostDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
   const [showComments, setShowComments] = useState(false);
+  const [staffProfileNotice, setStaffProfileNotice] = useState("");
 
   const queryClient = useQueryClient();
   const canSeePrivateImportFields = user?.role === "admin" || user?.role === "moderator";
@@ -758,7 +760,8 @@ export default function PostDetail() {
 
           {isAuth && hasEarlyMemberPremiumAccess(user) && (
             <div className="mt-3 rounded-xl border border-[#9bffd6]/25 bg-[#9bffd6]/10 px-3 py-2 text-sm text-[#d8fff1]">
-              Si anëtar i parë, ke akses falas në shërbimet Premium për periudhën hyrëse. Pagesa vullnetare mbetet e mundur te Premium.
+              Për anëtarët e parë, kemi dhënë akses falas në shërbimet Premium për periudhën hyrëse. Pagesa vullnetare mbetet e mundur te Premium duke klikuar{" "}
+              <Link to={createPageUrl("Subscriptions")} className="font-semibold text-[#9bffd6] underline underline-offset-2">këtu</Link>.
             </div>
           )}
 
@@ -794,9 +797,27 @@ export default function PostDetail() {
             </span>
             {job.poster_name && (() => {
               const canSeeProfile = isAuth && premiumAccess;
+              const posterIsStaff = isStaffUser(posterProfile);
               const profileLink = job.created_by ? `/UserProfiles?email=${encodeURIComponent(job.created_by)}` : null;
               const externalLink = (canSeePrivateImportFields || job.show_author_profile_url === true) ? job.author_profile_url || null : null;
-              const visibleProfileLink = canSeeProfile ? profileLink : null;
+              const visibleProfileLink = canSeeProfile && !posterIsStaff ? profileLink : null;
+              if (posterIsStaff) {
+                return (
+                  <button
+                    type="button"
+                    onClick={() => setStaffProfileNotice("Ky profil në këtë njoftim nuk hapet pasi ky është pjesë e stafit.")}
+                    className="flex items-center gap-1.5 text-[#8ab4ff] hover:text-[#9bffd6] transition-colors underline underline-offset-2"
+                  >
+                    <UserAvatar
+                      name={job.poster_name || posterProfile?.full_name || posterProfile?.first_name}
+                      email={job.created_by}
+                      photoUrl={job.author_photo_url}
+                      size={24}
+                    />
+                    {job.poster_name}
+                  </button>
+                );
+              }
               if (visibleProfileLink || externalLink) {
                 return (
                   <a
@@ -828,6 +849,15 @@ export default function PostDetail() {
               );
             })()}
           </div>
+
+          {staffProfileNotice && (
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[#8ab4ff]/25 bg-[#8ab4ff]/10 px-3 py-2 text-sm text-[#dbeafe]">
+              <span>{staffProfileNotice}</span>
+              <button type="button" onClick={() => setStaffProfileNotice("")} className="text-white/55 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
 
           {job.salary_info && (
             <div className="mt-4 px-4 py-2.5 rounded-xl bg-green-500/10 border border-green-500/20 text-green-300 text-sm font-medium">

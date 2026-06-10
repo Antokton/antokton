@@ -11,45 +11,8 @@ import { MessageCircle, Send, Loader2, Search, User, RotateCcw, Trash2, Shield, 
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import AuthAccessBanner from "@/components/AuthAccessBanner";
-
-const ALBANIAN_CORRECTIONS = new Map([
-  ["per", "për"],
-  ["eshte", "është"],
-  ["nje", "një"],
-  ["te", "të"],
-  ["ne", "në"],
-  ["qe", "që"],
-  ["dhe", "dhe"],
-  ["ju pergezoj", "ju përgëzoj"],
-  ["pergezoj", "përgëzoj"],
-  ["inisiativen", "iniciativën"],
-  ["iniciativen", "iniciativën"],
-  ["pergezime", "përgëzime"],
-  ["shume", "shumë"],
-  ["eshte", "është"],
-  ["faleminderit", "faleminderit"],
-  ["shqipetare", "shqiptare"],
-  ["shqiperia", "Shqipëria"],
-  ["mire", "mirë"],
-  ["pershendetje", "përshëndetje"],
-]);
-
-function autocorrectAlbanianText(text = "") {
-  let next = String(text || "");
-  for (const [from, to] of ALBANIAN_CORRECTIONS) {
-    next = next.replace(new RegExp(`\\b${from}\\b`, "gi"), (match) => {
-      if (match === match.toUpperCase()) return to.toUpperCase();
-      if (match[0] === match[0].toUpperCase()) return to.charAt(0).toUpperCase() + to.slice(1);
-      return to;
-    });
-  }
-  return next.replace(/\s+([,.!?;:])/g, "$1");
-}
-
-function applyForcedAlbanianAutocorrect(value, setter, enabled) {
-  const raw = String(value || "");
-  setter(enabled ? autocorrectAlbanianText(raw) : raw);
-}
+import { autocorrectAlbanianDraft, autocorrectAlbanianText } from "@/lib/albanianAutocorrect";
+import { getUserDisplayName } from "@/lib/userDisplay";
 
 export default function Messages() {
   const [user, setUser] = useState(null);
@@ -288,6 +251,16 @@ export default function Messages() {
     ? (conversations[selectedConversation]?.sort((a, b) => new Date(a.created_date) - new Date(b.created_date)) || [])
         .filter(msg => !messageSearchQuery || msg.message.toLowerCase().includes(messageSearchQuery.toLowerCase()))
     : [];
+  const selectedUser = selectedConversation ? allUsers.find((u) => u.email === selectedConversation) : null;
+  const selectedConversationName = selectedConversation ? getUserDisplayName(selectedUser, selectedConversation) : "";
+
+  const updateMessageText = (value) => {
+    setMessageText(autocorrectEnabled ? autocorrectAlbanianDraft(value) : value);
+  };
+
+  const updateStaffMessage = (value) => {
+    setStaffMessage(autocorrectEnabled ? autocorrectAlbanianDraft(value) : value);
+  };
 
   const handleSendMessage = () => {
     const cleanMessage = autocorrectEnabled ? autocorrectAlbanianText(messageText).trim() : messageText.trim();
@@ -466,9 +439,7 @@ export default function Messages() {
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           <User className="w-4 h-4 text-white/40 flex-shrink-0" />
                           <span className="text-white font-medium text-sm truncate">
-                            {conv.otherUser?.first_name && conv.otherUser?.surname 
-                              ? `${conv.otherUser.first_name} ${conv.otherUser.surname}`
-                              : conv.otherUser?.full_name || conv.email.split('@')[0]}
+                            {getUserDisplayName(conv.otherUser, conv.email)}
                           </span>
                           {activeSubs.some(s => s.user_email === conv.email) && (
                             <Crown className="w-3.5 h-3.5 text-yellow-400" title="Premium" />
@@ -532,7 +503,7 @@ export default function Messages() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <User className="w-5 h-5 text-white/60" />
-                      <span className="text-white font-medium">{selectedConversation.split('@')[0]}</span>
+                      <span className="text-white font-medium">{selectedConversationName}</span>
                     </div>
                     <div className="flex gap-2">
                       {archivedConversations.includes(selectedConversation) ? (
@@ -674,7 +645,7 @@ export default function Messages() {
                     </label>
                     <Textarea
                       value={messageText}
-                      onChange={(e) => applyForcedAlbanianAutocorrect(e.target.value, setMessageText, autocorrectEnabled)}
+                      onChange={(e) => updateMessageText(e.target.value)}
                       onBlur={() => autocorrectEnabled && setMessageText((text) => autocorrectAlbanianText(text))}
                       onKeyPress={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
@@ -723,7 +694,7 @@ export default function Messages() {
               <h3 className="text-white font-semibold mb-3">Dërgo një mesazh te stafi</h3>
               <Textarea
                 value={staffMessage}
-                onChange={(e) => applyForcedAlbanianAutocorrect(e.target.value, setStaffMessage, autocorrectEnabled)}
+                onChange={(e) => updateStaffMessage(e.target.value)}
                 onBlur={() => autocorrectEnabled && setStaffMessage((text) => autocorrectAlbanianText(text))}
                 placeholder="Shkruani mesazhin tuaj këtu..."
                 className="bg-white/5 border-white/10 text-white min-h-[120px] mb-2"
@@ -803,8 +774,10 @@ export default function Messages() {
                       />
                       <Button
                         onClick={() => {
-                          const response = document.getElementById(`response-${msg.id}`).value;
-                          if (response.trim()) {
+                          const input = document.getElementById(`response-${msg.id}`);
+                          const response = autocorrectEnabled ? autocorrectAlbanianText(input.value).trim() : input.value.trim();
+                          if (response) {
+                            input.value = response;
                             resolveStaffMessageMutation.mutate({ id: msg.id, response });
                           }
                         }}

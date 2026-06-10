@@ -1902,6 +1902,12 @@ export default function Statuset() {
     refetchOnWindowFocus: false,
   });
 
+  const { data: statusAuthors = [] } = useQuery({
+    queryKey: ["statusAuthors"],
+    queryFn: () => base44.entities.User.list("-updated_date", 1000),
+    staleTime: 60000,
+  });
+
   const { data: myConnections = [] } = useQuery({
     queryKey: ["userConnections", currentUser?.email],
     queryFn: () => base44.entities.UserConnection.filter({ owner_email: currentUser.email }, "-updated_date", 500),
@@ -1932,8 +1938,24 @@ export default function Statuset() {
     });
   }, [allStatuses, currentUser?.email, myBlocks, myConnections]);
 
-  const statuses = visibleStatuses.slice(0, page * PAGE_SIZE);
-  const hasMore = visibleStatuses.length > page * PAGE_SIZE;
+  const authorByEmail = useMemo(() => {
+    const map = new Map();
+    statusAuthors.forEach((author) => {
+      const email = String(author.email || "").toLowerCase();
+      if (!email || map.has(email)) return;
+      map.set(email, author);
+    });
+    return map;
+  }, [statusAuthors]);
+
+  const enrichedStatuses = useMemo(() => visibleStatuses.map((status) => {
+    const author = authorByEmail.get(String(status.author_email || "").toLowerCase());
+    if (!author?.profile_photo_url || status.author_photo_url) return status;
+    return { ...status, author_photo_url: author.profile_photo_url };
+  }), [authorByEmail, visibleStatuses]);
+
+  const statuses = enrichedStatuses.slice(0, page * PAGE_SIZE);
+  const hasMore = enrichedStatuses.length > page * PAGE_SIZE;
 
   // Auto-refresh every 60 seconds
   useEffect(() => {
