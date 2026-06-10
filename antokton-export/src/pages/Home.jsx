@@ -630,10 +630,10 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
             data-edit-label="Teksti"
             onClick={editMode ? (event) => { event.stopPropagation(); startEditing('text'); } : undefined}
           >
-            <h1 className="antokton-hero-light-title" aria-label={`${MOBILE_HERO_LINE_1}. ${MOBILE_HERO_LINE_2}`}>
+            <div className="antokton-hero-light-title" aria-label={`${MOBILE_HERO_LINE_1}. ${MOBILE_HERO_LINE_2}`}>
               <div className="antokton-hero-light-text antokton-mobile-hero-line" data-text={MOBILE_HERO_LINE_1}>{MOBILE_HERO_LINE_1}</div>
               <div className="antokton-hero-light-text antokton-mobile-hero-line antokton-mobile-hero-line-secondary" data-text={MOBILE_HERO_LINE_2}>{MOBILE_HERO_LINE_2}</div>
-            </h1>
+            </div>
           </div>
           {/* Butonat + Banner absolute brenda hartës */}
           <div
@@ -749,10 +749,10 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
             pointerEvents: 'auto',
             zIndex: 3
           }}>
-            <h1 className="antokton-hero-light-title" title="Mbaje mouse-in sipër për ta shfaqur tekstin komplet" style={{ margin: 0 }}>
+            <div className="antokton-hero-light-title" title="Mbaje mouse-in sipër për ta shfaqur tekstin komplet" style={{ margin: 0 }}>
               <div className="antokton-hero-light-text">{HERO_LINE_1}</div>
               <div className="antokton-hero-light-text">{HERO_LINE_2}</div>
-            </h1>
+            </div>
           </div>
 
           <div
@@ -922,14 +922,14 @@ export default function Home() {
   };
 
   React.useEffect(() => {
-    document.title = 'Antokton | Platforma e Shqiptarëve në Europë';
+    document.title = 'Antokton – Punë, Treg, Komunitet dhe Edukim në Europë';
     const metaDescription = document.querySelector('meta[name="description"]');
     if (metaDescription) {
-      metaDescription.setAttribute('content', 'Antokton është platformë shqiptare për komunitet, punë, treg, edukim dhe mundësi në Europë.');
+      metaDescription.setAttribute('content', 'Antokton është platforma shqiptare për komunitet, punë, treg, edukim, media, shërbime dhe mundësi për shqiptarët në Europë, diasporë dhe më gjerë në një vend.');
     } else {
       const meta = document.createElement('meta');
       meta.name = 'description';
-      meta.content = 'Antokton është platformë shqiptare për komunitet, punë, treg, edukim dhe mundësi në Europë.';
+      meta.content = 'Antokton është platforma shqiptare për komunitet, punë, treg, edukim, media, shërbime dhe mundësi për shqiptarët në Europë, diasporë dhe më gjerë në një vend.';
       document.head.appendChild(meta);
     }
   }, []);
@@ -982,6 +982,7 @@ export default function Home() {
       minHeight: '100vh',
       overflowX: 'hidden',
     }}>
+      <h1 className="sr-only">Antokton – Platforma e Shqiptarëve në Europë</h1>
       <EventNotifications />
       <LandingBanner
         theme={theme}
@@ -996,6 +997,27 @@ export default function Home() {
       />
 
       <CategoryCards />
+
+      <nav className="sr-only" aria-label="Lidhje kryesore për kërkuesit">
+        <h2>Punë në Europë</h2>
+        <Link to="/Feed">Punë</Link>
+        <Link to="/Pune">Punë në Europë</Link>
+        <h2>Pazar</h2>
+        <Link to="/Pazar">Pazar</Link>
+        <h2>Komunitet</h2>
+        <Link to="/Statuset">Komunitet</Link>
+        <h2>Edukim</h2>
+        <Link to="/Edukim">Edukim</Link>
+        <h2>Media</h2>
+        <Link to="/Media">Media</Link>
+        <h2>Bamirësi</h2>
+        <Link to="/Bamiresi">Bamirësi</Link>
+        <h2>Shërbime</h2>
+        <Link to="/Sherbime">Shërbime</Link>
+        <Link to="/Contact">Kontakt</Link>
+        <Link to="/Privacy">Privatësia</Link>
+        <Link to="/Terms">Kushtet</Link>
+      </nav>
 
       {/* Si Punon Antokton */}
       <section className="py-8 sm:py-14 px-4 sm:px-6">

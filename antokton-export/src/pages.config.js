@@ -10,7 +10,7 @@
  * Example file structure:
  * 
  *   import HomePage from './pages/HomePage';
- *   import Dashboard from './pages/Dashboard';
+ *   const Dashboard = lazy(() => import('./pages/Dashboard'));
  *   import Settings from './pages/Settings';
  *   
  *   export const PAGES = {
@@ -26,7 +26,7 @@
  * 
  * Example with Layout (wraps all pages):
  *
- *   import Home from './pages/Home';
+ *   const Home = lazy(() => import('./pages/Home'));
  *   import Settings from './pages/Settings';
  *   import __Layout from './Layout.jsx';
  *
@@ -47,52 +47,53 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
-import About from './pages/About';
-import Certifikim from './pages/Certifikim';
-import Media from './pages/Media';
-import Edukim from './pages/Edukim';
-import EdukiMeDija from './pages/EdukiMeDija';
-import Admin from './pages/Admin';
-import AdvancedRecruiterSearch from './pages/AdvancedRecruiterSearch';
-import ApplicationsDashboard from './pages/ApplicationsDashboard';
-import BulkImport from './pages/BulkImport';
-import Companies from './pages/Companies';
-import CompanyDetail from './pages/CompanyDetail';
-import Contact from './pages/Contact';
-import ContentModeration from './pages/ContentModeration';
-import CreatePost from './pages/CreatePost';
-import Dashboard from './pages/Dashboard';
-import EmployerDashboard from './pages/EmployerDashboard';
-import EventDetail from './pages/EventDetail';
-import Events from './pages/Events';
-import EventsCalendar from './pages/EventsCalendar';
-import FacebookGroups from './pages/FacebookGroups';
-import Feed from './pages/Feed';
-import Home from './pages/Home';
-import InspectorPanel from './pages/InspectorPanel';
-import JobMatches from './pages/JobMatches';
-import Members from './pages/Members';
-import Messages from './pages/Messages';
-import NotificationCenter from './pages/NotificationCenter';
-import Partners from './pages/Partners';
-import PaymentHistory from './pages/PaymentHistory';
-import PostDetail from './pages/PostDetail';
-import PremiumDashboard from './pages/PremiumDashboard';
-import Privacy from './pages/Privacy';
-import Profile from './pages/Profile';
-import ProjectDetail from './pages/ProjectDetail';
-import Recommendations from './pages/Recommendations';
-import RecruiterTools from './pages/RecruiterTools';
-import Referime from './pages/Referime';
-import Search from './pages/Search';
-import Setup from './pages/Setup';
-import Sherbime from './pages/Sherbime';
-import StaffChat from './pages/StaffChat';
-import StateAntokton from './pages/StateAntokton';
-import Subscriptions from './pages/Subscriptions';
-import Terms from './pages/Terms';
-import UserProfiles from './pages/UserProfiles';
-import UserSearch from './pages/UserSearch';
+import { lazy } from 'react';
+const About = lazy(() => import('./pages/About'));
+const Certifikim = lazy(() => import('./pages/Certifikim'));
+const Media = lazy(() => import('./pages/Media'));
+const Edukim = lazy(() => import('./pages/Edukim'));
+const EdukiMeDija = lazy(() => import('./pages/EdukiMeDija'));
+const Admin = lazy(() => import('./pages/Admin'));
+const AdvancedRecruiterSearch = lazy(() => import('./pages/AdvancedRecruiterSearch'));
+const ApplicationsDashboard = lazy(() => import('./pages/ApplicationsDashboard'));
+const BulkImport = lazy(() => import('./pages/BulkImport'));
+const Companies = lazy(() => import('./pages/Companies'));
+const CompanyDetail = lazy(() => import('./pages/CompanyDetail'));
+const Contact = lazy(() => import('./pages/Contact'));
+const ContentModeration = lazy(() => import('./pages/ContentModeration'));
+const CreatePost = lazy(() => import('./pages/CreatePost'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const EmployerDashboard = lazy(() => import('./pages/EmployerDashboard'));
+const EventDetail = lazy(() => import('./pages/EventDetail'));
+const Events = lazy(() => import('./pages/Events'));
+const EventsCalendar = lazy(() => import('./pages/EventsCalendar'));
+const FacebookGroups = lazy(() => import('./pages/FacebookGroups'));
+const Feed = lazy(() => import('./pages/Feed'));
+const Home = lazy(() => import('./pages/Home'));
+const InspectorPanel = lazy(() => import('./pages/InspectorPanel'));
+const JobMatches = lazy(() => import('./pages/JobMatches'));
+const Members = lazy(() => import('./pages/Members'));
+const Messages = lazy(() => import('./pages/Messages'));
+const NotificationCenter = lazy(() => import('./pages/NotificationCenter'));
+const Partners = lazy(() => import('./pages/Partners'));
+const PaymentHistory = lazy(() => import('./pages/PaymentHistory'));
+const PostDetail = lazy(() => import('./pages/PostDetail'));
+const PremiumDashboard = lazy(() => import('./pages/PremiumDashboard'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Profile = lazy(() => import('./pages/Profile'));
+const ProjectDetail = lazy(() => import('./pages/ProjectDetail'));
+const Recommendations = lazy(() => import('./pages/Recommendations'));
+const RecruiterTools = lazy(() => import('./pages/RecruiterTools'));
+const Referime = lazy(() => import('./pages/Referime'));
+const Search = lazy(() => import('./pages/Search'));
+const Setup = lazy(() => import('./pages/Setup'));
+const Sherbime = lazy(() => import('./pages/Sherbime'));
+const StaffChat = lazy(() => import('./pages/StaffChat'));
+const StateAntokton = lazy(() => import('./pages/StateAntokton'));
+const Subscriptions = lazy(() => import('./pages/Subscriptions'));
+const Terms = lazy(() => import('./pages/Terms'));
+const UserProfiles = lazy(() => import('./pages/UserProfiles'));
+const UserSearch = lazy(() => import('./pages/UserSearch'));
 import __Layout from './Layout.jsx';
 
 

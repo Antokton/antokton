@@ -1976,6 +1976,7 @@ export default function Statuset() {
 
   return (
     <div className="min-h-screen" style={{ background: "#0f1929" }}>
+      <h1 className="sr-only">Statuset</h1>
       <style>{`
         .fb-action-btn {
           background: transparent !important;

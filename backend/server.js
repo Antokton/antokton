@@ -175,6 +175,7 @@ function send(res, status, body, headers = {}) {
     "X-Frame-Options": "DENY",
     "X-XSS-Protection": "1; mode=block",
     "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(self), payment=(self)",
     "Content-Security-Policy": "default-src 'self'",
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Credentials": "true",
@@ -184,7 +185,7 @@ function send(res, status, body, headers = {}) {
 
   // HSTS for production only
   if (process.env.NODE_ENV === "production") {
-    securityHeaders["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+    securityHeaders["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload";
   }
 
   const baseHeaders = {
@@ -332,6 +333,18 @@ async function findUserByEmail(email) {
     .map(recordFromRow)
     .filter((user) => userEmailCandidates(user).includes(normalizedEmail))
     .sort(preferUsableUserRecord)[0] || null;
+}
+
+function commonSecurityHeaders() {
+  const headers = {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(self), payment=(self)"
+  };
+  if (process.env.NODE_ENV === "production") {
+    headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload";
+  }
+  return headers;
 }
 
 function userAccessBlockedForLookup(user) {
@@ -2261,11 +2274,41 @@ async function cleanupKnownTestUsers() {
 }
 
 function serveStatic(req, res, pathname) {
-  const sendFile = (filePath, contentType, extraHeaders = {}) => {
+  const knownSpaRoutes = new Set([
+    "", "404", "About", "Certifikim", "Media", "Edukim", "EdukiMeDija", "Admin",
+    "AdvancedRecruiterSearch", "ApplicationsDashboard", "BulkImport", "Companies",
+    "CompanyDetail", "Contact", "contact", "kontakt", "ContentModeration", "CreatePost",
+    "Dashboard", "EmployerDashboard", "EventDetail", "Events", "Ngjarje", "EventsCalendar",
+    "FacebookGroups", "Feed", "Pune", "Home", "InspectorPanel", "JobMatches", "Members",
+    "Messages", "NotificationCenter", "Partners", "PaymentHistory", "PostDetail",
+    "PremiumDashboard", "Privacy", "privacy", "politika-e-privatesise", "Profile",
+    "ProjectDetail", "Recommendations", "RecruiterTools", "Referime", "Search", "Setup",
+    "Sherbime", "StaffChat", "StateAntokton", "Statuset", "Subscriptions", "Terms",
+    "terms", "kushtet-e-perdorimit", "UserProfiles", "UserSearch", "Bileta", "Bamiresi",
+    "Pazar", "ImportPosts", "Member", "akademia", "AkademiaAdmin", "AkademiaMentor",
+    "DesignerPage", "verify-certificate", "admin"
+  ]);
+  const cacheControlForPath = (filePath) => {
+    const baseName = path.basename(filePath).toLowerCase();
+    const ext = path.extname(filePath).toLowerCase();
+    if (baseName === "index.html" || baseName === "sw.js" || baseName === "offline.html") return "no-cache";
+    if ([".js", ".css", ".woff", ".woff2", ".ttf", ".otf", ".eot", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".json", ".webmanifest"].includes(ext)) {
+      return "public, max-age=31536000, immutable";
+    }
+    return "no-cache";
+  };
+  const isKnownSpaRoute = () => {
+    const firstSegment = pathname.split("/").filter(Boolean)[0] || "";
+    return knownSpaRoutes.has(firstSegment);
+  };
+  const sendFile = (filePath, contentType, extraHeaders = {}, status = 200) => {
     const stat = fs.statSync(filePath);
-    res.writeHead(200, {
+    res.writeHead(status, {
       "Content-Type": contentType,
       "Content-Length": stat.size,
+      "Cache-Control": cacheControlForPath(filePath),
+      "Last-Modified": stat.mtime.toUTCString(),
+      ...commonSecurityHeaders(),
       ...extraHeaders
     });
     if (req.method === "HEAD") {
@@ -2286,7 +2329,8 @@ function serveStatic(req, res, pathname) {
     }
 
     return sendFile(uploadFile, mimeTypeForPath(uploadFile), {
-      "Access-Control-Allow-Origin": "*"
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "public, max-age=31536000, immutable"
     });
   }
 
@@ -2304,8 +2348,12 @@ function serveStatic(req, res, pathname) {
         ext === ".xml" ? "application/xml; charset=utf-8" :
         ext === ".json" ? "application/json; charset=utf-8" :
         ext === ".svg" ? "image/svg+xml" :
+        ext === ".ico" ? "image/x-icon" :
         ext === ".png" ? "image/png" :
         ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" :
+        ext === ".webp" ? "image/webp" :
+        ext === ".woff" ? "font/woff" :
+        ext === ".woff2" ? "font/woff2" :
         "application/octet-stream";
       return sendFile(distPath, type);
     }
@@ -2314,7 +2362,8 @@ function serveStatic(req, res, pathname) {
     }
     const indexPath = path.join(distDir, "index.html");
     if (fs.existsSync(indexPath)) {
-      return sendFile(indexPath, "text/html; charset=utf-8");
+      const status = pathname === "/404" || !isKnownSpaRoute() ? 404 : 200;
+      return sendFile(indexPath, "text/html; charset=utf-8", {}, status);
     }
   }
 
@@ -2334,9 +2383,12 @@ function serveStatic(req, res, pathname) {
     ext === ".js" ? "text/javascript; charset=utf-8" :
     ext === ".css" ? "text/css; charset=utf-8" :
     ext === ".json" ? "application/json; charset=utf-8" :
+    ext === ".ico" ? "image/x-icon" :
+    ext === ".svg" ? "image/svg+xml" :
     "application/octet-stream";
 
-  sendFile(filePath, type);
+  const status = routeMap.has(pathname) || isKnownSpaRoute() ? 200 : 404;
+  sendFile(filePath, type, {}, status);
 }
 
 const REQUEST_TIMEOUT_MS = Number(process.env.REQUEST_TIMEOUT_MS || 60000);

@@ -4,24 +4,25 @@ import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import PageNotFound from './lib/PageNotFound';
-import AdminSuggestions from './pages/AdminSuggestions';
-import AdminAnalytics from './pages/AdminAnalytics';
-import Media from './pages/Media';
-import Edukim from './pages/Edukim';
-import ImportPosts from './pages/ImportPosts';
-import Bileta from './pages/Bileta';
-import BamiresiFull from './pages/Bamiresi';
-import Statuset from './pages/Statuset';
-import Pazar from './pages/Pazar';
-import Akademia from './pages/Akademia';
-import AkademiaCourseDetail from './pages/AkademiaCourseDetail';
-import AkademiaAdmin from './pages/AkademiaAdmin';
-import AkademiaMentor from './pages/AkademiaMentor';
-import DesignerPage from './pages/DesignerPage';
-import VerifyCertificate from './pages/VerifyCertificate';
-import Login from './pages/Login';
-import MemberProfile from './pages/MemberProfile';
+const AdminSuggestions = lazy(() => import('./pages/AdminSuggestions'));
+const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'));
+const Media = lazy(() => import('./pages/Media'));
+const Edukim = lazy(() => import('./pages/Edukim'));
+const ImportPosts = lazy(() => import('./pages/ImportPosts'));
+const Bileta = lazy(() => import('./pages/Bileta'));
+const BamiresiFull = lazy(() => import('./pages/Bamiresi'));
+const Statuset = lazy(() => import('./pages/Statuset'));
+const Pazar = lazy(() => import('./pages/Pazar'));
+const Akademia = lazy(() => import('./pages/Akademia'));
+const AkademiaCourseDetail = lazy(() => import('./pages/AkademiaCourseDetail'));
+const AkademiaAdmin = lazy(() => import('./pages/AkademiaAdmin'));
+const AkademiaMentor = lazy(() => import('./pages/AkademiaMentor'));
+const DesignerPage = lazy(() => import('./pages/DesignerPage'));
+const VerifyCertificate = lazy(() => import('./pages/VerifyCertificate'));
+const Login = lazy(() => import('./pages/Login'));
+const MemberProfile = lazy(() => import('./pages/MemberProfile'));
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import VisualEditMode from '@/components/admin/VisualEditMode';
@@ -35,26 +36,30 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
 
+const PageLoader = () => (
+  <div className="fixed inset-0 flex items-center justify-center">
+    <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+  </div>
+);
+
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
   const isLoginRoute = window.location.pathname.toLowerCase() === "/login";
 
   if (isLoginRoute) {
     return (
-      <Routes>
-        <Route path="/Login" element={<Login />} />
-        <Route path="/login" element={<Login />} />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/Login" element={<Login />} />
+          <Route path="/login" element={<Login />} />
+        </Routes>
+      </Suspense>
     );
   }
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   // Handle authentication errors
@@ -70,6 +75,7 @@ const AuthenticatedApp = () => {
 
   // Render the main app
   return (
+    <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route path="/" element={
         <LayoutWrapper currentPageName={mainPageKey}>
@@ -106,14 +112,17 @@ const AuthenticatedApp = () => {
       <Route path="/Bamiresi" element={<LayoutWrapper currentPageName="Bamiresi"><BamiresiFull /></LayoutWrapper>} />
       <Route path="/Statuset" element={<LayoutWrapper currentPageName="Statuset"><Statuset /></LayoutWrapper>} />
       <Route path="/Pazar" element={<LayoutWrapper currentPageName="Pazar"><Pazar /></LayoutWrapper>} />
+      <Route path="/Pune" element={<LayoutWrapper currentPageName="Feed"><Pages.Feed /></LayoutWrapper>} />
       <Route path="/ImportPosts" element={<LayoutWrapper currentPageName="ImportPosts"><ImportPosts /></LayoutWrapper>} />
       <Route path="/admin/import-assistant" element={<LayoutWrapper currentPageName="ImportPosts"><ImportPosts /></LayoutWrapper>} />
       <Route path="/admin/import-assistant/queue" element={<LayoutWrapper currentPageName="ImportPosts"><ImportPosts defaultTab="table" /></LayoutWrapper>} />
       <Route path="/Media" element={<LayoutWrapper currentPageName="Media"><Media /></LayoutWrapper>} />
       <Route path="/Edukim" element={<LayoutWrapper currentPageName="Edukim"><Edukim /></LayoutWrapper>} />
       <Route path="/Member/:email" element={<LayoutWrapper currentPageName="Members"><MemberProfile /></LayoutWrapper>} />
-      <Route path="*" element={<PageNotFound />} />
+      <Route path="/404" element={<LayoutWrapper currentPageName="404"><PageNotFound /></LayoutWrapper>} />
+      <Route path="*" element={<LayoutWrapper currentPageName="404"><PageNotFound /></LayoutWrapper>} />
     </Routes>
+    </Suspense>
   );
 };
 

@@ -1,4 +1,4 @@
-const VERSION = "antokton-pwa-2026-06-08-1";
+const VERSION = "antokton-pwa-2026-06-11-1";
 const PRECACHE = `${VERSION}-precache`;
 const RUNTIME = `${VERSION}-runtime`;
 const API_CACHE = `${VERSION}-api`;
@@ -11,8 +11,13 @@ const CORE_ASSETS = [
   "/index.html",
   "/manifest.json",
   "/offline.html",
+  "/favicon.ico",
+  "/favicon-32x32.png",
+  "/apple-touch-icon.png",
   "/icons/antokton-192.png",
   "/icons/antokton-512.png",
+  "/icons/android-chrome-192x192.png",
+  "/icons/android-chrome-512x512.png",
   "/local-assets/0115b6553_Antoktontextiparemetexture.png",
   "/local-assets/122fac317_Antoktonfrontpage.jpg",
   "/local-assets/41f133055_ButonPuneneeurope.png",
