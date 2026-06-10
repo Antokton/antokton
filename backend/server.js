@@ -45,7 +45,6 @@ const {
   MAX_REMOTE_ASSET_BYTES,
   STRIPE_PUBLISHABLE_KEY,
   STRIPE_SECRET_KEY,
-  STRIPE_FALLBACK_URL,
   AUTH_TOKEN_TTL_HOURS,
   SESSION_COOKIE_NAME,
   SESSION_COOKIE_SECURE,
@@ -1759,10 +1758,6 @@ async function handleFunction(req, res, functionName) {
         status: "pending",
         checkout_type: functionName
       }, userEmail);
-      if (STRIPE_FALLBACK_URL && !STRIPE_SECRET_KEY) {
-        result = { url: STRIPE_FALLBACK_URL, checkoutId: subscription.id, fallback: true };
-        break;
-      }
       const session = await createStripeCheckoutSession({ req, payload: { ...payload, planType }, subscriptionId: subscription.id, user });
       await updateRecord("PremiumSubscription", subscription.id, {
         stripe_checkout_session_id: session.id,

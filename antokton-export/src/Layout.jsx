@@ -1268,7 +1268,7 @@ export default function Layout({ children, currentPageName }) {
           paddingBottom: 'calc(100px + env(safe-area-inset-bottom))'
         }}
       >
-        {showEarlyPremiumBanner && (
+        {showEarlyPremiumBanner && currentPageName !== "Home" && (
           <div className="mx-auto mb-4 max-w-5xl px-4 pt-4 sm:px-6">
             <div className="flex flex-col gap-3 rounded-xl border border-[#9bffd6]/25 bg-[#101b2d]/95 p-4 text-white shadow-lg sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">

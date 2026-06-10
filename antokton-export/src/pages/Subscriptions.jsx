@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/antoktonClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,9 @@ export default function Subscriptions() {
   const [user, setUser] = useState(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [supportAmount, setSupportAmount] = useState("");
+  const [supportError, setSupportError] = useState("");
+  const [checkoutLoadingPlan, setCheckoutLoadingPlan] = useState("");
+  const supportAmountRef = useRef(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -53,8 +56,6 @@ export default function Subscriptions() {
     }
   });
 
-  const parsedSupportAmount = Number(String(supportAmount).replace(",", "."));
-
   const handleCheckout = async (planType, amount) => {
     if (!user) {
       base44.auth.redirectToLogin();
@@ -62,11 +63,14 @@ export default function Subscriptions() {
     }
     const parsedAmount = Number(String(amount || "").replace(",", "."));
     if (planType === "support" && (!parsedAmount || parsedAmount <= 0)) {
-      alert("Vendosni shumën që dëshironi të dhuroni.");
+      setSupportError("Vendosni shumën që dëshironi të dhuroni.");
+      supportAmountRef.current?.focus();
       return;
     }
+    setSupportError("");
     
     try {
+      setCheckoutLoadingPlan(planType);
       const response = await base44.functions.invoke('createPremiumCheckout', {
         planType,
         userEmail: user.email,
@@ -79,6 +83,8 @@ export default function Subscriptions() {
       }
     } catch (error) {
       alert(error.message || "Ka ndodhur një gabim. Ju lutemi provoni përsëri.");
+    } finally {
+      setCheckoutLoadingPlan("");
     }
   };
 
@@ -248,15 +254,22 @@ export default function Subscriptions() {
                         min="1"
                         step="0.5"
                         value={supportAmount}
-                        onChange={(event) => setSupportAmount(event.target.value)}
+                        ref={supportAmountRef}
+                        onChange={(event) => {
+                          setSupportAmount(event.target.value);
+                          if (supportError) setSupportError("");
+                        }}
                         placeholder="p.sh. 3, 10, 25"
-                        className="h-10 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#8ab4ff]/60"
+                        className={`h-10 w-full rounded-lg border bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#8ab4ff]/60 ${supportError ? 'border-red-400/70' : 'border-white/10'}`}
                       />
+                      {supportError && (
+                        <span className="block text-xs font-medium text-red-300">{supportError}</span>
+                      )}
                     </label>
                   )}
                   <Button
                     onClick={() => plan.planType && handleCheckout(plan.planType, plan.customAmount ? supportAmount : undefined)}
-                    disabled={plan.disabled || plan.current || (plan.customAmount && (!parsedSupportAmount || parsedSupportAmount <= 0))}
+                    disabled={plan.disabled || plan.current || checkoutLoadingPlan === plan.planType}
                     className={`w-full ${
                       plan.popular
                         ? 'bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] hover:opacity-90'
@@ -265,7 +278,7 @@ export default function Subscriptions() {
                         : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
                     }`}
                   >
-                    {plan.cta}
+                    {checkoutLoadingPlan === plan.planType ? "Duke hapur pagesën..." : plan.cta}
                   </Button>
                 </CardContent>
               </Card>

@@ -10,6 +10,7 @@ import { ArrowRight, UserPlus, Search, Users, X, Sparkles, Edit3, Image as Image
 import { motion } from "framer-motion";
 import { t, getLanguage } from "../lib/translations";
 import toast from "react-hot-toast";
+import { hasEarlyMemberPremiumAccess } from "@/utils/premiumAccess";
 
 // ============================================================
 // POZICIONIMI MANUAL - ndrysho këto vlera për të rregulluar
@@ -166,7 +167,40 @@ function AdminEditField({ fieldKey, value, onChange, onUpload, uploadingKey }) {
   );
 }
 
-function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBanner, siteConfigs = [], siteConfigMap = {}, canEdit = false }) {
+function EarlyPremiumOfferCard({ onDismiss }) {
+  return (
+    <div className="rounded-xl border border-[#9bffd6]/25 bg-[#101b2d]/95 p-3 text-white shadow-lg backdrop-blur">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-[#d8fff1]">Ofertë hyrëse për anëtarët e parë</p>
+          <p className="mt-1 text-xs leading-relaxed text-white/72">
+            Për anëtarët e parë, kemi dhënë akses falas në shërbimet Premium për periudhën hyrëse.
+            Pagesa vullnetare mbetet e mundur te Premium duke klikuar{" "}
+            <Link to={createPageUrl("Subscriptions")} className="font-semibold text-[#9bffd6] underline underline-offset-2">
+              këtu
+            </Link>.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="shrink-0 rounded-lg border border-white/10 p-2 text-white/55 transition hover:bg-white/10 hover:text-white"
+          aria-label="Mbyll ofertën hyrëse"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <Link
+        to={createPageUrl("Subscriptions")}
+        className="mt-3 inline-flex rounded-lg bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] px-4 py-2 text-xs font-bold text-[#0b1020] transition hover:opacity-90"
+      >
+        Premium
+      </Link>
+    </div>
+  );
+}
+
+function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBanner, showEarlyPremiumOffer = false, onDismissEarlyPremiumOffer, siteConfigs = [], siteConfigMap = {}, canEdit = false }) {
   const queryClient = useQueryClient();
   const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
   const [isTablet, setIsTablet] = React.useState(window.innerWidth >= 768 && window.innerWidth < 1280);
@@ -630,6 +664,9 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
                 <img src={BTN_EDUKIM_IMG} alt="Edukim & Media" style={{ width: '100%', height: 'auto', display: 'block' }} />
               </Link>
             </div>
+            {showEarlyPremiumOffer && (
+              <EarlyPremiumOfferCard onDismiss={onDismissEarlyPremiumOffer} />
+            )}
             {/* Banner direkt poshtë butonave */}
             {showBanner && (
               <div style={{ position: 'relative' }}
@@ -722,28 +759,35 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
             className={editableClass}
             data-edit-label="Butonat"
             onClick={editMode ? (event) => { event.stopPropagation(); startEditing('buttons'); } : undefined}
-            style={{ position: 'absolute', left: '10%', right: '10%', bottom: `${buttonsBottomDesktop}%`, display: 'flex', gap: '2%', transition: 'bottom 0.3s ease', zIndex: 3 }}
+            style={{ position: 'absolute', left: '10%', right: '10%', bottom: `${buttonsBottomDesktop}%`, display: 'flex', flexDirection: 'column', gap: '10px', transition: 'bottom 0.3s ease', zIndex: 3 }}
           >
-            <Link to={createPageUrl('Feed') + `?category=${encodeURIComponent('pune')}`}
-              style={{ flex: 1, cursor: 'pointer', transition: 'opacity 0.3s', display: 'inline-block', lineHeight: 0 }}
-              onClick={(event) => stopEditNavigation(event, 'buttons')}
-              onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
-              <img src={BTN_PUNE_IMG} alt="Punë në Europë" style={{ width: '100%', height: 'auto', display: 'block' }} />
-            </Link>
+            <div style={{ display: 'flex', gap: '2%' }}>
+              <Link to={createPageUrl('Feed') + `?category=${encodeURIComponent('pune')}`}
+                style={{ flex: 1, cursor: 'pointer', transition: 'opacity 0.3s', display: 'inline-block', lineHeight: 0 }}
+                onClick={(event) => stopEditNavigation(event, 'buttons')}
+                onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
+                <img src={BTN_PUNE_IMG} alt="Punë në Europë" style={{ width: '100%', height: 'auto', display: 'block' }} />
+              </Link>
 
-            <Link to={createPageUrl('Statuset')}
-              style={{ flex: 1, cursor: 'pointer', transition: 'opacity 0.3s', display: 'inline-block', lineHeight: 0 }}
-              onClick={(event) => stopEditNavigation(event, 'buttons')}
-              onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
-              <img src={BTN_KOMUNITET_IMG} alt="Komunitet" style={{ width: '100%', height: 'auto', display: 'block' }} />
-            </Link>
+              <Link to={createPageUrl('Statuset')}
+                style={{ flex: 1, cursor: 'pointer', transition: 'opacity 0.3s', display: 'inline-block', lineHeight: 0 }}
+                onClick={(event) => stopEditNavigation(event, 'buttons')}
+                onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
+                <img src={BTN_KOMUNITET_IMG} alt="Komunitet" style={{ width: '100%', height: 'auto', display: 'block' }} />
+              </Link>
 
-            <Link to={createPageUrl('EdukiMeDija')}
-              style={{ flex: 1, cursor: 'pointer', transition: 'opacity 0.3s', display: 'inline-block', lineHeight: 0 }}
-              onClick={(event) => stopEditNavigation(event, 'buttons')}
-              onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
-              <img src={BTN_EDUKIM_IMG} alt="Edukim & Media" style={{ width: '100%', height: 'auto', display: 'block' }} />
-            </Link>
+              <Link to={createPageUrl('EdukiMeDija')}
+                style={{ flex: 1, cursor: 'pointer', transition: 'opacity 0.3s', display: 'inline-block', lineHeight: 0 }}
+                onClick={(event) => stopEditNavigation(event, 'buttons')}
+                onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
+                <img src={BTN_EDUKIM_IMG} alt="Edukim & Media" style={{ width: '100%', height: 'auto', display: 'block' }} />
+              </Link>
+            </div>
+            {showEarlyPremiumOffer && (
+              <div className="mx-auto w-full max-w-3xl">
+                <EarlyPremiumOfferCard onDismiss={onDismissEarlyPremiumOffer} />
+              </div>
+            )}
           </div>
 
           {/* Promo banner — brenda imazhit, nën butonat */}
@@ -783,7 +827,9 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
 
 export default function Home() {
   const [isAuth, setIsAuth] = React.useState(false);
+  const [user, setUser] = React.useState(null);
   const [showBanner, setShowBanner] = React.useState(true);
+  const [earlyPremiumBanner, setEarlyPremiumBanner] = React.useState(() => localStorage.getItem("earlyPremiumBannerDismissed") !== "true");
   const [theme, setTheme] = React.useState(() => document.body.className.includes('theme-light') ? 'light' : 'dark');
   const [language, setLanguage] = React.useState(getLanguage());
   const [notifHeight, setNotifHeight] = React.useState(0);
@@ -827,6 +873,8 @@ export default function Home() {
       const authenticated = await base44.auth.isAuthenticated();
       setIsAuth(authenticated);
       if (authenticated) {
+        const me = await base44.auth.me();
+        setUser(me);
         // Loguari nuk e sheh bannerin kurrë
         setShowBanner(false);
         return;
@@ -849,6 +897,29 @@ export default function Home() {
   };
 
   const shouldShowBanner = showBanner && !isAuth;
+
+  const { data: activePremiumSubscription } = useQuery({
+    queryKey: ["homeActivePremiumSubscription", user?.email],
+    queryFn: async () => {
+      if (!user?.email) return null;
+      const subscriptions = await base44.entities.PremiumSubscription.filter({
+        user_email: user.email,
+        is_active: true
+      });
+      const now = new Date();
+      return subscriptions.find((subscription) => new Date(subscription.end_date) > now) || null;
+    },
+    enabled: !!user?.email,
+    staleTime: 60000,
+    refetchOnWindowFocus: false
+  });
+
+  const shouldShowEarlyPremiumOffer = isAuth && user && !activePremiumSubscription && hasEarlyMemberPremiumAccess(user) && earlyPremiumBanner;
+
+  const dismissEarlyPremiumOffer = () => {
+    localStorage.setItem("earlyPremiumBannerDismissed", "true");
+    setEarlyPremiumBanner(false);
+  };
 
   React.useEffect(() => {
     document.title = 'Antokton | Platforma e Shqiptarëve në Europë';
@@ -917,6 +988,8 @@ export default function Home() {
         notifHeight={notifHeight}
         showBanner={shouldShowBanner}
         onDismissBanner={dismissBanner}
+        showEarlyPremiumOffer={shouldShowEarlyPremiumOffer}
+        onDismissEarlyPremiumOffer={dismissEarlyPremiumOffer}
         siteConfigs={siteConfigs}
         siteConfigMap={siteConfigMap}
         canEdit={false}
