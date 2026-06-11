@@ -673,28 +673,15 @@ export default function PostDetail() {
                </div>
               </div>
               <div className="space-y-1">
-                <Label className="text-white/60 text-xs">Email / Kontakt tjetër</Label>
+                <Label className="text-white/60 text-xs">Email ose info tjetër kontakti (opsional)</Label>
                 <Input value={editForm.contact_info} onChange={e => setEditForm({...editForm, contact_info: e.target.value})} className="bg-white/5 border-white/10 text-white" />
               </div>
               <div className="space-y-1">
-                <Label className="text-white/60 text-xs">Linku i burimit / postimit origjinal</Label>
-                <Input value={editForm.source_url || ''} onChange={e => setEditForm({...editForm, source_url: e.target.value})} placeholder="https://..." className="bg-white/5 border-white/10 text-white" />
-                <label className="flex cursor-pointer items-start gap-2 text-xs text-white/50">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(editForm.show_source_url)}
-                    onChange={e => setEditForm({...editForm, show_source_url: e.target.checked})}
-                    className="mt-0.5 h-4 w-4 accent-[#8ab4ff]"
-                  />
-                  <span>Shfaq linkun publikisht. Pa zgjedhje ruhet vetëm për gjurmim të postimit origjinal.</span>
-                </label>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-white/60 text-xs">Linku i kontaktit nga burimi</Label>
+                <Label className="text-white/60 text-xs">Linku i kontaktit nga burimi (opsional)</Label>
                 <Input
                   value={editForm.author_profile_url || ''}
                   onChange={e => setEditForm({...editForm, author_profile_url: e.target.value, import_author_profile_url: e.target.value})}
-                  placeholder="https://facebook.com/profile..."
+                  placeholder="https://facebook.com/profile... ose link kontakti"
                   className="bg-white/5 border-white/10 text-white"
                 />
                 <label className="flex cursor-pointer items-start gap-2 text-xs text-white/50">
@@ -705,6 +692,19 @@ export default function PostDetail() {
                     className="mt-0.5 h-4 w-4 accent-[#8ab4ff]"
                   />
                   <span>Shfaq linkun e kontaktit publikisht. Pa zgjedhje ruhet vetëm për admin/moderator.</span>
+                </label>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-white/60 text-xs">Linku i burimit / postimit origjinal (opsional)</Label>
+                <Input value={editForm.source_url || ''} onChange={e => setEditForm({...editForm, source_url: e.target.value})} placeholder="https://..." className="bg-white/5 border-white/10 text-white" />
+                <label className="flex cursor-pointer items-start gap-2 text-xs text-white/50">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editForm.show_source_url)}
+                    onChange={e => setEditForm({...editForm, show_source_url: e.target.checked})}
+                    className="mt-0.5 h-4 w-4 accent-[#8ab4ff]"
+                  />
+                  <span>Shfaq linkun publikisht. Pa zgjedhje ruhet vetëm për gjurmim të postimit origjinal.</span>
                 </label>
               </div>
               <div className="space-y-1">
@@ -789,7 +789,6 @@ export default function PostDetail() {
               const canSeeProfile = isAuth && premiumAccess;
               const posterIsStaff = isStaffUser(posterProfile);
               const profileLink = job.created_by ? `/UserProfiles?email=${encodeURIComponent(job.created_by)}` : null;
-              const externalLink = (canSeePrivateImportFields || job.show_author_profile_url === true) ? job.author_profile_url || null : null;
               const visibleProfileLink = canSeeProfile && !posterIsStaff ? profileLink : null;
               if (posterIsStaff) {
                 return (
@@ -808,11 +807,11 @@ export default function PostDetail() {
                   </button>
                 );
               }
-              if (visibleProfileLink || externalLink) {
+              if (visibleProfileLink) {
                 return (
                   <a
-                    href={visibleProfileLink || externalLink}
-                    target={externalLink && !visibleProfileLink ? "_blank" : "_self"}
+                    href={visibleProfileLink}
+                    target="_self"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 text-[#8ab4ff] hover:text-[#9bffd6] transition-colors underline underline-offset-2"
                   >
@@ -900,7 +899,7 @@ export default function PostDetail() {
             })}
           </div>
 
-          {(job.contact_info || job.phone_number) && (() => {
+          {(job.contact_info || job.phone_number || job.author_profile_url || job.source_url) && (() => {
             const canSeeContact = isAuth && premiumAccess;
             const phoneAppLabels = { telefon: "Telefon", whatsapp: "WhatsApp", viber: "Viber", telegram: "Telegram", bip: "BiP", signal: "Signal", tjeter: "" };
             const phoneAppSvgs = {
@@ -926,20 +925,27 @@ export default function PostDetail() {
               : `tel:${cleanPhone}`;
             const canShowAuthorContactUrl = canSeePrivateImportFields || job.show_author_profile_url === true;
             const authorContactUrl = job.author_profile_url || "";
+            const canShowSourceUrl = canSeePrivateImportFields || job.show_source_url === true;
+            const sourceUrl = job.source_url || "";
             const isAuthorContactLine = (line = "") => (
               authorContactUrl && line.trim().replace(/\/$/, "") === authorContactUrl.trim().replace(/\/$/, "")
             );
+            const hasVisibleContact = job.phone_number || job.contact_info || (canShowAuthorContactUrl && authorContactUrl) || (canShowSourceUrl && sourceUrl);
+            const hasPublicImportLink =
+              (job.show_author_profile_url === true && authorContactUrl) ||
+              (job.show_source_url === true && sourceUrl);
+            const canSeeContactDetails = canSeeContact || hasPublicImportLink || canSeePrivateImportFields;
 
-            return (
+            return hasVisibleContact ? (
               <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10">
                 <div className="flex items-center gap-2 text-sm font-medium text-white mb-2">
                   <Phone className="w-4 h-4" />
                   Kontakt
                 </div>
-                {canSeeContact ? (
+                {canSeeContactDetails ? (
                  <div className="text-white text-sm space-y-2">
                    {/* Numri i telefonit - direkt i klikueshëm */}
-                   {job.phone_number && (
+                   {canSeeContact && job.phone_number && (
                      <div className="flex items-center gap-3">
                        <a
                          href={`tel:${cleanPhone}`}
@@ -963,7 +969,7 @@ export default function PostDetail() {
                      </div>
                    )}
                     {/* Info tjetër kontakti */}
-                    {job.contact_info && job.contact_info.split(/\n/).filter((line) => canShowAuthorContactUrl || !isAuthorContactLine(line)).map((line, i) => {
+                    {canSeeContact && job.contact_info && job.contact_info.split(/\n/).filter((line) => canShowAuthorContactUrl || !isAuthorContactLine(line)).map((line, i) => {
                       const emailMatch = line.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
                       const urlMatch = line.match(/https?:\/\/[^\s]+/);
                       const mapsMatch = line.match(/^(rr\.|rruga|adresa|adresë|str\.|sheshi|bul\.)/i);
@@ -979,12 +985,36 @@ export default function PostDetail() {
                         href={authorContactUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block break-all text-[#8ab4ff] hover:text-[#9bffd6] underline"
+                        className="flex min-w-0 max-w-full items-center gap-2 break-all text-[#8ab4ff] hover:text-[#9bffd6] underline underline-offset-2"
                       >
-                        {authorContactUrl}
+                        <Link2 className="h-3.5 w-3.5 shrink-0" />
+                        <span className="min-w-0 break-all">Linku i kontaktit nga burimi</span>
+                        {canSeePrivateImportFields && job.show_author_profile_url !== true && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/25 bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold text-amber-200 no-underline">
+                            <Eye className="h-3 w-3" /> i kufizuar
+                          </span>
+                        )}
+                        <ExternalLink className="h-3 w-3 shrink-0" />
                       </a>
                     )}
-                    {(job.address || job.city || job.country) && (
+                    {canShowSourceUrl && sourceUrl && (
+                      <a
+                        href={sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex min-w-0 max-w-full items-center gap-2 break-all text-xs text-white/45 hover:text-[#8ab4ff] underline underline-offset-2"
+                      >
+                        <Link2 className="h-3.5 w-3.5 shrink-0" />
+                        <span className="min-w-0 break-all">Linku i burimit / postimit origjinal</span>
+                        {canSeePrivateImportFields && job.show_source_url !== true && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-white/50 no-underline">
+                            <Eye className="h-3 w-3" /> i kufizuar
+                          </span>
+                        )}
+                        <ExternalLink className="h-3 w-3 shrink-0" />
+                      </a>
+                    )}
+                    {canSeeContact && (job.address || job.city || job.country) && (
                       <a
                         href={`https://www.google.com/maps/search/${encodeURIComponent([job.address || job.city, job.country === "Antokton" ? null : job.country].filter(Boolean).join(", "))}`}
                         target="_blank" rel="noopener noreferrer"
@@ -1008,7 +1038,7 @@ export default function PostDetail() {
                   </div>
                 )}
               </div>
-            );
+            ) : null;
           })()}
 
           {applications.length > 0 && (
@@ -1030,22 +1060,6 @@ export default function PostDetail() {
                 <Briefcase className="w-4 h-4 mr-2" />
                 Apliko Tani
               </Button>
-            </div>
-          )}
-
-          {/* Linku i burimit - i klikueshëm */}
-          {job.source_url && (job.show_source_url === true || canSeePrivateImportFields) && (
-            <div className="mt-3">
-              <a
-                href={job.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex min-w-0 max-w-full items-center gap-2 text-xs text-[#8ab4ff] hover:text-[#9bffd6] transition-colors"
-              >
-                <Link2 className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="min-w-0 break-all underline underline-offset-2">{job.source_url}</span>
-                <ExternalLink className="w-3 h-3 flex-shrink-0" />
-              </a>
             </div>
           )}
 

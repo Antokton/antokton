@@ -331,6 +331,7 @@ export default function CreatePost() {
   const [success, setSuccess] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [customCountry, setCustomCountry] = useState("");
+  const [customZone, setCustomZone] = useState("");
   const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
@@ -361,12 +362,6 @@ export default function CreatePost() {
     // Validim: job_type detyrimisht për punë dhe shërbime
     if ((form.category === "pune" || form.category === "sherbime") && !form.job_type) {
       alert(`Ju lutem zgjidhni nëse ${form.category === "pune" ? "Ofroni apo Kërkoni punë" : "Ofroni apo Kërkoni shërbim"}.`);
-      return;
-    }
-
-    // Validim: të paktën një zonë për punë
-    if (form.category === "pune" && (!form.zones || form.zones.length === 0)) {
-      alert("Ju lutem zgjidhni të paktën një zonë ku ofrohet/kërkohet puna.");
       return;
     }
 
@@ -772,12 +767,12 @@ export default function CreatePost() {
 
           {/* Zonat e punës - vetëm për kategorinë "pune" */}
           {form.category === "pune" && (
-            <div className="space-y-2 p-4 rounded-xl border" style={{ backgroundColor: 'rgba(138,180,255,0.05)', borderColor: form.zones?.length ? 'rgba(138,180,255,0.3)' : 'rgba(239,68,68,0.4)' }}>
+            <div className="space-y-2 p-4 rounded-xl border" style={{ backgroundColor: 'rgba(138,180,255,0.05)', borderColor: 'rgba(138,180,255,0.25)' }}>
               <Label className="text-sm font-medium flex items-center gap-2" style={{ color: 'var(--text)' }}>
-                📍 Zonat ku ofrohet / kërkohet puna <span className="text-red-400 text-xs">(e detyrueshme — mund të zgjedhësh disa)</span>
+                📍 Zonat ku ofrohet / kërkohet puna <span className="text-white/40 text-xs">(opsionale — mund të zgjedhësh disa)</span>
               </Label>
               <p className="text-xs text-white/50">
-                Zgjidh të gjitha zonat/rajonet ku mund të punosh ose ku kompania ofron punë. Kjo ndihmon kandidatët të gjejnë mundësi edhe nëse janë në shtete apo qytete të ndryshme.
+                Nëse adresa ose qyteti është vendosur sipër, kjo pjesë mund të lihet bosh. Zgjidh zona vetëm kur njoftimi vlen për disa vende.
               </p>
 
               {/* Zonat e Antoktonit */}
@@ -810,7 +805,8 @@ export default function CreatePost() {
               {/* Shtetet e Europës */}
               <div className="space-y-1.5 mt-2">
                 <p className="text-xs font-semibold text-white/60 uppercase tracking-wider">🌍 Shtete të tjera</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="max-h-32 overflow-y-auto rounded-xl border border-white/10 bg-[#0f172a]/70 p-2">
+                  <div className="flex flex-wrap gap-2">
                   {Object.keys(zonesByCountry).filter(c => c !== "Antokton").map(country => {
                     const countryZones = zonesByCountry[country];
                     const selectedInCountry = countryZones.filter(z => (form.zones || []).includes(z));
@@ -842,30 +838,28 @@ export default function CreatePost() {
                       </button>
                     );
                   })}
-                  {/* Mundësia "Kudo" */}
-                  {(() => {
-                    const allZones = Object.values(zonesByCountry).flat();
-                    const isAllSelected = allZones.every(z => (form.zones || []).includes(z));
-                    return (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isAllSelected) {
-                            setForm(f => ({ ...f, zones: [] }));
-                          } else {
-                            setForm(f => ({ ...f, zones: allZones }));
-                          }
-                        }}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                          isAllSelected
-                            ? "bg-purple-500/20 border-purple-500/50 text-purple-300"
-                            : "bg-white/5 border-dashed border-white/20 text-white/50 hover:text-white/70"
-                        }`}
-                      >
-                        {isAllSelected ? "✓ " : ""}🌐 Kudo / Worldwide
-                      </button>
-                    );
-                  })()}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    value={customZone}
+                    onChange={(e) => setCustomZone(e.target.value)}
+                    placeholder="Tjetër, specifiko..."
+                    className="h-9 text-sm"
+                    style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const value = customZone.trim();
+                      if (!value) return;
+                      setForm(f => ({ ...f, zones: [...new Set([...(f.zones || []), value])] }));
+                      setCustomZone("");
+                    }}
+                    className="h-9 rounded-lg border border-white/15 px-3 text-sm font-medium text-white/70 hover:border-white/30 hover:text-white"
+                  >
+                    Shto
+                  </button>
                 </div>
               </div>
 
@@ -885,7 +879,7 @@ export default function CreatePost() {
               )}
 
               {(!form.zones || form.zones.length === 0) && (
-                <p className="text-xs text-red-400 flex items-center gap-1">⚠️ Zgjidh të paktën një zonë para publikimit</p>
+                <p className="text-xs text-white/35">Nuk është zgjedhur zonë shtesë. Njoftimi do përdorë vendndodhjen e vendosur sipër.</p>
               )}
             </div>
           )}
@@ -924,7 +918,7 @@ export default function CreatePost() {
           
           {/* Numri i telefonit + Platforma */}
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: 'var(--muted)' }}>Numri i telefonit (opcional)</Label>
+            <Label className="text-xs" style={{ color: 'var(--muted)' }}>Numri i telefonit (opsional)</Label>
             <div className="flex gap-2">
               <Input
                 value={form.phone_number}
@@ -956,34 +950,14 @@ export default function CreatePost() {
 
           {/* Email / info tjetër */}
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: 'var(--muted)' }}>Email ose info tjetër kontakti (opcional)</Label>
+            <Label className="text-xs" style={{ color: 'var(--muted)' }}>Email ose info tjetër kontakti (opsional)</Label>
             <Input value={form.contact_info} onChange={(e) => setForm({ ...form, contact_info: e.target.value })}
               placeholder="Email, adresë, faqe interneti..." className="h-11 break-all"
               style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }} />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: 'var(--muted)' }}>Linku i burimit / postimit origjinal (opcional)</Label>
-            <Input
-              value={form.source_url}
-              onChange={(e) => setForm({ ...form, source_url: e.target.value })}
-              placeholder="https://..."
-              className="h-11 break-all"
-              style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }}
-            />
-            <label className="flex cursor-pointer items-start gap-2 text-xs" style={{ color: 'var(--muted)' }}>
-              <input
-                type="checkbox"
-                checked={Boolean(form.show_source_url)}
-                onChange={(e) => setForm({ ...form, show_source_url: e.target.checked })}
-                className="mt-0.5 h-4 w-4 accent-[#8ab4ff]"
-              />
-              <span>Shfaq linkun publikisht. Lëre pa zgjedhur nëse linku duhet të ruhet vetëm për gjurmim të postimit origjinal.</span>
-            </label>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: 'var(--muted)' }}>Linku i kontaktit nga burimi (opcional)</Label>
+            <Label className="text-xs" style={{ color: 'var(--muted)' }}>Linku i kontaktit nga burimi (opsional)</Label>
             <Input
               value={form.author_profile_url}
               onChange={(e) => setForm({ ...form, author_profile_url: e.target.value, import_author_profile_url: e.target.value })}
@@ -999,6 +973,26 @@ export default function CreatePost() {
                 className="mt-0.5 h-4 w-4 accent-[#8ab4ff]"
               />
               <span>Shfaq linkun e kontaktit publikisht. Lëre pa zgjedhur nëse duhet të ruhet vetëm privatisht për admin/moderator.</span>
+            </label>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs" style={{ color: 'var(--muted)' }}>Linku i burimit / postimit origjinal (opsional)</Label>
+            <Input
+              value={form.source_url}
+              onChange={(e) => setForm({ ...form, source_url: e.target.value })}
+              placeholder="https://..."
+              className="h-11 break-all"
+              style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--line)', color: 'var(--text)' }}
+            />
+            <label className="flex cursor-pointer items-start gap-2 text-xs" style={{ color: 'var(--muted)' }}>
+              <input
+                type="checkbox"
+                checked={Boolean(form.show_source_url)}
+                onChange={(e) => setForm({ ...form, show_source_url: e.target.checked })}
+                className="mt-0.5 h-4 w-4 accent-[#8ab4ff]"
+              />
+              <span>Shfaq linkun publikisht. Lëre pa zgjedhur nëse linku duhet të ruhet vetëm për gjurmim të postimit origjinal.</span>
             </label>
           </div>
         </div>

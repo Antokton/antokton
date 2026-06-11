@@ -587,7 +587,7 @@ ${text || importedData.description || importedData.title || ""}`;
 
   const saveDraft = async (draft, status) => {
     const prepared = normalizeDraft(draft.import_original_text || draft.original_text || draft.description || "", draft, url.trim(), draft.job_type || jobType);
-    const contactUrl = authorUrl.trim();
+    const contactUrl = String(prepared.author_profile_url || prepared.import_author_profile_url || authorUrl || "").trim();
     const sourceUrl = prepared.source_url || url.trim();
     const platformPosterName = isStaff ? String(draft.poster_name || "").trim() : "";
     const contactInfoWarning = getContactInfoInTextMessage(prepared.description);
@@ -859,14 +859,14 @@ ${text || importedData.description || importedData.title || ""}`;
                 </Select>
               </div>
               <div>
-                <label className="text-white/50 text-xs mb-1 block">Kontakt tjetër</label>
+                <label className="text-white/50 text-xs mb-1 block">Email ose info tjetër kontakti (opsional)</label>
                 <Input value={data.contact_info || ""} onChange={(e) => set("contact_info", e.target.value)} placeholder="email, website, WhatsApp..." className="bg-white/5 border-white/10 text-white" style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }} />
               </div>
             </div>
           </div>
 
           <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
-            <div className="flex items-center gap-2 mb-1"><User className="w-4 h-4 text-[#c084fc]" /><span className="text-white font-semibold text-sm">Linku i kontaktit</span></div>
+            <div className="flex items-center gap-2 mb-1"><User className="w-4 h-4 text-[#c084fc]" /><span className="text-white font-semibold text-sm">Linku i kontaktit nga burimi</span></div>
             {isStaff && (
               <div>
                 <label className="text-white/50 text-xs mb-1 block">Emri i postuesit në platformë (opsional)</label>
@@ -880,14 +880,24 @@ ${text || importedData.description || importedData.title || ""}`;
               </div>
             )}
             <p className="text-white/50 text-xs">
-              Linku ruhet nga fusha sipër “Linku i kontaktit nga burimi”: {authorUrl.trim() || "nuk është vendosur"}.
+              Ky është profili/linku i personit ose faqes që mund të përdoret si kontakt publik nëse e lejon me checkbox.
             </p>
+            <Input
+              value={data.author_profile_url || data.import_author_profile_url || authorUrl || ""}
+              onChange={(e) => {
+                set("author_profile_url", e.target.value);
+                set("import_author_profile_url", e.target.value);
+              }}
+              placeholder="https://facebook.com/profile... ose link kontakti"
+              className="bg-white/5 border-white/10 text-white text-xs"
+              style={{ background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.75)" }}
+            />
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={data.show_author_profile_url === true}
                 onChange={(e) => set("show_author_profile_url", e.target.checked)}
-                disabled={!authorUrl.trim()}
+                disabled={!String(data.author_profile_url || data.import_author_profile_url || authorUrl || "").trim()}
                 className="rounded border-white/20"
                 style={{ accentColor: "#8ab4ff" }}
               />
