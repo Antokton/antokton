@@ -477,7 +477,7 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
 
       .antokton-mobile-hero-slogan {
         position: absolute;
-        top: clamp(340px, 53%, 500px);
+        top: clamp(238px, 43%, 380px);
         left: 7%;
         right: 7%;
         z-index: 2;
@@ -497,26 +497,16 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
         text-shadow: none;
       }
 
-      .antokton-mobile-hero-slogan .antokton-hero-light-text {
-        animation: none;
-        background-image: none;
-        color: rgba(255,255,255,0.88);
-        -webkit-text-fill-color: rgba(255,255,255,0.88);
-        text-shadow:
-          0 3px 16px rgba(0,0,0,0.86),
-          0 0 12px rgba(255,255,255,0.14);
-      }
-
       .antokton-mobile-hero-line {
         max-width: 100%;
         white-space: nowrap;
-        font-size: clamp(16px, 5vw, 24px);
+        font-size: clamp(18px, 5.9vw, 29px);
         line-height: 1.02;
         letter-spacing: 0;
       }
 
       .antokton-mobile-hero-line-secondary {
-        font-size: clamp(11px, 3.6vw, 16px);
+        font-size: clamp(12px, 3.9vw, 19px);
         line-height: 1.12;
       }
 
@@ -536,21 +526,21 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
         .antokton-mobile-hero-slogan {
           left: 5%;
           right: 5%;
-          top: clamp(318px, 52%, 455px);
+          top: clamp(228px, 42%, 350px);
         }
 
         .antokton-mobile-hero-line {
-          font-size: clamp(15px, 4.8vw, 20px);
+          font-size: clamp(17px, 5.9vw, 23px);
         }
 
         .antokton-mobile-hero-line-secondary {
-          font-size: clamp(10px, 3.4vw, 13px);
+          font-size: clamp(11px, 3.7vw, 15px);
         }
       }
 
       @media (max-height: 700px) {
         .antokton-mobile-hero-slogan {
-          top: 50%;
+          top: 41%;
         }
       }
 
@@ -600,8 +590,9 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
 
   // ---- TABLET + MOBILE: gjithçka fit në ekran pa scroll ----
   if (isTablet || isMobile) {
-    const preferredLogoTop = (isMobile ? 76 : 70) + mobileLogoOffset;
-    const topOffset = Math.max(48, Math.min(preferredLogoTop, isMobile ? 116 : 104));
+    const noticeBottom = realNotifHeight > 0 ? realNotifHeight : 86;
+    const mapLogoTop = (isMobile ? 98 : 84) + mobileLogoOffset;
+    const topOffset = Math.max(mapLogoTop, noticeBottom + (isMobile ? 20 : 16));
     return (
       <div style={{ width: '100%', height: 'calc(100vh - 64px)', background: '#000', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
         {adminEditStyles}
