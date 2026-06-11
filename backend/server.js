@@ -34,6 +34,12 @@ const {
 } = require("./auth");
 const { consumeAuthRateLimit, consumeGeneralRateLimit } = require("./rateLimit");
 const { logError } = require("./errorLogger");
+const {
+  canSeePostViewStats,
+  hasRecentPostView,
+  isStaffRecord,
+  summarizePostViews
+} = require("./postViewHelpers");
 
 const {
   ROOT_DIR,
@@ -558,6 +564,78 @@ function userEmailCandidates(user = {}) {
   ].map(normalizeEmail).filter(Boolean);
 }
 
+async function getPostViewStats(postId) {
+  if (!postId || !statements.listPostViewsByPost) {
+    return { view_count: 0, total_views: 0, unique_views: 0, views_last_24h: 0, views_last_7d: 0 };
+  }
+  const views = await statements.listPostViewsByPost.all(postId);
+  return summarizePostViews(views);
+}
+
+async function getPostViewStatsForViewer(post, viewer) {
+  if (!canSeePostViewStats(post, viewer)) return {};
+  const stats = await getPostViewStats(post.id);
+  return isStaffRecord(viewer) ? stats : { view_count: stats.view_count };
+}
+
+async function appendPostViewStatsForViewer(entity, record, viewer) {
+  if (!["Job", "Status"].includes(entity) || !record) return record;
+  return { ...record, ...(await getPostViewStatsForViewer(record, viewer)) };
+}
+
+async function appendPostViewStatsForRequest(entity, record, req) {
+  if (!["Job", "Status"].includes(entity) || !record) return record;
+  const viewerEmail = await getRequestUserEmail(req);
+  const viewer = await findUserByEmail(viewerEmail);
+  return appendPostViewStatsForViewer(entity, record, viewer);
+}
+
+function hashPostViewerSession(req, suppliedSessionId = "") {
+  const sessionId = String(suppliedSessionId || "").trim();
+  const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "";
+  const agent = req.headers["user-agent"] || "";
+  const language = req.headers["accept-language"] || "";
+  const source = sessionId || `${ip}|${agent}|${language}`;
+  return crypto.createHash("sha256").update(`${APP_ID}:post-view:${source}`).digest("hex");
+}
+
+async function handlePostView(req, res, postId) {
+  if (req.method !== "POST") return sendError(res, 405, "Method not allowed");
+  const row =
+    (await statements.getEntity.get(APP_ID, "Job", postId)) ||
+    (await findRecordRowByNaturalId("Job", postId)) ||
+    (await statements.getEntity.get(APP_ID, "Status", postId)) ||
+    (await findRecordRowByNaturalId("Status", postId));
+  const post = recordFromRow(row);
+  if (!post) return sendError(res, 404, "Postimi nuk u gjet.");
+
+  const body = await readJson(req);
+  const viewerEmail = normalizeEmail(await getRequestUserEmail(req));
+  const viewer = viewerEmail ? await findUserByEmail(viewerEmail) : null;
+  const viewerUserId = viewer?.id || viewerEmail || null;
+  const viewerSessionHash = viewerUserId ? null : hashPostViewerSession(req, body.sessionId);
+  const dedupeKey = viewerUserId ? `u:${normalizeEmail(viewerUserId)}` : `s:${viewerSessionHash}`;
+  const createdAt = now();
+  const existingViews = statements.listPostViewsByPost
+    ? await statements.listPostViewsByPost.all(post.id)
+    : [];
+  const hasRecentView = hasRecentPostView(existingViews, dedupeKey);
+
+  if (!hasRecentView && statements.insertPostView) {
+    await statements.insertPostView.run(
+      crypto.randomUUID(),
+      post.id,
+      viewerUserId,
+      viewerSessionHash,
+      createdAt,
+      String(req.headers["user-agent"] || "").slice(0, 500)
+    );
+  }
+
+  const stats = await getPostViewStatsForViewer(post, viewer);
+  return send(res, 200, { success: true, counted: !hasRecentView, ...stats });
+}
+
 async function ensureUser(email = DEV_USER_EMAIL, overrides = {}) {
   const normalizedEmail = normalizeEmail(email);
   const existing = await findUserByEmail(normalizedEmail);
@@ -906,10 +984,15 @@ async function redactEntityForRequest(entity, payload, req) {
   const canAudit = await requesterCanAuditImports(req);
   if (Array.isArray(payload)) {
     const out = [];
-    for (const record of payload) out.push(await redactImportedRecord(record, canAudit));
+    const viewer = ["Job", "Status"].includes(entity) ? await findUserByEmail(await getRequestUserEmail(req)) : null;
+    for (const record of payload) {
+      const withStats = await appendPostViewStatsForViewer(entity, record, viewer);
+      out.push(await redactImportedRecord(withStats, canAudit));
+    }
     return out;
   }
-  return redactImportedRecord(payload, canAudit);
+  const withStats = await appendPostViewStatsForRequest(entity, payload, req);
+  return redactImportedRecord(withStats, canAudit);
 }
 
 function buildEmptySchemaResult(schema) {
@@ -2443,6 +2526,10 @@ const server = http.createServer(async (req, res) => {
 
     if (url.pathname === "/api/local/entity-schemas") {
       return send(res, 200, entitySchemas);
+    }
+
+    if (segments[0] === "api" && segments[1] === "posts" && segments[2] && segments[3] === "view") {
+      return await handlePostView(req, res, segments[2]);
     }
 
     if (segments[0] === "api" && segments[1] === "apps" && segments[2] === "public") {

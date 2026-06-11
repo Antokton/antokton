@@ -135,6 +135,24 @@ CREATE TABLE IF NOT EXISTS auth_audit_logs (
   metadata TEXT,
   created_date TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS post_views (
+  id TEXT PRIMARY KEY,
+  post_id TEXT NOT NULL,
+  viewer_user_id TEXT,
+  viewer_session_hash TEXT,
+  created_at TEXT NOT NULL,
+  user_agent TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_views_post_created
+  ON post_views (post_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_post_views_post_user_created
+  ON post_views (post_id, viewer_user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_post_views_post_session_created
+  ON post_views (post_id, viewer_session_hash, created_at DESC);
 `);
 
 const statements = {
@@ -241,6 +259,15 @@ const statements = {
   deleteAuthAccount: db.prepare(`
     DELETE FROM auth_accounts
     WHERE id = ?
+  `),
+  insertPostView: db.prepare(`
+    INSERT INTO post_views (
+      id, post_id, viewer_user_id, viewer_session_hash, created_at, user_agent
+    )
+    VALUES (?, ?, ?, ?, ?, ?)
+  `),
+  listPostViewsByPost: db.prepare(`
+    SELECT * FROM post_views WHERE post_id = ? ORDER BY created_at DESC
   `)
 };
 

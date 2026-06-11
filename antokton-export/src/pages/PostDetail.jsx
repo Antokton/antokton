@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
-import { MapPin, Clock, MessageCircle, Send, ArrowLeft, Phone, Briefcase, Flag, Share2, Copy, Users as UsersIcon, X, Pencil, Check, MoreVertical, ExternalLink, Link2 } from "lucide-react";
+import { MapPin, Clock, MessageCircle, Send, ArrowLeft, Phone, Briefcase, Flag, Share2, Copy, Users as UsersIcon, X, Pencil, Check, MoreVertical, ExternalLink, Link2, Eye } from "lucide-react";
 import LocationPicker from "../components/job/LocationPicker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
@@ -110,6 +110,8 @@ const reportReasonLabel = (value) => {
   return all.find(r => r.value === value)?.label || value;
 };
 
+const formatViewText = (count) => `${count} ${Number(count) === 1 ? "shikim" : "shikime"}`;
+
 const categoryLabels = {
   pune: "Punë", shtepi: "Shtëpi", juridike: "Juridike",
   edukim: "Edukim", bamiresi: "Bamirësi", media: "Media", sherbime: "Shërbime"
@@ -138,6 +140,7 @@ export default function PostDetail() {
   const [editForm, setEditForm] = useState({});
   const [showComments, setShowComments] = useState(false);
   const [staffProfileNotice, setStaffProfileNotice] = useState("");
+  const viewTrackedRef = React.useRef(null);
 
   const queryClient = useQueryClient();
   const canSeePrivateImportFields = user?.role === "admin" || user?.role === "moderator";
@@ -165,36 +168,6 @@ export default function PostDetail() {
     checkAuth();
   }, []);
 
-  // Track job view
-  useEffect(() => {
-    const trackView = async () => {
-      if (user && jobId) {
-        try {
-          const existingViews = await base44.entities.JobView.filter({ 
-            job_id: jobId, 
-            user_email: user.email 
-          });
-          
-          if (existingViews.length > 0) {
-            await base44.entities.JobView.update(existingViews[0].id, {
-              view_count: (existingViews[0].view_count || 1) + 1,
-              last_viewed: new Date().toISOString()
-            });
-          } else {
-            await base44.entities.JobView.create({
-              job_id: jobId,
-              user_email: user.email,
-              last_viewed: new Date().toISOString()
-            });
-          }
-        } catch (error) {
-          console.error('Error tracking view:', error);
-        }
-      }
-    };
-    trackView();
-  }, [user, jobId]);
-
   const { data: job, isLoading } = useQuery({
     queryKey: ["job", jobId, user?.role],
     queryFn: async () => {
@@ -204,6 +177,23 @@ export default function PostDetail() {
     },
     enabled: !!jobId,
   });
+
+  useEffect(() => {
+    if (!job?.id || viewTrackedRef.current === job.id) return;
+    viewTrackedRef.current = job.id;
+    let cancelled = false;
+    base44.postViews.record(job.id)
+      .then((stats) => {
+        if (cancelled || typeof stats?.view_count !== "number") return;
+        queryClient.setQueryData(["job", jobId, user?.role], (current) => (
+          current ? { ...current, ...stats } : current
+        ));
+      })
+      .catch((error) => {
+        console.warn("Post view was not recorded", error);
+      });
+    return () => { cancelled = true; };
+  }, [job?.id, jobId, queryClient, user?.role]);
 
   const { data: comments = [] } = useQuery({
     queryKey: ["comments", jobId],
@@ -1062,7 +1052,7 @@ export default function PostDetail() {
           {/* Facebook-style action bar */}
           <div className="mt-4 pt-4 border-t border-white/10">
             {/* Counts row */}
-            {(reactions.length > 0 || comments.length > 0) && (
+            {(reactions.length > 0 || comments.length > 0 || typeof job.view_count === "number") && (
               <div className="flex items-center justify-between text-xs text-white/40 mb-2 px-1">
                 <div className="flex items-center gap-1">
                   {reactions.length > 0 && (
@@ -1075,11 +1065,19 @@ export default function PostDetail() {
                     </span>
                   )}
                 </div>
-                {comments.length > 0 && (
-                  <button onClick={() => setShowComments(v => !v)} className="hover:text-white/70 transition-colors">
-                    {comments.length} komente
-                  </button>
-                )}
+                <div className="flex items-center gap-3">
+                  {typeof job.view_count === "number" && (
+                    <span className="inline-flex items-center gap-1">
+                      <Eye className="h-3 w-3" />
+                      {formatViewText(job.view_count)}
+                    </span>
+                  )}
+                  {comments.length > 0 && (
+                    <button onClick={() => setShowComments(v => !v)} className="hover:text-white/70 transition-colors">
+                      {comments.length} komente
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 

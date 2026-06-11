@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "../../utils";
-import { MapPin, Clock, ThumbsUp, MessageCircle, Briefcase, Home as HomeIcon, Scale, GraduationCap, Heart, Radio, Wrench, ChevronRight, Banknote } from "lucide-react";
+import { MapPin, Clock, ThumbsUp, MessageCircle, Briefcase, Home as HomeIcon, Scale, GraduationCap, Heart, Radio, Wrench, ChevronRight, Banknote, Eye } from "lucide-react";
 import moment from "moment";
 
 const categoryConfig = {
@@ -19,6 +19,7 @@ const jobTypeStyle = {
   ofroj:  { bg: "rgba(155,255,214,0.15)", color: "#9bffd6", border: "rgba(155,255,214,0.3)" },
   kerkoj: { bg: "rgba(251,191,36,0.15)",  color: "#fbbf24", border: "rgba(251,191,36,0.3)"  },
 };
+const viewLabel = (count) => `${count} ${Number(count) === 1 ? "shikim" : "shikime"}`;
 
 export default function JobCard({ job }) {
   const cat = categoryConfig[job.category] || categoryConfig.pune;
@@ -94,6 +95,12 @@ export default function JobCard({ job }) {
             <MessageCircle className="w-2.5 h-2.5" />
             {job.comments_count || 0}
           </span>
+          {typeof job.view_count === "number" && (
+            <span className="flex items-center gap-0.5" title={viewLabel(job.view_count)}>
+              <Eye className="w-2.5 h-2.5" />
+              {job.view_count}
+            </span>
+          )}
         </div>
       </div>
 

@@ -9,7 +9,7 @@ import {
   Briefcase, ShoppingBag, Calendar, Users, Newspaper,
   Globe, MoreHorizontal, Home, Trash2, Flag, Copy, Check,
   ThumbsUp, ThumbsDown, Forward, ArrowLeft, Edit2,
-  ShieldCheck, EyeOff, Lock
+  ShieldCheck, EyeOff, Lock, Eye
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "../utils";
@@ -1415,6 +1415,8 @@ function CommentMenu({ comment, currentUser, statusId }) {
 /* ─── STATUS CARD ─── */
 export function StatusCard({ status, currentUser }) {
   const queryClient = useQueryClient();
+  const cardRef = useRef(null);
+  const viewReportedRef = useRef(false);
   const [showComments, setShowComments] = useState(false);
   const [showDetailPage, setShowDetailPage] = useState(false);
   const [commentText, setCommentText] = useState("");
@@ -1437,6 +1439,9 @@ export function StatusCard({ status, currentUser }) {
   const commentCount = status.comments_count || 0;
   const myName = currentUser ? (currentUser.first_name || currentUser.email.split("@")[0]) : "";
   const authorName = status.author_name || status.author_email?.split("@")[0] || "Anonim";
+  const viewLabel = typeof status.view_count === "number"
+    ? `${status.view_count} ${status.view_count === 1 ? "shikim" : "shikime"}`
+    : "";
 
   const manyComments = commentCount > 5;
 
@@ -1525,11 +1530,51 @@ export function StatusCard({ status, currentUser }) {
   const statusImageVisible = shouldShowStatusImage(status);
   const publicSourceUrl = getPublicSourceUrl(status);
 
+  useEffect(() => {
+    if (!status.id || viewReportedRef.current || typeof IntersectionObserver === "undefined") return;
+    const node = cardRef.current;
+    if (!node) return;
+
+    let timer = null;
+    const recordView = () => {
+      if (viewReportedRef.current) return;
+      viewReportedRef.current = true;
+      base44.postViews.record(status.id)
+        .then((stats) => {
+          if (typeof stats?.view_count !== "number") return;
+          queryClient.setQueryData(["statuses"], (current = []) => (
+            Array.isArray(current)
+              ? current.map((item) => item.id === status.id ? { ...item, ...stats } : item)
+              : current
+          ));
+        })
+        .catch((error) => {
+          viewReportedRef.current = false;
+          console.warn("Status view was not recorded", error);
+        });
+    };
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && entry.intersectionRatio >= 0.55) {
+        timer = setTimeout(recordView, 1500);
+      } else if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    }, { threshold: [0, 0.55] });
+
+    observer.observe(node);
+    return () => {
+      if (timer) clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [status.id, queryClient]);
+
   if (hidden) return null;
   if (showDetailPage) return <StatusDetailPage status={status} currentUser={currentUser} onBack={() => setShowDetailPage(false)} />;
 
   return (
-    <div style={{ background: "#1a2640", marginBottom: "8px" }}>
+    <div ref={cardRef} style={{ background: "#1a2640", marginBottom: "8px" }}>
 
       {/* Header */}
       <div className="flex items-start justify-between px-4 pt-2 pb-1">
@@ -1674,6 +1719,16 @@ export function StatusCard({ status, currentUser }) {
           style={{ padding: "4px 8px 4px 4px", fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.5)", cursor: "pointer" }}>
           <Forward style={{ width: 16, height: 16 }} />
         </button>
+        {typeof status.view_count === "number" && (
+          <span
+            className="ml-auto flex items-center gap-1"
+            title={viewLabel}
+            style={{ fontSize: 12, color: "rgba(255,255,255,0.38)" }}
+          >
+            <Eye style={{ width: 14, height: 14 }} />
+            {viewLabel}
+          </span>
+        )}
       </div>
 
 

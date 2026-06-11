@@ -2,6 +2,7 @@ import { appParams } from '@/lib/app-params';
 
 const appId = appParams.appId || import.meta.env.VITE_ANTOKTON_APP_ID || '6991d40eddf82cc25ec834a7';
 const DEV_LOGGED_OUT_KEY = 'antokton_dev_logged_out';
+const POST_VIEW_SESSION_KEY = 'antokton_post_view_session';
 
 function getToken() {
   const storedToken = localStorage.getItem('antokton_access_token') ||
@@ -31,6 +32,17 @@ function clearToken() {
 
 function hasToken() {
   return Boolean(getToken());
+}
+
+function getPostViewSessionId() {
+  let sessionId = localStorage.getItem(POST_VIEW_SESSION_KEY);
+  if (!sessionId) {
+    sessionId = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(POST_VIEW_SESSION_KEY, sessionId);
+  }
+  return sessionId;
 }
 
 async function request(path, options = {}) {
@@ -268,6 +280,15 @@ export const antoktonApi = {
       return request(`/api/app-logs/${appId}/log-user-in-app/${encodeURIComponent(pageName)}`, {
         method: 'POST',
         body: {}
+      });
+    }
+  },
+  postViews: {
+    record(postId) {
+      if (!postId) return Promise.resolve({ success: false });
+      return request(`/api/posts/${encodeURIComponent(postId)}/view`, {
+        method: 'POST',
+        body: { sessionId: getPostViewSessionId() }
       });
     }
   }
