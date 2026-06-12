@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/antoktonClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,15 +8,36 @@ import { Loader2, Upload, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 
+const profileDisplayName = (profile = {}, fallbackEmail = "") => (
+  [profile.first_name, profile.surname].filter(Boolean).join(" ").trim()
+  || profile.full_name
+  || profile.display_name
+  || profile.public_name
+  || fallbackEmail.split("@")[0]
+  || "Aplikues"
+);
+
 export default function ApplicationForm({ job, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [cvFile, setCvFile] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [form, setForm] = useState({
-    applicant_name: "",
     applicant_email: "",
     applicant_phone: "",
     cover_letter: ""
   });
+
+  useEffect(() => {
+    let mounted = true;
+    base44.auth.isAuthenticated().then(async (authenticated) => {
+      if (!authenticated) return;
+      const me = await base44.auth.me();
+      if (!mounted) return;
+      setCurrentUser(me);
+      setForm((prev) => ({ ...prev, applicant_email: prev.applicant_email || me.email || "" }));
+    });
+    return () => { mounted = false; };
+  }, []);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -47,8 +68,8 @@ export default function ApplicationForm({ job, onClose, onSuccess }) {
 
       await base44.entities.JobApplication.create({
         job_id: job.id,
-        applicant_email: form.applicant_email,
-        applicant_name: form.applicant_name,
+        applicant_email: currentUser?.email || form.applicant_email,
+        applicant_name: profileDisplayName(currentUser || {}, form.applicant_email),
         applicant_phone: normalizeInternationalPhone(form.applicant_phone),
         cover_letter: form.cover_letter,
         cv_url: cvUrl,
@@ -94,17 +115,6 @@ export default function ApplicationForm({ job, onClose, onSuccess }) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label className="text-white/70">Emri dhe mbiemri *</Label>
-            <Input
-              required
-              value={form.applicant_name}
-              onChange={(e) => setForm({ ...form, applicant_name: e.target.value })}
-              placeholder="Emri juaj i plotë"
-              className="bg-white/5 border-white/10 text-white"
-            />
-          </div>
-
-          <div className="space-y-1.5">
             <Label className="text-white/70">Email *</Label>
             <Input
               required
@@ -112,6 +122,7 @@ export default function ApplicationForm({ job, onClose, onSuccess }) {
               value={form.applicant_email}
               onChange={(e) => setForm({ ...form, applicant_email: e.target.value })}
               placeholder="email@example.com"
+              readOnly={Boolean(currentUser?.email)}
               className="bg-white/5 border-white/10 text-white"
             />
           </div>

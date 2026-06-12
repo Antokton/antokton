@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/antoktonClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, Clock, XCircle, ChevronDown, ChevronUp, MessageCircle, Send, User, Phone, Mail, FileText, Briefcase } from "lucide-react";
+import { CheckCircle, XCircle, ChevronDown, ChevronUp, MessageCircle, Send, User, Phone, Mail, FileText, Briefcase } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import moment from "moment";
 import { Link } from "react-router-dom";
@@ -18,10 +18,20 @@ const statusConfig = {
   hired:       { label: "Punësuar",   color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
 };
 
-function ApplicationCard({ app, job, user, onStatusChange }) {
+const profileName = (profile, fallbackEmail = "") => {
+  const name = [profile?.first_name, profile?.surname].filter(Boolean).join(" ").trim()
+    || profile?.full_name
+    || profile?.display_name
+    || profile?.public_name
+    || "";
+  return name || fallbackEmail.split("@")[0] || "Aplikues";
+};
+
+function ApplicationCard({ app, job, user, applicantProfile, onStatusChange }) {
   const [expanded, setExpanded] = useState(false);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
   const queryClient = useQueryClient();
 
   const { data: messages = [] } = useQuery({
@@ -41,29 +51,44 @@ function ApplicationCard({ app, job, user, onStatusChange }) {
       sender_email: app.applicant_email,
       receiver_email: user.email
     }, "-created_date", 50),
-    enabled: expanded && !!user?.email,
+    enabled: expanded && !!user?.email && app.applicant_email !== user.email,
     refetchInterval: expanded ? 10000 : false,
   });
 
   // Merge and sort all messages
-  const allMessages = [...messages, ...messagesFromApplicant]
+  const allMessages = Array.from(
+    new Map([...messages, ...messagesFromApplicant].map((msg) => {
+      const minuteBucket = msg.created_date ? moment(msg.created_date).format("YYYY-MM-DDTHH:mm") : "";
+      return [
+        `${msg.sender_email}-${msg.receiver_email}-${minuteBucket}-${String(msg.message || "").trim()}`,
+        msg
+      ];
+    })).values()
+  )
     .sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
 
   const sendMessage = async () => {
-    if (!message.trim()) return;
+    if (!message.trim() || sendingRef.current) return;
+    sendingRef.current = true;
     setSending(true);
-    await base44.entities.ChatMessage.create({
-      sender_email: user.email,
-      receiver_email: app.applicant_email,
-      message: message.trim(),
-      is_read: false,
-    });
-    setMessage("");
-    setSending(false);
-    queryClient.invalidateQueries({ queryKey: ["app-messages", app.id] });
+    try {
+      await base44.entities.ChatMessage.create({
+        sender_email: user.email,
+        receiver_email: app.applicant_email,
+        message: message.trim(),
+        is_read: false,
+      });
+      setMessage("");
+      queryClient.invalidateQueries({ queryKey: ["app-messages", app.id] });
+      queryClient.invalidateQueries({ queryKey: ["app-messages-from", app.id] });
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
+    }
   };
 
   const sc = statusConfig[app.status] || statusConfig.applied;
+  const applicantName = profileName(applicantProfile, app.applicant_email) || app.applicant_name || "Aplikues";
 
   return (
     <motion.div
@@ -78,11 +103,11 @@ function ApplicationCard({ app, job, user, onStatusChange }) {
       >
         <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
           style={{ background: 'linear-gradient(135deg, #8ab4ff, #9bffd6)', color: '#0b1020' }}>
-          {(app.applicant_name || "?")[0].toUpperCase()}
+          {(applicantName || "?")[0].toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-white font-semibold text-sm">{app.applicant_name}</span>
+            <span className="text-white font-semibold text-sm">{applicantName}</span>
             <Badge className={`text-xs border ${sc.color}`}>{sc.label}</Badge>
           </div>
           <p className="text-white/40 text-xs mt-0.5 truncate">
@@ -131,7 +156,7 @@ function ApplicationCard({ app, job, user, onStatusChange }) {
                 )}
                 <div className="flex items-center gap-2 text-sm">
                   <User className="w-4 h-4 text-white/40 flex-shrink-0" />
-                  <Link to={`/UserProfiles?email=${encodeURIComponent(app.applicant_email)}`} className="text-[#8ab4ff] hover:text-[#9bffd6]">
+                  <Link to={`/Member/${encodeURIComponent(app.applicant_email)}`} className="text-[#8ab4ff] hover:text-[#9bffd6]">
                     Shiko Profilin
                   </Link>
                 </div>
@@ -265,6 +290,14 @@ export default function EmployerDashboard() {
     enabled: !!user?.email && myJobs.length > 0,
   });
 
+  const { data: users = [] } = useQuery({
+    queryKey: ["employer-application-users"],
+    queryFn: () => base44.entities.User.list("-updated_date", 1000),
+    enabled: !!user?.email,
+    staleTime: 60000,
+  });
+  const userByEmail = new Map(users.map((item) => [String(item.email || "").toLowerCase(), item]));
+
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }) => base44.entities.JobApplication.update(id, { status }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employer-applications"] }),
@@ -325,6 +358,7 @@ export default function EmployerDashboard() {
               app={app}
               job={myJobs.find(j => j.id === app.job_id)}
               user={user}
+              applicantProfile={userByEmail.get(String(app.applicant_email || "").toLowerCase())}
               onStatusChange={(id, status) => updateStatusMutation.mutate({ id, status })}
             />
           ))}

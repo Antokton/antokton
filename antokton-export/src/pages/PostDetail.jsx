@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
-import { MapPin, Clock, MessageCircle, Send, ArrowLeft, Phone, Briefcase, Flag, Share2, Copy, Users as UsersIcon, X, Pencil, Check, MoreVertical, ExternalLink, Link2, Eye } from "lucide-react";
+import { MapPin, Clock, MessageCircle, Send, ArrowLeft, Phone, Briefcase, Flag, Share2, Copy, Users as UsersIcon, X, Pencil, Check, MoreVertical, ExternalLink, Link2, Eye, Upload } from "lucide-react";
 import LocationPicker from "../components/job/LocationPicker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
@@ -17,7 +17,7 @@ import moment from "moment";
 import { motion, AnimatePresence } from "framer-motion";
 import ApplicationForm from "../components/job/ApplicationForm";
 import CommentItem from "../components/job/CommentItem";
-import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizePhoneForCountry } from "@/lib/phone";
+import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone, normalizePhoneForCountry } from "@/lib/phone";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { hasEarlyMemberPremiumAccess, hasPremiumAccess } from "@/utils/premiumAccess";
 import { isStaffUser } from "@/lib/userDisplay";
@@ -111,6 +111,14 @@ const reportReasonLabel = (value) => {
 };
 
 const formatViewText = (count) => `${count} ${Number(count) === 1 ? "shikim" : "shikime"}`;
+const profileDisplayName = (profile = {}, fallbackEmail = "") => (
+  [profile.first_name, profile.surname].filter(Boolean).join(" ").trim()
+  || profile.full_name
+  || profile.display_name
+  || profile.public_name
+  || fallbackEmail.split("@")[0]
+  || "Aplikues"
+);
 
 const categoryLabels = {
   pune: "Punë", shtepi: "Shtëpi", juridike: "Juridike",
@@ -132,7 +140,8 @@ export default function PostDetail() {
   const [showQuickApply, setShowQuickApply] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [quickApplyForm, setQuickApplyForm] = useState({ name: "", email: "", message: "" });
+  const [quickApplyForm, setQuickApplyForm] = useState({ email: "", phone: "", message: "" });
+  const [quickApplyCvFile, setQuickApplyCvFile] = useState(null);
   const [reportForm, setReportForm] = useState({ reason: "", details: "", reporter_name: "", reporter_contact: "" });
   const [reportReasons, setReportReasons] = useState([]);
   const [timeLeft, setTimeLeft] = useState(null);
@@ -153,6 +162,7 @@ export default function PostDetail() {
       if (authenticated) {
         const me = await base44.auth.me();
         setUser(me);
+        setQuickApplyForm((prev) => ({ ...prev, email: prev.email || me.email || "" }));
         
         // Check for active subscription
         const subscriptions = await base44.entities.PremiumSubscription.filter({
@@ -350,11 +360,24 @@ export default function PostDetail() {
 
   const quickApplyMutation = useMutation({
     mutationFn: async () => {
+      if (!isValidInternationalPhone(quickApplyForm.phone)) {
+        alert(getInternationalPhoneError("Telefoni"));
+        throw new Error("invalid_phone");
+      }
+      let cvUrl = "";
+      if (quickApplyCvFile) {
+        const { data } = await base44.integrations.Core.UploadFile({ file: quickApplyCvFile });
+        cvUrl = data.file_url || "";
+      }
+      const applicantEmail = isAuth && user?.email ? user.email : quickApplyForm.email;
+      const applicantName = profileDisplayName(user || {}, applicantEmail);
       await base44.entities.JobApplication.create({
         job_id: jobId,
-        applicant_name: quickApplyForm.name,
-        applicant_email: quickApplyForm.email,
+        applicant_name: applicantName,
+        applicant_email: applicantEmail,
+        applicant_phone: normalizeInternationalPhone(quickApplyForm.phone),
         cover_letter: quickApplyForm.message,
+        cv_url: cvUrl,
         status: "applied"
       });
       
@@ -364,7 +387,7 @@ export default function PostDetail() {
           user_email: job.created_by,
           type: "application",
           title: "Aplikim i Ri",
-          message: `Keni një aplikim të ri nga ${quickApplyForm.name}`,
+          message: `Keni një aplikim të ri nga ${applicantName}`,
           link: createPageUrl("EmployerDashboard"),
           related_id: jobId
         });
@@ -372,10 +395,15 @@ export default function PostDetail() {
     },
     onSuccess: () => {
       setShowQuickApply(false);
-      setQuickApplyForm({ name: "", email: "", message: "" });
+      setQuickApplyForm({ email: user?.email || "", phone: "", message: "" });
+      setQuickApplyCvFile(null);
       queryClient.invalidateQueries({ queryKey: ["jobApplications", jobId] });
       alert("Aplikimi juaj u dërgua me sukses!");
-    }
+    },
+    onError: (error) => {
+      if (error?.message === "invalid_phone") return;
+      alert("Gabim gjatë dërgimit të aplikimit. Ju lutem provoni përsëri.");
+    },
   });
 
   const deleteJobMutation = useMutation({
@@ -1286,36 +1314,9 @@ export default function PostDetail() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-white/70">Emri dhe Mbiemri *</Label>
-              <Input
-                value={quickApplyForm.name}
-                onChange={(e) => setQuickApplyForm({ ...quickApplyForm, name: e.target.value })}
-                placeholder="Emri juaj"
-                className="bg-white/5 border-white/10 text-white"
-              />
-            </div>
             {!isAuth && (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label className="text-white/70">Emri (opsional)</Label>
-                  <Input
-                    value={reportForm.reporter_name}
-                    onChange={(e) => setReportForm({ ...reportForm, reporter_name: e.target.value })}
-                    placeholder="Emri juaj"
-                    className="bg-white/5 border-white/10 text-white"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-white/70">Email kontakti (opsional)</Label>
-                  <Input
-                    type="email"
-                    value={reportForm.reporter_contact}
-                    onChange={(e) => setReportForm({ ...reportForm, reporter_contact: e.target.value })}
-                    placeholder="email@shembull.com"
-                    className="bg-white/5 border-white/10 text-white"
-                  />
-                </div>
+              <div className="rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-xs text-amber-100">
+                Për profil të plotë dhe emër të verifikuar, aplikoni pasi të hyni në llogari.
               </div>
             )}
             <div className="space-y-1.5">
@@ -1325,6 +1326,16 @@ export default function PostDetail() {
                 value={quickApplyForm.email}
                 onChange={(e) => setQuickApplyForm({ ...quickApplyForm, email: e.target.value })}
                 placeholder="email@example.com"
+                readOnly={isAuth}
+                className="bg-white/5 border-white/10 text-white"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Telefon / WhatsApp (opsional)</Label>
+              <Input
+                value={quickApplyForm.phone}
+                onChange={(e) => setQuickApplyForm({ ...quickApplyForm, phone: e.target.value })}
+                placeholder={PHONE_PLACEHOLDER}
                 className="bg-white/5 border-white/10 text-white"
               />
             </div>
@@ -1337,9 +1348,30 @@ export default function PostDetail() {
                 className="bg-white/5 border-white/10 text-white min-h-[100px]"
               />
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70">CV (opsionale)</Label>
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70 hover:bg-white/10">
+                <Upload className="h-4 w-4" />
+                {quickApplyCvFile ? quickApplyCvFile.name : "Ngarko CV"}
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    if (file && file.size > 5 * 1024 * 1024) {
+                      alert("Madhësia e CV-së nuk duhet të kalojë 5MB");
+                      e.target.value = "";
+                      return;
+                    }
+                    setQuickApplyCvFile(file);
+                  }}
+                />
+              </label>
+            </div>
             <Button
               onClick={() => quickApplyMutation.mutate()}
-              disabled={!quickApplyForm.name || !quickApplyForm.email || quickApplyMutation.isPending}
+              disabled={!quickApplyForm.email || quickApplyMutation.isPending}
               className="w-full bg-gradient-to-r from-[#8ab4ff] to-[#9bffd6] text-[#0b1020] hover:opacity-90"
             >
               {quickApplyMutation.isPending ? "Duke dërguar..." : "Dërgo Aplikimin"}
