@@ -428,7 +428,7 @@ export default function CreatePost() {
     const finalProfession = typedProfession || "Tjetër";
     const publishStatus = isAdminOrMod ? "approved" : "pending";
 
-    await base44.entities.Job.create({
+    const createdJob = await base44.entities.Job.create({
       ...form,
       profession: finalProfession,
       country: finalCountry,
@@ -443,6 +443,19 @@ export default function CreatePost() {
       likes_count: 0, dislikes_count: 0, comments_count: 0,
       halal_standard: form.halal_standard || null,
     });
+
+    if (publishStatus === "pending") {
+      const staffUsers = (await base44.entities.User.list("-updated_date", 1000))
+        .filter((item) => ["admin", "moderator"].includes(String(item.role || item.member_category || "").toLowerCase()));
+      await Promise.all(staffUsers.map((staff) => base44.entities.Notification.create({
+        user_email: staff.email,
+        type: "moderation_request",
+        title: "Njoftim në pritje për miratim",
+        message: `"${createdJob.title || form.title || "Njoftim"}" pret kontroll nga stafi.`,
+        link: `/Admin?section=jobs&tab=pending&job=${encodeURIComponent(createdJob.id)}`,
+        related_id: createdJob.id,
+      })));
+    }
 
     // Ruaj nëse është halal="po" për të treguar mesazh të veçantë
     if (isAdminOrMod) {

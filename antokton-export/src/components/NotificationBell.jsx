@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { base44 } from "@/api/antoktonClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -33,6 +33,75 @@ export default function NotificationBell() {
     refetchIntervalInBackground: false
   });
 
+  const isStaff = ["admin", "moderator"].includes(String(user?.role || user?.member_category || "").toLowerCase());
+  const hasJobLinkedNotifications = notifications.some((item) => (
+    item.related_id && (
+      item.link?.includes("/PostDetail")
+      || ["application", "moderation_request", "status_update"].includes(item.type)
+    )
+  ));
+
+  const { data: jobsForNotifications = [], isFetched: jobsFetched } = useQuery({
+    queryKey: ["notification-linked-jobs", user?.email, isStaff],
+    queryFn: () => base44.entities.Job.list("-created_date", 1000),
+    enabled: !!user && (isStaff || hasJobLinkedNotifications),
+    staleTime: 30000,
+    refetchInterval: isStaff ? 60000 : false,
+    refetchIntervalInBackground: false,
+  });
+
+  const jobById = useMemo(() => new Map(jobsForNotifications.map((job) => [job.id, job])), [jobsForNotifications]);
+
+  const staleNotifications = useMemo(() => {
+    if (!jobsFetched && hasJobLinkedNotifications) return [];
+    return notifications.filter((notif) => {
+      const isJobLinked = notif.related_id && (
+        notif.link?.includes("/PostDetail")
+        || ["application", "moderation_request", "status_update"].includes(notif.type)
+      );
+      if (!isJobLinked) return false;
+      return !jobById.has(notif.related_id);
+    });
+  }, [hasJobLinkedNotifications, jobById, jobsFetched, notifications]);
+
+  const displayNotifications = useMemo(() => {
+    const filtered = notifications.filter((notif) => {
+      const isJobLinked = notif.related_id && (
+        notif.link?.includes("/PostDetail")
+        || ["application", "moderation_request", "status_update"].includes(notif.type)
+      );
+      if (!isJobLinked) return true;
+      if (!jobsFetched && hasJobLinkedNotifications) return true;
+      const linkedJob = jobById.get(notif.related_id);
+      if (!linkedJob) return false;
+      if (notif.type === "moderation_request") return linkedJob.status === "pending";
+      return true;
+    });
+
+    if (!isStaff) return filtered;
+
+    const existingPendingIds = new Set(
+      filtered
+        .filter((item) => item.type === "moderation_request" && item.related_id)
+        .map((item) => item.related_id)
+    );
+    const virtualPending = jobsForNotifications
+      .filter((job) => job.status === "pending" && !existingPendingIds.has(job.id))
+      .map((job) => ({
+        id: `virtual-pending-job-${job.id}`,
+        type: "moderation_request",
+        title: "Njoftim në pritje për miratim",
+        message: `"${job.title || "Njoftim"}" pret kontroll nga stafi.`,
+        link: `/Admin?section=jobs&tab=pending&job=${encodeURIComponent(job.id)}`,
+        related_id: job.id,
+        created_date: job.created_date || job.updated_date || new Date().toISOString(),
+        is_read: false,
+        is_virtual: true,
+      }));
+
+    return [...virtualPending, ...filtered].sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
+  }, [hasJobLinkedNotifications, isStaff, jobById, jobsFetched, jobsForNotifications, notifications]);
+
   const markAsReadMutation = useMutation({
     mutationFn: (id) => base44.entities.Notification.update(id, { is_read: true }),
     onSuccess: () => {
@@ -58,14 +127,13 @@ export default function NotificationBell() {
     }
   });
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadCount = displayNotifications.filter(n => !n.is_read).length;
   const visibleUnreadCount = open ? 0 : unreadCount;
   const badgeLabel = visibleUnreadCount > 99 ? "99+" : String(visibleUnreadCount);
-  const isStaff = ["admin", "moderator"].includes(String(user?.role || user?.member_category || "").toLowerCase());
 
   useEffect(() => {
     if (!open) return;
-    const unreadItems = notifications.filter((item) => !item.is_read);
+    const unreadItems = displayNotifications.filter((item) => !item.is_read && !item.is_virtual);
     if (unreadItems.length && !markAllAsReadMutation.isPending) {
       markAllAsReadMutation.mutate(unreadItems);
     }
@@ -76,10 +144,15 @@ export default function NotificationBell() {
     };
     document.addEventListener("pointerdown", closeOnOutside, true);
     return () => document.removeEventListener("pointerdown", closeOnOutside, true);
-  }, [open, notifications]);
+  }, [open, displayNotifications]);
+
+  useEffect(() => {
+    if (!staleNotifications.length || deleteNotificationMutation.isPending) return;
+    staleNotifications.forEach((notif) => deleteNotificationMutation.mutate(notif.id));
+  }, [staleNotifications]);
 
   const openNotification = (notif) => {
-    if (!notif.is_read) markAsReadMutation.mutate(notif.id);
+    if (!notif.is_virtual && !notif.is_read) markAsReadMutation.mutate(notif.id);
     if (notif.link) {
       setOpen(false);
       window.setTimeout(() => {
@@ -143,12 +216,12 @@ export default function NotificationBell() {
             </div>
 
             <div className="flex-1 overflow-y-auto md:max-h-[400px]">
-              {notifications.length === 0 ? (
+              {displayNotifications.length === 0 ? (
                 <div className="p-8 text-center text-white/40">
                   Nuk ka njoftime
                 </div>
               ) : (
-                notifications.map((notif) => {
+                displayNotifications.map((notif) => {
                   const canModerate = isStaff && ["application", "moderation_request", "suggestion"].includes(notif.type);
                   return (
                     <div
@@ -172,17 +245,19 @@ export default function NotificationBell() {
                             {moment(notif.created_date).fromNow()}
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteNotificationMutation.mutate(notif.id);
-                          }}
-                          className="text-white/40 hover:text-red-400 transition-colors p-1 flex-shrink-0"
-                          aria-label="Fshije njoftimin"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+                        {!notif.is_virtual && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteNotificationMutation.mutate(notif.id);
+                            }}
+                            className="text-white/40 hover:text-red-400 transition-colors p-1 flex-shrink-0"
+                            aria-label="Fshije njoftimin"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
                         <div className="relative group">
                           <button
                             type="button"

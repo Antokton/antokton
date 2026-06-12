@@ -10,6 +10,8 @@
       "type": "string",
       "enum": [
         "application",
+        "moderation_request",
+        "suggestion",
         "status_update",
         "comment",
         "system"
