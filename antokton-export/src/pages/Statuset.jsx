@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "../utils";
+import { requireCompleteProfileForInteraction } from "@/lib/profileCompleteness";
 
 /* ─── LIGHTBOX PORTAL ─── */
 function Lightbox({ src, onClose, status, currentUser, onLike, onComment, onShare }) {
@@ -611,6 +612,7 @@ function CreatePostModal({ currentUser, onClose, initialImportMode = false }) {
 
   const submit = useMutation({
     mutationFn: async () => {
+      if (!requireCompleteProfileForInteraction(currentUser, "postim/status")) return;
       let image_url = "";
       let import_private_image_url = "";
       if (imageFile) {
@@ -969,6 +971,7 @@ function StatusDetailPage({ status, currentUser, onBack }) {
   const commentMutation = useMutation({
     mutationFn: async () => {
       if (!currentUser || !commentText.trim()) return;
+      if (!requireCompleteProfileForInteraction(currentUser, "koment")) return;
       await base44.entities.StatusComment.create({
         status_id: status.id,
         author_email: currentUser.email,
@@ -1472,6 +1475,7 @@ export function StatusCard({ status, currentUser }) {
       const replyTarget = payload.replyTarget || replyingTo;
       const textValue = payload.text ?? commentText;
       if (!currentUser || !textValue.trim()) return;
+      if (!requireCompleteProfileForInteraction(currentUser, "koment")) return;
       const commentData = {
         status_id: status.id,
         author_email: currentUser.email,

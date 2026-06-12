@@ -18,9 +18,25 @@
       "type": "string",
       "description": "Numri i telefonit"
     },
+    "birthplace": {
+      "type": "string",
+      "description": "Vendlindja"
+    },
+    "birth_date": {
+      "type": "string",
+      "description": "Ditëlindja"
+    },
     "location": {
       "type": "string",
       "description": "Vendndodhja"
+    },
+    "current_city": {
+      "type": "string",
+      "description": "Qyteti aktual"
+    },
+    "current_country": {
+      "type": "string",
+      "description": "Shteti aktual"
     },
     "gender": {
       "type": "string",

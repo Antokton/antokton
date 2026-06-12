@@ -156,6 +156,7 @@ export default function Profile() {
     public_name_mode: "nickname",
     phone: "",
     birthplace: "",
+    birth_date: "",
     location: "",
     calendar_preference: "both",
     gender: "",
@@ -218,6 +219,7 @@ export default function Profile() {
       public_name_mode: currentUser.public_name_mode || "nickname",
       phone: currentUser.phone || "",
       birthplace: currentUser.birthplace || "",
+      birth_date: currentUser.birth_date || currentUser.birthday || currentUser.date_of_birth || "",
       location: currentUser.location || "",
       calendar_preference: currentUser.calendar_preference || "both",
       gender: currentUser.gender || "",
@@ -436,6 +438,7 @@ export default function Profile() {
     const firstName = form.first_name.trim();
     const surname = form.surname.trim();
     const birthplace = form.birthplace.trim();
+    const birthDate = String(form.birth_date || "").trim();
     const location = form.location.trim();
     if (!firstName || !surname) {
       alert("Emri dhe mbiemri janë të detyrueshëm.");
@@ -443,6 +446,10 @@ export default function Profile() {
     }
     if (!birthplace) {
       alert("Vendlindja është e detyrueshme.");
+      return;
+    }
+    if (!birthDate) {
+      alert("Ditëlindja është e detyrueshme.");
       return;
     }
     if (!location) {
@@ -474,6 +481,7 @@ export default function Profile() {
         first_name: firstName,
         surname,
         birthplace,
+        birth_date: birthDate,
         location,
         full_name: `${firstName} ${surname}`,
         phone: normalizeInternationalPhone(form.phone),
@@ -1178,6 +1186,17 @@ export default function Profile() {
                   className="bg-white/5 border-white/10 text-white"
                 />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-white">Ditëlindja *</Label>
+              <Input
+                type="date"
+                value={form.birth_date || ""}
+                onChange={(e) => setForm({ ...form, birth_date: e.target.value })}
+                required
+                className="bg-white/5 border-white/10 text-white"
+              />
             </div>
 
             <div className="space-y-1.5">

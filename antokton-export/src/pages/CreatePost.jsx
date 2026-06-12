@@ -13,6 +13,7 @@ import AIJobDescriptionGenerator from "../components/job/AIJobDescriptionGenerat
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizePhoneForCountry } from "@/lib/phone";
 import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
 import { hasEarlyMemberPremiumAccess } from "@/utils/premiumAccess";
+import { requireCompleteProfileForInteraction } from "@/lib/profileCompleteness";
 
 const ALL_PROFESSIONS = [
   "3D Artist","Administrator","Agjent Shitjesh","Agjent Sigurimesh","Agjent Udhëtimesh",
@@ -352,6 +353,7 @@ export default function CreatePost() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isAuth) { base44.auth.redirectToLogin(); return; }
+    if (!isAdminOrMod && !requireCompleteProfileForInteraction(user, "njoftim/postim")) return;
 
     if (!hasEarlyMemberPremiumAccess(user) && (user.posts_remaining || 0) <= 0 && user.subscription_type === "none") {
       alert("Nuk ke njoftime të mbetura. Ju lutem bëj një abonim për të postuar.");

@@ -20,7 +20,8 @@ import CommentItem from "../components/job/CommentItem";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone, normalizePhoneForCountry } from "@/lib/phone";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { hasEarlyMemberPremiumAccess, hasPremiumAccess } from "@/utils/premiumAccess";
-import { isStaffUser } from "@/lib/userDisplay";
+import { getUserDisplayName, isStaffUser } from "@/lib/userDisplay";
+import { requireCompleteProfileForInteraction } from "@/lib/profileCompleteness";
 
 function SimilarPosts({ currentJobId, category }) {
   const { data: similarJobs = [] } = useQuery({
@@ -270,6 +271,7 @@ export default function PostDetail() {
 
   const commentMutation = useMutation({
     mutationFn: async () => {
+      if (!requireCompleteProfileForInteraction(user, "koment")) return;
       // Check comment limit for non-subscribed users
       if (!premiumAccess && user.subscription_type === "none") {
         const userComments = comments.filter(c => c.created_by === user.email);
@@ -813,10 +815,11 @@ export default function PostDetail() {
               <Clock className="w-4 h-4" />
               {moment(job.created_date).format("D MMMM YYYY")}
             </span>
-            {job.poster_name && (() => {
+            {(job.poster_name || posterProfile || job.created_by) && (() => {
+              const posterDisplayName = job.poster_name || getUserDisplayName(posterProfile, job.created_by);
               const canSeeProfile = isAuth && premiumAccess;
               const posterIsStaff = isStaffUser(posterProfile);
-              const profileLink = job.created_by ? `/UserProfiles?email=${encodeURIComponent(job.created_by)}` : null;
+              const profileLink = job.created_by ? `/Member/${encodeURIComponent(job.created_by)}` : null;
               const visibleProfileLink = canSeeProfile && !posterIsStaff ? profileLink : null;
               if (posterIsStaff) {
                 return (
@@ -826,12 +829,12 @@ export default function PostDetail() {
                     className="flex items-center gap-1.5 text-[#8ab4ff] hover:text-[#9bffd6] transition-colors underline underline-offset-2"
                   >
                     <UserAvatar
-                      name={job.poster_name || posterProfile?.full_name || posterProfile?.first_name}
+                      name={posterDisplayName}
                       email={job.created_by}
                       photoUrl={job.author_photo_url}
                       size={24}
                     />
-                    {job.poster_name}
+                    {posterDisplayName}
                   </button>
                 );
               }
@@ -844,24 +847,24 @@ export default function PostDetail() {
                     className="flex items-center gap-1.5 text-[#8ab4ff] hover:text-[#9bffd6] transition-colors underline underline-offset-2"
                   >
                     <UserAvatar
-                      name={job.poster_name || posterProfile?.full_name || posterProfile?.first_name}
+                      name={posterDisplayName}
                       email={job.created_by}
                       photoUrl={job.author_photo_url}
                       size={24}
                     />
-                    {job.poster_name}
+                    {posterDisplayName}
                   </a>
                 );
               }
               return (
                 <span className="flex items-center gap-1.5 text-white/70">
                   <UserAvatar
-                    name={job.poster_name || posterProfile?.full_name || posterProfile?.first_name}
+                    name={posterDisplayName}
                     email={job.created_by}
                     photoUrl={job.author_photo_url}
                     size={24}
                   />
-                  {job.poster_name}
+                  {posterDisplayName}
                 </span>
               );
             })()}
@@ -927,7 +930,7 @@ export default function PostDetail() {
             })}
           </div>
 
-          {(job.contact_info || job.phone_number || job.author_profile_url || job.source_url) && (() => {
+          {(job.contact_info || job.phone_number || job.author_profile_url || job.import_author_profile_url || job.source_url || job.import_source_url) && (() => {
             const canSeeContact = isAuth && premiumAccess;
             const phoneAppLabels = { telefon: "Telefon", whatsapp: "WhatsApp", viber: "Viber", telegram: "Telegram", bip: "BiP", signal: "Signal", tjeter: "" };
             const phoneAppSvgs = {
@@ -952,9 +955,9 @@ export default function PostDetail() {
               ? `https://t.me/${cleanPhone}`
               : `tel:${cleanPhone}`;
             const canShowAuthorContactUrl = canSeePrivateImportFields || job.show_author_profile_url === true;
-            const authorContactUrl = job.author_profile_url || "";
+            const authorContactUrl = job.author_profile_url || job.import_author_profile_url || "";
             const canShowSourceUrl = canSeePrivateImportFields || job.show_source_url === true;
-            const sourceUrl = job.source_url || "";
+            const sourceUrl = job.source_url || job.import_source_url || "";
             const isAuthorContactLine = (line = "") => (
               authorContactUrl && line.trim().replace(/\/$/, "") === authorContactUrl.trim().replace(/\/$/, "")
             );

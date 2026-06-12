@@ -58,9 +58,10 @@ export default function JobCard({ job }) {
           {(job.country || job.city) && (
             <span className="flex items-center gap-0.5">
               <MapPin className="w-3 h-3 sm:w-2.5 sm:h-2.5" />
-              {job.location_precision === "perafersisht"
-                ? [job.country].filter(Boolean).join(", ")
-                : [job.city, job.country].filter(Boolean).join(", ")}
+              {[job.city || job.zone, job.country].filter(Boolean).join(", ")}
+              {job.location_precision === "perafersisht" && job.city && (
+                <span className="text-white/35">(zonë)</span>
+              )}
             </span>
           )}
           {job.salary_info && (

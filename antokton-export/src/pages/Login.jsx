@@ -31,7 +31,7 @@ export default function Login() {
     if (searchParams.get("mode") === "register") return "register";
     return "login";
   });
-  const [form, setForm] = useState({ email: "", password: "", full_name: "" });
+  const [form, setForm] = useState({ email: "", password: "", first_name: "", surname: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -90,15 +90,21 @@ export default function Login() {
           setError("Për regjistrim duhet të pranosh Kushtet e Përdorimit dhe Politikën e Privatësisë.");
           return;
         }
+        if (!form.first_name.trim() || !form.surname.trim()) {
+          setError("Për regjistrim duhet të vendosësh emrin dhe mbiemrin.");
+          return;
+        }
         authResult = await base44.auth.register({
           email,
           password,
-          full_name: form.full_name.trim()
+          first_name: form.first_name.trim(),
+          surname: form.surname.trim(),
+          full_name: `${form.first_name.trim()} ${form.surname.trim()}`.trim()
         });
       } else {
         authResult = await base44.auth.loginViaEmailPassword(email, password);
       }
-      window.location.replace(getPostLoginUrl(redirectTarget, authResult?.access_token));
+      window.location.replace(getPostLoginUrl(mode === "register" ? "/Profile?complete=1" : redirectTarget, authResult?.access_token));
     } catch (err) {
       setError(err.message || "Nuk u krye hyrja. Kontrollo të dhënat dhe provo përsëri.");
       if (err.status === 401) {
@@ -145,14 +151,27 @@ export default function Login() {
 
         <form onSubmit={submit} className="space-y-4">
           {mode === "register" && (
-            <div className="space-y-1.5">
-              <Label className="text-white/70 text-sm">Emri i plotë</Label>
-              <Input
-                value={form.full_name}
-                onChange={(event) => setForm({ ...form, full_name: event.target.value })}
-                className="border-white/10 h-11 text-white bg-white/10"
-                autoComplete="name"
-              />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-white/70 text-sm">Emri *</Label>
+                <Input
+                  value={form.first_name}
+                  onChange={(event) => setForm({ ...form, first_name: event.target.value })}
+                  className="border-white/10 h-11 text-white bg-white/10"
+                  autoComplete="given-name"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-white/70 text-sm">Mbiemri *</Label>
+                <Input
+                  value={form.surname}
+                  onChange={(event) => setForm({ ...form, surname: event.target.value })}
+                  className="border-white/10 h-11 text-white bg-white/10"
+                  autoComplete="family-name"
+                  required
+                />
+              </div>
             </div>
           )}
 
