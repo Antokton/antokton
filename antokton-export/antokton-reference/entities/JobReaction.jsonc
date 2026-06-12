@@ -10,9 +10,14 @@
       "type": "string",
       "enum": [
         "like",
-        "dislike"
+        "dislike",
+        "❤️",
+        "😂",
+        "😮",
+        "😢",
+        "😡"
       ],
-      "description": "Lloji i reagimit"
+      "description": "Lloji i reagimit ose emoji i ruajtur nga butoni i reagimeve"
     },
     "user_email": {
       "type": "string",

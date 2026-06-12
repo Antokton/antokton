@@ -1124,7 +1124,7 @@ export default function PostDetail() {
             )}
 
             {/* Action buttons row */}
-            <div className="flex max-w-full items-center overflow-hidden border-t border-white/10 pt-1 gap-0">
+            <div className="flex max-w-full items-center overflow-visible border-t border-white/10 pt-1 gap-0">
               {/* Emoji Reaction button */}
               <div className="relative flex-1 flex justify-center">
                 <button
