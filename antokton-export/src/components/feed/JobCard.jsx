@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "../../utils";
-import { MapPin, Clock, ThumbsUp, MessageCircle, Briefcase, Home as HomeIcon, Scale, GraduationCap, Heart, Radio, Wrench, ChevronRight, Banknote, Eye } from "lucide-react";
+import { MapPin, Clock, ThumbsUp, MessageCircle, Briefcase, Home as HomeIcon, Scale, GraduationCap, Heart, Radio, Wrench, ChevronRight, Banknote, Eye, ShoppingBag } from "lucide-react";
 import moment from "moment";
 
 const categoryConfig = {
@@ -12,6 +12,7 @@ const categoryConfig = {
   bamiresi: { label: "Bamirësi",  icon: Heart,         accent: "#f87171", bg: "rgba(248,113,113,0.10)", border: "rgba(248,113,113,0.22)" },
   media:    { label: "Media",     icon: Radio,         accent: "#22d3ee", bg: "rgba(34,211,238,0.10)",  border: "rgba(34,211,238,0.22)"  },
   sherbime: { label: "Shërbime",  icon: Wrench,        accent: "#fb923c", bg: "rgba(251,146,60,0.10)",  border: "rgba(251,146,60,0.22)"  },
+  pazar:    { label: "Pazar",     icon: ShoppingBag,   accent: "#8ab4ff", bg: "rgba(138,180,255,0.12)", border: "rgba(138,180,255,0.25)" },
 };
 
 const jobTypeLabel = { ofroj: "Ofroj", kerkoj: "Kërkoj" };
@@ -21,10 +22,20 @@ const jobTypeStyle = {
 };
 const viewLabel = (count) => `${count} ${Number(count) === 1 ? "shikim" : "shikime"}`;
 
+const getPostThumbnail = (job) => {
+  const images = Array.isArray(job?.image_urls) ? job.image_urls.filter(Boolean).slice(0, 6) : [];
+  const mainIndex = Math.min(
+    Math.max(Number.parseInt(job?.main_image_index, 10) || 0, 0),
+    Math.max(images.length - 1, 0)
+  );
+  return job?.image_url || images[mainIndex] || images[0] || "";
+};
+
 export default function JobCard({ job }) {
   const cat = categoryConfig[job.category] || categoryConfig.pune;
   const CatIcon = cat.icon;
   const jtStyle = jobTypeStyle[job.job_type] || jobTypeStyle.ofroj;
+  const thumbnail = getPostThumbnail(job);
 
   return (
     <Link
@@ -41,12 +52,22 @@ export default function JobCard({ job }) {
         style={{ background: cat.accent }}
       />
 
-      {/* Icon bubble */}
+      {/* Icon / thumbnail bubble */}
       <div
-        className="shrink-0 w-9 h-9 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center"
+        className="shrink-0 w-9 h-9 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center overflow-hidden"
         style={{ background: cat.bg, border: `1px solid ${cat.border}` }}
       >
-        <CatIcon className="w-4.5 h-4.5 sm:w-4 sm:h-4" style={{ color: cat.accent }} />
+        {thumbnail ? (
+          <img
+            src={thumbnail}
+            alt=""
+            className="h-full w-full object-cover"
+            loading="lazy"
+            onError={(event) => { event.currentTarget.style.display = "none"; }}
+          />
+        ) : (
+          <CatIcon className="w-4.5 h-4.5 sm:w-4 sm:h-4" style={{ color: cat.accent }} />
+        )}
       </div>
 
       {/* Center: title + meta */}
