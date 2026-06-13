@@ -864,7 +864,7 @@ export default function EventDetail() {
               
               <form onSubmit={handleSubmitRegistration} className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label className="text-white/70">Bio (opsionale)</Label>
+                  <Label className="text-white/70">Jetëshkrim (opsional)</Label>
                   <Textarea
                     value={registerForm.bio}
                     onChange={(e) => setRegisterForm({ ...registerForm, bio: e.target.value })}

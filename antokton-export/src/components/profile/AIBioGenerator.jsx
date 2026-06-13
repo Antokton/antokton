@@ -9,7 +9,7 @@ export default function AIBioGenerator({ currentBio, jobTitle, skills, onApply }
   const handleGenerate = async () => {
     setLoading(true);
     try {
-      const prompt = `Gjenero një bio profesionale në shqip për një ${jobTitle || 'profesionist'} me aftësi: ${skills || 'të ndryshme'}. ${currentBio ? `Bio aktuale: ${currentBio}. Përmirësoje këtë bio.` : 'Krijo një bio të re.'} Bio duhet të jetë 2-3 fjali, koncize dhe profesionale.`;
+      const prompt = `Gjenero një jetëshkrim profesional në shqip për një ${jobTitle || 'profesionist'} me aftësi: ${skills || 'të ndryshme'}. ${currentBio ? `Jetëshkrimi aktual: ${currentBio}. Përmirësoje këtë jetëshkrim.` : 'Krijo një jetëshkrim të ri.'} Jetëshkrimi duhet të jetë 2-3 fjali, konciz dhe profesional.`;
       
       const response = await base44.integrations.Core.InvokeLLM({
         prompt,

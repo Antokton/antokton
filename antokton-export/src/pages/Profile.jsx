@@ -110,10 +110,90 @@ function ProfilePanel({ title, description, children, defaultOpen = false, dange
 }
 
 const staffRoles = new Set(["admin", "moderator", "inspector", "superadmin"]);
+const unsetDatePart = "__unset";
+const monthOptions = [
+  "Janar", "Shkurt", "Mars", "Prill", "Maj", "Qershor",
+  "Korrik", "Gusht", "Shtator", "Tetor", "Nëntor", "Dhjetor"
+];
 
 function isStaffUser(user) {
   return staffRoles.has(String(user?.role || "").toLowerCase()) ||
     staffRoles.has(String(user?.member_category || "").toLowerCase());
+}
+
+function parseDateParts(value = "") {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return { year: "", month: "", day: "" };
+  return { year: match[1], month: String(Number(match[2])), day: String(Number(match[3])) };
+}
+
+function toIsoDate({ year, month, day }) {
+  if (!year || !month || !day) return "";
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function daysInMonth(year, month) {
+  if (!year || !month) return 31;
+  return new Date(Number(year), Number(month), 0).getDate();
+}
+
+function BirthDatePicker({ value, onChange }) {
+  const [parts, setParts] = useState(() => parseDateParts(value));
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 101 }, (_, index) => String(currentYear - 13 - index));
+  const maxDays = daysInMonth(parts.year, parts.month);
+
+  useEffect(() => {
+    if (value) setParts(parseDateParts(value));
+  }, [value]);
+
+  const update = (field, nextValue) => {
+    const next = { ...parts, [field]: nextValue === unsetDatePart ? "" : nextValue };
+    if (field === "month" || field === "year") {
+      const nextMaxDays = daysInMonth(next.year, next.month);
+      if (Number(next.day) > nextMaxDays) next.day = String(nextMaxDays);
+    }
+    setParts(next);
+    onChange(toIsoDate(next));
+  };
+
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      <Select value={parts.day || unsetDatePart} onValueChange={(v) => update("day", v)}>
+        <SelectTrigger className="bg-white/5 border-white/10 text-white">
+          <SelectValue placeholder="Dita" />
+        </SelectTrigger>
+        <SelectContent className="bg-[#0b1020] border-white/20 max-h-64">
+          <SelectItem value={unsetDatePart}>Dita</SelectItem>
+          {Array.from({ length: maxDays }, (_, index) => String(index + 1)).map((day) => (
+            <SelectItem key={day} value={day}>{day}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={parts.month || unsetDatePart} onValueChange={(v) => update("month", v)}>
+        <SelectTrigger className="bg-white/5 border-white/10 text-white">
+          <SelectValue placeholder="Muaji" />
+        </SelectTrigger>
+        <SelectContent className="bg-[#0b1020] border-white/20 max-h-64">
+          <SelectItem value={unsetDatePart}>Muaji</SelectItem>
+          {monthOptions.map((month, index) => (
+            <SelectItem key={month} value={String(index + 1)}>{month}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={parts.year || unsetDatePart} onValueChange={(v) => update("year", v)}>
+        <SelectTrigger className="bg-white/5 border-white/10 text-white">
+          <SelectValue placeholder="Viti" />
+        </SelectTrigger>
+        <SelectContent className="bg-[#0b1020] border-white/20 max-h-72">
+          <SelectItem value={unsetDatePart}>Viti</SelectItem>
+          {years.map((year) => (
+            <SelectItem key={year} value={year}>{year}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
 }
 
 function getLegalNameChangeGate(user) {
@@ -164,7 +244,7 @@ export default function Profile() {
     religious_belief: "",
     religious_belief_other: "",
     job_title: "",
-    experience_years: 0,
+    experience_years: "",
     skills: "",
     bio: "",
     user_type: "job_seeker",
@@ -227,7 +307,7 @@ export default function Profile() {
       religious_belief: currentUser.religious_belief || "",
       religious_belief_other: currentUser.religious_belief_other || "",
       job_title: currentUser.job_title || "",
-      experience_years: currentUser.experience_years || 0,
+      experience_years: currentUser.experience_years ?? "",
       skills: currentUser.skills || "",
       bio: currentUser.bio || "",
       user_type: currentUser.user_type || "job_seeker",
@@ -485,6 +565,7 @@ export default function Profile() {
         location,
         full_name: `${firstName} ${surname}`,
         phone: normalizeInternationalPhone(form.phone),
+        experience_years: form.experience_years === "" ? 0 : Number(form.experience_years),
         recruitment_team_size: recruitmentTeamSize === "" ? 0 : Number(recruitmentTeamSize),
         industry_specialization: industrySpecializationText
           .split(",")
@@ -1190,12 +1271,9 @@ export default function Profile() {
 
             <div className="space-y-1.5">
               <Label className="text-white">Ditëlindja *</Label>
-              <Input
-                type="date"
+              <BirthDatePicker
                 value={form.birth_date || ""}
-                onChange={(e) => setForm({ ...form, birth_date: e.target.value })}
-                required
-                className="bg-white/5 border-white/10 text-white"
+                onChange={(birthDate) => setForm({ ...form, birth_date: birthDate })}
               />
             </div>
 
@@ -1362,8 +1440,13 @@ export default function Profile() {
                     <Label className="text-white">Vite përvoje</Label>
                     <Input
                       type="number"
-                      value={form.experience_years}
-                      onChange={(e) => setForm({ ...form, experience_years: parseInt(e.target.value) || 0 })}
+                      min="0"
+                      inputMode="numeric"
+                      value={form.experience_years ?? ""}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setForm({ ...form, experience_years: value === "" ? "" : Math.max(0, Number.parseInt(value, 10) || 0) });
+                      }}
                       className="bg-white/5 border-white/10 text-white"
                     />
                   </div>
@@ -1376,7 +1459,6 @@ export default function Profile() {
                   <Input
                     value={form.skills}
                     onChange={(e) => setForm({ ...form, skills: e.target.value })}
-                    placeholder="JavaScript, React, Node.js"
                     className="bg-white/5 border-white/10 text-white"
                   />
                   <AISuggestions
@@ -1389,7 +1471,7 @@ export default function Profile() {
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <Label className="text-white">Bio</Label>
+                    <Label className="text-white">Jetëshkrim</Label>
                   </div>
                   <Textarea
                     value={form.bio}

@@ -528,7 +528,6 @@ export default function FeedFilters({ filters, setFilters }) {
                 <div>
                   <label className="text-[10px] text-white mb-1 block">Aftësi të kërkuara:</label>
                   <Input
-                    placeholder="p.sh. JavaScript, React"
                     value={filters.skills || ""}
                     onChange={(e) => setFilters({ ...filters, skills: e.target.value })}
                     className="border-white/20 h-7 text-xs bg-white/10 text-white placeholder:text-white/70"

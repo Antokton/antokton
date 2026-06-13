@@ -37,7 +37,7 @@ export default function AISuggestions({ jobTitle, skills, currentBio, onApply, t
 
   const getLabel = () => {
     switch(type) {
-      case 'bio': return 'Sugjero Bio';
+      case 'bio': return 'Sugjero jetëshkrim';
       case 'work_experience': return 'Sugjero Përvojë Pune';
       case 'skills': return 'Sugjero Aftësi';
       case 'job_description': return 'Sugjero Përshkrim Pune';
