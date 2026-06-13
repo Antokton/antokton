@@ -185,14 +185,6 @@ const countrySubregions = {
       "Savinja","Southeastern Slovenia","Upper Carniola"
     ]
   },
-  "Greqi": {
-    label: "Rajoni",
-    regions: [
-      "Atika (Athinë)","Egje Jugore","Egje Veriore","Epiri","Greqia Qendrore",
-      "Greqia Perëndimore","Kreta","Maqedonia Jugore (Selanik)","Maqedonia Qendrore",
-      "Maqedonia Perëndimore","Peloponez","Tesalia","Thesprotia (Çamëria)","Janinë"
-    ]
-  },
   "Turki": {
     label: "Provinca",
     regions: [
@@ -234,7 +226,7 @@ const antoktonRegions = [
     label: "Rajoni Perëndimor — Iliria",
     // Iliria (bregdeti adriatik, malet perëndimore) + Mali i Zi shqiptar
     cities: [
-      "Apolloni", "Berat", "Burrel", "Durrës", "Elbasan", "Fier",
+      "Apolloni", "Berat", "Budva", "Burrel", "Durrës", "Elbasan", "Fier",
       "Gramsh", "Guci", "Kavajë", "Krujë", "Kukës", "Lezhë", "Librazhd",
       "Lushnjë", "Plavë", "Pukë", "Rodon", "Shkodër", "Tiranë", "Tivar",
       "Tuzi", "Ulqin", "Vlorë"
@@ -449,7 +441,7 @@ export default function FeedFilters({ filters, setFilters }) {
             <SelectItem value="all">Të gjithë vendet</SelectItem>
             {[
               "Antokton","Angli","Arabi","Austri","Belgjikë","Bosnje","Bullgari","Çeki","Danimarkë",
-              "Egjipt","Emiratet","Estoni","Finlandë","Francë","Gjermani","Greqi","Hungari",
+              "Egjipt","Emiratet","Estoni","Finlandë","Francë","Gjermani","Hungari",
               "Islandë","Irlandë","Irak","Itali","Katar","Kroaci","Kuvajt","Letoni",
               "Lituani","Luksemburg","Maltë","Hollandë","Norvegji","Poloni","Portugali",
               "Rumani","Siri","Sllovaki","Slloveni","Skoci","Spanjë","Suedi","Turki","Zvicër"

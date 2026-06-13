@@ -69,24 +69,12 @@ export const COUNTRIES_DATA = [
     ]
   },
   {
-    name: "Maqedoni e Veriut",
+    name: "Antokton",
     regions: [
-      { name: "Shkup", cities: ["Shkup", "Tetovë", "Gostivar"] },
-      { name: "Tetovë", cities: ["Tetovë", "Jegunovcë", "Bogovinjë"] },
-      { name: "Gostivar", cities: ["Gostivar", "Vrapciste", "Zhelino"] },
-    ]
-  },
-  {
-    name: "Mal i Zi",
-    regions: [
-      { name: "Ulqin", cities: ["Ulqin", "Pllavë", "Krajë"] },
-      { name: "Podgoricë", cities: ["Podgoricë", "Tuzi"] },
-    ]
-  },
-  {
-    name: "Serbi",
-    regions: [
-      { name: "Preshevë", cities: ["Preshevë", "Bujanoc", "Medvegjë"] },
+      { name: "Rajoni Verior — Dardhania", cities: ["Bujanovc", "Kumanovë", "Medvegjë", "Preshevë", "Shkup"] },
+      { name: "Rajoni Perëndimor — Iliria", cities: ["Budva", "Guci", "Plavë", "Tivar", "Tuzi", "Ulqin"] },
+      { name: "Rajoni Jugor — Epiri", cities: ["Çamëri", "Filat", "Janinë", "Prevezë"] },
+      { name: "Rajoni Lindor — Thesalia & Maqedonia", cities: ["Gostivar", "Ohër", "Strugë", "Tetovë"] },
     ]
   },
   {
@@ -108,13 +96,6 @@ export const COUNTRIES_DATA = [
       { name: "Toscana", cities: ["Firenze", "Pisa", "Siena"] },
       { name: "Lazio", cities: ["Roma"] },
       { name: "Emilia-Romagna", cities: ["Bologna", "Parma", "Modena"] },
-    ]
-  },
-  {
-    name: "Greqi",
-    regions: [
-      { name: "Atikë", cities: ["Athinë", "Pireas", "Kallithea"] },
-      { name: "Maqedoni Qendrore", cities: ["Selanik", "Kavala"] },
     ]
   },
   {

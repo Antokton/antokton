@@ -9,7 +9,7 @@ const ANTOKTON_ZONES = {
     "Prishtinë","Prokuplje","Prizren","Rozhajë","Shkup","Sjenicë","Tutin","Vushtrri","Vranjë","Zveçan"
   ],
   "Rajoni Perëndimor — Iliria": [
-    "Apolloni","Berat","Burrel","Durrës","Elbasan","Fier","Gramsh","Guci","Kavajë","Krujë",
+    "Apolloni","Berat","Budva","Burrel","Durrës","Elbasan","Fier","Gramsh","Guci","Kavajë","Krujë",
     "Kukës","Lezhë","Librazhd","Lushnjë","Plavë","Pukë","Rodon","Shkodër","Tiranë","Tivar",
     "Tuzi","Ulqin","Vlorë"
   ],
@@ -29,6 +29,7 @@ const ANTOKTON_ZONES = {
 // Kjo listë mundëson: (1) gjetjen me emrin shqip, (2) zëvendësimin e emrave të huaj me ata shqip
 const ANTOKTON_PLACES = [
   // Mal i Zi — Zona shqiptare
+  { name: "Budva", aliases: ["budva","budua"], zone: "Rajoni Perëndimor — Iliria", city: "Budva", near: "Tivar" },
   { name: "Katërkollë", aliases: ["vladimir","katerkole","katër kollë"], zone: "Rajoni Perëndimor — Iliria", city: "Katërkollë", near: "Ulqin" },
   { name: "Kosmaç", aliases: ["kosmac","kosmaç","cosmos"], zone: "Rajoni Perëndimor — Iliria", city: "Kosmaç", near: "Shkodër" },
   { name: "Selcë", aliases: ["selce","seltse"], zone: "Rajoni Perëndimor — Iliria", city: "Selcë", near: "Plavë" },
@@ -245,6 +246,7 @@ function normalizeSearch(value) {
 function normalizeCountryName(country = "") {
   const value = String(country || "").trim();
   if (/^(gjermani|gjermania|germany|deutschland)$/i.test(value)) return "Gjermani";
+  if (/^(mal i zi|mali i zi|mal të zi|mali të zi|montenegro|crna gora|serbi|serbia|srbija|greqi|greqia|greece|ellada|maqedoni|maqedonia|maqedoni e veriut|maqedonia e veriut|north macedonia|macedonia)$/i.test(value)) return "Antokton";
   return value;
 }
 
@@ -337,7 +339,7 @@ async function searchNominatim(query) {
 
       // fullAddress = "Rue Piers 7, 1080 Molenbeek-Saint-Jean, Belgjikë"
       const fullAddress = isAntokton
-        ? [streetPart || null, city, nearCity || null, "Shqipëri"].filter(Boolean).join(", ")
+        ? [streetPart || null, city, nearCity || null, "Antokton"].filter(Boolean).join(", ")
         : [streetPart || null, postcode && cleanCity ? `${postcode} ${cleanCity}` : cleanCity || null, countryRaw || null].filter(Boolean).join(", ") || item.display_name.split(",").slice(0, 3).join(",").trim();
 
       const displayLabel = isAntokton

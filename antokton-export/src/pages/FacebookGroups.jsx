@@ -9,7 +9,7 @@ export default function FacebookGroups() {
     { country: "Francë", url: "https://t.ly/a-0xf" },
     { country: "Gjermani", url: "https://t.ly/G0iO_" },
     { country: "Itali", url: "https://t.ly/zK-FM" },
-    { country: "Mal të Zi", url: "https://t.ly/3RGRO" }
+    { country: "Antokton", url: "https://t.ly/3RGRO" }
   ];
 
   return (

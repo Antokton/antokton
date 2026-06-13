@@ -12,7 +12,7 @@ const COUNTRIES = [
   { value: "Francë", label: "Francë" },
   { value: "Gjermani", label: "Gjermani" },
   { value: "Itali", label: "Itali" },
-  { value: "Mal i Zi", label: "Mal i Zi" },
+  { value: "Antokton", label: "Antokton" },
 ];
 
 const CATEGORIES = [

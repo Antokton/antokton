@@ -251,7 +251,7 @@ const citiesByZone = {
     "Vushtrri", "Vranjë", "Zveçan"
   ].sort(),
   "Rajoni Perëndimor — Iliria": [
-    "Apolloni", "Berat", "Burrel", "Durrës", "Elbasan", "Fier",
+    "Apolloni", "Berat", "Budva", "Burrel", "Durrës", "Elbasan", "Fier",
     "Gramsh", "Guci", "Kavajë", "Krujë", "Kukës", "Lezhë", "Librazhd",
     "Lushnjë", "Plavë", "Pukë", "Rodon", "Shkodër", "Tiranë", "Tivar",
     "Tuzi", "Ulqin", "Vlorë"
