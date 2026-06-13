@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Send, CheckCircle, Loader2, Eye, MapPin, Briefcase } from "lucide-react";
+import { Send, CheckCircle, Loader2, Eye, MapPin, Briefcase, Upload, X, Star, Image as ImageIcon } from "lucide-react";
 import LocationPicker from "../components/job/LocationPicker";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
@@ -299,6 +299,7 @@ const emptyForm = {
   property_subcategory: "", property_deal_type: "", service_field: "",
   education_field: "", education_level_target: "",
   pazar_category: "", pazar_subcategory: "",
+  image_url: "", image_urls: [], main_image_index: 0,
   certifications: [],
   halal_standard: "",
   is_halal_compliant: false,
@@ -349,6 +350,50 @@ export default function CreatePost() {
 
   const isAdminOrMod = user?.role === "admin" || user?.role === "moderator";
   const [customPosterName, setCustomPosterName] = useState("");
+
+  const handleUploadPazarImages = async (e) => {
+    const files = Array.from(e.target.files || []).filter((file) => file.type.startsWith("image/"));
+    e.target.value = "";
+    if (files.length === 0) return;
+    const currentImages = Array.isArray(form.image_urls) ? form.image_urls : [];
+    const slots = Math.max(0, 6 - currentImages.length);
+    if (slots <= 0) {
+      alert("Mund të ngarkoni maksimumi 6 foto për një njoftim Pazar.");
+      return;
+    }
+    const selectedFiles = files.slice(0, slots);
+    if (files.length > slots) {
+      alert(`U morën vetëm ${slots} foto, sepse limiti maksimal është 6.`);
+    }
+    try {
+      setLoading(true);
+      const uploads = await Promise.all(selectedFiles.map((file) => base44.integrations.Core.UploadFile({ file })));
+      const newUrls = uploads.map((item) => item.file_url).filter(Boolean);
+      const nextImages = [...currentImages, ...newUrls].slice(0, 6);
+      const mainIndex = Math.min(Number(form.main_image_index || 0), Math.max(0, nextImages.length - 1));
+      setForm((prev) => ({
+        ...prev,
+        image_urls: nextImages,
+        main_image_index: mainIndex,
+        image_url: nextImages[mainIndex] || "",
+      }));
+    } catch (error) {
+      alert("Gabim gjatë ngarkimit të fotove: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const setPazarMainImage = (index) => {
+    const images = Array.isArray(form.image_urls) ? form.image_urls : [];
+    setForm({ ...form, main_image_index: index, image_url: images[index] || "" });
+  };
+
+  const removePazarImage = (index) => {
+    const images = (Array.isArray(form.image_urls) ? form.image_urls : []).filter((_, i) => i !== index);
+    const nextMain = Math.min(Number(form.main_image_index || 0), Math.max(0, images.length - 1));
+    setForm({ ...form, image_urls: images, main_image_index: nextMain, image_url: images[nextMain] || "" });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -429,9 +474,14 @@ export default function CreatePost() {
 
     const finalProfession = typedProfession || "Tjetër";
     const publishStatus = isAdminOrMod ? "approved" : "pending";
+    const pazarImages = form.category === "pazar" && Array.isArray(form.image_urls) ? form.image_urls.slice(0, 6) : [];
+    const mainImageIndex = Math.min(Number(form.main_image_index || 0), Math.max(0, pazarImages.length - 1));
 
     const createdJob = await base44.entities.Job.create({
       ...form,
+      image_urls: pazarImages,
+      main_image_index: mainImageIndex,
+      image_url: pazarImages[mainImageIndex] || form.image_url || "",
       profession: finalProfession,
       country: finalCountry,
       zone: (form.zones || []).join(", "), // ruaj si string për retrokompatibilitet
@@ -634,6 +684,67 @@ export default function CreatePost() {
                     {pazarSubcategories.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+          </div>
+        )}
+
+        {showPazarFields && (
+          <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <Label className="text-sm font-medium" style={{ color: 'var(--text)' }}>Fotot e njoftimit</Label>
+                <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>
+                  Ngarko deri në 6 foto. Kliko yllin për foton kryesore që shfaqet si thumbnail në Pazar.
+                </p>
+              </div>
+              <label className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm font-medium text-white/75 hover:bg-white/10 ${(form.image_urls || []).length >= 6 ? "pointer-events-none opacity-45" : ""}`}>
+                <Upload className="h-4 w-4" />
+                Ngarko foto
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handleUploadPazarImages} disabled={loading || (form.image_urls || []).length >= 6} />
+              </label>
+            </div>
+
+            {(form.image_urls || []).length > 0 ? (
+              <div className="space-y-3">
+                <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0b1020]">
+                  <img
+                    src={(form.image_urls || [])[form.main_image_index || 0]}
+                    alt="Foto kryesore"
+                    className="h-64 w-full object-cover"
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                  {(form.image_urls || []).map((url, index) => {
+                    const selected = Number(form.main_image_index || 0) === index;
+                    return (
+                      <div key={`${url}-${index}`} className={`relative overflow-hidden rounded-lg border ${selected ? "border-[#9bffd6]" : "border-white/10"} bg-[#0b1020]`}>
+                        <img src={url} alt={`Foto ${index + 1}`} className="h-20 w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setPazarMainImage(index)}
+                          className={`absolute left-1 top-1 rounded-full p-1 ${selected ? "bg-[#9bffd6] text-[#0b1020]" : "bg-black/60 text-white"}`}
+                          title="Bëje foto kryesore"
+                        >
+                          <Star className={`h-3.5 w-3.5 ${selected ? "fill-current" : ""}`} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removePazarImage(index)}
+                          className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-red-500"
+                          title="Hiq foton"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-5 text-sm text-white/45">
+                <ImageIcon className="h-5 w-5" />
+                Nuk është ngarkuar asnjë foto.
               </div>
             )}
           </div>

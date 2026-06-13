@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 import {
   ShoppingBag, Home, Car, Sofa, Shirt, Smartphone, Bike,
   Wrench, Leaf, BookOpen, Palette, Gift, Search,
-  Plus, MapPin, Clock, Heart, X, Upload,
+  Plus, MapPin, Clock, Heart, X, Upload, Star,
   ExternalLink, Loader2, Tag, ArrowLeft,
   AlertCircle, CheckCircle
 } from "lucide-react";
@@ -42,13 +42,15 @@ const FEMIJE_SUBCATS = [
 function ListingCard({ job }) {
   const [liked, setLiked] = useState(false);
   const price = job.salary_info || "";
+  const gallery = Array.isArray(job.image_urls) ? job.image_urls : [];
+  const thumbnail = job.image_url || gallery[Math.min(Number(job.main_image_index || 0), Math.max(0, gallery.length - 1))] || gallery[0] || "";
   return (
     <Link to={`/PostDetail?id=${job.id}`}
       className="bg-[#1c2333] rounded-xl overflow-hidden border border-white/8 hover:border-white/20 transition-all group block">
       {/* Image */}
       <div className="relative aspect-square bg-[#2a3347] overflow-hidden">
-        {job.image_url ? (
-          <img src={job.image_url} alt={job.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        {thumbnail ? (
+          <img src={thumbnail} alt={job.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <ShoppingBag className="w-10 h-10 text-white/20" />
@@ -93,7 +95,7 @@ function ListingCard({ job }) {
 }
 
 /* ─── IMPORT MODAL ─── */
-function ImportModal({ onClose, onImported }) {
+function ImportModal({ onClose, onImported, user }) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -102,6 +104,50 @@ function ImportModal({ onClose, onImported }) {
   const [step, setStep] = useState("input"); // input | preview | done
   const [category, setCategory] = useState("makina");
   const [jobType, setJobType] = useState("ofroj");
+
+  const setMainImage = (index) => {
+    const images = Array.isArray(extracted?.image_urls) ? extracted.image_urls : [];
+    setExtracted((prev) => ({ ...prev, main_image_index: index, image_url: images[index] || "" }));
+  };
+
+  const removeImage = (index) => {
+    const images = (Array.isArray(extracted?.image_urls) ? extracted.image_urls : []).filter((_, i) => i !== index);
+    const nextMain = Math.min(Number(extracted?.main_image_index || 0), Math.max(0, images.length - 1));
+    setExtracted((prev) => ({
+      ...prev,
+      image_urls: images,
+      main_image_index: nextMain,
+      image_url: images[nextMain] || "",
+    }));
+  };
+
+  const handleUploadImages = async (event) => {
+    const files = Array.from(event.target.files || []).filter((file) => file.type.startsWith("image/"));
+    event.target.value = "";
+    if (!files.length) return;
+    const currentImages = Array.isArray(extracted?.image_urls) ? extracted.image_urls : [];
+    const slots = Math.max(0, 6 - currentImages.length);
+    if (slots <= 0) {
+      setError("Mund të ngarkoni maksimumi 6 foto.");
+      return;
+    }
+    try {
+      setLoading(true);
+      const uploads = await Promise.all(files.slice(0, slots).map((file) => base44.integrations.Core.UploadFile({ file })));
+      const nextImages = [...currentImages, ...uploads.map((item) => item.file_url).filter(Boolean)].slice(0, 6);
+      const nextMain = Math.min(Number(extracted?.main_image_index || 0), Math.max(0, nextImages.length - 1));
+      setExtracted((prev) => ({
+        ...prev,
+        image_urls: nextImages,
+        main_image_index: nextMain,
+        image_url: nextImages[nextMain] || "",
+      }));
+    } catch (error) {
+      setError("Gabim gjatë ngarkimit të fotove.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Force body scroll when modal open (override any layout overflow:hidden)
   useEffect(() => {
@@ -122,6 +168,9 @@ function ImportModal({ onClose, onImported }) {
         const imported = res.data.data || {};
         setExtracted({
           ...imported,
+          image_urls: Array.isArray(imported.image_urls) ? imported.image_urls.slice(0, 6) : imported.image_url ? [imported.image_url] : [],
+          main_image_index: 0,
+          image_url: (Array.isArray(imported.image_urls) && imported.image_urls[0]) || imported.image_url || "",
           source_url: imported.source_url || url.trim(),
           import_source_url: imported.import_source_url || imported.source_url || url.trim(),
           import_author_profile_url: imported.import_author_profile_url || imported.author_profile_url || "",
@@ -146,10 +195,15 @@ function ImportModal({ onClose, onImported }) {
       return;
     }
     const phoneNumber = normalizeInternationalPhone(extracted.phone_number);
+    const images = Array.isArray(extracted.image_urls) ? extracted.image_urls.slice(0, 6) : [];
+    const mainIndex = Math.min(Number(extracted.main_image_index || 0), Math.max(0, images.length - 1));
     setLoading(true);
     try {
       await base44.entities.Job.create({
         ...extracted,
+        image_urls: images,
+        main_image_index: mainIndex,
+        image_url: images[mainIndex] || extracted.image_url || "",
         phone_number: phoneNumber || "",
         source_url: extracted.source_url || url,
         author_profile_url: extracted.author_profile_url || "",
@@ -257,17 +311,41 @@ function ImportModal({ onClose, onImported }) {
                 <CheckCircle className="w-4 h-4" /> Të dhënat u morën me sukses!
               </p>
               <div className="space-y-3">
-                {/* Foto preview - deri 3 falas */}
+                {/* Foto preview - deri 6 */}
                 {Array.isArray(extracted.image_urls) && extracted.image_urls.length > 0 && (
-                  <div>
-                    <label className="text-white/40 text-xs mb-1 block">Fotot ({Math.min(extracted.image_urls.length, 3)} falas)</label>
-                    <div className="flex gap-2 overflow-x-auto">
-                      {extracted.image_urls.slice(0, 3).map((url, i) => (
-                        <img key={i} src={url} alt="" className="w-28 h-20 object-cover rounded-lg shrink-0 border border-white/10" onError={e => e.target.style.display='none'} />
-                      ))}
+                  <div className="space-y-2">
+                    <label className="text-white/40 text-xs block">Fotot ({Math.min(extracted.image_urls.length, 6)}/6)</label>
+                    <div className="overflow-hidden rounded-xl border border-white/10 bg-[#1c2333]">
+                      <img
+                        src={extracted.image_urls[extracted.main_image_index || 0]}
+                        alt="Foto kryesore"
+                        className="h-52 w-full object-cover"
+                        onError={e => e.currentTarget.style.display='none'}
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {extracted.image_urls.slice(0, 6).map((imgUrl, i) => {
+                        const selected = Number(extracted.main_image_index || 0) === i;
+                        return (
+                          <div key={`${imgUrl}-${i}`} className={`relative overflow-hidden rounded-lg border ${selected ? "border-[#9bffd6]" : "border-white/10"}`}>
+                            <img src={imgUrl} alt="" className="h-16 w-full object-cover" onError={e => e.currentTarget.style.display='none'} />
+                            <button type="button" onClick={() => setMainImage(i)} className={`absolute left-1 top-1 rounded-full p-1 ${selected ? "bg-[#9bffd6] text-[#0b1020]" : "bg-black/60 text-white"}`}>
+                              <Star className={`h-3 w-3 ${selected ? "fill-current" : ""}`} />
+                            </button>
+                            <button type="button" onClick={() => removeImage(i)} className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-red-500">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
+                <label className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/15 px-3 py-2.5 text-sm font-semibold text-white/75 hover:bg-white/10 ${(extracted.image_urls || []).length >= 6 ? "pointer-events-none opacity-45" : ""}`}>
+                  <Upload className="h-4 w-4" />
+                  Ngarko foto manualisht
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={handleUploadImages} disabled={loading || (extracted.image_urls || []).length >= 6} />
+                </label>
                 <div>
                   <label className="text-white/40 text-xs">Titulli</label>
                   <input value={extracted.title || ""} onChange={e => setExtracted({...extracted, title: e.target.value})}
@@ -504,7 +582,7 @@ export default function Pazar() {
 
       {/* Import Modal */}
       {showImport && canImportPosts && (
-        <ImportModal onClose={() => setShowImport(false)} onImported={() => refetch()} />
+        <ImportModal user={user} onClose={() => setShowImport(false)} onImported={() => refetch()} />
       )}
     </div>
   );

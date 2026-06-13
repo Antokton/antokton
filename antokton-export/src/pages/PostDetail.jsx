@@ -888,25 +888,39 @@ export default function PostDetail() {
           {/* Foto gallery - nga image_urls (array) ose image_url (singular fallback) */}
           {(() => {
             const imgs = Array.isArray(job.image_urls) && job.image_urls.length > 0
-              ? job.image_urls.slice(0, 3)
+              ? job.image_urls.slice(0, 6)
               : job.image_url ? [job.image_url] : [];
             if (imgs.length === 0) return null;
+            const mainIndex = Math.min(Number(job.main_image_index || 0), Math.max(0, imgs.length - 1));
+            const mainImage = imgs[mainIndex] || imgs[0];
             return (
               <div
                 data-swipe-back-ignore
-                className="mt-5 flex max-w-full gap-2 overflow-x-auto pb-1"
+                className="mt-5 max-w-full space-y-2"
                 style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
               >
-                {imgs.map((imgUrl, i) => (
-                  <a key={i} href={imgUrl} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                    <img
-                      src={imgUrl}
-                      alt={`foto ${i + 1}`}
-                      className="h-44 w-auto max-w-[260px] rounded-xl object-cover border border-white/10 hover:opacity-90 transition-opacity cursor-pointer"
-                      onError={e => e.target.style.display = 'none'}
-                    />
-                  </a>
-                ))}
+                <a href={mainImage} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl border border-white/10 bg-white/5">
+                  <img
+                    src={mainImage}
+                    alt="Foto kryesore"
+                    className="max-h-[520px] w-full object-cover hover:opacity-95 transition-opacity cursor-pointer"
+                    onError={e => e.currentTarget.style.display = 'none'}
+                  />
+                </a>
+                {imgs.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {imgs.map((imgUrl, i) => (
+                      <a key={i} href={imgUrl} target="_blank" rel="noopener noreferrer" className={`shrink-0 overflow-hidden rounded-lg border ${i === mainIndex ? "border-[#9bffd6]" : "border-white/10"} bg-white/5`}>
+                        <img
+                          src={imgUrl}
+                          alt={`foto ${i + 1}`}
+                          className="h-16 w-20 object-cover hover:opacity-90 transition-opacity cursor-pointer"
+                          onError={e => e.currentTarget.style.display = 'none'}
+                        />
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })()}

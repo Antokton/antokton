@@ -532,6 +532,10 @@ export default function Profile() {
       alert("Ditëlindja është e detyrueshme.");
       return;
     }
+    if (!form.profile_photo_url) {
+      alert("Fotoja e profilit është e detyrueshme për të vendosur njoftime, postime ose komente.");
+      return;
+    }
     if (!location) {
       alert("Vendbanimi aktual është i detyrueshëm.");
       return;
@@ -1120,7 +1124,7 @@ export default function Profile() {
                 </div>
               </div>
               <div className="min-w-0 flex-1">
-                <h4 className="text-white font-semibold mb-2">Foto e profilit</h4>
+                <h4 className="text-white font-semibold mb-2">Foto e profilit *</h4>
                 <div className="flex gap-2 flex-wrap">
                   <label className="cursor-pointer">
                     <input type="file" className="hidden" onChange={handleUploadProfilePhoto} accept="image/*" disabled={loading} />
@@ -1140,7 +1144,7 @@ export default function Profile() {
                     </Button>
                   )}
                 </div>
-                <p className="text-white/50 text-xs mt-2">Formatet e suportuara: JPG, PNG, GIF. Madhësia maksimale: 5MB</p>
+                <p className="text-white/50 text-xs mt-2">E detyrueshme për të vendosur njoftime, postime ose komente. Formatet e suportuara: JPG, PNG, GIF. Madhësia maksimale: 5MB</p>
               </div>
             </div>
 
@@ -1359,7 +1363,6 @@ export default function Profile() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Islam">Islam</SelectItem>
-                    <SelectItem value="Krishterim">Krishterim</SelectItem>
                     <SelectItem value="Krishterë Katolik">Krishterë Katolik</SelectItem>
                     <SelectItem value="Krishterë Ortodoks">Krishterë Ortodoks</SelectItem>
                     <SelectItem value="Nuk dua të përgjigjem">Nuk dua të përgjigjem</SelectItem>
