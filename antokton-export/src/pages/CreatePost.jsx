@@ -341,6 +341,7 @@ export default function CreatePost() {
   const [customCountry, setCustomCountry] = useState("");
   const [customZone, setCustomZone] = useState("");
   const [form, setForm] = useState(initialForm);
+  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -483,71 +484,86 @@ export default function CreatePost() {
     }
 
     setLoading(true);
-    const defaultName = user?.first_name && user?.surname
-      ? `${user.first_name} ${user.surname}`
-      : user?.first_name || user?.full_name || user?.email?.split('@')[0] || "Anonim";
-    const displayName = (isAdminOrMod && customPosterName.trim()) ? customPosterName.trim() : defaultName;
+    setSubmitError("");
+    try {
+      const defaultName = user?.first_name && user?.surname
+        ? `${user.first_name} ${user.surname}`
+        : user?.first_name || user?.full_name || user?.email?.split('@')[0] || "Anonim";
+      const displayName = (isAdminOrMod && customPosterName.trim()) ? customPosterName.trim() : defaultName;
 
-    const typedProfession = (form.profession || "").trim();
-    const isKnownProfession = ALL_PROFESSIONS.some((item) => item.toLowerCase() === typedProfession.toLowerCase());
-    if (typedProfession && !isKnownProfession) {
-      await base44.entities.ProfessionSuggestion.create({ suggested_name: typedProfession, user_email: user.email });
+      const typedProfession = (form.profession || "").trim();
+      const isKnownProfession = ALL_PROFESSIONS.some((item) => item.toLowerCase() === typedProfession.toLowerCase());
+      const suggestionTasks = [];
+      if (typedProfession && !isKnownProfession) {
+        suggestionTasks.push(base44.entities.ProfessionSuggestion.create({ suggested_name: typedProfession, user_email: user.email }));
+      }
+      if (form.country === "__other__" && customCountry.trim()) {
+        suggestionTasks.push(base44.entities.CountrySuggestion.create({ suggested_name: customCountry.trim(), user_email: user.email }));
+      }
+
+      const finalProfession = typedProfession || "Tjetër";
+      const publishStatus = isAdminOrMod ? "approved" : "pending";
+      const pazarImages = form.category === "pazar" && Array.isArray(form.image_urls) ? form.image_urls.slice(0, 6) : [];
+      const mainImageIndex = Math.min(Number(form.main_image_index || 0), Math.max(0, pazarImages.length - 1));
+
+      const createdJob = await base44.entities.Job.create({
+        ...form,
+        image_urls: pazarImages,
+        main_image_index: mainImageIndex,
+        image_url: pazarImages[mainImageIndex] || form.image_url || "",
+        profession: finalProfession,
+        country: finalCountry,
+        zone: (form.zones || []).join(", "), // ruaj si string për retrokompatibilitet
+        phone_number: phoneNumber || "",
+        phone_app: phoneNumber ? (form.phone_app || "telefon") : "",
+        status: publishStatus,
+        moderation_status: publishStatus,
+        is_halal_compliant: form.is_halal_compliant || false,
+        poster_name: displayName,
+        author_photo_url: user?.profile_photo_url || "",
+        likes_count: 0, dislikes_count: 0, comments_count: 0,
+        halal_standard: form.halal_standard || null,
+      });
+
+      Promise.allSettled(suggestionTasks).catch(() => {});
+
+      if (publishStatus === "pending") {
+        try {
+          const staffUsers = (await base44.entities.User.list("-updated_date", 1000))
+            .filter((item) => ["admin", "moderator"].includes(String(item.role || item.member_category || "").toLowerCase()));
+          await Promise.allSettled(staffUsers.map((staff) => base44.entities.Notification.create({
+            user_email: staff.email,
+            type: "moderation_request",
+            title: "Njoftim në pritje për miratim",
+            message: `"${createdJob.title || form.title || "Njoftim"}" pret kontroll nga stafi.`,
+            link: `/Admin?section=jobs&tab=pending&job=${encodeURIComponent(createdJob.id)}`,
+            related_id: createdJob.id,
+          })));
+        } catch (notificationError) {
+          console.warn("Njoftimi u ruajt, por njoftimet për staf nuk u dërguan.", notificationError);
+        }
+      }
+
+      // Ruaj nëse është halal="po" për të treguar mesazh të veçantë
+      if (isAdminOrMod) {
+        setSuccess("approved");
+      } else if (form.halal_standard === "po") {
+        setSuccess("halal_yes");
+      } else {
+        setSuccess(true);
+      }
+
+      if (user.posts_remaining > 0) {
+        base44.auth.updateMe({ posts_remaining: user.posts_remaining - 1 }).catch((quotaError) => {
+          console.warn("Njoftimi u ruajt, por kuota nuk u përditësua.", quotaError);
+        });
+      }
+    } catch (error) {
+      console.error("Gabim gjatë postimit të njoftimit:", error);
+      setSubmitError(error?.message || "Njoftimi nuk u postua. Kontrollo lidhjen dhe provo përsëri.");
+    } finally {
+      setLoading(false);
     }
-    if (form.country === "__other__" && customCountry.trim()) {
-      await base44.entities.CountrySuggestion.create({ suggested_name: customCountry.trim(), user_email: user.email });
-    }
-
-    const finalProfession = typedProfession || "Tjetër";
-    const publishStatus = isAdminOrMod ? "approved" : "pending";
-    const pazarImages = form.category === "pazar" && Array.isArray(form.image_urls) ? form.image_urls.slice(0, 6) : [];
-    const mainImageIndex = Math.min(Number(form.main_image_index || 0), Math.max(0, pazarImages.length - 1));
-
-    const createdJob = await base44.entities.Job.create({
-      ...form,
-      image_urls: pazarImages,
-      main_image_index: mainImageIndex,
-      image_url: pazarImages[mainImageIndex] || form.image_url || "",
-      profession: finalProfession,
-      country: finalCountry,
-      zone: (form.zones || []).join(", "), // ruaj si string për retrokompatibilitet
-      phone_number: phoneNumber || "",
-      phone_app: phoneNumber ? (form.phone_app || "telefon") : "",
-      status: publishStatus,
-      moderation_status: publishStatus,
-      is_halal_compliant: form.is_halal_compliant || false,
-      poster_name: displayName,
-      author_photo_url: user?.profile_photo_url || "",
-      likes_count: 0, dislikes_count: 0, comments_count: 0,
-      halal_standard: form.halal_standard || null,
-    });
-
-    if (publishStatus === "pending") {
-      const staffUsers = (await base44.entities.User.list("-updated_date", 1000))
-        .filter((item) => ["admin", "moderator"].includes(String(item.role || item.member_category || "").toLowerCase()));
-      await Promise.all(staffUsers.map((staff) => base44.entities.Notification.create({
-        user_email: staff.email,
-        type: "moderation_request",
-        title: "Njoftim në pritje për miratim",
-        message: `"${createdJob.title || form.title || "Njoftim"}" pret kontroll nga stafi.`,
-        link: `/Admin?section=jobs&tab=pending&job=${encodeURIComponent(createdJob.id)}`,
-        related_id: createdJob.id,
-      })));
-    }
-
-    // Ruaj nëse është halal="po" për të treguar mesazh të veçantë
-    if (isAdminOrMod) {
-      setSuccess("approved");
-    } else if (form.halal_standard === "po") {
-      setSuccess("halal_yes");
-    } else {
-      setSuccess(true);
-    }
-
-    if (user.posts_remaining > 0) {
-      await base44.auth.updateMe({ posts_remaining: user.posts_remaining - 1 });
-    }
-
-    setLoading(false);
   };
 
   if (!isAuth) {
@@ -1238,6 +1254,12 @@ export default function CreatePost() {
                 <p className="break-words text-white/70 text-sm line-clamp-3">{form.description || "Përshkrimi do të shfaqet këtu..."}</p>
               </div>
             </motion.div>
+          )}
+
+          {submitError && (
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              {submitError}
+            </div>
           )}
 
           <Button type="submit" disabled={loading} className="w-full h-12 text-sm font-semibold"
