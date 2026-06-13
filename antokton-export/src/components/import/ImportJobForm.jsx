@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { base44 } from "@/api/antoktonClient";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Link2, Sparkles, CheckCircle2, AlertCircle, Phone, MapPin, User, Briefcase, DollarSign, FileText, Image, ClipboardPaste } from "lucide-react";
+import { Loader2, Link2, Sparkles, CheckCircle2, AlertCircle, Phone, MapPin, User, Briefcase, DollarSign, FileText, Image, ClipboardPaste, Star, Upload, X } from "lucide-react";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizePhoneForCountry } from "@/lib/phone";
 import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
 import { extractImportedPostFields, sanitizeImportedText } from "@/lib/importExtractors";
@@ -342,6 +342,14 @@ const buildHeuristicDrafts = (rawText = "", baseDraft = {}, fallbackUrl = "", jo
 
 const normalizeDraft = (rawText, draft = {}, fallbackUrl = "", jobType = "ofroj") => {
   const decodedRawText = sanitizeImportedText(rawText);
+  const imageUrls = (Array.isArray(draft.image_urls) ? draft.image_urls : draft.image_url ? [draft.image_url] : [])
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .slice(0, 6);
+  const mainImageIndex = Math.min(
+    Math.max(Number.parseInt(draft.main_image_index, 10) || 0, 0),
+    Math.max(imageUrls.length - 1, 0)
+  );
   const decodedDraft = {
     ...draft,
     poster_name: "",
@@ -353,6 +361,9 @@ const normalizeDraft = (rawText, draft = {}, fallbackUrl = "", jobType = "ofroj"
     city: sanitizeImportedText(draft.city || ""),
     address: sanitizeImportedText(draft.address || ""),
     contact_info: sanitizeImportedText(draft.contact_info || ""),
+    image_urls: imageUrls,
+    main_image_index: mainImageIndex,
+    image_url: imageUrls[mainImageIndex] || sanitizeImportedText(draft.image_url || ""),
   };
   const polished = polishDraft(decodedDraft, decodedRawText);
   return extractImportedPostFields(decodedRawText || "", {
@@ -369,6 +380,9 @@ const normalizeDraft = (rawText, draft = {}, fallbackUrl = "", jobType = "ofroj"
     show_author_profile_url: false,
     category: draft.category || "pune",
     job_type: draft.job_type || jobType || "ofroj",
+    image_urls: imageUrls,
+    main_image_index: mainImageIndex,
+    image_url: imageUrls[mainImageIndex] || draft.image_url || "",
     status: "pending",
   });
 };
@@ -590,6 +604,14 @@ ${text || importedData.description || importedData.title || ""}`;
     const contactUrl = String(prepared.author_profile_url || prepared.import_author_profile_url || authorUrl || "").trim();
     const sourceUrl = prepared.source_url || url.trim();
     const platformPosterName = isStaff ? String(draft.poster_name || "").trim() : "";
+    const images = (Array.isArray(prepared.image_urls) ? prepared.image_urls : prepared.image_url ? [prepared.image_url] : [])
+      .map((item) => String(item || "").trim())
+      .filter(Boolean)
+      .slice(0, 6);
+    const mainImageIndex = Math.min(
+      Math.max(Number.parseInt(prepared.main_image_index, 10) || 0, 0),
+      Math.max(images.length - 1, 0)
+    );
     const contactInfoWarning = getContactInfoInTextMessage(prepared.description);
     if (contactInfoWarning) {
       throw new Error(contactInfoWarning);
@@ -608,6 +630,9 @@ ${text || importedData.description || importedData.title || ""}`;
       contact_info: removeUrlsFromContactInfo(prepared.contact_info, [contactUrl, sourceUrl]),
       phone_number: phoneNumber || "",
       phone_app: phoneNumber ? (prepared.phone_app || "telefon") : "",
+      image_urls: images,
+      main_image_index: mainImageIndex,
+      image_url: images[mainImageIndex] || prepared.image_url || "",
       source_url: sourceUrl,
       author_profile_url: contactUrl,
       import_source_url: prepared.import_source_url || sourceUrl,
@@ -645,6 +670,50 @@ ${text || importedData.description || importedData.title || ""}`;
   const set = (key, val) => setDrafts((items) => items.map((item, index) => (
     index === selectedDraftIndex ? { ...item, [key]: val } : item
   )));
+
+  const updateSelectedDraft = (patch) => setDrafts((items) => items.map((item, index) => (
+    index === selectedDraftIndex ? { ...item, ...patch } : item
+  )));
+
+  const setMainImage = (index) => {
+    const images = Array.isArray(data?.image_urls) ? data.image_urls : [];
+    updateSelectedDraft({ main_image_index: index, image_url: images[index] || "" });
+  };
+
+  const removeImage = (index) => {
+    const images = (Array.isArray(data?.image_urls) ? data.image_urls : []).filter((_, i) => i !== index);
+    const mainImageIndex = Math.min(Number(data?.main_image_index || 0), Math.max(images.length - 1, 0));
+    updateSelectedDraft({
+      image_urls: images,
+      main_image_index: mainImageIndex,
+      image_url: images[mainImageIndex] || "",
+    });
+  };
+
+  const handleUploadImages = async (event) => {
+    const currentImages = Array.isArray(data?.image_urls) ? data.image_urls : [];
+    const slots = Math.max(0, 6 - currentImages.length);
+    const files = Array.from(event.target.files || []).slice(0, slots);
+    event.target.value = "";
+    if (!files.length) return;
+
+    setSaving(true);
+    setError("");
+    try {
+      const uploads = await Promise.all(files.map((file) => base44.integrations.Core.UploadFile({ file })));
+      const nextImages = [...currentImages, ...uploads.map((item) => item?.file_url).filter(Boolean)].slice(0, 6);
+      const mainImageIndex = Math.min(Number(data?.main_image_index || 0), Math.max(nextImages.length - 1, 0));
+      updateSelectedDraft({
+        image_urls: nextImages,
+        main_image_index: mainImageIndex,
+        image_url: nextImages[mainImageIndex] || "",
+      });
+    } catch (e) {
+      setError(e?.message || "Fotot nuk u ngarkuan. Provo përsëri.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (step === "done") {
     return (
@@ -905,14 +974,51 @@ ${text || importedData.description || importedData.title || ""}`;
             </label>
           </div>
 
-          {Array.isArray(data.image_urls) && data.image_urls.length > 0 && (
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-2">
-              <div className="flex items-center gap-2 mb-1"><Image className="w-4 h-4 text-white/60" /><span className="text-white font-semibold text-sm">Fotot ({data.image_urls.length})</span></div>
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {data.image_urls.slice(0, 5).map((imgUrl, i) => <img key={i} src={imgUrl} alt="" className="w-28 h-20 object-cover rounded-lg shrink-0 border border-white/10" onError={(e) => { e.currentTarget.style.display = "none"; }} />)}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Image className="w-4 h-4 text-white/60" />
+                <span className="text-white font-semibold text-sm">Fotot ({Math.min((data.image_urls || []).length, 6)}/6)</span>
               </div>
+              <span className="text-white/40 text-xs">Ylli cakton foton kryesore</span>
             </div>
-          )}
+
+            {Array.isArray(data.image_urls) && data.image_urls.length > 0 && (
+              <>
+                <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black/20">
+                  <img
+                    src={data.image_urls[Math.min(Number(data.main_image_index || 0), data.image_urls.length - 1)]}
+                    alt=""
+                    className="h-48 w-full object-cover"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  {data.image_urls.slice(0, 6).map((imgUrl, i) => {
+                    const selected = Number(data.main_image_index || 0) === i;
+                    return (
+                      <div key={`${imgUrl}-${i}`} className={`relative overflow-hidden rounded-lg border ${selected ? "border-[#9bffd6]" : "border-white/10"}`}>
+                        <button type="button" onClick={() => setMainImage(i)} className="absolute left-1 top-1 rounded-full bg-black/60 p-1 text-white hover:text-[#ffd166]" title="Bëje foto kryesore">
+                          <Star className={`h-3.5 w-3.5 ${selected ? "fill-[#ffd166] text-[#ffd166]" : ""}`} />
+                        </button>
+                        <button type="button" onClick={() => removeImage(i)} className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:text-red-300" title="Hiqe foton">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                        <img src={imgUrl} alt="" className="h-20 w-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            <label className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/15 px-3 py-2.5 text-sm font-semibold text-white/75 hover:bg-white/10 ${(data.image_urls || []).length >= 6 ? "pointer-events-none opacity-45" : ""}`}>
+              <Upload className="h-4 w-4" />
+              Ngarko foto për Pazar
+              <input type="file" accept="image/*" multiple className="hidden" onChange={handleUploadImages} disabled={saving || (data.image_urls || []).length >= 6} />
+            </label>
+            <p className="text-white/40 text-xs">Ngarko deri në 6 foto. Fotoja me yll përdoret si foto kryesore dhe thumbnail në Pazar.</p>
+          </div>
 
           <div>
             <label className="text-white/50 text-xs mb-1 block">Linku i njoftimit / burimit</label>

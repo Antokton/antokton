@@ -3,7 +3,7 @@ import { base44 } from "@/api/antoktonClient";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, Trash2, RotateCcw, Save, Send, Globe, Archive, X } from "lucide-react";
+import { Loader2, Sparkles, Trash2, RotateCcw, Save, Send, Globe, Archive, X, Image, Star, Upload } from "lucide-react";
 import { COUNTRIES_DATA, CATEGORIES, LISTING_TYPES, SOURCES } from "./importConstants";
 import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
 import { extractImportedPostFields, sanitizeImportedText } from "@/lib/importExtractors";
@@ -37,6 +37,9 @@ export default function ImportForm({ user, editingPost, onDone }) {
     show_original_post_url_publicly: false,
     show_source_url: false,
     show_author_profile_url: false,
+    image_url: "",
+    image_urls: [],
+    main_image_index: 0,
   };
 
   const [form, setForm] = useState(empty);
@@ -61,6 +64,47 @@ export default function ImportForm({ user, editingPost, onDone }) {
   }, [editingPost]);
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
+
+  const setMainImage = (index) => {
+    const images = Array.isArray(form.image_urls) ? form.image_urls : [];
+    setForm((f) => ({ ...f, main_image_index: index, image_url: images[index] || "" }));
+  };
+
+  const removeImage = (index) => {
+    const images = (Array.isArray(form.image_urls) ? form.image_urls : []).filter((_, i) => i !== index);
+    const mainImageIndex = Math.min(Number(form.main_image_index || 0), Math.max(images.length - 1, 0));
+    setForm((f) => ({
+      ...f,
+      image_urls: images,
+      main_image_index: mainImageIndex,
+      image_url: images[mainImageIndex] || "",
+    }));
+  };
+
+  const handleUploadImages = async (event) => {
+    const currentImages = Array.isArray(form.image_urls) ? form.image_urls : [];
+    const slots = Math.max(0, 6 - currentImages.length);
+    const files = Array.from(event.target.files || []).slice(0, slots);
+    event.target.value = "";
+    if (!files.length) return;
+
+    setLoading(true);
+    try {
+      const uploads = await Promise.all(files.map((file) => base44.integrations.Core.UploadFile({ file })));
+      const nextImages = [...currentImages, ...uploads.map((item) => item?.file_url).filter(Boolean)].slice(0, 6);
+      const mainImageIndex = Math.min(Number(form.main_image_index || 0), Math.max(nextImages.length - 1, 0));
+      setForm((f) => ({
+        ...f,
+        image_urls: nextImages,
+        main_image_index: mainImageIndex,
+        image_url: nextImages[mainImageIndex] || "",
+      }));
+    } catch (e) {
+      alert(e?.message || "Fotot nuk u ngarkuan. Provo përsëri.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // When user types in the textarea for the first time (new post)
   const handleTextChange = (val) => {
@@ -196,6 +240,16 @@ Kthe JSON me këto fusha.`;
       import_original_text: prepared.import_original_text || form.original_text || "",
       show_source_url: prepared.show_source_url === true,
       show_author_profile_url: prepared.show_author_profile_url === true,
+      image_urls: (Array.isArray(prepared.image_urls) ? prepared.image_urls : prepared.image_url ? [prepared.image_url] : []).filter(Boolean).slice(0, 6),
+      main_image_index: Math.min(
+        Math.max(Number.parseInt(prepared.main_image_index, 10) || 0, 0),
+        Math.max(((Array.isArray(prepared.image_urls) ? prepared.image_urls : prepared.image_url ? [prepared.image_url] : []).filter(Boolean).slice(0, 6)).length - 1, 0)
+      ),
+      image_url: (() => {
+        const images = (Array.isArray(prepared.image_urls) ? prepared.image_urls : prepared.image_url ? [prepared.image_url] : []).filter(Boolean).slice(0, 6);
+        const mainIndex = Math.min(Math.max(Number.parseInt(prepared.main_image_index, 10) || 0, 0), Math.max(images.length - 1, 0));
+        return images[mainIndex] || "";
+      })(),
       status,
       imported_by: user.email,
       ...(status === "publikuar" && !editingPost?.published_at ? { published_at: new Date().toISOString() } : {}),
@@ -443,6 +497,51 @@ Kthe JSON me këto fusha.`;
         <p className="text-white/40 text-xs">
           Në ruajtje, telefoni/emaili/linku hiqen nga trupi i tekstit dhe mbeten te fushat e kontaktit/gjurmimit.
         </p>
+      </div>
+
+      {/* Photos */}
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Image className="w-4 h-4 text-white/60" />
+            <span className="text-white font-semibold text-sm">Fotot ({Math.min((form.image_urls || []).length, 6)}/6)</span>
+          </div>
+          <span className="text-white/40 text-xs">Për Pazar, ylli cakton thumbnail</span>
+        </div>
+        {(form.image_urls || []).length > 0 && (
+          <>
+            <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black/20">
+              <img
+                src={(form.image_urls || [])[Math.min(Number(form.main_image_index || 0), (form.image_urls || []).length - 1)]}
+                alt=""
+                className="h-48 w-full object-cover"
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
+              />
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              {(form.image_urls || []).slice(0, 6).map((imgUrl, i) => {
+                const selected = Number(form.main_image_index || 0) === i;
+                return (
+                  <div key={`${imgUrl}-${i}`} className={`relative overflow-hidden rounded-lg border ${selected ? "border-[#9bffd6]" : "border-white/10"}`}>
+                    <button type="button" onClick={() => setMainImage(i)} className="absolute left-1 top-1 rounded-full bg-black/60 p-1 text-white hover:text-[#ffd166]" title="Bëje foto kryesore">
+                      <Star className={`h-3.5 w-3.5 ${selected ? "fill-[#ffd166] text-[#ffd166]" : ""}`} />
+                    </button>
+                    <button type="button" onClick={() => removeImage(i)} className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:text-red-300" title="Hiqe foton">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                    <img src={imgUrl} alt="" className="h-20 w-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+        <label className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/15 px-3 py-2.5 text-sm font-semibold text-white/75 hover:bg-white/10 ${(form.image_urls || []).length >= 6 ? "pointer-events-none opacity-45" : ""}`}>
+          <Upload className="h-4 w-4" />
+          Ngarko foto
+          <input type="file" accept="image/*" multiple className="hidden" onChange={handleUploadImages} disabled={loading || (form.image_urls || []).length >= 6} />
+        </label>
+        <p className="text-white/40 text-xs">Mund të ruhen deri në 6 foto; fotoja me yll përdoret si kryesore në Pazar.</p>
       </div>
 
       {/* Action Buttons */}
