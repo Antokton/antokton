@@ -494,7 +494,7 @@ export default function Pazar() {
                 <Upload className="w-3.5 h-3.5" /> Importo
               </button>
             )}
-            <Link to="/CreatePost"
+            <Link to="/CreatePost?category=pazar"
               className="flex items-center gap-1.5 text-[#0b1020] text-xs font-bold px-3 py-2 rounded-lg"
               style={{ background: 'linear-gradient(to right, #8ab4ff, #9bffd6)' }}>
               <Plus className="w-3.5 h-3.5" /> Posto
@@ -530,7 +530,7 @@ export default function Pazar() {
                 <Upload className="w-5 h-5" /> Importo Njoftim
               </button>
             )}
-            <Link to="/CreatePost"
+            <Link to="/CreatePost?category=pazar"
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:bg-white/5 hover:text-white transition-all">
               <Plus className="w-5 h-5" /> Posto Njoftim
             </Link>

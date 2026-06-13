@@ -14,6 +14,7 @@ import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhon
 import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
 import { hasEarlyMemberPremiumAccess } from "@/utils/premiumAccess";
 import { requireCompleteProfileForInteraction } from "@/lib/profileCompleteness";
+import { useLocation } from "react-router-dom";
 
 const ALL_PROFESSIONS = [
   "3D Artist","Administrator","Agjent Shitjesh","Agjent Sigurimesh","Agjent Udhëtimesh",
@@ -327,6 +328,11 @@ const PHONE_APP_ICONS = {
 };
 
 export default function CreatePost() {
+  const location = useLocation();
+  const initialCategory = new URLSearchParams(location.search).get("category");
+  const initialForm = categories.some((item) => item.value === initialCategory)
+    ? { ...emptyForm, category: initialCategory, job_type: initialCategory === "pune" || initialCategory === "sherbime" ? "ofroj" : "" }
+    : emptyForm;
   const [user, setUser] = useState(null);
   const [isAuth, setIsAuth] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -334,7 +340,7 @@ export default function CreatePost() {
   const [showPreview, setShowPreview] = useState(false);
   const [customCountry, setCustomCountry] = useState("");
   const [customZone, setCustomZone] = useState("");
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(initialForm);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -350,6 +356,25 @@ export default function CreatePost() {
 
   const isAdminOrMod = user?.role === "admin" || user?.role === "moderator";
   const [customPosterName, setCustomPosterName] = useState("");
+
+  useEffect(() => {
+    const requestedCategory = new URLSearchParams(location.search).get("category");
+    if (!categories.some((item) => item.value === requestedCategory)) return;
+    setForm((current) => (
+      current.category === requestedCategory
+        ? current
+        : {
+          ...current,
+          category: requestedCategory,
+          job_type: requestedCategory === "pune" || requestedCategory === "sherbime" ? "ofroj" : "",
+          service_field: "",
+          education_field: "",
+          education_level_target: "",
+          pazar_category: requestedCategory === "pazar" ? current.pazar_category : "",
+          pazar_subcategory: requestedCategory === "pazar" ? current.pazar_subcategory : "",
+        }
+    ));
+  }, [location.search]);
 
   const handleUploadPazarImages = async (e) => {
     const files = Array.from(e.target.files || []).filter((file) => file.type.startsWith("image/"));
