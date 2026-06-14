@@ -1156,15 +1156,22 @@ function facebookUrlVariants(inputUrl) {
 }
 
 async function fetchPublicHtml(url) {
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36 AntoktonPublicImport/1.0",
-      Accept: "text/html,application/xhtml+xml",
-      "Accept-Language": "sq,en-US;q=0.9,en;q=0.8"
-    },
-    signal: AbortSignal.timeout(12000)
-  });
-  return response.text();
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timeout = controller ? setTimeout(() => controller.abort(), 12000) : null;
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36 AntoktonPublicImport/1.0",
+        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "sq,en-US;q=0.9,en;q=0.8"
+      },
+      ...(controller ? { signal: controller.signal } : {})
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.text();
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
 }
 
 function getRequestOrigin(req) {
@@ -1700,11 +1707,11 @@ async function handleFunction(req, res, functionName) {
       }
       try {
         const scraped = await scrapeBasicListing(payload.url);
-        const localizedScraped = await localizeRemoteAssets(scraped, [functionName]);
         result = {
           success: true,
           data: {
-            ...localizedScraped,
+            ...scraped,
+            image_urls: Array.isArray(scraped.image_urls) ? scraped.image_urls.slice(0, 6) : [],
             category: payload.category || (functionName === "importMarketplacePost" ? "pazar" : "pune"),
             job_type: payload.job_type || "ofroj",
             status: "pending"

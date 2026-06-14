@@ -371,6 +371,36 @@ function ImportModal({ onClose, onImported, user }) {
     };
   }, []);
 
+  const openManualDraft = (message) => {
+    const source = url.trim();
+    setExtracted({
+      title: "",
+      description: "",
+      salary_info: "",
+      city: "",
+      address: "",
+      poster_name: "",
+      phone_number: "",
+      contact_info: "",
+      image_urls: [],
+      main_image_index: 0,
+      image_url: "",
+      image_focus_json: {},
+      source_url: source,
+      import_source_url: source,
+      author_profile_url: "",
+      import_author_profile_url: "",
+      show_source_url: false,
+      show_author_profile_url: false,
+      category: "pazar",
+      pazar_category: category,
+      job_type: jobType,
+      status: "pending",
+    });
+    setError(message || "Nuk u lexua automatikisht nga linku. Linku u ruajt për gjurmim; plotëso të dhënat manualisht dhe publiko kur ta kontrollosh.");
+    setStep("preview");
+  };
+
   const handleFetch = async () => {
     if (!url.trim()) return;
     setLoading(true); setError(""); setExtracted(null);
@@ -392,10 +422,11 @@ function ImportModal({ onClose, onImported, user }) {
         });
         setStep("preview");
       } else {
-        setError(res.data?.error || "Nuk u mundua të importohet njoftimi.");
+        openManualDraft("Nuk u lexua automatikisht nga linku. Linku ruhet vetëm për gjurmim; plotëso të dhënat manualisht.");
       }
     } catch (e) {
-      setError("Gabim gjatë importimit. Kontrolloni URL-në.");
+      const technical = e?.status ? ` (${e.status})` : "";
+      openManualDraft(`Importi automatik nuk u hap${technical}. Linku ruhet vetëm për gjurmim; plotëso të dhënat manualisht.`);
     } finally {
       setLoading(false);
     }
@@ -522,8 +553,9 @@ function ImportModal({ onClose, onImported, user }) {
 
           {step === "preview" && extracted && (
             <>
-              <p className="text-[#9bffd6] text-sm font-medium flex items-center gap-2">
-                <CheckCircle className="w-4 h-4" /> Të dhënat u morën me sukses!
+              <p className={`text-sm font-medium flex items-center gap-2 ${error ? "text-yellow-300" : "text-[#9bffd6]"}`}>
+                {error ? <AlertCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                {error ? "Draft manual nga linku" : "Të dhënat u morën me sukses!"}
               </p>
               <div className="space-y-3">
                 {/* Foto preview - deri 6 */}
