@@ -8,7 +8,7 @@ import {
   Wrench, Leaf, BookOpen, Palette, Gift, Search,
   Plus, MapPin, Clock, Heart, X, Upload, Star,
   ExternalLink, Loader2, Tag, ArrowLeft,
-  AlertCircle, CheckCircle, MoreVertical, Phone, Link2, Flag, Share2, MessageCircle, Copy
+  AlertCircle, CheckCircle, MoreVertical, Flag, Share2, MessageCircle, Copy
 } from "lucide-react";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -66,10 +66,6 @@ function ListingCard({ job, user }) {
     event.stopPropagation();
   };
 
-  const stopMenuBubble = (event) => {
-    event.stopPropagation();
-  };
-
   const toggleFavorite = (event) => {
     stopCardClick(event);
     setLiked((current) => {
@@ -98,6 +94,27 @@ function ListingCard({ job, user }) {
     } catch {
       window.prompt(`Kopjo ${label.toLowerCase()}:`, text);
     }
+  };
+
+  const shareText = async (event, text, title) => {
+    stopCardClick(event);
+    if (!text) return;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        alert("Teksti u kopjua.");
+      }
+    } catch {
+      // User cancelled native share.
+    }
+  };
+
+  const openExternal = (event, targetUrl) => {
+    stopCardClick(event);
+    if (!targetUrl) return;
+    window.open(targetUrl, "_blank", "noopener,noreferrer");
   };
 
   const shareListing = async (event) => {
@@ -195,27 +212,28 @@ function ListingCard({ job, user }) {
               <Share2 className="h-4 w-4 text-white/65" /> Shpërndaj
             </DropdownMenuItem>
             {job.phone_number && (
-              <DropdownMenuItem asChild>
-                <a href={`tel:${String(job.phone_number).replace(/\s+/g, "")}`} onClick={stopMenuBubble} className="flex cursor-pointer items-center gap-2 text-white/85">
-                  <Phone className="h-4 w-4 text-white/65" /> Kontakto me telefon
-                </a>
-              </DropdownMenuItem>
-            )}
-            {job.phone_number && (
               <DropdownMenuItem onClick={(event) => copyText(event, job.phone_number, "Telefoni")} className="cursor-pointer gap-2 text-white/85">
                 <Copy className="h-4 w-4 text-white/65" /> Kopjo telefonin
               </DropdownMenuItem>
             )}
+            {job.phone_number && (
+              <DropdownMenuItem onClick={(event) => shareText(event, job.phone_number, "Telefon kontakti")} className="cursor-pointer gap-2 text-white/85">
+                <Share2 className="h-4 w-4 text-white/65" /> Shpërndaj telefonin
+              </DropdownMenuItem>
+            )}
             {publicContactUrl && (
-              <DropdownMenuItem asChild>
-                <a href={publicContactUrl} target="_blank" rel="noopener noreferrer" onClick={stopMenuBubble} className="flex cursor-pointer items-center gap-2 text-white/85">
-                  <Link2 className="h-4 w-4 text-white/65" /> Link kontakti
-                </a>
+              <DropdownMenuItem onClick={(event) => openExternal(event, publicContactUrl)} className="cursor-pointer gap-2 text-white/85">
+                <ExternalLink className="h-4 w-4 text-white/65" /> Hap linkun e kontaktit
               </DropdownMenuItem>
             )}
             {publicContactUrl && (
               <DropdownMenuItem onClick={(event) => copyText(event, publicContactUrl, "Linku i kontaktit")} className="cursor-pointer gap-2 text-white/85">
                 <Copy className="h-4 w-4 text-white/65" /> Kopjo linkun e kontaktit
+              </DropdownMenuItem>
+            )}
+            {publicContactUrl && (
+              <DropdownMenuItem onClick={(event) => shareText(event, publicContactUrl, "Link kontakti")} className="cursor-pointer gap-2 text-white/85">
+                <Share2 className="h-4 w-4 text-white/65" /> Shpërndaj linkun e kontaktit
               </DropdownMenuItem>
             )}
             {!canContact && (
@@ -236,32 +254,6 @@ function ListingCard({ job, user }) {
           </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        {canContact && (
-          <div className="absolute bottom-2 right-2 flex gap-1.5">
-            {job.phone_number && (
-              <a
-                href={`tel:${String(job.phone_number).replace(/\s+/g, "")}`}
-                onClick={stopMenuBubble}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-black/65 text-white shadow-sm backdrop-blur hover:bg-black/80"
-                title="Telefono"
-              >
-                <Phone className="h-4 w-4" />
-              </a>
-            )}
-            {publicContactUrl && (
-              <a
-                href={publicContactUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={stopMenuBubble}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-black/65 text-white shadow-sm backdrop-blur hover:bg-black/80"
-                title="Hap linkun e kontaktit"
-              >
-                <Link2 className="h-4 w-4" />
-              </a>
-            )}
-          </div>
-        )}
         {job.job_type === "ofroj" && price && (
           <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs font-bold px-2 py-0.5 rounded-lg">
             {price}

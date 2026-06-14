@@ -213,7 +213,8 @@ const auth = {
     window.location.replace(fromUrl || '/Login');
   },
   hasToken,
-  setToken
+  setToken,
+  clearToken
 };
 
 function coreOperation(operation, payload = {}) {
