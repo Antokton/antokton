@@ -22,6 +22,8 @@ import UserAvatar from "@/components/ui/UserAvatar";
 import { hasEarlyMemberPremiumAccess, hasPremiumAccess } from "@/utils/premiumAccess";
 import { getUserDisplayName, isStaffUser } from "@/lib/userDisplay";
 import { requireCompleteProfileForInteraction } from "@/lib/profileCompleteness";
+import ImageFocusControls from "@/components/media/ImageFocusControls";
+import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, updateImageFocus } from "@/lib/imageFocus";
 
 function SimilarPosts({ currentJobId, category }) {
   const { data: similarJobs = [] } = useQuery({
@@ -150,6 +152,7 @@ export default function PostDetail() {
   const [editForm, setEditForm] = useState({});
   const [showComments, setShowComments] = useState(false);
   const [staffProfileNotice, setStaffProfileNotice] = useState("");
+  const [photoViewerUrl, setPhotoViewerUrl] = useState("");
   const viewTrackedRef = React.useRef(null);
 
   const queryClient = useQueryClient();
@@ -482,7 +485,8 @@ export default function PostDetail() {
       show_author_profile_url: Boolean(job.show_author_profile_url),
       image_urls: editImages,
       main_image_index: editMainImageIndex,
-      image_url: editImages[editMainImageIndex] || job.image_url || ''
+      image_url: editImages[editMainImageIndex] || job.image_url || '',
+      image_focus_json: pruneImageFocusMap(job.image_focus_json, editImages)
     });
     setIsEditing(true);
   };
@@ -506,7 +510,8 @@ export default function PostDetail() {
         ...current,
         image_urls: images,
         main_image_index: mainImageIndex,
-        image_url: images[mainImageIndex] || ""
+        image_url: images[mainImageIndex] || "",
+        image_focus_json: pruneImageFocusMap(current.image_focus_json, images)
       };
     });
   };
@@ -533,6 +538,16 @@ export default function PostDetail() {
     }
   };
 
+  const selectedEditImage = (editForm.image_urls || [])[Math.min(Number(editForm.main_image_index || 0), Math.max((editForm.image_urls || []).length - 1, 0))] || "";
+
+  const updateEditImageFocus = (focus) => {
+    if (!selectedEditImage) return;
+    setEditForm((current) => ({
+      ...current,
+      image_focus_json: updateImageFocus(current.image_focus_json, selectedEditImage, focus),
+    }));
+  };
+
   const editJobMutation = useMutation({
     mutationFn: async () => {
       const phoneNumber = normalizePhoneForCountry(
@@ -551,6 +566,7 @@ export default function PostDetail() {
         Math.max(Number.parseInt(editForm.main_image_index, 10) || 0, 0),
         Math.max(editImages.length - 1, 0)
       );
+      const imageFocus = pruneImageFocusMap(editForm.image_focus_json, editImages);
       await base44.entities.Job.update(jobId, {
         ...editForm,
         address: editForm.address || editForm.city || "",
@@ -565,6 +581,7 @@ export default function PostDetail() {
         image_urls: editImages,
         main_image_index: editMainImageIndex,
         image_url: editImages[editMainImageIndex] || "",
+        image_focus_json: imageFocus,
       });
     },
     onSuccess: () => {
@@ -836,15 +853,21 @@ export default function PostDetail() {
                     <>
                       <div className="overflow-hidden rounded-lg border border-white/10 bg-black/20">
                         <img
-                          src={(editForm.image_urls || [])[Math.min(Number(editForm.main_image_index || 0), (editForm.image_urls || []).length - 1)]}
+                          src={selectedEditImage}
                           alt="Foto kryesore"
                           className="h-44 w-full object-cover"
+                          style={getImageFocusStyle(getImageFocus(editForm.image_focus_json, selectedEditImage))}
                           onError={(e) => { e.currentTarget.style.display = "none"; }}
                         />
                       </div>
+                      <ImageFocusControls
+                        value={getImageFocus(editForm.image_focus_json, selectedEditImage)}
+                        onChange={updateEditImageFocus}
+                      />
                       <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                         {(editForm.image_urls || []).slice(0, 6).map((imgUrl, i) => {
                           const selected = Number(editForm.main_image_index || 0) === i;
+                          const focus = getImageFocus(editForm.image_focus_json, imgUrl);
                           return (
                             <div key={`${imgUrl}-${i}`} className={`relative overflow-hidden rounded-lg border ${selected ? "border-[#9bffd6]" : "border-white/10"}`}>
                               <button type="button" onClick={() => setEditMainImage(i)} className="absolute left-1 top-1 rounded-full bg-black/60 p-1 text-white hover:text-[#ffd166]" title="Bëje foto kryesore">
@@ -853,7 +876,7 @@ export default function PostDetail() {
                               <button type="button" onClick={() => removeEditImage(i)} className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:text-red-300" title="Hiqe foton">
                                 <X className="h-3.5 w-3.5" />
                               </button>
-                              <img src={imgUrl} alt="" className="h-16 w-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                              <img src={imgUrl} alt="" className="h-16 w-full object-cover" style={getImageFocusStyle(focus)} onError={(e) => { e.currentTarget.style.display = "none"; }} />
                             </div>
                           );
                         })}
@@ -1005,32 +1028,38 @@ export default function PostDetail() {
             if (imgs.length === 0) return null;
             const mainIndex = Math.min(Number(job.main_image_index || 0), Math.max(0, imgs.length - 1));
             const mainImage = imgs[mainIndex] || imgs[0];
+            const mainFocus = getImageFocus(job.image_focus_json, mainImage);
             return (
               <div
                 data-swipe-back-ignore
                 className="mt-5 max-w-full space-y-2"
                 style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
               >
-                <a href={mainImage} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl border border-white/10 bg-white/5">
+                <button type="button" onClick={() => setPhotoViewerUrl(mainImage)} className="block w-full overflow-hidden rounded-xl border border-white/10 bg-white/5 text-left">
                   <img
                     src={mainImage}
                     alt="Foto kryesore"
                     className="max-h-[520px] w-full object-cover hover:opacity-95 transition-opacity cursor-pointer"
+                    style={getImageFocusStyle(mainFocus)}
                     onError={e => e.currentTarget.style.display = 'none'}
                   />
-                </a>
+                </button>
                 {imgs.length > 1 && (
                   <div className="flex gap-2 overflow-x-auto pb-1">
-                    {imgs.map((imgUrl, i) => (
-                      <a key={i} href={imgUrl} target="_blank" rel="noopener noreferrer" className={`shrink-0 overflow-hidden rounded-lg border ${i === mainIndex ? "border-[#9bffd6]" : "border-white/10"} bg-white/5`}>
-                        <img
-                          src={imgUrl}
-                          alt={`foto ${i + 1}`}
-                          className="h-16 w-20 object-cover hover:opacity-90 transition-opacity cursor-pointer"
-                          onError={e => e.currentTarget.style.display = 'none'}
-                        />
-                      </a>
-                    ))}
+                    {imgs.map((imgUrl, i) => {
+                      const focus = getImageFocus(job.image_focus_json, imgUrl);
+                      return (
+                        <button key={i} type="button" onClick={() => setPhotoViewerUrl(imgUrl)} className={`shrink-0 overflow-hidden rounded-lg border ${i === mainIndex ? "border-[#9bffd6]" : "border-white/10"} bg-white/5`}>
+                          <img
+                            src={imgUrl}
+                            alt={`foto ${i + 1}`}
+                            className="h-16 w-20 object-cover hover:opacity-90 transition-opacity cursor-pointer"
+                            style={getImageFocusStyle(focus)}
+                            onError={e => e.currentTarget.style.display = 'none'}
+                          />
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1590,6 +1619,28 @@ export default function PostDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {photoViewerUrl && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4"
+          onClick={() => setPhotoViewerUrl("")}
+        >
+          <button
+            type="button"
+            onClick={() => setPhotoViewerUrl("")}
+            className="absolute right-4 top-4 rounded-full border border-white/20 bg-black/60 p-2 text-white hover:bg-white/10"
+            aria-label="Mbyll foton"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <img
+            src={photoViewerUrl}
+            alt="Foto e njoftimit"
+            className="max-h-[90vh] max-w-[96vw] rounded-xl object-contain"
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

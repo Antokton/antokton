@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import ImageFocusControls from "@/components/media/ImageFocusControls";
+import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, updateImageFocus } from "@/lib/imageFocus";
 
 /* ─── KATEGORITE ─── */
 const CATEGORIES = [
@@ -46,6 +48,7 @@ function ListingCard({ job, user }) {
   const price = job.salary_info || "";
   const gallery = Array.isArray(job.image_urls) ? job.image_urls : [];
   const thumbnail = job.image_url || gallery[Math.min(Number(job.main_image_index || 0), Math.max(0, gallery.length - 1))] || gallery[0] || "";
+  const thumbnailFocus = getImageFocus(job.image_focus_json, thumbnail);
   const detailUrl = `/PostDetail?id=${job.id}`;
   const publicContactUrl = job.show_author_profile_url === true ? (job.author_profile_url || job.import_author_profile_url || "") : "";
   const canContact = Boolean(job.phone_number || publicContactUrl);
@@ -111,7 +114,7 @@ function ListingCard({ job, user }) {
       {/* Image */}
       <div className="relative aspect-square bg-[#2a3347] overflow-hidden">
         {thumbnail ? (
-          <img src={thumbnail} alt={job.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          <img src={thumbnail} alt={job.title} className="w-full h-full object-cover transition-transform duration-300" style={getImageFocusStyle(thumbnailFocus)} />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <ShoppingBag className="w-10 h-10 text-white/20" />
@@ -229,6 +232,7 @@ function ImportModal({ onClose, onImported, user }) {
       image_urls: images,
       main_image_index: nextMain,
       image_url: images[nextMain] || "",
+      image_focus_json: pruneImageFocusMap(prev?.image_focus_json, images),
     }));
   };
 
@@ -260,6 +264,16 @@ function ImportModal({ onClose, onImported, user }) {
     }
   };
 
+  const selectedImportImage = (extracted?.image_urls || [])[Math.min(Number(extracted?.main_image_index || 0), Math.max((extracted?.image_urls || []).length - 1, 0))] || "";
+
+  const updateImportImageFocus = (focus) => {
+    if (!selectedImportImage) return;
+    setExtracted((prev) => ({
+      ...prev,
+      image_focus_json: updateImageFocus(prev?.image_focus_json, selectedImportImage, focus),
+    }));
+  };
+
   // Force body scroll when modal open (override any layout overflow:hidden)
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -282,6 +296,7 @@ function ImportModal({ onClose, onImported, user }) {
           image_urls: Array.isArray(imported.image_urls) ? imported.image_urls.slice(0, 6) : imported.image_url ? [imported.image_url] : [],
           main_image_index: 0,
           image_url: (Array.isArray(imported.image_urls) && imported.image_urls[0]) || imported.image_url || "",
+          image_focus_json: pruneImageFocusMap(imported.image_focus_json, Array.isArray(imported.image_urls) ? imported.image_urls.slice(0, 6) : imported.image_url ? [imported.image_url] : []),
           source_url: imported.source_url || url.trim(),
           import_source_url: imported.import_source_url || imported.source_url || url.trim(),
           import_author_profile_url: imported.import_author_profile_url || imported.author_profile_url || "",
@@ -308,6 +323,7 @@ function ImportModal({ onClose, onImported, user }) {
     const phoneNumber = normalizeInternationalPhone(extracted.phone_number);
     const images = Array.isArray(extracted.image_urls) ? extracted.image_urls.slice(0, 6) : [];
     const mainIndex = Math.min(Number(extracted.main_image_index || 0), Math.max(0, images.length - 1));
+    const imageFocus = pruneImageFocusMap(extracted.image_focus_json, images);
     setLoading(true);
     try {
       await base44.entities.Job.create({
@@ -315,6 +331,7 @@ function ImportModal({ onClose, onImported, user }) {
         image_urls: images,
         main_image_index: mainIndex,
         image_url: images[mainIndex] || extracted.image_url || "",
+        image_focus_json: imageFocus,
         phone_number: phoneNumber || "",
         source_url: extracted.source_url || url,
         author_profile_url: extracted.author_profile_url || "",
@@ -428,18 +445,24 @@ function ImportModal({ onClose, onImported, user }) {
                     <label className="text-white/40 text-xs block">Fotot ({Math.min(extracted.image_urls.length, 6)}/6)</label>
                     <div className="overflow-hidden rounded-xl border border-white/10 bg-[#1c2333]">
                       <img
-                        src={extracted.image_urls[extracted.main_image_index || 0]}
+                        src={selectedImportImage}
                         alt="Foto kryesore"
                         className="h-52 w-full object-cover"
+                        style={getImageFocusStyle(getImageFocus(extracted.image_focus_json, selectedImportImage))}
                         onError={e => e.currentTarget.style.display='none'}
                       />
                     </div>
+                    <ImageFocusControls
+                      value={getImageFocus(extracted.image_focus_json, selectedImportImage)}
+                      onChange={updateImportImageFocus}
+                    />
                     <div className="grid grid-cols-3 gap-2">
                       {extracted.image_urls.slice(0, 6).map((imgUrl, i) => {
                         const selected = Number(extracted.main_image_index || 0) === i;
+                        const focus = getImageFocus(extracted.image_focus_json, imgUrl);
                         return (
                           <div key={`${imgUrl}-${i}`} className={`relative overflow-hidden rounded-lg border ${selected ? "border-[#9bffd6]" : "border-white/10"}`}>
-                            <img src={imgUrl} alt="" className="h-16 w-full object-cover" onError={e => e.currentTarget.style.display='none'} />
+                            <img src={imgUrl} alt="" className="h-16 w-full object-cover" style={getImageFocusStyle(focus)} onError={e => e.currentTarget.style.display='none'} />
                             <button type="button" onClick={() => setMainImage(i)} className={`absolute left-1 top-1 rounded-full p-1 ${selected ? "bg-[#9bffd6] text-[#0b1020]" : "bg-black/60 text-white"}`}>
                               <Star className={`h-3 w-3 ${selected ? "fill-current" : ""}`} />
                             </button>

@@ -15,6 +15,8 @@ import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
 import { hasEarlyMemberPremiumAccess } from "@/utils/premiumAccess";
 import { requireCompleteProfileForInteraction } from "@/lib/profileCompleteness";
 import { useLocation } from "react-router-dom";
+import ImageFocusControls from "@/components/media/ImageFocusControls";
+import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, updateImageFocus } from "@/lib/imageFocus";
 
 const ALL_PROFESSIONS = [
   "3D Artist","Administrator","Agjent Shitjesh","Agjent Sigurimesh","Agjent Udhëtimesh",
@@ -303,7 +305,7 @@ const emptyForm = {
   property_subcategory: "", property_deal_type: "", service_field: "",
   education_field: "", education_level_target: "",
   pazar_category: "", pazar_subcategory: "",
-  image_url: "", image_urls: [], main_image_index: 0,
+  image_url: "", image_urls: [], main_image_index: 0, image_focus_json: {},
   certifications: [],
   halal_standard: "",
   is_halal_compliant: false,
@@ -428,7 +430,23 @@ export default function CreatePost() {
   const removePazarImage = (index) => {
     const images = (Array.isArray(form.image_urls) ? form.image_urls : []).filter((_, i) => i !== index);
     const nextMain = Math.min(Number(form.main_image_index || 0), Math.max(0, images.length - 1));
-    setForm({ ...form, image_urls: images, main_image_index: nextMain, image_url: images[nextMain] || "" });
+    setForm({
+      ...form,
+      image_urls: images,
+      main_image_index: nextMain,
+      image_url: images[nextMain] || "",
+      image_focus_json: pruneImageFocusMap(form.image_focus_json, images),
+    });
+  };
+
+  const selectedPazarImage = (form.image_urls || [])[Math.min(Number(form.main_image_index || 0), Math.max((form.image_urls || []).length - 1, 0))] || "";
+
+  const updatePazarImageFocus = (focus) => {
+    if (!selectedPazarImage) return;
+    setForm((current) => ({
+      ...current,
+      image_focus_json: updateImageFocus(current.image_focus_json, selectedPazarImage, focus),
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -517,12 +535,14 @@ export default function CreatePost() {
       const publishStatus = isAdminOrMod ? "approved" : "pending";
       const pazarImages = form.category === "pazar" && Array.isArray(form.image_urls) ? form.image_urls.slice(0, 6) : [];
       const mainImageIndex = Math.min(Number(form.main_image_index || 0), Math.max(0, pazarImages.length - 1));
+      const imageFocus = pruneImageFocusMap(form.image_focus_json, pazarImages);
 
       const createdJob = await base44.entities.Job.create({
         ...form,
         image_urls: pazarImages,
         main_image_index: mainImageIndex,
         image_url: pazarImages[mainImageIndex] || form.image_url || "",
+        image_focus_json: imageFocus,
         profession: finalProfession,
         country: finalCountry,
         zone: (form.zones || []).join(", "), // ruaj si string për retrokompatibilitet
@@ -762,17 +782,23 @@ export default function CreatePost() {
               <div className="space-y-3">
                 <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0b1020]">
                   <img
-                    src={(form.image_urls || [])[form.main_image_index || 0]}
+                    src={selectedPazarImage}
                     alt="Foto kryesore"
                     className="h-64 w-full object-cover"
+                    style={getImageFocusStyle(getImageFocus(form.image_focus_json, selectedPazarImage))}
                   />
                 </div>
+                <ImageFocusControls
+                  value={getImageFocus(form.image_focus_json, selectedPazarImage)}
+                  onChange={updatePazarImageFocus}
+                />
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                   {(form.image_urls || []).map((url, index) => {
                     const selected = Number(form.main_image_index || 0) === index;
+                    const focus = getImageFocus(form.image_focus_json, url);
                     return (
                       <div key={`${url}-${index}`} className={`relative overflow-hidden rounded-lg border ${selected ? "border-[#9bffd6]" : "border-white/10"} bg-[#0b1020]`}>
-                        <img src={url} alt={`Foto ${index + 1}`} className="h-20 w-full object-cover" />
+                        <img src={url} alt={`Foto ${index + 1}`} className="h-20 w-full object-cover" style={getImageFocusStyle(focus)} />
                         <button
                           type="button"
                           onClick={() => setPazarMainImage(index)}
