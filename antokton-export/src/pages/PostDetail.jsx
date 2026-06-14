@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
-import { MapPin, Clock, MessageCircle, Send, ArrowLeft, Phone, Briefcase, Flag, Share2, Copy, Users as UsersIcon, X, Pencil, Check, MoreVertical, ExternalLink, Link2, Eye, Upload } from "lucide-react";
+import { MapPin, Clock, MessageCircle, Send, ArrowLeft, Phone, Briefcase, Flag, Share2, Copy, Users as UsersIcon, X, Pencil, Check, MoreVertical, ExternalLink, Link2, Eye, Upload, Star } from "lucide-react";
 import LocationPicker from "../components/job/LocationPicker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
@@ -450,6 +450,16 @@ export default function PostDetail() {
   };
 
   const startEditJob = () => {
+    const editImages = (Array.isArray(job.image_urls) && job.image_urls.length > 0
+      ? job.image_urls
+      : job.image_url
+        ? [job.image_url]
+        : []
+    ).filter(Boolean).slice(0, 6);
+    const editMainImageIndex = Math.min(
+      Math.max(Number.parseInt(job.main_image_index, 10) || 0, 0),
+      Math.max(editImages.length - 1, 0)
+    );
     setEditForm({
       title: job.title,
       description: job.description,
@@ -469,9 +479,58 @@ export default function PostDetail() {
       show_source_url: Boolean(job.show_source_url),
       author_profile_url: job.author_profile_url || '',
       import_author_profile_url: job.import_author_profile_url || job.author_profile_url || '',
-      show_author_profile_url: Boolean(job.show_author_profile_url)
+      show_author_profile_url: Boolean(job.show_author_profile_url),
+      image_urls: editImages,
+      main_image_index: editMainImageIndex,
+      image_url: editImages[editMainImageIndex] || job.image_url || ''
     });
     setIsEditing(true);
+  };
+
+  const setEditMainImage = (index) => {
+    setEditForm((current) => {
+      const images = Array.isArray(current.image_urls) ? current.image_urls : [];
+      return {
+        ...current,
+        main_image_index: index,
+        image_url: images[index] || ""
+      };
+    });
+  };
+
+  const removeEditImage = (index) => {
+    setEditForm((current) => {
+      const images = (Array.isArray(current.image_urls) ? current.image_urls : []).filter((_, i) => i !== index);
+      const mainImageIndex = Math.min(Number(current.main_image_index || 0), Math.max(images.length - 1, 0));
+      return {
+        ...current,
+        image_urls: images,
+        main_image_index: mainImageIndex,
+        image_url: images[mainImageIndex] || ""
+      };
+    });
+  };
+
+  const handleEditImageUpload = async (event) => {
+    const currentImages = Array.isArray(editForm.image_urls) ? editForm.image_urls : [];
+    const slots = Math.max(0, 6 - currentImages.length);
+    const files = Array.from(event.target.files || []).slice(0, slots);
+    event.target.value = "";
+    if (!files.length) return;
+
+    try {
+      const uploads = await Promise.all(files.map((file) => base44.integrations.Core.UploadFile({ file })));
+      const nextImages = [...currentImages, ...uploads.map((item) => item?.file_url).filter(Boolean)].slice(0, 6);
+      const mainImageIndex = Math.min(Number(editForm.main_image_index || 0), Math.max(nextImages.length - 1, 0));
+      setEditForm((current) => ({
+        ...current,
+        image_urls: nextImages,
+        main_image_index: mainImageIndex,
+        image_url: nextImages[mainImageIndex] || ""
+      }));
+    } catch (error) {
+      alert(error?.message || "Fotot nuk u ngarkuan. Provo përsëri.");
+    }
   };
 
   const editJobMutation = useMutation({
@@ -484,6 +543,14 @@ export default function PostDetail() {
       if (phoneNumber && !isValidInternationalPhone(phoneNumber)) {
         throw new Error(getInternationalPhoneError("Numri i telefonit"));
       }
+      const editImages = (Array.isArray(editForm.image_urls) ? editForm.image_urls : editForm.image_url ? [editForm.image_url] : [])
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+        .slice(0, 6);
+      const editMainImageIndex = Math.min(
+        Math.max(Number.parseInt(editForm.main_image_index, 10) || 0, 0),
+        Math.max(editImages.length - 1, 0)
+      );
       await base44.entities.Job.update(jobId, {
         ...editForm,
         address: editForm.address || editForm.city || "",
@@ -495,6 +562,9 @@ export default function PostDetail() {
         author_profile_url: editForm.author_profile_url || "",
         import_author_profile_url: editForm.import_author_profile_url || editForm.author_profile_url || "",
         show_author_profile_url: editForm.show_author_profile_url === true,
+        image_urls: editImages,
+        main_image_index: editMainImageIndex,
+        image_url: editImages[editMainImageIndex] || "",
       });
     },
     onSuccess: () => {
@@ -754,6 +824,48 @@ export default function PostDetail() {
                 <div className="space-y-1 p-3 rounded-lg border border-amber-500/30 bg-amber-500/5">
                   <Label className="text-amber-300 text-xs font-semibold">🛡️ Emri i Postuesit (Admin/Mod)</Label>
                   <Input value={editForm.poster_name || ''} onChange={e => setEditForm({...editForm, poster_name: e.target.value})} placeholder="Emri që shfaqet publikisht..." className="bg-white/5 border-white/10 text-white" />
+                </div>
+              )}
+              {(editForm.category === "pazar" || (Array.isArray(editForm.image_urls) && editForm.image_urls.length > 0)) && (
+                <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label className="text-white/70 text-xs font-semibold">Fotot për Pazar ({Math.min((editForm.image_urls || []).length, 6)}/6)</Label>
+                    <span className="text-white/40 text-[11px]">Ylli cakton foton kryesore</span>
+                  </div>
+                  {(editForm.image_urls || []).length > 0 && (
+                    <>
+                      <div className="overflow-hidden rounded-lg border border-white/10 bg-black/20">
+                        <img
+                          src={(editForm.image_urls || [])[Math.min(Number(editForm.main_image_index || 0), (editForm.image_urls || []).length - 1)]}
+                          alt="Foto kryesore"
+                          className="h-44 w-full object-cover"
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                        {(editForm.image_urls || []).slice(0, 6).map((imgUrl, i) => {
+                          const selected = Number(editForm.main_image_index || 0) === i;
+                          return (
+                            <div key={`${imgUrl}-${i}`} className={`relative overflow-hidden rounded-lg border ${selected ? "border-[#9bffd6]" : "border-white/10"}`}>
+                              <button type="button" onClick={() => setEditMainImage(i)} className="absolute left-1 top-1 rounded-full bg-black/60 p-1 text-white hover:text-[#ffd166]" title="Bëje foto kryesore">
+                                <Star className={`h-3.5 w-3.5 ${selected ? "fill-[#ffd166] text-[#ffd166]" : ""}`} />
+                              </button>
+                              <button type="button" onClick={() => removeEditImage(i)} className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:text-red-300" title="Hiqe foton">
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                              <img src={imgUrl} alt="" className="h-16 w-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                  <label className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/75 hover:bg-white/10 ${(editForm.image_urls || []).length >= 6 ? "pointer-events-none opacity-45" : ""}`}>
+                    <Upload className="h-4 w-4" />
+                    Ngarko foto për Pazar
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={handleEditImageUpload} disabled={editJobMutation.isPending || (editForm.image_urls || []).length >= 6} />
+                  </label>
+                  <p className="text-white/40 text-[11px]">Mund të ruhen deri në 6 foto; fotoja me yll shfaqet si kryesore dhe thumbnail.</p>
                 </div>
               )}
               <div className="space-y-1">
