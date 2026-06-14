@@ -19,8 +19,8 @@ const DEFAULT_NAV = [
   {
     id: "jobs", label: "Punë në Europë", page: "Feed", hasSubmenu: true, visible: true,
     submenu: [
-      { id: "jobs-ofroj", label: "Ofroj punë", url: "/Feed?category=pune&job_type=ofroj", visible: true },
-      { id: "jobs-kerkoj", label: "Kërkoj punë", url: "/Feed?category=pune&job_type=kerkoj", visible: true },
+      { id: "jobs-ofroj", label: "Ofroj punë", url: "/Pune?job_type=ofroj", visible: true },
+      { id: "jobs-kerkoj", label: "Kërkoj punë", url: "/Pune?job_type=kerkoj", visible: true },
       { id: "sherbime-ofroj", label: "Ofroj shërbim", url: "/Feed?category=sherbime&job_type=ofroj", visible: true },
       { id: "sherbime-kerkoj", label: "Kërkoj shërbim", url: "/Feed?category=sherbime&job_type=kerkoj", visible: true },
       { id: "juridike", label: "Ndihmë Juridike", url: "/Feed?category=juridike", visible: true },

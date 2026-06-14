@@ -11,9 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createPageUrl } from "../utils";
 
-export default function Feed() {
+export default function Feed({ fixedCategory = null }) {
   const urlParams = new URLSearchParams(window.location.search);
-  const initialCategory = urlParams.get("category") || "all";
+  const initialCategory = fixedCategory || urlParams.get("category") || "all";
   const initialJobType = urlParams.get("job_type") || "all";
   const initialSub = urlParams.get("sub") || "all";
   const initialField = urlParams.get("field") || "all";
@@ -128,8 +128,10 @@ export default function Feed() {
     alert("Kërkimi u ruajt me sukses! Do të merrni njoftime kur të postohen njoftime që përputhen.");
   };
 
-  // Merge charity calls into feed when category is "bamiresi" or "all"
+  // Merge charity calls into feed when category is "bamiresi" or "all".
+  // /Pune uses fixedCategory="pune" and must never show other post categories.
   const allFeedItems = useMemo(() => {
+    if (fixedCategory === "pune") return jobs.filter((job) => job.category === "pune");
     const charityCalls = charityCallsRaw.map(c => ({
       ...c,
       _isCharityCall: true,
@@ -142,11 +144,12 @@ export default function Feed() {
     if (filters.category === "bamiresi") return charityCalls;
     if (filters.category === "all") return [...jobs, ...charityCalls];
     return jobs;
-  }, [jobs, charityCallsRaw, filters.category]);
+  }, [jobs, charityCallsRaw, filters.category, fixedCategory]);
 
   const filteredJobs = useMemo(() => {
     let filtered = allFeedItems.filter(job => {
-      if (filters.category !== "all" && job.category !== filters.category) return false;
+      if (fixedCategory && job.category !== fixedCategory) return false;
+      if (!fixedCategory && filters.category !== "all" && job.category !== filters.category) return false;
       if (filters.profession !== "all" && job.profession !== filters.profession) return false;
 
       // Job type filter (ofroj / kerkoj)
@@ -203,7 +206,7 @@ export default function Feed() {
       }
 
       // Property sub-filters
-      if (filters.category === "prona") {
+      if (!fixedCategory && filters.category === "prona") {
         if (filters.property_subcategory && filters.property_subcategory !== "all" && job.property_subcategory !== filters.property_subcategory) return false;
         if (filters.property_transaction && filters.property_transaction !== "all" && job.property_transaction !== filters.property_transaction) return false;
       }
@@ -251,7 +254,7 @@ export default function Feed() {
     }
 
     return filtered;
-  }, [jobs, filters]);
+  }, [allFeedItems, filters, fixedCategory]);
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
@@ -259,8 +262,8 @@ export default function Feed() {
       <div className="mb-3">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg sm:text-2xl font-black text-white tracking-wide uppercase">Njoftime</h1>
-            <p className="text-white/65 text-xs sm:text-sm">Gjej mundësi pune, shërbime dhe më shumë</p>
+            <h1 className="text-lg sm:text-2xl font-black text-white tracking-wide uppercase">{fixedCategory === "pune" ? "Punë" : "Njoftime"}</h1>
+            <p className="text-white/65 text-xs sm:text-sm">{fixedCategory === "pune" ? "Gjej mundësi pune dhe rekrutime" : "Gjej mundësi pune, shërbime dhe më shumë"}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {canImportPosts && (

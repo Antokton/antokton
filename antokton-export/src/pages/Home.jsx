@@ -1000,7 +1000,7 @@ export default function Home() {
 
       <nav className="sr-only" aria-label="Lidhje kryesore për kërkuesit">
         <h2>Punë në Europë</h2>
-        <Link to="/Feed">Punë</Link>
+        <Link to="/Pune">Punë</Link>
         <Link to="/Pune">Punë në Europë</Link>
         <h2>Pazar</h2>
         <Link to="/Pazar">Pazar</Link>

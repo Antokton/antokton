@@ -687,13 +687,13 @@ export default function Layout({ children, currentPageName }) {
                     return (
                       <DropdownMenu key={item.page}>
                         <SplitNavTrigger
-                          to="/Feed?category=pune"
+                          to="/Pune"
                           label={item.name}
                           active={["Feed","CreatePost","ApplicationsDashboard"].includes(currentPageName)}
                         />
                         <DropdownMenuContent align="start" className="w-48 bg-[#0b1020] border-white/10">
-                          <DropdownMenuItem asChild><Link to="/Feed?category=pune&job_type=ofroj" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Briefcase className="w-4 h-4" /> Oferta pune</Link></DropdownMenuItem>
-                          <DropdownMenuItem asChild><Link to="/Feed?category=pune&job_type=kerkoj" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Briefcase className="w-4 h-4" /> Kërkesa pune</Link></DropdownMenuItem>
+                          <DropdownMenuItem asChild><Link to="/Pune?job_type=ofroj" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Briefcase className="w-4 h-4" /> Oferta pune</Link></DropdownMenuItem>
+                          <DropdownMenuItem asChild><Link to="/Pune?job_type=kerkoj" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Briefcase className="w-4 h-4" /> Kërkesa pune</Link></DropdownMenuItem>
                           {isAuth && (<><DropdownMenuSeparator className="bg-white/10" />
                             <DropdownMenuItem asChild><Link to="/ApplicationsDashboard" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><User className="w-4 h-4" /> {t("Aplikimet e mia","My Applications")}</Link></DropdownMenuItem>
                             {hasPostedJobs && <DropdownMenuItem asChild><Link to="/Feed?filter=my-jobs" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Briefcase className="w-4 h-4" /> {t("Njoftimet e mia","My Jobs")}</Link></DropdownMenuItem>}
@@ -1063,7 +1063,7 @@ export default function Layout({ children, currentPageName }) {
                 <>
                   <div>
                     <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.07] transition-all">
-                      <Link to="/Feed?category=pune" onClick={()=>setMenuOpen(false)} className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5">
+                      <Link to="/Pune" onClick={()=>setMenuOpen(false)} className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5">
                         <Briefcase className="w-3.5 h-3.5" /><span className="text-sm font-medium">{t("Punë","Jobs")}</span>
                       </Link>
                       <button type="button" aria-label="Hap nënmenutë për Punë" onClick={(event) => { event.preventDefault(); event.stopPropagation(); toggleMobileMainMenu("jobs"); }} className="shrink-0 px-3 py-1.5 text-white/80 hover:text-white">
@@ -1072,8 +1072,8 @@ export default function Layout({ children, currentPageName }) {
                     </div>
                     {mobileSubmenuOpen.jobs && (
                       <div className="ml-5 mt-0.5 space-y-0.5">
-                        <Link to="/Feed?category=pune&job_type=ofroj" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm text-white hover:text-white/60"><Briefcase className="w-3.5 h-3.5" /> Oferta pune</Link>
-                        <Link to="/Feed?category=pune&job_type=kerkoj" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm text-white hover:text-white/60"><Briefcase className="w-3.5 h-3.5" /> Kërkesa pune</Link>
+                        <Link to="/Pune?job_type=ofroj" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm text-white hover:text-white/60"><Briefcase className="w-3.5 h-3.5" /> Oferta pune</Link>
+                        <Link to="/Pune?job_type=kerkoj" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm text-white hover:text-white/60"><Briefcase className="w-3.5 h-3.5" /> Kërkesa pune</Link>
                         {isAuth && <><Link to="/CreatePost" onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm text-white hover:text-white/60"><PlusCircle className="w-3.5 h-3.5" /> {t("Posto Njoftim","Post Job")}</Link></>}
                       </div>
                     )}
@@ -1376,7 +1376,7 @@ export default function Layout({ children, currentPageName }) {
             <div>
               <h4 style={{ color: '#ffffff' }} className="text-xs font-bold uppercase tracking-wider mb-4">Njoftime</h4>
               <div className="space-y-2.5">
-                <Link to={createPageUrl("Feed") + "?category=pune"} className="block text-sm text-white hover:text-white/60 transition-colors">Punë</Link>
+                <Link to="/Pune" className="block text-sm text-white hover:text-white/60 transition-colors">Punë</Link>
                 <Link to="/Pazar" className="block text-sm text-white hover:text-white/60 transition-colors">Pazar</Link>
                 <Link to={createPageUrl("Feed") + "?category=sherbime"} className="block text-sm text-white hover:text-white/60 transition-colors">Shërbime</Link>
                 <Link to="/Bamiresi" className="block text-sm text-white hover:text-white/60 transition-colors">Bamirësi</Link>

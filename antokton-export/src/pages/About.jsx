@@ -63,7 +63,7 @@ export default function About() {
   };
 
   const defaultProjects = [
-    { icon: "Briefcase", title: "Punë në Europë", desc: "Portal njoftimesh pune për diasporën shqiptare në Europë dhe më gjerë.", color: "bg-blue-50 text-blue-500", link: createPageUrl("Feed") + "?category=pune" },
+    { icon: "Briefcase", title: "Punë në Europë", desc: "Portal njoftimesh pune për diasporën shqiptare në Europë dhe më gjerë.", color: "bg-blue-50 text-blue-500", link: "/Pune" },
     { icon: "Radio", title: "Antokton TV & Radio", desc: "Përmbajtje mediatike komunitare — lajme, intervista dhe programe.", color: "bg-purple-50 text-purple-500", link: createPageUrl("Media") },
     { icon: "Heart", title: "Fitra Antokton", desc: "Bamirësi dhe solidaritet — mbështetje për ata që kanë nevojë.", color: "bg-rose-50 text-rose-500", link: createPageUrl("Bamiresi") },
     { icon: "Users", title: "Komunitet", desc: "Ndërveprim social, komente, diskutime dhe bashkëpunim.", color: "bg-amber-50 text-amber-500", link: createPageUrl("Statuset") },

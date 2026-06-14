@@ -1891,7 +1891,7 @@ const SIDEBAR_LINKS = [
   { icon: Users, label: "Anëtarë", to: "/Members" },
   { icon: ShoppingBag, label: "Pazar", to: "/Pazar" },
   { icon: Calendar, label: "Ngjarje", to: "/Events" },
-  { icon: Briefcase, label: "Punë", to: "/Feed?category=pune" },
+  { icon: Briefcase, label: "Punë", to: "/Pune" },
   { icon: Newspaper, label: "Media", to: "/Media" },
 ];
 

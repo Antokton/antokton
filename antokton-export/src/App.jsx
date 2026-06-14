@@ -112,7 +112,7 @@ const AuthenticatedApp = () => {
       <Route path="/Bamiresi" element={<LayoutWrapper currentPageName="Bamiresi"><BamiresiFull /></LayoutWrapper>} />
       <Route path="/Statuset" element={<LayoutWrapper currentPageName="Statuset"><Statuset /></LayoutWrapper>} />
       <Route path="/Pazar" element={<LayoutWrapper currentPageName="Pazar"><Pazar /></LayoutWrapper>} />
-      <Route path="/Pune" element={<LayoutWrapper currentPageName="Feed"><Pages.Feed /></LayoutWrapper>} />
+      <Route path="/Pune" element={<LayoutWrapper currentPageName="Feed"><Pages.Feed fixedCategory="pune" /></LayoutWrapper>} />
       <Route path="/ImportPosts" element={<LayoutWrapper currentPageName="ImportPosts"><ImportPosts /></LayoutWrapper>} />
       <Route path="/admin/import-assistant" element={<LayoutWrapper currentPageName="ImportPosts"><ImportPosts /></LayoutWrapper>} />
       <Route path="/admin/import-assistant/queue" element={<LayoutWrapper currentPageName="ImportPosts"><ImportPosts defaultTab="table" /></LayoutWrapper>} />

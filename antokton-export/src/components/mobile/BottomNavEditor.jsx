@@ -28,7 +28,7 @@ const AVAILABLE_PATHS = [
   { label: "Partnerë", path: "/Partners" },
   { label: "Njoftimet", path: "/NotificationCenter" },
   { label: "Pazar", path: "/Pazar" },
-  { label: "Punë (Feed)", path: "/Feed?category=pune" },
+  { label: "Punë", path: "/Pune" },
   { label: "Prona (Feed)", path: "/Feed?category=prona" },
   { label: "Shërbime (Feed)", path: "/Feed?category=sherbime" },
   { label: "Posto Njoftim", path: "/CreatePost" },
