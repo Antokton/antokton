@@ -1,5 +1,7 @@
 import { extractImportedPostFields, sanitizeImportedText } from "@/lib/importExtractors";
 
+const STAFF_DEFAULT_POSTER_NAME = "Koordinator Projekti";
+
 const ANTOKTON_CITY_RE = /\b(tiran[eë]?|tirana|durr[eë]s|durres|shkod[eë]r|shkoder|elbasan|vlor[eë]|vlore|kor[çc][eë]|korce|prishtin[eë]?|prishtina|prizren|pej[eë]|gjakov[eë]|gjilan|ferizaj|budva|ulqin|tivar|tuzi|plav[eë]|guci|preshev[eë]|bujanovc|medvegj[eë]|shkup|tetov[eë]|gostivar|kumanov[eë]|oh[eë]r|strug[eë]|janin[eë]|filat|[çc]am[eë]ri)\b/i;
 
 export function normalizeImportedCountry(post = {}) {
@@ -78,7 +80,7 @@ export function buildJobPayloadFromImportedPost(post = {}, user = {}) {
     imported_by: post.imported_by || user.email || "",
     importer_email: user.email || post.importer_email || post.imported_by || "",
     import_original_text: prepared.import_original_text || cleanOriginalText,
-    poster_name: post.author_name || "",
+    poster_name: post.poster_name || post.platform_poster_name || STAFF_DEFAULT_POSTER_NAME,
     image_urls: images,
     main_image_index: mainImageIndex,
     image_url: images[mainImageIndex] || "",

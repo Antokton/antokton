@@ -37,6 +37,7 @@ const PHONE_APPS = [
   { value: "signal", label: "Signal" },
   { value: "tjeter", label: "Tjetër" },
 ];
+const STAFF_DEFAULT_POSTER_NAME = "Koordinator Projekti";
 
 const PROFESSION_KEYWORDS = [
   "punetor", "punëtor", "elektricist", "hidraulik", "shofer", "kuzhinier", "kamerier",
@@ -352,7 +353,7 @@ const normalizeDraft = (rawText, draft = {}, fallbackUrl = "", jobType = "ofroj"
   );
   const decodedDraft = {
     ...draft,
-    poster_name: "",
+    poster_name: sanitizeImportedText(draft.poster_name || ""),
     author_profile_url: "",
     import_author_profile_url: "",
     title: sanitizeImportedText(draft.title || ""),
@@ -603,7 +604,7 @@ ${text || importedData.description || importedData.title || ""}`;
     const prepared = normalizeDraft(draft.import_original_text || draft.original_text || draft.description || "", draft, url.trim(), draft.job_type || jobType);
     const contactUrl = String(prepared.author_profile_url || prepared.import_author_profile_url || authorUrl || "").trim();
     const sourceUrl = prepared.source_url || url.trim();
-    const platformPosterName = isStaff ? String(draft.poster_name || "").trim() : "";
+    const platformPosterName = isStaff ? String(draft.poster_name || STAFF_DEFAULT_POSTER_NAME).trim() : "";
     const images = (Array.isArray(prepared.image_urls) ? prepared.image_urls : prepared.image_url ? [prepared.image_url] : [])
       .map((item) => String(item || "").trim())
       .filter(Boolean)
@@ -940,9 +941,9 @@ ${text || importedData.description || importedData.title || ""}`;
               <div>
                 <label className="text-white/50 text-xs mb-1 block">Emri i postuesit në platformë (opsional)</label>
                 <Input
-                  value={data.poster_name || ""}
+                  value={data.poster_name || STAFF_DEFAULT_POSTER_NAME}
                   onChange={(e) => set("poster_name", e.target.value)}
-                  placeholder="Lëre bosh për ta përdorur emrin e llogarisë"
+                  placeholder={STAFF_DEFAULT_POSTER_NAME}
                   className="bg-white/5 border-white/10 text-white"
                   style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }}
                 />

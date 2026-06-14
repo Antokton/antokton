@@ -741,7 +741,7 @@ export default function PostDetail() {
                 <Label className="text-white/60 text-xs">Kategoria</Label>
                 <select value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})}
                   className="w-full rounded-md px-3 py-2 text-sm text-white border border-white/10" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                  {[{v:'pune',l:'Punë'},{v:'sherbime',l:'Shërbime'},{v:'prona',l:'Prona'},{v:'edukim',l:'Edukim'},{v:'bamiresi',l:'Bamirësi'},{v:'media',l:'Media'},{v:'pazar',l:'Pazar'}].map(c => (
+                  {[{v:'pune',l:'Punë'},{v:'sherbime',l:'Shërbime'},{v:'pazar',l:'Pazar'},{v:'edukim',l:'Edukim'},{v:'bamiresi',l:'Bamirësi'},{v:'media',l:'Media'}].map(c => (
                     <option key={c.v} value={c.v} className="bg-[#0b1020]">{c.l}</option>
                   ))}
                 </select>

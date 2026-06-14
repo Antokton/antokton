@@ -5,6 +5,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Loader2, Pencil, Trash2, Globe } from "lucide-react";
 import { CATEGORIES, LISTING_TYPES, SOURCES, STATUS_LABELS, STATUS_COLORS } from "./importConstants";
+
+const getCategoryLabel = (value) => {
+  if (value === "prona") return "Pazar";
+  return CATEGORIES.find(c => c.value === value)?.label || "—";
+};
 import { publishImportedPost } from "./publishImportedPost";
 import moment from "moment";
 
@@ -123,7 +128,7 @@ export default function ImportTable({ user, onEdit }) {
                     <p className="text-white/80 truncate">{post.edited_text?.slice(0, 60)}...</p>
                   </td>
                   <td className="px-3 py-2.5 text-white/70 whitespace-nowrap">{post.author_name || "—"}</td>
-                  <td className="px-3 py-2.5 text-white/70">{CATEGORIES.find(c => c.value === post.category)?.label || "—"}</td>
+                  <td className="px-3 py-2.5 text-white/70">{getCategoryLabel(post.category)}</td>
                   <td className="px-3 py-2.5 text-white/70 whitespace-nowrap">{post.country || "—"}</td>
                   <td className="px-3 py-2.5 text-white/70 whitespace-nowrap">{post.region || "—"}</td>
                   <td className="px-3 py-2.5 text-white/70 whitespace-nowrap">{post.city || "—"}</td>

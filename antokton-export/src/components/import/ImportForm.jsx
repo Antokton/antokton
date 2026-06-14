@@ -477,7 +477,7 @@ Kthe JSON me këto fusha.`;
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Image className="w-4 h-4 text-white/60" />
-            <span className="text-white font-semibold text-sm">Fotot ({Math.min((form.image_urls || []).length, 6)}/6)</span>
+            <span className="text-white font-semibold text-sm">Fotot për Pazar ({Math.min((form.image_urls || []).length, 6)}/6)</span>
           </div>
           <span className="text-white/40 text-xs">Për Pazar, ylli cakton thumbnail</span>
         </div>
@@ -511,7 +511,7 @@ Kthe JSON me këto fusha.`;
         )}
         <label className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/15 px-3 py-2.5 text-sm font-semibold text-white/75 hover:bg-white/10 ${(form.image_urls || []).length >= 6 ? "pointer-events-none opacity-45" : ""}`}>
           <Upload className="h-4 w-4" />
-          Ngarko foto
+          Ngarko foto për Pazar
           <input type="file" accept="image/*" multiple className="hidden" onChange={handleUploadImages} disabled={loading || (form.image_urls || []).length >= 6} />
         </label>
         <p className="text-white/40 text-xs">Mund të ruhen deri në 6 foto; fotoja me yll përdoret si kryesore në Pazar.</p>

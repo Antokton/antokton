@@ -285,6 +285,7 @@ const citiesByZone = {
 
 // Fjalë që mund të tregojnë mospërputhje me standardin etik
 const FLAGGED_WORDS = ["bar", "nightclub", "kazino", "alkool", "alkol", "disko", "casino", "pub", "night club", "strip"];
+const STAFF_DEFAULT_POSTER_NAME = "Koordinator Projekti";
 
 const containsFlaggedWords = (text) => {
   if (!text) return false;
@@ -359,6 +360,13 @@ export default function CreatePost() {
 
   const isAdminOrMod = user?.role === "admin" || user?.role === "moderator";
   const [customPosterName, setCustomPosterName] = useState("");
+  const [posterNameTouched, setPosterNameTouched] = useState(false);
+
+  useEffect(() => {
+    if (isAdminOrMod && !posterNameTouched && !customPosterName) {
+      setCustomPosterName(STAFF_DEFAULT_POSTER_NAME);
+    }
+  }, [isAdminOrMod, posterNameTouched, customPosterName]);
 
   useEffect(() => {
     const requestedCategory = new URLSearchParams(location.search).get("category");
@@ -491,7 +499,9 @@ export default function CreatePost() {
       const defaultName = user?.first_name && user?.surname
         ? `${user.first_name} ${user.surname}`
         : user?.first_name || user?.full_name || user?.email?.split('@')[0] || "Anonim";
-      const displayName = (isAdminOrMod && customPosterName.trim()) ? customPosterName.trim() : defaultName;
+      const displayName = isAdminOrMod
+        ? (customPosterName.trim() || STAFF_DEFAULT_POSTER_NAME)
+        : defaultName;
 
       const typedProfession = (form.profession || "").trim();
       const isKnownProfession = ALL_PROFESSIONS.some((item) => item.toLowerCase() === typedProfession.toLowerCase());
@@ -1201,12 +1211,15 @@ export default function CreatePost() {
               🛡️ Posto si (Admin/Moderator)
             </Label>
             <p className="text-xs text-white/50">
-              Lër bosh për të postuar me emrin tënd. Shkruaj emër tjetër nëse dëshiron që postimi të shfaqet nga një emër specifik.
+              Si parazgjedhje publikohet si Koordinator Projekti. Shkruaj “Administrator” ose emër tjetër nëse dëshiron shfaqje ndryshe.
             </p>
             <Input
               value={customPosterName}
-              onChange={e => setCustomPosterName(e.target.value)}
-              placeholder={`Lihet bosh → postohet si "${user?.first_name || user?.full_name || user?.email?.split('@')[0]}"`}
+              onChange={e => {
+                setPosterNameTouched(true);
+                setCustomPosterName(e.target.value);
+              }}
+              placeholder={STAFF_DEFAULT_POSTER_NAME}
               className="h-10"
               style={{ backgroundColor: 'var(--bg)', borderColor: 'rgba(251,191,36,0.3)', color: 'var(--text)' }}
             />

@@ -711,10 +711,29 @@ export default function Layout({ children, currentPageName }) {
                           label={item.name}
                           active={currentPageName==="Pazar"}
                         />
-                        <DropdownMenuContent align="start" className="w-48 bg-[#0b1020] border-white/10">
-                          <DropdownMenuItem asChild><Link to="/Pazar" className="flex items-center gap-2 cursor-pointer text-[#8ab4ff] font-semibold text-white/80 hover:text-white">Të gjitha</Link></DropdownMenuItem>
-                          {[{key:"makina",label:"Makina"},{key:"mobilje",label:"Mobilje"},{key:"shtepi",label:"Shtëpi & Kuzhinë"},{key:"elektronike",label:"Elektronikë"},{key:"veshje",label:"Veshje"},{key:"aksesore",label:"Aksesorë"},{key:"bicikleta",label:"Bicikleta & Sport"},{key:"mjete",label:"Mjete & Pajisje"},{key:"art",label:"Art & Koleksione"},{key:"dhurime",label:"Dhurime falas"}].map(c => (
-                            <DropdownMenuItem key={c.key} asChild><Link to={`/Pazar?category=${c.key}`} className="cursor-pointer text-white/80 hover:text-white">{c.label}</Link></DropdownMenuItem>
+                        <DropdownMenuContent align="start" className="max-h-[70vh] w-72 overflow-y-auto bg-[#0b1020] border-white/10">
+                          <DropdownMenuItem asChild>
+                            <Link to="/Pazar" className="flex items-center gap-2 cursor-pointer text-[#8ab4ff] font-semibold text-white/80 hover:text-white">
+                              <ShoppingBag className="w-4 h-4" /> Të gjitha
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-white/10" />
+                          {PAZAR_NAV_GROUPS.map((group, index) => (
+                            <React.Fragment key={group.id}>
+                              <DropdownMenuItem asChild>
+                                <Link to={group.url} className="flex items-center gap-2 cursor-pointer text-white/85 hover:text-white">
+                                  <ShoppingBag className="w-4 h-4 text-white/55" /> {group.label}
+                                </Link>
+                              </DropdownMenuItem>
+                              {group.children?.map(([sub, label]) => (
+                                <DropdownMenuItem key={`${group.id}-${sub}`} asChild>
+                                  <Link to={`${group.url}&sub=${sub}`} className="flex items-center gap-2 cursor-pointer pl-7 text-xs text-white/60 hover:text-white">
+                                    <Home className="w-3 h-3" /> {label}
+                                  </Link>
+                                </DropdownMenuItem>
+                              ))}
+                              {index < PAZAR_NAV_GROUPS.length - 1 && <DropdownMenuSeparator className="bg-white/10" />}
+                            </React.Fragment>
                           ))}
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -1358,7 +1377,7 @@ export default function Layout({ children, currentPageName }) {
               <h4 style={{ color: '#ffffff' }} className="text-xs font-bold uppercase tracking-wider mb-4">Njoftime</h4>
               <div className="space-y-2.5">
                 <Link to={createPageUrl("Feed") + "?category=pune"} className="block text-sm text-white hover:text-white/60 transition-colors">Punë</Link>
-                <Link to={createPageUrl("Feed") + "?category=prona"} className="block text-sm text-white hover:text-white/60 transition-colors">Prona</Link>
+                <Link to="/Pazar" className="block text-sm text-white hover:text-white/60 transition-colors">Pazar</Link>
                 <Link to={createPageUrl("Feed") + "?category=sherbime"} className="block text-sm text-white hover:text-white/60 transition-colors">Shërbime</Link>
                 <Link to="/Bamiresi" className="block text-sm text-white hover:text-white/60 transition-colors">Bamirësi</Link>
                 <Link to={createPageUrl("Bileta")} className="block text-sm text-white hover:text-white/60 transition-colors">Bileta</Link>

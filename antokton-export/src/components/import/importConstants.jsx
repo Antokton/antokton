@@ -1,7 +1,6 @@
 export const CATEGORIES = [
   { value: "pune", label: "Punë" },
   { value: "pazar", label: "Pazar" },
-  { value: "prona", label: "Prona" },
   { value: "edukim", label: "Edukim" },
   { value: "bamiresi", label: "Bamirësi" },
   { value: "media", label: "Media" },
