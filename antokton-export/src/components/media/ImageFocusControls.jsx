@@ -52,7 +52,7 @@ export default function ImageFocusControls({ value, onChange }) {
           Zmadhimi
           <input
             type="range"
-            min="1"
+            min="0.2"
             max="3"
             step="0.05"
             value={focus.zoom}

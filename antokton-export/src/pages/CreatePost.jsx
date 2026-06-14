@@ -16,6 +16,7 @@ import { hasEarlyMemberPremiumAccess } from "@/utils/premiumAccess";
 import { requireCompleteProfileForInteraction } from "@/lib/profileCompleteness";
 import { useLocation } from "react-router-dom";
 import ImageFocusControls from "@/components/media/ImageFocusControls";
+import ImageFocusPreview from "@/components/media/ImageFocusPreview";
 import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, updateImageFocus } from "@/lib/imageFocus";
 
 const ALL_PROFESSIONS = [
@@ -780,12 +781,13 @@ export default function CreatePost() {
 
             {(form.image_urls || []).length > 0 ? (
               <div className="space-y-3">
-                <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0b1020]">
-                  <img
+                <div className="rounded-xl border border-white/10 bg-[#0b1020]">
+                  <ImageFocusPreview
                     src={selectedPazarImage}
                     alt="Foto kryesore"
-                    className="h-64 w-full object-cover"
-                    style={getImageFocusStyle(getImageFocus(form.image_focus_json, selectedPazarImage))}
+                    className="h-64 w-full rounded-xl"
+                    focus={getImageFocus(form.image_focus_json, selectedPazarImage)}
+                    onChange={updatePazarImageFocus}
                   />
                 </div>
                 <ImageFocusControls

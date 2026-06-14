@@ -13,6 +13,7 @@ import {
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ImageFocusControls from "@/components/media/ImageFocusControls";
+import ImageFocusPreview from "@/components/media/ImageFocusPreview";
 import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, updateImageFocus } from "@/lib/imageFocus";
 
 /* ─── KATEGORITE ─── */
@@ -443,12 +444,13 @@ function ImportModal({ onClose, onImported, user }) {
                 {Array.isArray(extracted.image_urls) && extracted.image_urls.length > 0 && (
                   <div className="space-y-2">
                     <label className="text-white/40 text-xs block">Fotot ({Math.min(extracted.image_urls.length, 6)}/6)</label>
-                    <div className="overflow-hidden rounded-xl border border-white/10 bg-[#1c2333]">
-                      <img
+                    <div className="rounded-xl border border-white/10 bg-[#1c2333]">
+                      <ImageFocusPreview
                         src={selectedImportImage}
                         alt="Foto kryesore"
-                        className="h-52 w-full object-cover"
-                        style={getImageFocusStyle(getImageFocus(extracted.image_focus_json, selectedImportImage))}
+                        className="h-52 w-full rounded-xl"
+                        focus={getImageFocus(extracted.image_focus_json, selectedImportImage)}
+                        onChange={updateImportImageFocus}
                         onError={e => e.currentTarget.style.display='none'}
                       />
                     </div>

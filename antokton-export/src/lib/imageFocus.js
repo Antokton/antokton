@@ -19,7 +19,7 @@ export function normalizeImageFocus(value = {}) {
   return {
     x: clamp(Number(value?.x ?? DEFAULT_IMAGE_FOCUS.x), 0, 100),
     y: clamp(Number(value?.y ?? DEFAULT_IMAGE_FOCUS.y), 0, 100),
-    zoom: clamp(Number(value?.zoom ?? DEFAULT_IMAGE_FOCUS.zoom), 1, 3),
+    zoom: clamp(Number(value?.zoom ?? DEFAULT_IMAGE_FOCUS.zoom), 0.2, 3),
   };
 }
 
@@ -45,9 +45,11 @@ export function pruneImageFocusMap(map, imageUrls = []) {
 
 export function getImageFocusStyle(focus) {
   const normalized = normalizeImageFocus(focus);
+  const isZoomedOut = normalized.zoom < 1;
   return {
+    objectFit: isZoomedOut ? "contain" : "cover",
     objectPosition: `${normalized.x}% ${normalized.y}%`,
-    transform: `scale(${normalized.zoom})`,
+    transform: isZoomedOut ? "scale(1)" : `scale(${normalized.zoom})`,
     transformOrigin: `${normalized.x}% ${normalized.y}%`,
   };
 }
