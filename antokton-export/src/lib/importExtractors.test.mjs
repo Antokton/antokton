@@ -60,6 +60,22 @@ test("extractImportedPostFields normalizes Gjermania to Gjermani", () => {
   assert.equal(result.country, "Gjermani");
 });
 
+test("extractImportedPostFields normalizes foreign place names without definite forms", () => {
+  const bremen = extractImportedPostFields("Punë në Bremeni", {
+    city: "Bremeni",
+    country: "Gjermania",
+  });
+  assert.equal(bremen.city, "Bremen");
+  assert.equal(bremen.country, "Gjermani");
+
+  const brussels = extractImportedPostFields("Punë në Brukseli", {
+    city: "Brukseli",
+    country: "Belgjika",
+  });
+  assert.equal(brussels.city, "Bruksel");
+  assert.equal(brussels.country, "Belgjikë");
+});
+
 test("extractImportedPostFields treats Budva and neighboring state labels as Antokton", () => {
   assert.equal(extractImportedPostFields("Kërkohet punëtor në Budva", {}).country, "Antokton");
   assert.equal(extractImportedPostFields("Kërkohet punëtor në Tiranë", {}).country, "Antokton");

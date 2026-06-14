@@ -74,8 +74,48 @@ function inferCountryFromText(text = "") {
 function normalizeCountryName(country = "") {
   const value = sanitizeImportedText(country).trim();
   if (/^(gjermani|gjermania|germany|deutschland)$/i.test(value)) return "Gjermani";
+  if (/^(belgjikë|belgjike|belgjika|belgium|belgique|belgië)$/i.test(value)) return "Belgjikë";
+  if (/^(itali|italia|italy|italie)$/i.test(value)) return "Itali";
+  if (/^(zvicër|zvicer|zvicra|switzerland|suisse|schweiz)$/i.test(value)) return "Zvicër";
+  if (/^(austri|austria|österreich|osterreich)$/i.test(value)) return "Austri";
+  if (/^(francë|france|franca)$/i.test(value)) return "Francë";
+  if (/^(hollandë|hollande|hollanda|netherlands|nederland)$/i.test(value)) return "Hollandë";
+  if (/^(suedi|suedia|sweden|sverige)$/i.test(value)) return "Suedi";
+  if (/^(norvegji|norvegjia|norway|norge)$/i.test(value)) return "Norvegji";
+  if (/^(danimarkë|danimarke|danimarka|denmark|danmark)$/i.test(value)) return "Danimarkë";
+  if (/^(spanjë|spanje|spanja|spain|españa)$/i.test(value)) return "Spanjë";
+  if (/^(angli|anglia|england|united kingdom|mbretëri e bashkuar|mbreteria e bashkuar)$/i.test(value)) return "Angli";
   if (/^(shqipëri|shqiperi|shqiperia|albania|kosovë|kosove|kosova|mal i zi|mali i zi|mal të zi|mali të zi|montenegro|crna gora|serbi|serbia|srbija|greqi|greqia|greece|ellada|maqedoni|maqedonia|maqedoni e veriut|maqedonia e veriut|north macedonia|macedonia)$/i.test(value)) return "Antokton";
   return value;
+}
+
+function normalizeCityName(city = "") {
+  const value = sanitizeImportedText(city).trim();
+  const key = value.toLowerCase();
+  const replacements = new Map([
+    ["bremeni", "Bremen"],
+    ["bremen", "Bremen"],
+    ["brukseli", "Bruksel"],
+    ["bruksell", "Bruksel"],
+    ["brussels", "Bruksel"],
+    ["bruxelles", "Bruksel"],
+    ["berlini", "Berlin"],
+    ["hamburgu", "Hamburg"],
+    ["frankfurti", "Frankfurt"],
+    ["dortmundi", "Dortmund"],
+    ["dyseldorfi", "Düsseldorf"],
+    ["dusseldorfi", "Düsseldorf"],
+    ["düsseldorfi", "Düsseldorf"],
+    ["kolni", "Köln"],
+    ["kölni", "Köln"],
+    ["mynihu", "München"],
+    ["munihu", "München"],
+    ["munich", "München"],
+    ["vjena", "Wien"],
+    ["vjeni", "Wien"],
+    ["wien", "Wien"],
+  ]);
+  return replacements.get(key) || value;
 }
 
 function hasUsefulPhone(candidate = "") {
@@ -152,7 +192,7 @@ export function extractImportedPostFields(rawText = "", initial = {}) {
     extractFirstByLabels(combined, ["adresa", "adresë", "lokacioni", "lokacion", "vendndodhja", "vendi i pun[eë]s", "vendi pun[eë]s", "vendi", "location", "address"]) ||
     "";
   const city =
-    cleanInitial.city ||
+    normalizeCityName(cleanInitial.city) ||
     extractFirstByLabels(combined, ["qyteti", "qytet", "city"]) ||
     "";
   const country = normalizeCountryName(cleanInitial.country) || inferCountryFromText([combined, address, city].join("\n"));
@@ -175,7 +215,7 @@ export function extractImportedPostFields(rawText = "", initial = {}) {
     contact_info: contactLines.join("\n"),
     phone_number: primaryPhone,
     address,
-    city,
+    city: normalizeCityName(city),
     country,
     source_url: sourceUrl,
     author_profile_url: authorProfileUrl,

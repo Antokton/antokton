@@ -59,7 +59,7 @@ const countrySubregions = {
   },
   "Belgjikë": {
     label: "Rajoni",
-    regions: ["Brukseli","Flandrija","Valonia"]
+    regions: ["Bruksel","Flandrija","Valonia"]
   },
   "Hollandë": {
     label: "Provinca",

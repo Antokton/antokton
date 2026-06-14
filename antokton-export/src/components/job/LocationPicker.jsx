@@ -248,8 +248,48 @@ function normalizeSearch(value) {
 function normalizeCountryName(country = "") {
   const value = String(country || "").trim();
   if (/^(gjermani|gjermania|germany|deutschland)$/i.test(value)) return "Gjermani";
+  if (/^(belgjikë|belgjike|belgjika|belgium|belgique|belgië)$/i.test(value)) return "Belgjikë";
+  if (/^(itali|italia|italy|italie)$/i.test(value)) return "Itali";
+  if (/^(zvicër|zvicer|zvicra|switzerland|suisse|schweiz)$/i.test(value)) return "Zvicër";
+  if (/^(austri|austria|österreich|osterreich)$/i.test(value)) return "Austri";
+  if (/^(francë|france|franca)$/i.test(value)) return "Francë";
+  if (/^(hollandë|hollande|hollanda|netherlands|nederland)$/i.test(value)) return "Hollandë";
+  if (/^(suedi|suedia|sweden|sverige)$/i.test(value)) return "Suedi";
+  if (/^(norvegji|norvegjia|norway|norge)$/i.test(value)) return "Norvegji";
+  if (/^(danimarkë|danimarke|danimarka|denmark|danmark)$/i.test(value)) return "Danimarkë";
+  if (/^(spanjë|spanje|spanja|spain|españa)$/i.test(value)) return "Spanjë";
+  if (/^(angli|anglia|england|united kingdom|mbretëri e bashkuar|mbreteria e bashkuar)$/i.test(value)) return "Angli";
   if (/^(mal i zi|mali i zi|mal të zi|mali të zi|montenegro|crna gora|serbi|serbia|srbija|greqi|greqia|greece|ellada|maqedoni|maqedonia|maqedoni e veriut|maqedonia e veriut|north macedonia|macedonia)$/i.test(value)) return "Antokton";
   return value;
+}
+
+function normalizeCityName(city = "") {
+  const value = String(city || "").trim();
+  const key = normalizeSearch(value);
+  const replacements = new Map([
+    ["bremeni", "Bremen"],
+    ["bremen", "Bremen"],
+    ["brukseli", "Bruksel"],
+    ["bruksell", "Bruksel"],
+    ["brussels", "Bruksel"],
+    ["bruxelles", "Bruksel"],
+    ["berlini", "Berlin"],
+    ["hamburgu", "Hamburg"],
+    ["frankfurti", "Frankfurt"],
+    ["dortmundi", "Dortmund"],
+    ["dyseldorfi", "Düsseldorf"],
+    ["dusseldorfi", "Düsseldorf"],
+    ["düsseldorfi", "Düsseldorf"],
+    ["kolni", "Köln"],
+    ["kölni", "Köln"],
+    ["mynihu", "München"],
+    ["munihu", "München"],
+    ["munich", "München"],
+    ["vjena", "Wien"],
+    ["vjeni", "Wien"],
+    ["wien", "Wien"],
+  ]);
+  return replacements.get(key) || value;
 }
 
 function detectAntoktonZone(cityName) {
@@ -312,7 +352,7 @@ async function searchNominatim(query) {
 
       // Zëvendëso me emrin shqip nëse ekziston alias
       const albanianPlace = getAlbanianName(rawCity) || getAlbanianName(item.display_name.split(",")[0]);
-      const city = albanianPlace ? albanianPlace.city : rawCity;
+      const city = normalizeCityName(albanianPlace ? albanianPlace.city : rawCity);
 
       // Kontrollojmë nëse është territor Antokton
       const detectedZone = albanianPlace ? albanianPlace.zone : detectAntoktonZone(city);
@@ -334,7 +374,7 @@ async function searchNominatim(query) {
       const rawCityClean = rawCity.includes(" - ") ? rawCity.split(" - ")[0].trim()
                          : rawCity.includes(" / ")  ? rawCity.split(" / ")[0].trim()
                          : rawCity;
-      const cleanCity = isAntokton ? city : rawCityClean;
+      const cleanCity = isAntokton ? city : normalizeCityName(rawCityClean);
 
       // streetPart: "Rue Piers 7" (rruga + numri ndërtesës)
       const streetPart = road && houseNumber ? `${road} ${houseNumber}` : road || "";
@@ -424,7 +464,7 @@ Kthe VETËM JSON.`;
         }
       });
       const country = normalizeCountryName(res.antokton_country || res.country_raw || "");
-      const city = res.city || "";
+      const city = normalizeCityName(res.city || "");
       const zone = res.is_antokton ? detectAntoktonZone(city) : null;
       // Ruaj adresën e plotë të tipuar nga përdoruesi (rruga + qyteti), jo vetëm qytetin
       const result = {
@@ -456,7 +496,7 @@ Kthe VETËM JSON.`;
       address: addressForDB,
       country: normalizeCountryName(s.country || ""),
       zone: s.zone || "",
-      city: s.city || "",
+      city: normalizeCityName(s.city || ""),
       location_precision: "sakte",
       is_antokton: s.is_antokton || false
     };

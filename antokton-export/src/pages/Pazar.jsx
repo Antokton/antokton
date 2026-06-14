@@ -8,9 +8,10 @@ import {
   Wrench, Leaf, BookOpen, Palette, Gift, Search,
   Plus, MapPin, Clock, Heart, X, Upload, Star,
   ExternalLink, Loader2, Tag, ArrowLeft,
-  AlertCircle, CheckCircle
+  AlertCircle, CheckCircle, MoreVertical, Phone, Link2, Flag, Share2, MessageCircle
 } from "lucide-react";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 /* ─── KATEGORITE ─── */
 const CATEGORIES = [
@@ -39,13 +40,73 @@ const FEMIJE_SUBCATS = [
 ];
 
 /* ─── LISTING CARD ─── */
-function ListingCard({ job }) {
+function ListingCard({ job, user }) {
   const [liked, setLiked] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const price = job.salary_info || "";
   const gallery = Array.isArray(job.image_urls) ? job.image_urls : [];
   const thumbnail = job.image_url || gallery[Math.min(Number(job.main_image_index || 0), Math.max(0, gallery.length - 1))] || gallery[0] || "";
+  const detailUrl = `/PostDetail?id=${job.id}`;
+  const publicContactUrl = job.show_author_profile_url === true ? (job.author_profile_url || job.import_author_profile_url || "") : "";
+  const canContact = Boolean(job.phone_number || publicContactUrl);
+
+  const stopCardClick = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const shareListing = async (event) => {
+    stopCardClick(event);
+    const url = `${window.location.origin}${detailUrl}`;
+    const title = `${job.title || "Njoftim"} - Antokton`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, text: title, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        alert("Linku u kopjua.");
+      }
+    } catch {
+      // User cancelled native share.
+    }
+  };
+
+  const reportListing = async (event) => {
+    stopCardClick(event);
+    if (!user) {
+      base44.auth.redirectToLogin();
+      return;
+    }
+    if (reporting) return;
+    const confirmed = window.confirm("Dëshiron ta raportosh këtë njoftim për kontroll nga stafi?");
+    if (!confirmed) return;
+    setReporting(true);
+    try {
+      await base44.entities.Report.create({
+        post_id: job.id,
+        reported_entity: "Job",
+        reported_entity_id: job.id,
+        reported_user_email: job.created_by || job.author_email || "",
+        post_title: job.title || "",
+        post_category: job.category || "pazar",
+        reporter_id: user.id || "",
+        reporter_email: user.email || "",
+        reporter_name: user.full_name || "",
+        reason: "other",
+        description: "Raportim nga menuja e Pazarit.",
+        details: "Raportim nga menuja e Pazarit.",
+        status: "new"
+      });
+      alert("Raportimi u dërgua tek stafi.");
+    } catch (error) {
+      alert(error?.message || "Raportimi nuk u ruajt. Provo përsëri.");
+    } finally {
+      setReporting(false);
+    }
+  };
+
   return (
-    <Link to={`/PostDetail?id=${job.id}`}
+    <Link to={detailUrl}
       className="bg-[#1c2333] rounded-xl overflow-hidden border border-white/8 hover:border-white/20 transition-all group block">
       {/* Image */}
       <div className="relative aspect-square bg-[#2a3347] overflow-hidden">
@@ -61,6 +122,56 @@ function ListingCard({ job }) {
             ${liked ? "bg-red-500 text-white" : "bg-black/50 text-white/70 hover:text-white"}`}>
           <Heart className={`w-4 h-4 ${liked ? "fill-white" : ""}`} />
         </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              onClick={stopCardClick}
+              className="absolute right-2 top-12 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white/80 transition-all hover:bg-black/75 hover:text-white"
+              aria-label="Më shumë mundësi"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 border-white/10 bg-[#0b1020] text-white">
+            <DropdownMenuItem onClick={(event) => { stopCardClick(event); setLiked(true); }} className="cursor-pointer gap-2 text-white/85">
+              <Heart className={`h-4 w-4 ${liked ? "fill-red-400 text-red-400" : "text-white/65"}`} />
+              {liked ? "I ruajtur si i preferuar" : "Ruaje si i preferuar"}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={shareListing} className="cursor-pointer gap-2 text-white/85">
+              <Share2 className="h-4 w-4 text-white/65" /> Shpërndaj
+            </DropdownMenuItem>
+            {job.phone_number && (
+              <DropdownMenuItem asChild>
+                <a href={`tel:${String(job.phone_number).replace(/\s+/g, "")}`} onClick={stopCardClick} className="flex cursor-pointer items-center gap-2 text-white/85">
+                  <Phone className="h-4 w-4 text-white/65" /> Kontakto me telefon
+                </a>
+              </DropdownMenuItem>
+            )}
+            {publicContactUrl && (
+              <DropdownMenuItem asChild>
+                <a href={publicContactUrl} target="_blank" rel="noopener noreferrer" onClick={stopCardClick} className="flex cursor-pointer items-center gap-2 text-white/85">
+                  <Link2 className="h-4 w-4 text-white/65" /> Link kontakti
+                </a>
+              </DropdownMenuItem>
+            )}
+            {!canContact && (
+              <DropdownMenuItem asChild>
+                <Link to={detailUrl} onClick={stopCardClick} className="flex cursor-pointer items-center gap-2 text-white/85">
+                  <MessageCircle className="h-4 w-4 text-white/65" /> Shiko mënyrat e kontaktit
+                </Link>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem asChild>
+              <Link to={`${detailUrl}#vleresim`} onClick={stopCardClick} className="flex cursor-pointer items-center gap-2 text-white/85">
+                <Star className="h-4 w-4 text-[#ffd166]" /> Jep vlerësim
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={reportListing} className="cursor-pointer gap-2 text-orange-200">
+              <Flag className="h-4 w-4 text-orange-300" /> {reporting ? "Duke raportuar..." : "Raporto"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         {job.job_type === "ofroj" && price && (
           <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs font-bold px-2 py-0.5 rounded-lg">
             {price}
@@ -573,7 +684,7 @@ export default function Pazar() {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {filtered.map(job => <ListingCard key={job.id} job={job} />)}
+                {filtered.map(job => <ListingCard key={job.id} job={job} user={user} />)}
               </div>
             )}
           </div>
