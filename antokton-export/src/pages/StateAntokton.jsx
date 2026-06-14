@@ -68,7 +68,7 @@ export default function StateAntokton() {
       <div className="bg-gradient-to-br from-[#0d3a47] via-[#051e28] to-[#0b1020] py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">
-            Shteti Antokton
+            Vendi Antokton
           </h1>
           <p className="text-xl text-white/70 max-w-3xl mx-auto mb-8">
             Një ekosistem i plotë shërbimesh për diasporën shqiptare - punë, edukim, 

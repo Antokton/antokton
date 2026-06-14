@@ -257,7 +257,7 @@ export default function AkademiaAdmin() {
                   <Input value={courseForm.city} onChange={(e) => setCourseForm({ ...courseForm, city: e.target.value })} required className="mt-1 bg-white/5 border-white/10 text-white" />
                 </div>
                 <div>
-                  <Label className="text-white/70">Shteti</Label>
+                  <Label className="text-white/70">Vendi</Label>
                   <Input value={courseForm.country} onChange={(e) => setCourseForm({ ...courseForm, country: e.target.value })} required className="mt-1 bg-white/5 border-white/10 text-white" />
                 </div>
               </div>

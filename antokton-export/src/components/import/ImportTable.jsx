@@ -135,7 +135,7 @@ export default function ImportTable({ user, onEdit }) {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-white/10 bg-white/5">
-                {["Teksti", "Autori", "Kategoria", "Shteti", "Rajoni", "Qyteti", "Lloji", "Burimi", "Statusi", "Importuar nga", "Data", ""].map(h => (
+                {["Teksti", "Autori", "Kategoria", "Vendi", "Rajoni", "Qyteti", "Lloji", "Burimi", "Statusi", "Importuar nga", "Data", ""].map(h => (
                   <th key={h} className="text-left px-3 py-2.5 text-white/50 font-medium whitespace-nowrap">{h}</th>
                 ))}
               </tr>

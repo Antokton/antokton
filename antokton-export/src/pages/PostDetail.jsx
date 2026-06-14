@@ -56,7 +56,7 @@ function SimilarPosts({ currentJobId, category }) {
             </h3>
             <div className="flex items-center gap-2 text-xs text-white mb-2">
               <MapPin className="w-3 h-3" />
-              {[job.city, job.country].filter(Boolean).join(", ")}
+              {formatLocationParts(job.city, job.country)}
             </div>
             <p className="text-white text-xs line-clamp-2">{job.description}</p>
           </a>
@@ -115,6 +115,20 @@ const reportReasonLabel = (value) => {
 };
 
 const formatViewText = (count) => `${count} ${Number(count) === 1 ? "shikim" : "shikime"}`;
+const formatLocationParts = (...parts) => {
+  const seen = new Set();
+  return parts
+    .flatMap((part) => String(part || "").split(","))
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => {
+      const key = part.toLocaleLowerCase("sq");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .join(", ");
+};
 const profileDisplayName = (profile = {}, fallbackEmail = "") => (
   [profile.first_name, profile.surname].filter(Boolean).join(" ").trim()
   || profile.full_name
@@ -938,11 +952,9 @@ export default function PostDetail() {
               const isPrecise = job.location_precision !== 'perafersisht';
               // Kur është "përafërsisht", shfaq vetëm zonën/qytetin - jo adresën e saktë
               const displayAddress = isPrecise
-                ? (job.address && job.address !== job.city ? job.address : [job.city, isAntokton ? "Antokton" : job.country].filter(Boolean).join(", "))
-                : [job.city || job.zone, isAntokton ? "Antokton" : job.country].filter(Boolean).join(", ");
-              const mapsQuery = isPrecise
-                ? (job.address && job.address !== job.city ? job.address : [job.city, isAntokton ? "Antokton" : job.country].filter(Boolean).join(", "))
-                : [job.city || job.zone, isAntokton ? "Antokton" : job.country].filter(Boolean).join(", ");
+                ? (job.address && job.address !== job.city ? formatLocationParts(job.address, isAntokton ? null : job.country) : formatLocationParts(job.city, isAntokton ? "Antokton" : job.country))
+                : formatLocationParts(job.city || job.zone, isAntokton ? "Antokton" : job.country);
+              const mapsQuery = displayAddress;
               return (
                 <a
                   href={`https://www.google.com/maps/search/${encodeURIComponent(mapsQuery)}`}
@@ -1212,17 +1224,19 @@ export default function PostDetail() {
                         <ExternalLink className="h-3 w-3 shrink-0" />
                       </a>
                     )}
-                    {canSeeContact && (job.address || job.city || job.country) && (
+                    {canSeeContact && (job.address || job.city || job.country) && (() => {
+                      const contactLocation = formatLocationParts(job.address || job.city, job.country === "Antokton" ? null : job.country);
+                      return (
                       <a
-                        href={`https://www.google.com/maps/search/${encodeURIComponent([job.address || job.city, job.country === "Antokton" ? null : job.country].filter(Boolean).join(", "))}`}
+                        href={`https://www.google.com/maps/search/${encodeURIComponent(contactLocation)}`}
                         target="_blank" rel="noopener noreferrer"
                         className="inline-flex max-w-full items-center gap-1.5 mt-1 text-xs text-[#9bffd6] hover:text-white underline underline-offset-2"
                         title="Hap lokacionin në hartë"
                       >
                         <MapPin className="w-3 h-3 shrink-0" />
-                        <span className="min-w-0 break-words">{[job.address || job.city, job.country === "Antokton" ? null : job.country].filter(Boolean).join(", ")}</span>
+                        <span className="min-w-0 break-words">{contactLocation}</span>
                       </a>
-                    )}
+                    )})()}
                   </div>
                 ) : (
                   <div className="space-y-3">

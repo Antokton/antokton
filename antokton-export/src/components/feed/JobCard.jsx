@@ -22,6 +22,21 @@ const jobTypeStyle = {
 };
 const viewLabel = (count) => `${count} ${Number(count) === 1 ? "shikim" : "shikime"}`;
 
+const formatLocationParts = (...parts) => {
+  const seen = new Set();
+  return parts
+    .flatMap((part) => String(part || "").split(","))
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => {
+      const key = part.toLocaleLowerCase("sq");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .join(", ");
+};
+
 const getPostThumbnail = (job) => {
   const images = Array.isArray(job?.image_urls) ? job.image_urls.filter(Boolean).slice(0, 6) : [];
   const mainIndex = Math.min(
@@ -79,7 +94,7 @@ export default function JobCard({ job }) {
           {(job.country || job.city) && (
             <span className="flex items-center gap-0.5">
               <MapPin className="w-3 h-3 sm:w-2.5 sm:h-2.5" />
-              {[job.city || job.zone, job.country].filter(Boolean).join(", ")}
+              {formatLocationParts(job.city || job.zone, job.country)}
               {job.location_precision === "perafersisht" && job.city && (
                 <span className="text-white/35">(zonë)</span>
               )}

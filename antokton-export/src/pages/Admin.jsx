@@ -1999,7 +1999,7 @@ export default function Admin() {
                   <Input value={eventForm.location || ""} onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })} className="bg-white/5 border-white/10 text-white" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-white/70">Shteti</Label>
+                  <Label className="text-white/70">Vendi</Label>
                   <Input value={eventForm.country || ""} onChange={(e) => setEventForm({ ...eventForm, country: e.target.value })} className="bg-white/5 border-white/10 text-white" />
                 </div>
                 <div className="space-y-1.5">

@@ -451,7 +451,7 @@ Kthe JSON me këto fusha.`;
           }))}
         />
         <p className="text-white/40 text-xs">
-          Shkruaj adresën ose qytetin; sugjerimet plotësojnë automatikisht shtetin, rajonin dhe qytetin.
+          Shkruaj adresën ose qytetin; sugjerimet plotësojnë automatikisht vendin, rajonin dhe qytetin.
         </p>
       </div>
 

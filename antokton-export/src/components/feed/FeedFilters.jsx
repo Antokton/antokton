@@ -208,7 +208,7 @@ const countrySubregions = {
 };
 
 const antoktonRegions = [
-  { value: "all", label: "Shteti Antokton - Të gjithë" },
+  { value: "all", label: "Vendi Antokton - Të gjithë" },
   {
     value: "qendror",
     label: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut",
@@ -228,7 +228,7 @@ const antoktonRegions = [
   },
   {
     value: "verior",
-    label: "Rajoni Verior — Dardania",
+    label: "Rajoni Verior - Dardania Qendrore dhe Veriore",
     cities: [
       "Beograd", "Bujanovc", "Jabllanicë", "Leskovac", "Medvegjë", "Nish",
       "Novi Pazar", "Pirot", "Preshevë", "Prijepolje", "Prokuplje", "Sjenicë",
@@ -237,7 +237,7 @@ const antoktonRegions = [
   },
   {
     value: "jugor",
-    label: "Rajoni Jugor — Epiri",
+    label: "Rajoni Jugor - Epiri dhe Jugu",
     // Epiri historik + Etolia + pjesë e Thesalisë jugore
     cities: [
       "Ambraki", "Arta", "Astakos", "Butrinti", "Delvinë", "Dodona",
@@ -248,7 +248,7 @@ const antoktonRegions = [
   },
   {
     value: "lindor",
-    label: "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia",
+    label: "Rajoni Lindor - Thesalia dhe Makedonia",
     cities: [
       "Dibër", "Edesa", "Farsala", "Florinë", "Gostivar", "Kavala",
       "Kërçovë", "Kozani", "Kostur", "Larisa", "Lerin", "Liknid",
@@ -437,7 +437,7 @@ export default function FeedFilters({ filters, setFilters }) {
 
         <Select value={filters.country || "all"} onValueChange={(v) => setFilters({ ...filters, country: v, region: "", city: "", subregion: "" })}>
           <SelectTrigger className="border-white/10 h-8 text-xs text-white col-span-1" style={{ background: 'rgba(255, 255, 255, 0.08)' }}>
-            <SelectValue placeholder="Shteti" />
+            <SelectValue placeholder="Vendi" />
           </SelectTrigger>
           <SelectContent className="max-h-60">
             <SelectItem value="all">Të gjithë vendet</SelectItem>

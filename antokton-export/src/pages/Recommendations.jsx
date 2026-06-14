@@ -72,7 +72,7 @@ export default function Recommendations() {
                 )}
                 {recommendations.insights.topCountry && (
                   <div>
-                    <p className="text-white/40 text-xs mb-1">Shteti më i kërkuar</p>
+                    <p className="text-white/40 text-xs mb-1">Vendi më i kërkuar</p>
                     <p className="text-white font-semibold">{recommendations.insights.topCountry}</p>
                   </div>
                 )}
