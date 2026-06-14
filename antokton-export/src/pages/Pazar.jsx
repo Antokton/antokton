@@ -8,7 +8,7 @@ import {
   Wrench, Leaf, BookOpen, Palette, Gift, Search,
   Plus, MapPin, Clock, Heart, X, Upload, Star,
   ExternalLink, Loader2, Tag, ArrowLeft,
-  AlertCircle, CheckCircle, MoreVertical, Phone, Link2, Flag, Share2, MessageCircle
+  AlertCircle, CheckCircle, MoreVertical, Phone, Link2, Flag, Share2, MessageCircle, Copy
 } from "lucide-react";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -44,7 +44,14 @@ const FEMIJE_SUBCATS = [
 
 /* ─── LISTING CARD ─── */
 function ListingCard({ job, user }) {
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return JSON.parse(window.localStorage.getItem("pazar_favorites") || "[]").includes(job.id);
+    } catch {
+      return false;
+    }
+  });
   const [reporting, setReporting] = useState(false);
   const price = job.salary_info || "";
   const gallery = Array.isArray(job.image_urls) ? job.image_urls : [];
@@ -57,6 +64,40 @@ function ListingCard({ job, user }) {
   const stopCardClick = (event) => {
     event.preventDefault();
     event.stopPropagation();
+  };
+
+  const stopMenuBubble = (event) => {
+    event.stopPropagation();
+  };
+
+  const toggleFavorite = (event) => {
+    stopCardClick(event);
+    setLiked((current) => {
+      const next = !current;
+      if (typeof window !== "undefined") {
+        try {
+          const saved = JSON.parse(window.localStorage.getItem("pazar_favorites") || "[]");
+          const updated = next
+            ? Array.from(new Set([...saved, job.id]))
+            : saved.filter((id) => id !== job.id);
+          window.localStorage.setItem("pazar_favorites", JSON.stringify(updated));
+        } catch {
+          // Local favorites are best-effort.
+        }
+      }
+      return next;
+    });
+  };
+
+  const copyText = async (event, text, label) => {
+    stopCardClick(event);
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      alert(`${label} u kopjua.`);
+    } catch {
+      window.prompt(`Kopjo ${label.toLowerCase()}:`, text);
+    }
   };
 
   const shareListing = async (event) => {
@@ -115,48 +156,66 @@ function ListingCard({ job, user }) {
       {/* Image */}
       <div className="relative aspect-square bg-[#2a3347] overflow-hidden">
         {thumbnail ? (
-          <img src={thumbnail} alt={job.title} className="w-full h-full object-cover transition-transform duration-300" style={getImageFocusStyle(thumbnailFocus)} />
+          <ImageFocusPreview
+            src={thumbnail}
+            alt={job.title}
+            focus={thumbnailFocus}
+            className="h-full w-full"
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <ShoppingBag className="w-10 h-10 text-white/20" />
           </div>
         )}
-        <button onClick={e => { e.preventDefault(); setLiked(!liked); }}
-          className={`absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center transition-all
-            ${liked ? "bg-red-500 text-white" : "bg-black/50 text-white/70 hover:text-white"}`}>
-          <Heart className={`w-4 h-4 ${liked ? "fill-white" : ""}`} />
-        </button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              onClick={stopCardClick}
-              className="absolute right-2 top-12 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white/80 transition-all hover:bg-black/75 hover:text-white"
-              aria-label="Më shumë mundësi"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </button>
-          </DropdownMenuTrigger>
+        <div className="absolute right-2 top-2 flex gap-1.5 rounded-full bg-black/50 p-1 backdrop-blur">
+          <button onClick={toggleFavorite}
+            className={`flex h-8 w-8 items-center justify-center rounded-full transition-all
+              ${liked ? "bg-red-500 text-white" : "bg-white/10 text-white hover:bg-white/20"}`}
+            aria-label={liked ? "Hiq nga të preferuarat" : "Ruaje si të preferuar"}
+          >
+            <Heart className={`w-4 h-4 ${liked ? "fill-white" : ""}`} />
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                onClick={stopCardClick}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white transition-all hover:bg-white/20"
+                aria-label="Më shumë mundësi"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 border-white/10 bg-[#0b1020] text-white">
-            <DropdownMenuItem onClick={(event) => { stopCardClick(event); setLiked(true); }} className="cursor-pointer gap-2 text-white/85">
+            <DropdownMenuItem onClick={toggleFavorite} className="cursor-pointer gap-2 text-white/85">
               <Heart className={`h-4 w-4 ${liked ? "fill-red-400 text-red-400" : "text-white/65"}`} />
-              {liked ? "I ruajtur si i preferuar" : "Ruaje si i preferuar"}
+              {liked ? "Hiq nga të preferuarat" : "Ruaje si i preferuar"}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={shareListing} className="cursor-pointer gap-2 text-white/85">
               <Share2 className="h-4 w-4 text-white/65" /> Shpërndaj
             </DropdownMenuItem>
             {job.phone_number && (
               <DropdownMenuItem asChild>
-                <a href={`tel:${String(job.phone_number).replace(/\s+/g, "")}`} onClick={stopCardClick} className="flex cursor-pointer items-center gap-2 text-white/85">
+                <a href={`tel:${String(job.phone_number).replace(/\s+/g, "")}`} onClick={stopMenuBubble} className="flex cursor-pointer items-center gap-2 text-white/85">
                   <Phone className="h-4 w-4 text-white/65" /> Kontakto me telefon
                 </a>
               </DropdownMenuItem>
             )}
+            {job.phone_number && (
+              <DropdownMenuItem onClick={(event) => copyText(event, job.phone_number, "Telefoni")} className="cursor-pointer gap-2 text-white/85">
+                <Copy className="h-4 w-4 text-white/65" /> Kopjo telefonin
+              </DropdownMenuItem>
+            )}
             {publicContactUrl && (
               <DropdownMenuItem asChild>
-                <a href={publicContactUrl} target="_blank" rel="noopener noreferrer" onClick={stopCardClick} className="flex cursor-pointer items-center gap-2 text-white/85">
+                <a href={publicContactUrl} target="_blank" rel="noopener noreferrer" onClick={stopMenuBubble} className="flex cursor-pointer items-center gap-2 text-white/85">
                   <Link2 className="h-4 w-4 text-white/65" /> Link kontakti
                 </a>
+              </DropdownMenuItem>
+            )}
+            {publicContactUrl && (
+              <DropdownMenuItem onClick={(event) => copyText(event, publicContactUrl, "Linku i kontaktit")} className="cursor-pointer gap-2 text-white/85">
+                <Copy className="h-4 w-4 text-white/65" /> Kopjo linkun e kontaktit
               </DropdownMenuItem>
             )}
             {!canContact && (
@@ -175,7 +234,34 @@ function ListingCard({ job, user }) {
               <Flag className="h-4 w-4 text-orange-300" /> {reporting ? "Duke raportuar..." : "Raporto"}
             </DropdownMenuItem>
           </DropdownMenuContent>
-        </DropdownMenu>
+          </DropdownMenu>
+        </div>
+        {canContact && (
+          <div className="absolute bottom-2 right-2 flex gap-1.5">
+            {job.phone_number && (
+              <a
+                href={`tel:${String(job.phone_number).replace(/\s+/g, "")}`}
+                onClick={stopMenuBubble}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-black/65 text-white shadow-sm backdrop-blur hover:bg-black/80"
+                title="Telefono"
+              >
+                <Phone className="h-4 w-4" />
+              </a>
+            )}
+            {publicContactUrl && (
+              <a
+                href={publicContactUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={stopMenuBubble}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-black/65 text-white shadow-sm backdrop-blur hover:bg-black/80"
+                title="Hap linkun e kontaktit"
+              >
+                <Link2 className="h-4 w-4" />
+              </a>
+            )}
+          </div>
+        )}
         {job.job_type === "ofroj" && price && (
           <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs font-bold px-2 py-0.5 rounded-lg">
             {price}
