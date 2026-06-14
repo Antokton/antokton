@@ -11,6 +11,7 @@ export default function ImageFocusPreview({
   onChange,
   className = "h-64 w-full",
   imageClassName = "",
+  showBlurBackdrop = true,
   onError,
 }) {
   const containerRef = useRef(null);
@@ -103,11 +104,20 @@ export default function ImageFocusPreview({
       onPointerCancel={endPointer}
       onPointerLeave={endPointer}
     >
+      {showBlurBackdrop && src && (
+        <img
+          src={src}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+          className="absolute inset-0 h-full w-full scale-110 select-none object-cover opacity-45 blur-xl"
+        />
+      )}
       <img
         src={src}
         alt={alt}
         draggable={false}
-        className={`select-none ${frame ? "absolute max-w-none" : "h-full w-full object-cover"} ${imageClassName}`}
+        className={`z-[1] select-none ${frame ? "absolute max-w-none" : "relative h-full w-full object-cover"} ${imageClassName}`}
         style={frame ? {
           width: `${frame.width}px`,
           height: `${frame.height}px`,

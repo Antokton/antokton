@@ -159,6 +159,16 @@ export default function PostDetail() {
   const queryClient = useQueryClient();
   const canSeePrivateImportFields = user?.role === "admin" || user?.role === "moderator";
   const premiumAccess = hasPremiumAccess(user, hasActiveSubscription);
+  const photoViewerFocus = photoViewerUrl ? getImageFocus(job?.image_focus_json, photoViewerUrl) : null;
+
+  useEffect(() => {
+    if (!photoViewerUrl) return;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setPhotoViewerUrl("");
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [photoViewerUrl]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -1038,11 +1048,11 @@ export default function PostDetail() {
                 style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
               >
                 <button type="button" onClick={() => setPhotoViewerUrl(mainImage)} className="block w-full overflow-hidden rounded-xl border border-white/10 bg-white/5 text-left">
-                  <img
+                  <ImageFocusPreview
                     src={mainImage}
                     alt="Foto kryesore"
-                    className="max-h-[520px] w-full object-cover hover:opacity-95 transition-opacity cursor-pointer"
-                    style={getImageFocusStyle(mainFocus)}
+                    focus={mainFocus}
+                    className="h-[min(70vw,520px)] min-h-[220px] w-full hover:opacity-95 transition-opacity cursor-pointer"
                     onError={e => e.currentTarget.style.display = 'none'}
                   />
                 </button>
@@ -1052,11 +1062,11 @@ export default function PostDetail() {
                       const focus = getImageFocus(job.image_focus_json, imgUrl);
                       return (
                         <button key={i} type="button" onClick={() => setPhotoViewerUrl(imgUrl)} className={`shrink-0 overflow-hidden rounded-lg border ${i === mainIndex ? "border-[#9bffd6]" : "border-white/10"} bg-white/5`}>
-                          <img
+                          <ImageFocusPreview
                             src={imgUrl}
                             alt={`foto ${i + 1}`}
-                            className="h-16 w-20 object-cover hover:opacity-90 transition-opacity cursor-pointer"
-                            style={getImageFocusStyle(focus)}
+                            focus={focus}
+                            className="h-16 w-20 hover:opacity-90 transition-opacity cursor-pointer"
                             onError={e => e.currentTarget.style.display = 'none'}
                           />
                         </button>
@@ -1624,23 +1634,39 @@ export default function PostDetail() {
 
       {photoViewerUrl && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-3 sm:p-5"
           onClick={() => setPhotoViewerUrl("")}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Pamja e fotos"
         >
           <button
             type="button"
             onClick={() => setPhotoViewerUrl("")}
-            className="absolute right-4 top-4 rounded-full border border-white/20 bg-black/60 p-2 text-white hover:bg-white/10"
+            className="absolute right-3 top-3 z-[2] rounded-full border border-white/25 bg-black/80 p-3 text-white shadow-lg hover:bg-white/10 sm:right-5 sm:top-5"
             aria-label="Mbyll foton"
           >
-            <X className="h-5 w-5" />
+            <X className="h-6 w-6" />
           </button>
-          <img
+          <div
+            className="flex max-h-[92vh] w-full max-w-6xl flex-col items-center gap-3"
+            onClick={(event) => event.stopPropagation()}
+          >
+          <ImageFocusPreview
             src={photoViewerUrl}
             alt="Foto e njoftimit"
-            className="max-h-[90vh] max-w-[96vw] rounded-xl object-contain"
-            onClick={(event) => event.stopPropagation()}
+            focus={photoViewerFocus}
+            className="h-[82vh] max-h-[82vh] w-full rounded-xl border border-white/10 bg-black/40"
+            imageClassName="rounded-xl"
           />
+            <button
+              type="button"
+              onClick={() => setPhotoViewerUrl("")}
+              className="rounded-xl border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold text-white hover:bg-white/15"
+            >
+              Mbyll
+            </button>
+          </div>
         </div>
       )}
     </div>
