@@ -71,6 +71,31 @@ export default function Feed({ fixedCategory = null }) {
   });
   const canImportPosts = user?.role === "admin" || user?.role === "moderator";
 
+  const buildCategoryUrl = (nextFilters) => {
+    const category = nextFilters.category || "all";
+    if (category === "pune") return "/Pune";
+    const params = new URLSearchParams();
+    if (category !== "all") params.set("category", category);
+    if (nextFilters.job_type && nextFilters.job_type !== "all") params.set("job_type", nextFilters.job_type);
+    if (nextFilters.service_field && nextFilters.service_field !== "all") params.set("field", nextFilters.service_field);
+    if (nextFilters.sub && nextFilters.sub !== "all") params.set("sub", nextFilters.sub);
+    const query = params.toString();
+    return `/Feed${query ? `?${query}` : ""}`;
+  };
+
+  const updateFilters = (nextFilters) => {
+    const previousCategory = filters.category || "all";
+    const nextCategory = nextFilters.category || "all";
+    const categoryChanged = nextCategory !== previousCategory;
+
+    if (categoryChanged && (fixedCategory || nextCategory === "pune")) {
+      window.location.href = buildCategoryUrl(nextFilters);
+      return;
+    }
+
+    setFilters(nextFilters);
+  };
+
   const { data: jobs = [], isLoading, refetch } = useQuery({
     queryKey: ["jobs"],
     queryFn: () => base44.entities.Job.filter({ status: "approved" }, "-created_date", 200),
@@ -298,7 +323,7 @@ export default function Feed({ fixedCategory = null }) {
                 key={search.id}
                 onClick={() => {
                   const f = search.filters;
-                  setFilters({
+                  updateFilters({
                     ...filters,
                     category: f.category || "all",
                     country: f.country || "all",
@@ -320,11 +345,11 @@ export default function Feed({ fixedCategory = null }) {
       </div>
 
       <div className="mb-2">
-        <FeedFilters filters={filters} setFilters={setFilters} />
+        <FeedFilters filters={filters} setFilters={updateFilters} />
 
         {/* Row: Sort + Save Search */}
         <div className="flex gap-2 items-center flex-wrap">
-          <Select value={filters.sortBy} onValueChange={(val) => setFilters({...filters, sortBy: val})}>
+          <Select value={filters.sortBy} onValueChange={(val) => updateFilters({...filters, sortBy: val})}>
             <SelectTrigger className="h-8 w-48 bg-white/10 border-white/20 text-white text-xs">
               <SelectValue />
             </SelectTrigger>
