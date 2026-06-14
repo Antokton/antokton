@@ -1,5 +1,6 @@
 export const CATEGORIES = [
   { value: "pune", label: "Punë" },
+  { value: "pazar", label: "Pazar" },
   { value: "prona", label: "Prona" },
   { value: "edukim", label: "Edukim" },
   { value: "bamiresi", label: "Bamirësi" },
@@ -8,9 +9,12 @@ export const CATEGORIES = [
 ];
 
 export const LISTING_TYPES = [
-  { value: "pune", label: "Punë" },
-  { value: "shtepi", label: "Shtëpi" },
-  { value: "sherbim", label: "Shërbim" },
+  { value: "ofroj", label: "Ofroj" },
+  { value: "kerkoj", label: "Kërkoj" },
+  { value: "shitje", label: "Shitje" },
+  { value: "blerje", label: "Blerje" },
+  { value: "qira", label: "Qira" },
+  { value: "falas", label: "Falas" },
   { value: "reklame", label: "Reklamë" },
   { value: "tjeter", label: "Tjetër" },
 ];
@@ -44,6 +48,17 @@ export const STATUS_COLORS = {
 
 export const COUNTRIES_DATA = [
   {
+    name: "Antokton",
+    regions: [
+      { name: "Rajoni Qendror — Dardania", cities: ["Tiranë", "Durrës", "Elbasan", "Shkodër", "Kavajë", "Krujë", "Lezhë"] },
+      { name: "Rajoni Lindor — Dardania", cities: ["Prishtinë", "Prizren", "Pejë", "Gjakovë", "Gjilan", "Ferizaj", "Mitrovicë"] },
+      { name: "Rajoni Verior — Dardhania", cities: ["Bujanovc", "Kumanovë", "Medvegjë", "Preshevë", "Shkup"] },
+      { name: "Rajoni Perëndimor — Iliria", cities: ["Budva", "Guci", "Plavë", "Tivar", "Tuzi", "Ulqin"] },
+      { name: "Rajoni Jugor — Epiri", cities: ["Çamëri", "Filat", "Janinë", "Prevezë"] },
+      { name: "Rajoni Lindor — Thesalia & Maqedonia", cities: ["Gostivar", "Ohër", "Strugë", "Tetovë"] },
+    ]
+  },
+  {
     name: "Shqipëri",
     regions: [
       { name: "Tiranë", cities: ["Tiranë", "Kamëz", "Vorë"] },
@@ -66,15 +81,6 @@ export const COUNTRIES_DATA = [
       { name: "Gjakovë", cities: ["Gjakovë", "Rahovec", "Malishevë"] },
       { name: "Gjilan", cities: ["Gjilan", "Viti", "Kamenicë"] },
       { name: "Ferizaj", cities: ["Ferizaj", "Kaçanik", "Shtimë"] },
-    ]
-  },
-  {
-    name: "Antokton",
-    regions: [
-      { name: "Rajoni Verior — Dardhania", cities: ["Bujanovc", "Kumanovë", "Medvegjë", "Preshevë", "Shkup"] },
-      { name: "Rajoni Perëndimor — Iliria", cities: ["Budva", "Guci", "Plavë", "Tivar", "Tuzi", "Ulqin"] },
-      { name: "Rajoni Jugor — Epiri", cities: ["Çamëri", "Filat", "Janinë", "Prevezë"] },
-      { name: "Rajoni Lindor — Thesalia & Maqedonia", cities: ["Gostivar", "Ohër", "Strugë", "Tetovë"] },
     ]
   },
   {

@@ -331,7 +331,7 @@ export default function Layout({ children, currentPageName }) {
   const navItems = [
     { name: "Punë", page: "Feed", icon: Briefcase, hasSubmenu: true },
     { name: "Shërbime", page: "FeedSherbime", icon: Wrench, hasSubmenu: true, isSherbime: true },
-    { name: "Pazar", page: "Pazar", icon: ShoppingBag },
+    { name: "Pazar", page: "Pazar", icon: ShoppingBag, hasSubmenu: true, isProna: true },
     { name: "Edukim", page: "Edukim", icon: GraduationCap, hasSubmenu: true, isEdukim: true },
     { name: "Bileta", page: "Bileta", icon: Plane, hasSubmenu: true, isBileta: true },
     { name: "Ngjarje", page: "Events", icon: Calendar },
@@ -353,6 +353,22 @@ export default function Layout({ children, currentPageName }) {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const splitNavClass = (active) => `rounded-lg text-xs font-medium transition-all duration-200 flex items-center overflow-hidden whitespace-nowrap ${
+    active ? "text-white bg-white/10" : "text-white hover:text-white/60 hover:bg-white/5"
+  }`;
+  const SplitNavTrigger = ({ to, label, active }) => (
+    <div className={splitNavClass(active)}>
+      <Link to={to} className="px-2.5 py-2">
+        {label}
+      </Link>
+      <DropdownMenuTrigger asChild>
+        <button type="button" className="px-2 py-2 border-l border-white/10" aria-label={`Hap nënmenunë ${label}`}>
+          <ChevronDown className="w-3.5 h-3.5" />
+        </button>
+      </DropdownMenuTrigger>
+    </div>
+  );
 
   // Update last_seen when user is active
   useEffect(() => {
@@ -618,6 +634,9 @@ export default function Layout({ children, currentPageName }) {
                     if (sub.visible === false) return false;
                     const itemLabel = String(item.label || item.id || "").toLowerCase();
                     const subLabel = String(sub.label || "").toLowerCase();
+                    if (itemLabel.includes("shërbime") || itemLabel.includes("sherbime")) {
+                      return subLabel !== "pazar";
+                    }
                     return !(itemLabel.includes("pazar") && (subLabel === "të gjitha" || subLabel === "te gjitha"));
                   });
                   if (!item.hasSubmenu || visibleSubs.length === 0) {
@@ -631,12 +650,11 @@ export default function Layout({ children, currentPageName }) {
                           }
                           return (
                           <DropdownMenu key={item.id}>
-                          <DropdownMenuTrigger asChild>
-                          <button className={`px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 whitespace-nowrap
-                            ${currentPageName === item.page ? "text-white bg-white/10" : "text-white hover:text-white/60 hover:bg-white/5"}`}>
-                            {item.label} <ChevronDown className="w-3.5 h-3.5" />
-                        </button>
-                      </DropdownMenuTrigger>
+                          <SplitNavTrigger
+                            to={item.url || (item.page ? `/${item.page}` : "/")}
+                            label={item.label}
+                            active={currentPageName === item.page}
+                          />
                       <DropdownMenuContent align="start" className="w-52 bg-[#0b1020] border-white/10">
                         {visibleSubs.map(sub => (
                           <DropdownMenuItem key={sub.id} asChild>
@@ -668,12 +686,11 @@ export default function Layout({ children, currentPageName }) {
                   if (item.hasSubmenu && item.page === "Feed") {
                     return (
                       <DropdownMenu key={item.page}>
-                        <DropdownMenuTrigger asChild>
-                          <button className={`px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 whitespace-nowrap
-                            ${["Feed","CreatePost","ApplicationsDashboard"].includes(currentPageName) ? "text-white bg-white/10" : "text-white hover:text-white/60 hover:bg-white/5"}`}>
-                            {item.name} <ChevronDown className="w-3.5 h-3.5" />
-                          </button>
-                        </DropdownMenuTrigger>
+                        <SplitNavTrigger
+                          to="/Feed?category=pune"
+                          label={item.name}
+                          active={["Feed","CreatePost","ApplicationsDashboard"].includes(currentPageName)}
+                        />
                         <DropdownMenuContent align="start" className="w-48 bg-[#0b1020] border-white/10">
                           <DropdownMenuItem asChild><Link to="/Feed?category=pune&job_type=ofroj" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Briefcase className="w-4 h-4" /> Oferta pune</Link></DropdownMenuItem>
                           <DropdownMenuItem asChild><Link to="/Feed?category=pune&job_type=kerkoj" className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white"><Briefcase className="w-4 h-4" /> Kërkesa pune</Link></DropdownMenuItem>
@@ -689,12 +706,11 @@ export default function Layout({ children, currentPageName }) {
                   if (item.hasSubmenu && item.isProna) {
                     return (
                       <DropdownMenu key={item.page}>
-                        <DropdownMenuTrigger asChild>
-                          <button className={`px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 whitespace-nowrap
-                            ${currentPageName==="FeedProna" ? "text-white bg-white/10" : "text-white hover:text-white/60 hover:bg-white/5"}`}>
-                            {item.name} <ChevronDown className="w-3.5 h-3.5" />
-                          </button>
-                        </DropdownMenuTrigger>
+                        <SplitNavTrigger
+                          to="/Pazar"
+                          label={item.name}
+                          active={currentPageName==="Pazar"}
+                        />
                         <DropdownMenuContent align="start" className="w-48 bg-[#0b1020] border-white/10">
                           <DropdownMenuItem asChild><Link to="/Pazar" className="flex items-center gap-2 cursor-pointer text-[#8ab4ff] font-semibold text-white/80 hover:text-white">Të gjitha</Link></DropdownMenuItem>
                           {[{key:"makina",label:"Makina"},{key:"mobilje",label:"Mobilje"},{key:"shtepi",label:"Shtëpi & Kuzhinë"},{key:"elektronike",label:"Elektronikë"},{key:"veshje",label:"Veshje"},{key:"aksesore",label:"Aksesorë"},{key:"bicikleta",label:"Bicikleta & Sport"},{key:"mjete",label:"Mjete & Pajisje"},{key:"art",label:"Art & Koleksione"},{key:"dhurime",label:"Dhurime falas"}].map(c => (
@@ -707,15 +723,12 @@ export default function Layout({ children, currentPageName }) {
                   if (item.hasSubmenu && item.isSherbime) {
                     return (
                       <DropdownMenu key={item.page}>
-                        <DropdownMenuTrigger asChild>
-                          <button className={`px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 whitespace-nowrap
-                            ${currentPageName==="FeedSherbime" ? "text-white bg-white/10" : "text-white hover:text-white/60 hover:bg-white/5"}`}>
-                            {item.name} <ChevronDown className="w-3.5 h-3.5" />
-                          </button>
-                        </DropdownMenuTrigger>
+                        <SplitNavTrigger
+                          to="/Sherbime"
+                          label={item.name}
+                          active={currentPageName==="FeedSherbime"}
+                        />
                         <DropdownMenuContent align="start" className="w-52 bg-[#0b1020] border-white/10">
-                          <DropdownMenuItem asChild><Link to="/Pazar" className="flex items-center gap-2 cursor-pointer text-[#8ab4ff] hover:text-white font-semibold"><ShoppingBag className="w-4 h-4" /> Pazar</Link></DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-white/10" />
                           <DropdownMenuItem asChild><Link to="/Feed?category=sherbime&job_type=ofroj" className="cursor-pointer text-white/80 hover:text-white">Ofroj shërbim</Link></DropdownMenuItem>
                           <DropdownMenuItem asChild><Link to="/Feed?category=sherbime&job_type=kerkoj" className="cursor-pointer text-white/80 hover:text-white">Kërkoj shërbim</Link></DropdownMenuItem>
                           <DropdownMenuSeparator className="bg-white/10" />
@@ -745,11 +758,11 @@ export default function Layout({ children, currentPageName }) {
                   if (item.hasSubmenu && item.isEdukim) {
                     return (
                       <DropdownMenu key={item.page}>
-                        <DropdownMenuTrigger asChild>
-                          <button className={`px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 whitespace-nowrap ${["Edukim","Akademia"].includes(currentPageName)?"text-white bg-white/10":"text-white hover:text-white/60 hover:bg-white/5"}`}>
-                            {item.name} <ChevronDown className="w-3.5 h-3.5" />
-                          </button>
-                        </DropdownMenuTrigger>
+                        <SplitNavTrigger
+                          to="/Edukim"
+                          label={item.name}
+                          active={["Edukim","Akademia"].includes(currentPageName)}
+                        />
                         <DropdownMenuContent align="start" className="w-52 bg-[#0b1020] border-white/10">
                           {EDUKIM_NAV_SUBMENU.map((sub) => {
                             const SubIcon = sub.icon || GraduationCap;
@@ -779,11 +792,11 @@ export default function Layout({ children, currentPageName }) {
                   if (item.hasSubmenu && item.isBileta) {
                     return (
                       <DropdownMenu key={item.page}>
-                        <DropdownMenuTrigger asChild>
-                          <button className={`px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 whitespace-nowrap ${currentPageName==="Bileta"?"text-white bg-white/10":"text-white hover:text-white/60 hover:bg-white/5"}`}>
-                            {item.name} <ChevronDown className="w-3.5 h-3.5" />
-                          </button>
-                        </DropdownMenuTrigger>
+                        <SplitNavTrigger
+                          to="/Bileta"
+                          label={item.name}
+                          active={currentPageName==="Bileta"}
+                        />
                         <DropdownMenuContent align="start" className="w-52 bg-[#0b1020] border-white/10">
                           {BILETA_NAV_SUBMENU.map((b) => {
                             const TicketIcon = b.icon || Plane;
@@ -802,11 +815,11 @@ export default function Layout({ children, currentPageName }) {
                   if (item.hasSubmenu && item.isMedia) {
                     return (
                       <DropdownMenu key={item.page}>
-                        <DropdownMenuTrigger asChild>
-                          <button className={`px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 whitespace-nowrap ${currentPageName==="Media"?"text-white bg-white/10":"text-white hover:text-white/60 hover:bg-white/5"}`}>
-                            {item.name} <ChevronDown className="w-3.5 h-3.5" />
-                          </button>
-                        </DropdownMenuTrigger>
+                        <SplitNavTrigger
+                          to="/Media"
+                          label={item.name}
+                          active={currentPageName==="Media"}
+                        />
                         <DropdownMenuContent align="start" className="w-52 bg-[#0b1020] border-white/10">
                           <DropdownMenuItem className="text-white/40 text-xs cursor-default"><Tv className="w-4 h-4" /> Antokton TV <span className="ml-1 text-[10px] opacity-60">(së shpejti)</span></DropdownMenuItem>
                           <DropdownMenuItem className="text-white/40 text-xs cursor-default"><Radio className="w-4 h-4" /> Antokton Radio <span className="ml-1 text-[10px] opacity-60">(së shpejti)</span></DropdownMenuItem>

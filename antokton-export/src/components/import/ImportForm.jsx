@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Sparkles, Trash2, RotateCcw, Save, Send, Globe, Archive, X, Image, Star, Upload } from "lucide-react";
 import { COUNTRIES_DATA, CATEGORIES, LISTING_TYPES, SOURCES } from "./importConstants";
+import { publishImportedPost } from "./publishImportedPost";
 import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
 import { extractImportedPostFields, sanitizeImportedText } from "@/lib/importExtractors";
 
@@ -254,14 +255,26 @@ Kthe JSON me këto fusha.`;
       imported_by: user.email,
       ...(status === "publikuar" && !editingPost?.published_at ? { published_at: new Date().toISOString() } : {}),
     };
-    if (editingPost) {
-      await base44.entities.ImportedPost.update(editingPost.id, payload);
-    } else {
-      await base44.entities.ImportedPost.create(payload);
+    try {
+      let savedPost;
+      if (editingPost) {
+        const updated = await base44.entities.ImportedPost.update(editingPost.id, payload);
+        savedPost = { ...editingPost, ...payload, ...(updated || {}), id: editingPost.id };
+      } else {
+        savedPost = await base44.entities.ImportedPost.create(payload);
+        savedPost = { ...payload, ...(savedPost || {}) };
+      }
+      if (status === "publikuar") {
+        await publishImportedPost(base44, savedPost, user);
+      }
+      qc.invalidateQueries({ queryKey: ["importedPosts"] });
+      qc.invalidateQueries({ queryKey: ["jobs"] });
+      onDone();
+    } catch (error) {
+      alert(error?.message || "Ruajtja dështoi. Provo përsëri.");
+    } finally {
+      setLoading(false);
     }
-    qc.invalidateQueries({ queryKey: ["importedPosts"] });
-    setLoading(false);
-    onDone();
   };
 
   const isAdmin = user.role === "admin";

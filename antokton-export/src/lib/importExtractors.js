@@ -65,7 +65,7 @@ function inferCountryFromText(text = "") {
   if (/\b(gjermani|gjermania|germany|deutschland|gütersloh|gutersloh|bielefeld|berlin|hamburg|münchen|munich|dortmund|düsseldorf|dusseldorf|köln|koln|frankfurt)\b/i.test(value)) {
     return "Gjermani";
   }
-  if (/\b(budva|ulqin|tivar|tuzi|plavë|plave|guci|preshevë|presheve|bujanoc|bujanovc|medvegjë|medvegje|shkup|tetovë|tetove|gostivar|kumanovë|kumanove|ohër|oher|strugë|struge|janinë|janine|filat|çamëri|cameri|selanik|maqedoni|maqedonia|mal i zi|mali i zi|montenegro|serbi|greqi|greece)\b/i.test(value)) {
+  if (/(^|[^a-zçë])(tiranë|tirane|tirana|durrës|durres|shkodër|shkoder|elbasan|prishtinë|prishtine|prizren|pejë|peje|gjakovë|gjakove|gjilan|ferizaj|budva|ulqin|tivar|tuzi|plavë|plave|guci|preshevë|presheve|bujanoc|bujanovc|medvegjë|medvegje|shkup|tetovë|tetove|gostivar|kumanovë|kumanove|ohër|oher|strugë|struge|janinë|janine|filat|çamëri|cameri|selanik|shqipëri|shqiperi|albania|kosovë|kosove|maqedoni|maqedonia|mal i zi|mali i zi|montenegro|serbi|greqi|greece)(?=$|[^a-zçë])/i.test(value)) {
     return "Antokton";
   }
   return "";
@@ -74,7 +74,7 @@ function inferCountryFromText(text = "") {
 function normalizeCountryName(country = "") {
   const value = sanitizeImportedText(country).trim();
   if (/^(gjermani|gjermania|germany|deutschland)$/i.test(value)) return "Gjermani";
-  if (/^(mal i zi|mali i zi|mal të zi|mali të zi|montenegro|crna gora|serbi|serbia|srbija|greqi|greqia|greece|ellada|maqedoni|maqedonia|maqedoni e veriut|maqedonia e veriut|north macedonia|macedonia)$/i.test(value)) return "Antokton";
+  if (/^(shqipëri|shqiperi|shqiperia|albania|kosovë|kosove|kosova|mal i zi|mali i zi|mal të zi|mali të zi|montenegro|crna gora|serbi|serbia|srbija|greqi|greqia|greece|ellada|maqedoni|maqedonia|maqedoni e veriut|maqedonia e veriut|north macedonia|macedonia)$/i.test(value)) return "Antokton";
   return value;
 }
 

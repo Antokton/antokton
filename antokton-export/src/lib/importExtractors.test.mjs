@@ -62,6 +62,9 @@ test("extractImportedPostFields normalizes Gjermania to Gjermani", () => {
 
 test("extractImportedPostFields treats Budva and neighboring state labels as Antokton", () => {
   assert.equal(extractImportedPostFields("Kërkohet punëtor në Budva", {}).country, "Antokton");
+  assert.equal(extractImportedPostFields("Kërkohet punëtor në Tiranë", {}).country, "Antokton");
+  assert.equal(extractImportedPostFields("Kërkohet punëtor", { country: "Shqipëri" }).country, "Antokton");
+  assert.equal(extractImportedPostFields("Kërkohet punëtor", { country: "Kosovë" }).country, "Antokton");
   assert.equal(extractImportedPostFields("Kërkohet punëtor", { country: "Mal i Zi" }).country, "Antokton");
   assert.equal(extractImportedPostFields("Kërkohet punëtor", { country: "Serbi" }).country, "Antokton");
   assert.equal(extractImportedPostFields("Kërkohet punëtor", { country: "Greqi" }).country, "Antokton");

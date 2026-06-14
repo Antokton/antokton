@@ -5,11 +5,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Loader2, Pencil, Trash2, Globe } from "lucide-react";
 import { CATEGORIES, LISTING_TYPES, SOURCES, STATUS_LABELS, STATUS_COLORS } from "./importConstants";
+import { publishImportedPost } from "./publishImportedPost";
 import moment from "moment";
 
 export default function ImportTable({ user, onEdit }) {
   const qc = useQueryClient();
   const [filters, setFilters] = useState({ status: "all", category: "all", listing_type: "all", source: "all", search: "" });
+  const [publishingId, setPublishingId] = useState(null);
 
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ["importedPosts"],
@@ -37,8 +39,16 @@ export default function ImportTable({ user, onEdit }) {
   };
 
   const handleQuickPublish = async (post) => {
-    await base44.entities.ImportedPost.update(post.id, { status: "publikuar", published_at: new Date().toISOString() });
-    qc.invalidateQueries({ queryKey: ["importedPosts"] });
+    setPublishingId(post.id);
+    try {
+      await publishImportedPost(base44, post, user);
+      qc.invalidateQueries({ queryKey: ["importedPosts"] });
+      qc.invalidateQueries({ queryKey: ["jobs"] });
+    } catch (error) {
+      alert(error?.message || "Publikimi dështoi. Provo përsëri.");
+    } finally {
+      setPublishingId(null);
+    }
   };
 
   const isAdmin = user.role === "admin";
@@ -132,8 +142,8 @@ export default function ImportTable({ user, onEdit }) {
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       {isAdmin && post.status !== "publikuar" && (
-                        <button onClick={() => handleQuickPublish(post)} className="p-1.5 rounded text-[#9bffd6]/60 hover:text-[#9bffd6] hover:bg-[#9bffd6]/10 transition-colors" title="Publiko">
-                          <Globe className="w-3.5 h-3.5" />
+                        <button onClick={() => handleQuickPublish(post)} disabled={publishingId === post.id} className="p-1.5 rounded text-[#9bffd6]/60 hover:text-[#9bffd6] hover:bg-[#9bffd6]/10 transition-colors disabled:opacity-40" title="Publiko">
+                          {publishingId === post.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
                         </button>
                       )}
                       {isAdmin && (
