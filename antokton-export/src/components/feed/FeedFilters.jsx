@@ -210,26 +210,29 @@ const countrySubregions = {
 const antoktonRegions = [
   { value: "all", label: "Shteti Antokton - Të gjithë" },
   {
-    value: "verior",
-    label: "Rajoni Verior — Dardhania",
-    // Dardania (Kosova, jugu i Serbisë) + Peonia (Maqedonia Veri-Lindore)
+    value: "qendror",
+    label: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut",
     cities: [
-      "Bujanovc", "Ferizaj", "Gjakovë", "Gjilan", "Kaçanik", "Kratovë",
-      "Kriva Pallankë", "Kumanovë", "Leskovac", "Medvegjë", "Mitrovicë",
-      "Nish", "Pejë", "Podujevë", "Preshevë", "Prijepolje", "Prishtinë",
-      "Prokuplje", "Prizren", "Rozhajë", "Shkup", "Sjenicë", "Tutin",
-      "Vushtrri", "Vranjë", "Zveçan"
+      "Apolloni", "Berat", "Burrel", "Durrës", "Elbasan", "Ferizaj", "Fier",
+      "Gjakovë", "Gjilan", "Gramsh", "Kavajë", "Krujë", "Kukës", "Lezhë",
+      "Librazhd", "Lushnjë", "Mitrovicë", "Pejë", "Podujevë", "Prishtinë",
+      "Prizren", "Pukë", "Rodon", "Shkodër", "Tiranë", "Vlorë", "Vushtrri"
     ].sort()
   },
   {
     value: "perendimor",
-    label: "Rajoni Perëndimor — Iliria",
-    // Iliria (bregdeti adriatik, malet perëndimore) + Mali i Zi shqiptar
+    label: "Rajoni Perëndimor — Iliria Perëndimore",
     cities: [
-      "Apolloni", "Berat", "Budva", "Burrel", "Durrës", "Elbasan", "Fier",
-      "Gramsh", "Guci", "Kavajë", "Krujë", "Kukës", "Lezhë", "Librazhd",
-      "Lushnjë", "Plavë", "Pukë", "Rodon", "Shkodër", "Tiranë", "Tivar",
-      "Tuzi", "Ulqin", "Vlorë"
+      "Budva", "Guci", "Plavë", "Rozhajë", "Tivar", "Tuzi", "Ulqin"
+    ].sort()
+  },
+  {
+    value: "verior",
+    label: "Rajoni Verior — Dardania",
+    cities: [
+      "Beograd", "Bujanovc", "Jabllanicë", "Leskovac", "Medvegjë", "Nish",
+      "Novi Pazar", "Pirot", "Preshevë", "Prijepolje", "Prokuplje", "Sjenicë",
+      "Toplicë", "Tutin", "Vojvodinë", "Vranjë", "Zveçan"
     ].sort()
   },
   {
@@ -240,18 +243,17 @@ const antoktonRegions = [
       "Ambraki", "Arta", "Astakos", "Butrinti", "Delvinë", "Dodona",
       "Dropull", "Filiates", "Gjirokastër", "Igumenicë", "Janinë",
       "Konispol", "Margëlliç", "Mesologji", "Nafpaktos", "Paramithi",
-      "Prevezë", "Sarandë", "Tesproti", "Tefëri"
+      "Patra", "Peloponez", "Prevezë", "Sarandë", "Tesproti", "Tefëri"
     ].sort()
   },
   {
     value: "lindor",
-    label: "Rajoni Lindor — Thesalia & Maqedonia",
-    // Maqedonia historike + Thesalia + pjesë e Peaonisë
+    label: "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia",
     cities: [
       "Dibër", "Edesa", "Farsala", "Florinë", "Gostivar", "Kavala",
       "Kërçovë", "Kozani", "Kostur", "Larisa", "Lerin", "Liknid",
       "Manastir", "Ohër", "Pella", "Pogradec", "Selanik", "Strumicë",
-      "Strugë", "Tetovë", "Trikala", "Veria", "Volos", "Voskopojë"
+      "Strugë", "Tetovë", "Thrakë", "Trikala", "Veria", "Volos", "Voskopojë", "Athinë"
     ].sort()
   }
 ];

@@ -224,10 +224,11 @@ const BASE_COUNTRIES = [
 
 const zonesByCountry = {
   "Antokton": [
-    "Rajoni Verior — Dardhania",
-    "Rajoni Perëndimor — Iliria",
+    "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut",
+    "Rajoni Perëndimor — Iliria Perëndimore",
+    "Rajoni Verior — Dardania",
     "Rajoni Jugor — Epiri",
-    "Rajoni Lindor — Thesalia & Maqedonia"
+    "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia"
   ],
   "Gjermani": ["Lindja", "Perëndimi", "Veriu", "Jugu", "Qendra"],
   "Angli": ["Londër", "Midlands", "Veriu", "Jugu", "Perëndimi", "Lindja"],
@@ -244,30 +245,31 @@ const zonesByCountry = {
 };
 
 const citiesByZone = {
-  "Rajoni Verior — Dardhania": [
-    "Bujanovc", "Ferizaj", "Gjakovë", "Gjilan", "Kaçanik", "Kratovë",
-    "Kriva Pallankë", "Kumanovë", "Leskovac", "Medvegjë", "Mitrovicë",
-    "Nish", "Pejë", "Podujevë", "Preshevë", "Prijepolje", "Prishtinë",
-    "Prokuplje", "Prizren", "Rozhajë", "Shkup", "Sjenicë", "Tutin",
-    "Vushtrri", "Vranjë", "Zveçan"
+  "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut": [
+    "Apolloni", "Berat", "Burrel", "Durrës", "Elbasan", "Ferizaj", "Fier",
+    "Gjakovë", "Gjilan", "Gramsh", "Kavajë", "Krujë", "Kukës", "Lezhë",
+    "Librazhd", "Lushnjë", "Mitrovicë", "Pejë", "Podujevë", "Prishtinë",
+    "Prizren", "Pukë", "Rodon", "Shkodër", "Tiranë", "Vlorë", "Vushtrri"
   ].sort(),
-  "Rajoni Perëndimor — Iliria": [
-    "Apolloni", "Berat", "Budva", "Burrel", "Durrës", "Elbasan", "Fier",
-    "Gramsh", "Guci", "Kavajë", "Krujë", "Kukës", "Lezhë", "Librazhd",
-    "Lushnjë", "Plavë", "Pukë", "Rodon", "Shkodër", "Tiranë", "Tivar",
-    "Tuzi", "Ulqin", "Vlorë"
+  "Rajoni Perëndimor — Iliria Perëndimore": [
+    "Budva", "Guci", "Plavë", "Rozhajë", "Tivar", "Tuzi", "Ulqin"
+  ].sort(),
+  "Rajoni Verior — Dardania": [
+    "Beograd", "Bujanovc", "Jabllanicë", "Leskovac", "Medvegjë", "Nish",
+    "Novi Pazar", "Pirot", "Preshevë", "Prijepolje", "Prokuplje", "Sjenicë",
+    "Toplicë", "Tutin", "Vojvodinë", "Vranjë", "Zveçan"
   ].sort(),
   "Rajoni Jugor — Epiri": [
     "Ambraki", "Arta", "Astakos", "Butrinti", "Delvinë", "Dodona",
     "Dropull", "Filiates", "Gjirokastër", "Igumenicë", "Janinë",
     "Konispol", "Margëlliç", "Mesologji", "Nafpaktos", "Paramithi",
-    "Prevezë", "Sarandë", "Tesproti", "Tefëri"
+    "Patra", "Peloponez", "Prevezë", "Sarandë", "Tesproti", "Tefëri"
   ].sort(),
-  "Rajoni Lindor — Thesalia & Maqedonia": [
+  "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia": [
     "Dibër", "Edesa", "Farsala", "Florinë", "Gostivar", "Kavala",
     "Kërçovë", "Kozani", "Kostur", "Larisa", "Lerin", "Liknid",
     "Manastir", "Ohër", "Pella", "Pogradec", "Selanik", "Strumicë",
-    "Strugë", "Tetovë", "Trikala", "Veria", "Volos", "Voskopojë"
+    "Strugë", "Tetovë", "Thrakë", "Trikala", "Veria", "Volos", "Voskopojë", "Athinë"
   ].sort(),
   "Lindja": ["Berlin", "Leipzig", "Dresden", "Potsdam", "Erfurt"],
   "Perëndimi": ["Köln", "Düsseldorf", "Dortmund", "Essen", "Bonn"],

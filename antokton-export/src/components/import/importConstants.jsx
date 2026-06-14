@@ -50,37 +50,11 @@ export const COUNTRIES_DATA = [
   {
     name: "Antokton",
     regions: [
-      { name: "Rajoni Qendror — Dardania", cities: ["Tiranë", "Durrës", "Elbasan", "Shkodër", "Kavajë", "Krujë", "Lezhë"] },
-      { name: "Rajoni Lindor — Dardania", cities: ["Prishtinë", "Prizren", "Pejë", "Gjakovë", "Gjilan", "Ferizaj", "Mitrovicë"] },
-      { name: "Rajoni Verior — Dardhania", cities: ["Bujanovc", "Kumanovë", "Medvegjë", "Preshevë", "Shkup"] },
-      { name: "Rajoni Perëndimor — Iliria", cities: ["Budva", "Guci", "Plavë", "Tivar", "Tuzi", "Ulqin"] },
-      { name: "Rajoni Jugor — Epiri", cities: ["Çamëri", "Filat", "Janinë", "Prevezë"] },
-      { name: "Rajoni Lindor — Thesalia & Maqedonia", cities: ["Gostivar", "Ohër", "Strugë", "Tetovë"] },
-    ]
-  },
-  {
-    name: "Shqipëri",
-    regions: [
-      { name: "Tiranë", cities: ["Tiranë", "Kamëz", "Vorë"] },
-      { name: "Durrës", cities: ["Durrës", "Shijak", "Rrashbull"] },
-      { name: "Vlorë", cities: ["Vlorë", "Sarandë", "Himarë", "Fier"] },
-      { name: "Shkodër", cities: ["Shkodër", "Lezhë", "Laç"] },
-      { name: "Korçë", cities: ["Korçë", "Pogradec", "Librazhd"] },
-      { name: "Elbasan", cities: ["Elbasan", "Cërrik", "Peqin"] },
-      { name: "Gjirokastër", cities: ["Gjirokastër", "Tepelenë", "Permët"] },
-      { name: "Berat", cities: ["Berat", "Kuçovë", "Çorovodë"] },
-    ]
-  },
-  {
-    name: "Kosovë",
-    regions: [
-      { name: "Prishtinë", cities: ["Prishtinë", "Fushë Kosovë", "Lipjan", "Gllogoc"] },
-      { name: "Prizren", cities: ["Prizren", "Dragash", "Suharekë"] },
-      { name: "Pejë", cities: ["Pejë", "Istog", "Klinë", "Deçan"] },
-      { name: "Mitrovicë", cities: ["Mitrovicë", "Vushtrri", "Skenderaj"] },
-      { name: "Gjakovë", cities: ["Gjakovë", "Rahovec", "Malishevë"] },
-      { name: "Gjilan", cities: ["Gjilan", "Viti", "Kamenicë"] },
-      { name: "Ferizaj", cities: ["Ferizaj", "Kaçanik", "Shtimë"] },
+      { name: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", cities: ["Tiranë", "Durrës", "Elbasan", "Shkodër", "Kavajë", "Krujë", "Lezhë", "Vlorë", "Berat", "Korçë", "Prishtinë", "Prizren", "Pejë", "Gjakovë", "Gjilan", "Ferizaj", "Mitrovicë"] },
+      { name: "Rajoni Perëndimor — Iliria Perëndimore", cities: ["Budva", "Guci", "Plavë", "Tivar", "Tuzi", "Ulqin", "Rozhajë"] },
+      { name: "Rajoni Verior — Dardania", cities: ["Bujanovc", "Medvegjë", "Nish", "Novi Pazar", "Preshevë", "Toplicë", "Jabllanicë", "Vranjë", "Pirot", "Sjenicë", "Tutin", "Vojvodinë"] },
+      { name: "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia", cities: ["Shkup", "Tetovë", "Gostivar", "Kumanovë", "Ohër", "Strugë", "Manastir", "Selanik", "Larisa", "Volos", "Trikala", "Athinë", "Thrakë"] },
+      { name: "Rajoni Jugor — Epiri", cities: ["Çamëri", "Filat", "Janinë", "Prevezë", "Arta", "Igumenicë", "Mesologji", "Patra", "Peloponez"] },
     ]
   },
   {

@@ -3,25 +3,27 @@ import { MapPin, Loader2, X } from "lucide-react";
 import { base44 } from "@/api/antoktonClient";
 
 const ANTOKTON_ZONES = {
-  "Rajoni Verior — Dardhania": [
-    "Bujanovc","Ferizaj","Gjakovë","Gjilan","Kaçanik","Kratovë","Kriva Pallankë","Kumanovë",
-    "Leskovac","Medvegjë","Mitrovicë","Nish","Pejë","Podujevë","Preshevë","Prijepolje",
-    "Prishtinë","Prokuplje","Prizren","Rozhajë","Shkup","Sjenicë","Tutin","Vushtrri","Vranjë","Zveçan"
+  "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut": [
+    "Apolloni","Berat","Burrel","Durrës","Elbasan","Ferizaj","Fier","Gjakovë","Gjilan","Gramsh",
+    "Kavajë","Krujë","Kukës","Lezhë","Librazhd","Lushnjë","Mitrovicë","Pejë","Podujevë",
+    "Prishtinë","Prizren","Pukë","Rodon","Shkodër","Tiranë","Vlorë","Vushtrri"
   ],
-  "Rajoni Perëndimor — Iliria": [
-    "Apolloni","Berat","Budva","Burrel","Durrës","Elbasan","Fier","Gramsh","Guci","Kavajë","Krujë",
-    "Kukës","Lezhë","Librazhd","Lushnjë","Plavë","Pukë","Rodon","Shkodër","Tiranë","Tivar",
-    "Tuzi","Ulqin","Vlorë"
+  "Rajoni Perëndimor — Iliria Perëndimore": [
+    "Budva","Guci","Plavë","Rozhajë","Tivar","Tuzi","Ulqin"
+  ],
+  "Rajoni Verior — Dardania": [
+    "Beograd","Bujanovc","Jabllanicë","Leskovac","Medvegjë","Nish","Novi Pazar","Pirot",
+    "Preshevë","Prijepolje","Prokuplje","Sjenicë","Toplicë","Tutin","Vojvodinë","Vranjë","Zveçan"
   ],
   "Rajoni Jugor — Epiri": [
     "Ambraki","Arta","Astakos","Butrinti","Delvinë","Dodona","Dropull","Filiates","Gjirokastër",
     "Igumenicë","Janinë","Konispol","Margëlliç","Mesologji","Nafpaktos","Paramithi","Prevezë",
-    "Sarandë","Tesproti","Tefëri"
+    "Patra","Peloponez","Sarandë","Tesproti","Tefëri"
   ],
-  "Rajoni Lindor — Thesalia & Maqedonia": [
+  "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia": [
     "Dibër","Edesa","Farsala","Florinë","Gostivar","Kavala","Kërçovë","Kozani","Kostur","Larisa",
     "Lerin","Liknid","Manastir","Ohër","Pella","Pogradec","Selanik","Strumicë","Strugë","Tetovë",
-    "Trikala","Veria","Volos","Voskopojë"
+    "Thrakë","Trikala","Veria","Volos","Voskopojë","Athinë"
   ]
 };
 
@@ -29,43 +31,43 @@ const ANTOKTON_ZONES = {
 // Kjo listë mundëson: (1) gjetjen me emrin shqip, (2) zëvendësimin e emrave të huaj me ata shqip
 const ANTOKTON_PLACES = [
   // Mal i Zi — Zona shqiptare
-  { name: "Budva", aliases: ["budva","budua"], zone: "Rajoni Perëndimor — Iliria", city: "Budva", near: "Tivar" },
-  { name: "Katërkollë", aliases: ["vladimir","katerkole","katër kollë"], zone: "Rajoni Perëndimor — Iliria", city: "Katërkollë", near: "Ulqin" },
-  { name: "Kosmaç", aliases: ["kosmac","kosmaç","cosmos"], zone: "Rajoni Perëndimor — Iliria", city: "Kosmaç", near: "Shkodër" },
-  { name: "Selcë", aliases: ["selce","seltse"], zone: "Rajoni Perëndimor — Iliria", city: "Selcë", near: "Plavë" },
-  { name: "Muriqan", aliases: ["muriqan","murican"], zone: "Rajoni Perëndimor — Iliria", city: "Muriqan", near: "Shkodër" },
-  { name: "Gruemirë", aliases: ["gruemire","grubisic"], zone: "Rajoni Perëndimor — Iliria", city: "Gruemirë", near: "Guci" },
-  { name: "Zatriç", aliases: ["zatric","zatriç"], zone: "Rajoni Perëndimor — Iliria", city: "Zatriç", near: "Plavë" },
-  { name: "Vrith", aliases: ["vrith","vrit"], zone: "Rajoni Perëndimor — Iliria", city: "Vrith", near: "Ulqin" },
-  { name: "Arbnesh", aliases: ["arbnesh","arbanese"], zone: "Rajoni Perëndimor — Iliria", city: "Arbnesh", near: "Tivar" },
-  { name: "Briska e Madhe", aliases: ["briska e madhe","velika briska"], zone: "Rajoni Perëndimor — Iliria", city: "Briska e Madhe", near: "Ulqin" },
-  { name: "Hot", aliases: ["hot","hoti"], zone: "Rajoni Perëndimor — Iliria", city: "Hot", near: "Guci" },
-  { name: "Triesh", aliases: ["triesh","triesch"], zone: "Rajoni Perëndimor — Iliria", city: "Triesh", near: "Plavë" },
+  { name: "Budva", aliases: ["budva","budua"], zone: "Rajoni Perëndimor — Iliria Perëndimore", city: "Budva", near: "Tivar" },
+  { name: "Katërkollë", aliases: ["vladimir","katerkole","katër kollë"], zone: "Rajoni Perëndimor — Iliria Perëndimore", city: "Katërkollë", near: "Ulqin" },
+  { name: "Kosmaç", aliases: ["kosmac","kosmaç","cosmos"], zone: "Rajoni Perëndimor — Iliria Perëndimore", city: "Kosmaç", near: "Shkodër" },
+  { name: "Selcë", aliases: ["selce","seltse"], zone: "Rajoni Perëndimor — Iliria Perëndimore", city: "Selcë", near: "Plavë" },
+  { name: "Muriqan", aliases: ["muriqan","murican"], zone: "Rajoni Perëndimor — Iliria Perëndimore", city: "Muriqan", near: "Shkodër" },
+  { name: "Gruemirë", aliases: ["gruemire","grubisic"], zone: "Rajoni Perëndimor — Iliria Perëndimore", city: "Gruemirë", near: "Guci" },
+  { name: "Zatriç", aliases: ["zatric","zatriç"], zone: "Rajoni Perëndimor — Iliria Perëndimore", city: "Zatriç", near: "Plavë" },
+  { name: "Vrith", aliases: ["vrith","vrit"], zone: "Rajoni Perëndimor — Iliria Perëndimore", city: "Vrith", near: "Ulqin" },
+  { name: "Arbnesh", aliases: ["arbnesh","arbanese"], zone: "Rajoni Perëndimor — Iliria Perëndimore", city: "Arbnesh", near: "Tivar" },
+  { name: "Briska e Madhe", aliases: ["briska e madhe","velika briska"], zone: "Rajoni Perëndimor — Iliria Perëndimore", city: "Briska e Madhe", near: "Ulqin" },
+  { name: "Hot", aliases: ["hot","hoti"], zone: "Rajoni Perëndimor — Iliria Perëndimore", city: "Hot", near: "Guci" },
+  { name: "Triesh", aliases: ["triesh","triesch"], zone: "Rajoni Perëndimor — Iliria Perëndimore", city: "Triesh", near: "Plavë" },
   // Kosovë — fshatra
-  { name: "Ibar", aliases: ["ibar","ibare"], zone: "Rajoni Verior — Dardhania", city: "Ibar", near: "Mitrovicë" },
-  { name: "Banjë", aliases: ["banje","banja"], zone: "Rajoni Verior — Dardhania", city: "Banjë", near: "Pejë" },
-  { name: "Bresalc", aliases: ["bresalc","brezovica"], zone: "Rajoni Verior — Dardhania", city: "Bresalc", near: "Ferizaj" },
-  { name: "Kamenicë", aliases: ["kamenice","kamenica"], zone: "Rajoni Verior — Dardhania", city: "Kamenicë", near: "Gjilan" },
-  { name: "Lipjan", aliases: ["lipjan","lipljan"], zone: "Rajoni Verior — Dardhania", city: "Lipjan", near: "Prishtinë" },
-  { name: "Drenas", aliases: ["drenas","glogovac"], zone: "Rajoni Verior — Dardhania", city: "Drenas", near: "Prishtinë" },
-  { name: "Rahovec", aliases: ["rahovec","orahovac"], zone: "Rajoni Verior — Dardhania", city: "Rahovec", near: "Gjakovë" },
-  { name: "Skenderaj", aliases: ["skenderaj","srbica"], zone: "Rajoni Verior — Dardhania", city: "Skenderaj", near: "Mitrovicë" },
-  { name: "Malishevë", aliases: ["malisevo","malisheve"], zone: "Rajoni Verior — Dardhania", city: "Malishevë", near: "Prizren" },
-  { name: "Suharekë", aliases: ["suhareka","suhareke","suva reka"], zone: "Rajoni Verior — Dardhania", city: "Suharekë", near: "Prizren" },
-  { name: "Obiliq", aliases: ["obilic","obiliq"], zone: "Rajoni Verior — Dardhania", city: "Obiliq", near: "Prishtinë" },
-  { name: "Deçan", aliases: ["decan","decane"], zone: "Rajoni Verior — Dardhania", city: "Deçan", near: "Pejë" },
-  { name: "Klinë", aliases: ["kline","klina"], zone: "Rajoni Verior — Dardhania", city: "Klinë", near: "Pejë" },
-  { name: "Dragash", aliases: ["dragash","dragas"], zone: "Rajoni Verior — Dardhania", city: "Dragash", near: "Prizren" },
-  { name: "Leposaviq", aliases: ["leposavic","leposaviq"], zone: "Rajoni Verior — Dardhania", city: "Leposaviq", near: "Mitrovicë" },
+  { name: "Ibar", aliases: ["ibar","ibare"], zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", city: "Ibar", near: "Mitrovicë" },
+  { name: "Banjë", aliases: ["banje","banja"], zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", city: "Banjë", near: "Pejë" },
+  { name: "Bresalc", aliases: ["bresalc","brezovica"], zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", city: "Bresalc", near: "Ferizaj" },
+  { name: "Kamenicë", aliases: ["kamenice","kamenica"], zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", city: "Kamenicë", near: "Gjilan" },
+  { name: "Lipjan", aliases: ["lipjan","lipljan"], zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", city: "Lipjan", near: "Prishtinë" },
+  { name: "Drenas", aliases: ["drenas","glogovac"], zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", city: "Drenas", near: "Prishtinë" },
+  { name: "Rahovec", aliases: ["rahovec","orahovac"], zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", city: "Rahovec", near: "Gjakovë" },
+  { name: "Skenderaj", aliases: ["skenderaj","srbica"], zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", city: "Skenderaj", near: "Mitrovicë" },
+  { name: "Malishevë", aliases: ["malisevo","malisheve"], zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", city: "Malishevë", near: "Prizren" },
+  { name: "Suharekë", aliases: ["suhareka","suhareke","suva reka"], zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", city: "Suharekë", near: "Prizren" },
+  { name: "Obiliq", aliases: ["obilic","obiliq"], zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", city: "Obiliq", near: "Prishtinë" },
+  { name: "Deçan", aliases: ["decan","decane"], zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", city: "Deçan", near: "Pejë" },
+  { name: "Klinë", aliases: ["kline","klina"], zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", city: "Klinë", near: "Pejë" },
+  { name: "Dragash", aliases: ["dragash","dragas"], zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", city: "Dragash", near: "Prizren" },
+  { name: "Leposaviq", aliases: ["leposavic","leposaviq"], zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", city: "Leposaviq", near: "Mitrovicë" },
   // Maqedoni e Veriut — vendbanime shqiptare
-  { name: "Çegran", aliases: ["cegran","chegran"], zone: "Rajoni Lindor — Thesalia & Maqedonia", city: "Çegran", near: "Gostivar" },
-  { name: "Jegunovcë", aliases: ["jegunovce","jegunovtse"], zone: "Rajoni Lindor — Thesalia & Maqedonia", city: "Jegunovcë", near: "Shkup" },
-  { name: "Saraj", aliases: ["saraj"], zone: "Rajoni Lindor — Thesalia & Maqedonia", city: "Saraj", near: "Shkup" },
-  { name: "Kondovë", aliases: ["kondove","kondovo"], zone: "Rajoni Lindor — Thesalia & Maqedonia", city: "Kondovë", near: "Shkup" },
-  { name: "Zhelinë", aliases: ["zheline","zelino"], zone: "Rajoni Lindor — Thesalia & Maqedonia", city: "Zhelinë", near: "Tetovë" },
-  { name: "Bogovinë", aliases: ["bogovinje","bogovine"], zone: "Rajoni Lindor — Thesalia & Maqedonia", city: "Bogovinë", near: "Tetovë" },
-  { name: "Vrapçisht", aliases: ["vrapcist","vrapchisht"], zone: "Rajoni Lindor — Thesalia & Maqedonia", city: "Vrapçisht", near: "Gostivar" },
-  { name: "Debar", aliases: ["debar","diber"], zone: "Rajoni Lindor — Thesalia & Maqedonia", city: "Debar", near: "Dibër" },
+  { name: "Çegran", aliases: ["cegran","chegran"], zone: "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia", city: "Çegran", near: "Gostivar" },
+  { name: "Jegunovcë", aliases: ["jegunovce","jegunovtse"], zone: "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia", city: "Jegunovcë", near: "Shkup" },
+  { name: "Saraj", aliases: ["saraj"], zone: "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia", city: "Saraj", near: "Shkup" },
+  { name: "Kondovë", aliases: ["kondove","kondovo"], zone: "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia", city: "Kondovë", near: "Shkup" },
+  { name: "Zhelinë", aliases: ["zheline","zelino"], zone: "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia", city: "Zhelinë", near: "Tetovë" },
+  { name: "Bogovinë", aliases: ["bogovinje","bogovine"], zone: "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia", city: "Bogovinë", near: "Tetovë" },
+  { name: "Vrapçisht", aliases: ["vrapcist","vrapchisht"], zone: "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia", city: "Vrapçisht", near: "Gostivar" },
+  { name: "Debar", aliases: ["debar","diber"], zone: "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia", city: "Debar", near: "Dibër" },
   // Greqi veriore (Epiri — vendbanime shqiptare)
   { name: "Filat", aliases: ["filiates","filati"], zone: "Rajoni Jugor — Epiri", city: "Filat", near: "Janinë" },
   { name: "Çamëri", aliases: ["chameria","cameria","çamëri"], zone: "Rajoni Jugor — Epiri", city: "Çamëri", near: "Prevezë" },
@@ -189,44 +191,44 @@ const EUROPE_SUGGESTIONS = [
 // Rrugë/lagje të njohura në qytetet Antokton (për autocomplete të detajuar)
 const STREET_SUGGESTIONS = [
   // Prishtinë
-  { label: "Rr. Nënë Tereza, Prishtinë", city: "Prishtinë", zone: "Rajoni Verior — Dardhania", country: "Antokton", is_antokton: true },
-  { label: "Rr. UÇK, Prishtinë", city: "Prishtinë", zone: "Rajoni Verior — Dardhania", country: "Antokton", is_antokton: true },
-  { label: "Rr. Ali Ajeti, Prishtinë", city: "Prishtinë", zone: "Rajoni Verior — Dardhania", country: "Antokton", is_antokton: true },
-  { label: "Rr. Bill Clinton, Prishtinë", city: "Prishtinë", zone: "Rajoni Verior — Dardhania", country: "Antokton", is_antokton: true },
-  { label: "Lagja Dardania, Prishtinë", city: "Prishtinë", zone: "Rajoni Verior — Dardhania", country: "Antokton", is_antokton: true },
-  { label: "Lagja Kalabria, Prishtinë", city: "Prishtinë", zone: "Rajoni Verior — Dardhania", country: "Antokton", is_antokton: true },
-  { label: "Lagja Matiqan, Prishtinë", city: "Prishtinë", zone: "Rajoni Verior — Dardhania", country: "Antokton", is_antokton: true },
-  { label: "Lagja Bregu i Diellit, Prishtinë", city: "Prishtinë", zone: "Rajoni Verior — Dardhania", country: "Antokton", is_antokton: true },
-  { label: "Qendra, Prishtinë", city: "Prishtinë", zone: "Rajoni Verior — Dardhania", country: "Antokton", is_antokton: true },
+  { label: "Rr. Nënë Tereza, Prishtinë", city: "Prishtinë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Rr. UÇK, Prishtinë", city: "Prishtinë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Rr. Ali Ajeti, Prishtinë", city: "Prishtinë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Rr. Bill Clinton, Prishtinë", city: "Prishtinë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Lagja Dardania, Prishtinë", city: "Prishtinë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Lagja Kalabria, Prishtinë", city: "Prishtinë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Lagja Matiqan, Prishtinë", city: "Prishtinë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Lagja Bregu i Diellit, Prishtinë", city: "Prishtinë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Qendra, Prishtinë", city: "Prishtinë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
   // Tiranë
-  { label: "Rr. Myslym Shyri, Tiranë", city: "Tiranë", zone: "Rajoni Perëndimor — Iliria", country: "Antokton", is_antokton: true },
-  { label: "Rr. Kavajës, Tiranë", city: "Tiranë", zone: "Rajoni Perëndimor — Iliria", country: "Antokton", is_antokton: true },
-  { label: "Blloku, Tiranë", city: "Tiranë", zone: "Rajoni Perëndimor — Iliria", country: "Antokton", is_antokton: true },
-  { label: "Yzberisht, Tiranë", city: "Tiranë", zone: "Rajoni Perëndimor — Iliria", country: "Antokton", is_antokton: true },
-  { label: "Kombinat, Tiranë", city: "Tiranë", zone: "Rajoni Perëndimor — Iliria", country: "Antokton", is_antokton: true },
-  { label: "Qyteti Studenti, Tiranë", city: "Tiranë", zone: "Rajoni Perëndimor — Iliria", country: "Antokton", is_antokton: true },
-  { label: "Astir, Tiranë", city: "Tiranë", zone: "Rajoni Perëndimor — Iliria", country: "Antokton", is_antokton: true },
-  { label: "Selitë, Tiranë", city: "Tiranë", zone: "Rajoni Perëndimor — Iliria", country: "Antokton", is_antokton: true },
+  { label: "Rr. Myslym Shyri, Tiranë", city: "Tiranë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Rr. Kavajës, Tiranë", city: "Tiranë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Blloku, Tiranë", city: "Tiranë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Yzberisht, Tiranë", city: "Tiranë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Kombinat, Tiranë", city: "Tiranë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Qyteti Studenti, Tiranë", city: "Tiranë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Astir, Tiranë", city: "Tiranë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Selitë, Tiranë", city: "Tiranë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
   // Shkup
-  { label: "Çair, Shkup", city: "Shkup", zone: "Rajoni Verior — Dardhania", country: "Antokton", is_antokton: true },
-  { label: "Butel, Shkup", city: "Shkup", zone: "Rajoni Verior — Dardhania", country: "Antokton", is_antokton: true },
-  { label: "Qendra, Shkup", city: "Shkup", zone: "Rajoni Verior — Dardhania", country: "Antokton", is_antokton: true },
-  { label: "Gjorçe Petrov, Shkup", city: "Shkup", zone: "Rajoni Verior — Dardhania", country: "Antokton", is_antokton: true },
+  { label: "Çair, Shkup", city: "Shkup", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Butel, Shkup", city: "Shkup", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Qendra, Shkup", city: "Shkup", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Gjorçe Petrov, Shkup", city: "Shkup", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
   // Tetovë
-  { label: "Qendra, Tetovë", city: "Tetovë", zone: "Rajoni Lindor — Thesalia & Maqedonia", country: "Antokton", is_antokton: true },
-  { label: "Rr. Ilinden, Tetovë", city: "Tetovë", zone: "Rajoni Lindor — Thesalia & Maqedonia", country: "Antokton", is_antokton: true },
+  { label: "Qendra, Tetovë", city: "Tetovë", zone: "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia", country: "Antokton", is_antokton: true },
+  { label: "Rr. Ilinden, Tetovë", city: "Tetovë", zone: "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia", country: "Antokton", is_antokton: true },
   // Gjakovë
-  { label: "Çarshia e Vjetër, Gjakovë", city: "Gjakovë", zone: "Rajoni Verior — Dardhania", country: "Antokton", is_antokton: true },
-  { label: "Qendra, Gjakovë", city: "Gjakovë", zone: "Rajoni Verior — Dardhania", country: "Antokton", is_antokton: true },
+  { label: "Çarshia e Vjetër, Gjakovë", city: "Gjakovë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Qendra, Gjakovë", city: "Gjakovë", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
   // Prizren
-  { label: "Qendra Historike, Prizren", city: "Prizren", zone: "Rajoni Verior — Dardhania", country: "Antokton", is_antokton: true },
-  { label: "Rr. Shën Flori, Prizren", city: "Prizren", zone: "Rajoni Verior — Dardhania", country: "Antokton", is_antokton: true },
+  { label: "Qendra Historike, Prizren", city: "Prizren", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Rr. Shën Flori, Prizren", city: "Prizren", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
   // Shkodër
-  { label: "Qendra, Shkodër", city: "Shkodër", zone: "Rajoni Perëndimor — Iliria", country: "Antokton", is_antokton: true },
-  { label: "Rus, Shkodër", city: "Shkodër", zone: "Rajoni Perëndimor — Iliria", country: "Antokton", is_antokton: true },
+  { label: "Qendra, Shkodër", city: "Shkodër", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Rus, Shkodër", city: "Shkodër", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
   // Durrës
-  { label: "Qendra, Durrës", city: "Durrës", zone: "Rajoni Perëndimor — Iliria", country: "Antokton", is_antokton: true },
-  { label: "Shkozet, Durrës", city: "Durrës", zone: "Rajoni Perëndimor — Iliria", country: "Antokton", is_antokton: true },
+  { label: "Qendra, Durrës", city: "Durrës", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
+  { label: "Shkozet, Durrës", city: "Durrës", zone: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", country: "Antokton", is_antokton: true },
   // Janinë / Epir
   { label: "Qendra, Janinë", city: "Janinë", zone: "Rajoni Jugor — Epiri", country: "Antokton", is_antokton: true },
 ];

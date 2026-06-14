@@ -794,8 +794,8 @@ export default function PostDetail() {
                 ? (job.address && job.address !== job.city ? job.address : [job.city, isAntokton ? "Antokton" : job.country].filter(Boolean).join(", "))
                 : [job.city || job.zone, isAntokton ? "Antokton" : job.country].filter(Boolean).join(", ");
               const mapsQuery = isPrecise
-                ? (job.address && job.address !== job.city ? job.address : [job.city, isAntokton ? "Shqipëri" : job.country].filter(Boolean).join(", "))
-                : [job.city || job.zone, isAntokton ? "Shqipëri" : job.country].filter(Boolean).join(", ");
+                ? (job.address && job.address !== job.city ? job.address : [job.city, isAntokton ? "Antokton" : job.country].filter(Boolean).join(", "))
+                : [job.city || job.zone, isAntokton ? "Antokton" : job.country].filter(Boolean).join(", ");
               return (
                 <a
                   href={`https://www.google.com/maps/search/${encodeURIComponent(mapsQuery)}`}
