@@ -468,6 +468,14 @@ Kthe VETËM JSON.`;
     setInputVal(val);
     setParsed(null);
     setActiveIdx(-1);
+    onChange({
+      ...(parsed || value),
+      address: val,
+      country: parsed?.country || value.country || "",
+      zone: parsed?.zone || value.zone || "",
+      city: parsed?.city || value.city || "",
+      location_precision: parsed?.location_precision || value.location_precision || "sakte",
+    });
     // Shfaq menjëherë sugjerime lokale
     const local = getLocalSuggestions(val);
     setSuggestions(local);

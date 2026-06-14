@@ -4,7 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Sparkles, Trash2, RotateCcw, Save, Send, Globe, Archive, X, Image, Star, Upload } from "lucide-react";
-import { COUNTRIES_DATA, CATEGORIES, LISTING_TYPES, SOURCES } from "./importConstants";
+import LocationPicker from "@/components/job/LocationPicker";
+import { CATEGORIES, LISTING_TYPES, SOURCES } from "./importConstants";
 import { publishImportedPost } from "./publishImportedPost";
 import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
 import { extractImportedPostFields, sanitizeImportedText } from "@/lib/importExtractors";
@@ -139,15 +140,6 @@ export default function ImportForm({ user, editingPost, onDone }) {
     }
     handleTextChange(val);
   };
-
-  // Regions from selected country
-  const countryData = COUNTRIES_DATA.find(c => c.name === form.country);
-  const regions = countryData?.regions || [];
-  const regionData = regions.find(r => r.name === form.region);
-  const cities = regionData?.cities || [];
-
-  const handleCountryChange = (val) => setForm(f => ({ ...f, country: val, region: "", city: "" }));
-  const handleRegionChange = (val) => setForm(f => ({ ...f, region: val, city: "" }));
 
   // AI auto-fill from URL
   const [urlLoading, setUrlLoading] = useState(false);
@@ -445,54 +437,22 @@ Kthe JSON me këto fusha.`;
 
       {/* Location */}
       <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
-        <label className="text-white text-sm font-semibold block">Vendndodhja</label>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label className="text-white/60 text-xs mb-1 block">Shteti</label>
-            <Select value={form.country} onValueChange={handleCountryChange}>
-              <SelectTrigger className="bg-white/5 border-white/10 text-white text-sm" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}>
-                <SelectValue placeholder="Zgjidh..." />
-              </SelectTrigger>
-              <SelectContent className="bg-[#0b1020] border-white/10">
-                {COUNTRIES_DATA.map(c => <SelectItem key={c.name} value={c.name} className="text-white">{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="text-white/60 text-xs mb-1 block">Rajoni</label>
-            {regions.length > 0 ? (
-              <Select value={form.region} onValueChange={handleRegionChange}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white text-sm" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}>
-                  <SelectValue placeholder="Zgjidh..." />
-                </SelectTrigger>
-                <SelectContent className="bg-[#0b1020] border-white/10">
-                  {regions.map(r => <SelectItem key={r.name} value={r.name} className="text-white">{r.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input value={form.region} onChange={e => set("region", e.target.value)} placeholder="Rajoni..." className="bg-white/5 border-white/10 text-white text-sm" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }} />
-            )}
-          </div>
-          <div>
-            <label className="text-white/60 text-xs mb-1 block">Qyteti</label>
-            {cities.length > 0 ? (
-              <Select value={form.city} onValueChange={v => set("city", v)}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white text-sm" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}>
-                  <SelectValue placeholder="Zgjidh..." />
-                </SelectTrigger>
-                <SelectContent className="bg-[#0b1020] border-white/10">
-                  {cities.map(c => <SelectItem key={c} value={c} className="text-white">{c}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input value={form.city} onChange={e => set("city", e.target.value)} placeholder="Qyteti..." className="bg-white/5 border-white/10 text-white text-sm" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }} />
-            )}
-          </div>
-        </div>
-        <div>
-          <label className="text-white/60 text-xs mb-1 block">Adresa / lokacioni i nxjerrë</label>
-          <Input value={form.address} onChange={e => set("address", e.target.value)} placeholder="Adresa ose lokacioni..." className="bg-white/5 border-white/10 text-white text-sm" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }} />
-        </div>
+        <label className="text-white text-sm font-semibold block">Adresa / vendndodhja</label>
+        <LocationPicker
+          value={{ address: form.address || "", country: form.country, zone: form.region || form.zone || "", city: form.city, location_precision: form.location_precision }}
+          onChange={loc => setForm(f => ({
+            ...f,
+            address: loc.address,
+            country: loc.country,
+            region: loc.zone || "",
+            zone: loc.zone || "",
+            city: loc.city,
+            location_precision: loc.location_precision,
+          }))}
+        />
+        <p className="text-white/40 text-xs">
+          Shkruaj adresën ose qytetin; sugjerimet plotësojnë automatikisht shtetin, rajonin dhe qytetin.
+        </p>
       </div>
 
       <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
