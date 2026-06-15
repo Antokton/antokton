@@ -12,6 +12,7 @@ import { publishImportedPost } from "./publishImportedPost";
 import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
 import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, updateImageFocus } from "@/lib/imageFocus";
 import { extractImportedPostFields, sanitizeImportedText } from "@/lib/importExtractors";
+import { PAZAR_CATEGORIES, cleanPazarLabel, findPazarCategory } from "@/lib/pazarCategories";
 
 export default function ImportForm({ user, editingPost, onDone }) {
   const qc = useQueryClient();
@@ -30,6 +31,8 @@ export default function ImportForm({ user, editingPost, onDone }) {
     importer_email: "",
     import_original_text: "",
     category: "",
+    pazar_category: "",
+    pazar_subcategory: "",
     listing_type: "",
     country: "",
     region: "",
@@ -245,6 +248,8 @@ Kthe JSON me këto fusha.`;
       price: prepared.price || prepared.salary || form.price || form.salary || form.salary_info || "",
       salary: prepared.salary || prepared.price || form.salary || form.price || form.salary_info || "",
       salary_info: prepared.salary_info || prepared.salary || prepared.price || form.salary_info || form.salary || form.price || "",
+      pazar_category: prepared.pazar_category || form.pazar_category || "",
+      pazar_subcategory: prepared.pazar_subcategory || form.pazar_subcategory || "",
       original_post_url: prepared.source_url || form.original_post_url || "",
       source_url: prepared.source_url || form.source_url || form.original_post_url || "",
       import_source_url: prepared.import_source_url || prepared.source_url || form.source_url || form.original_post_url || "",
@@ -426,7 +431,7 @@ Kthe JSON me këto fusha.`;
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label className="text-white/60 text-xs mb-1.5 block">Kategoria</label>
-          <Select value={form.category} onValueChange={v => set("category", v)}>
+          <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v, ...(v !== "pazar" ? { pazar_category: "", pazar_subcategory: "" } : {}) }))}>
             <SelectTrigger className="bg-white/5 border-white/10 text-white text-sm" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}>
               <SelectValue placeholder="Zgjidh..." />
             </SelectTrigger>
@@ -458,6 +463,42 @@ Kthe JSON me këto fusha.`;
           </Select>
         </div>
       </div>
+
+      {form.category === "pazar" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-xl border border-white/10 bg-white/5 p-4">
+          <div>
+            <label className="text-white/60 text-xs mb-1.5 block">Kategoria e Pazarit</label>
+            <Select
+              value={form.pazar_category || ""}
+              onValueChange={v => setForm(f => ({ ...f, pazar_category: v, pazar_subcategory: "" }))}
+            >
+              <SelectTrigger className="bg-white/5 border-white/10 text-white text-sm" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}>
+                <SelectValue placeholder="Zgjidh..." />
+              </SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10">
+                {PAZAR_CATEGORIES.map(c => <SelectItem key={c.value} value={c.value} className="text-white">{cleanPazarLabel(c.label)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-white/60 text-xs mb-1.5 block">Nënkategoria</label>
+            <Select
+              value={form.pazar_subcategory || ""}
+              onValueChange={v => set("pazar_subcategory", v)}
+              disabled={!findPazarCategory(form.pazar_category)?.subcategories?.length}
+            >
+              <SelectTrigger className="bg-white/5 border-white/10 text-white text-sm disabled:opacity-50" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}>
+                <SelectValue placeholder="Zgjidh..." />
+              </SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10">
+                {(findPazarCategory(form.pazar_category)?.subcategories || []).map(sub => (
+                  <SelectItem key={sub.value} value={sub.value} className="text-white">{sub.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
 
       {/* Location */}
       <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">

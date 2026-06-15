@@ -25,6 +25,7 @@ import { requireCompleteProfileForInteraction } from "@/lib/profileCompleteness"
 import ImageFocusControls from "@/components/media/ImageFocusControls";
 import ImageFocusPreview from "@/components/media/ImageFocusPreview";
 import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, updateImageFocus } from "@/lib/imageFocus";
+import { PAZAR_CATEGORIES, cleanPazarLabel, findPazarCategory } from "@/lib/pazarCategories";
 
 function SimilarPosts({ currentJobId, category }) {
   const { data: similarJobs = [] } = useQuery({
@@ -513,6 +514,7 @@ export default function PostDetail() {
       location_precision: job.location_precision || 'sakte',
       category: job.category || '',
       pazar_category: job.pazar_category || '',
+      pazar_subcategory: job.pazar_subcategory || '',
       poster_name: job.poster_name || '',
       source_url: job.source_url || '',
       show_source_url: Boolean(job.show_source_url),
@@ -615,6 +617,7 @@ export default function PostDetail() {
         phone_app: phoneNumber ? (editForm.phone_app || "telefon") : "",
         category: editForm.category,
         pazar_category: editForm.pazar_category || undefined,
+        pazar_subcategory: editForm.pazar_subcategory || undefined,
         poster_name: editForm.poster_name || job.poster_name,
         author_profile_url: editForm.author_profile_url || "",
         import_author_profile_url: editForm.import_author_profile_url || editForm.author_profile_url || "",
@@ -867,13 +870,46 @@ export default function PostDetail() {
               </div>
               <div className="space-y-1">
                 <Label className="text-white/60 text-xs">Kategoria</Label>
-                <select value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})}
+                <select value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value, ...(e.target.value !== "pazar" ? { pazar_category: "", pazar_subcategory: "" } : {})})}
                   className="w-full rounded-md px-3 py-2 text-sm text-white border border-white/10" style={{ background: 'rgba(255,255,255,0.05)' }}>
                   {[{v:'pune',l:'Punë'},{v:'sherbime',l:'Shërbime'},{v:'pazar',l:'Pazar'},{v:'edukim',l:'Edukim'},{v:'bamiresi',l:'Bamirësi'},{v:'media',l:'Media'}].map(c => (
                     <option key={c.v} value={c.v} className="bg-[#0b1020]">{c.l}</option>
                   ))}
                 </select>
               </div>
+              {editForm.category === "pazar" && (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label className="text-white/60 text-xs">Kategoria e Pazarit</Label>
+                    <select
+                      value={editForm.pazar_category || ""}
+                      onChange={e => setEditForm({...editForm, pazar_category: e.target.value, pazar_subcategory: ""})}
+                      className="w-full rounded-md border border-white/10 px-3 py-2 text-sm text-white"
+                      style={{ background: 'rgba(255,255,255,0.05)' }}
+                    >
+                      <option value="" className="bg-[#0b1020]">Zgjidh...</option>
+                      {PAZAR_CATEGORIES.map(c => (
+                        <option key={c.value} value={c.value} className="bg-[#0b1020]">{cleanPazarLabel(c.label)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-white/60 text-xs">Nënkategoria</Label>
+                    <select
+                      value={editForm.pazar_subcategory || ""}
+                      onChange={e => setEditForm({...editForm, pazar_subcategory: e.target.value})}
+                      disabled={!findPazarCategory(editForm.pazar_category)?.subcategories?.length}
+                      className="w-full rounded-md border border-white/10 px-3 py-2 text-sm text-white disabled:opacity-50"
+                      style={{ background: 'rgba(255,255,255,0.05)' }}
+                    >
+                      <option value="" className="bg-[#0b1020]">Zgjidh...</option>
+                      {(findPazarCategory(editForm.pazar_category)?.subcategories || []).map(sub => (
+                        <option key={sub.value} value={sub.value} className="bg-[#0b1020]">{sub.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
               <div className="space-y-1">
                 <Label className="text-white/60 text-xs">Paga/Çmimi</Label>
                 <Input value={editForm.salary_info} onChange={e => setEditForm({...editForm, salary_info: e.target.value})} className="bg-white/5 border-white/10 text-white" />

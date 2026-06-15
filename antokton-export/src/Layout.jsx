@@ -18,6 +18,7 @@ import { t, getLanguage, setLanguage } from "./lib/translations";
 import { CONTACT_EMAIL } from "@/lib/publicConfig";
 import { hasEarlyMemberPremiumAccess } from "@/utils/premiumAccess";
 import { getUserDisplayName } from "@/lib/userDisplay";
+import { PAZAR_CATEGORIES, cleanPazarLabel } from "@/lib/pazarCategories";
 
 const BILETA_NAV_SUBMENU = [
   { id: "avion", label: "Avion", url: "/Bileta?type=avion#kerkese-bilete", icon: Plane, visible: true },
@@ -39,70 +40,16 @@ const EDUKIM_NAV_SUBMENU = [
   { id: "kurse", label: "Kurse online", url: "/Feed?category=edukim&sub=kurse", icon: MonitorPlay, visible: true }
 ];
 
-const PAZAR_NAV_GROUPS = [
-  {
-    id: "prona",
-    label: "Prona",
-    url: "/Pazar?category=prona",
-    children: [
-      ["shtepi", "Shtëpi"],
-      ["banesa", "Banesa"],
-      ["dyqane", "Dyqane"],
-      ["restorante", "Restorante"],
-      ["hotele", "Hotele"],
-      ["magazina", "Magazina"],
-      ["toka", "Toka"],
-      ["troje", "Troje"],
-      ["ara", "Ara"],
-      ["pemishte", "Pemishte"],
-      ["pyje", "Pyje"],
-    ],
-  },
-  {
-    id: "rroba",
-    label: "Rroba dhe Tesha",
-    url: "/Pazar?category=veshje",
-    children: [["burra", "Burra"], ["gra", "Gra"], ["femije", "Fëmijë"], ["stoli", "Stoli"]],
-  },
-  {
-    id: "mjete",
-    label: "Mjete",
-    url: "/Pazar?category=mjete",
-    children: [["makina", "Makina"], ["traktore", "Traktorë"], ["mjete_bujqesore", "Mjete bujqësore"]],
-  },
-  {
-    id: "pajisje_shtepiake",
-    label: "Pajisje shtëpiake",
-    url: "/Pazar?category=shtepi",
-    children: [
-      ["kuzine", "Kuzinë"],
-      ["furre", "Furrë"],
-      ["lavatesha", "Lavatesha"],
-      ["lavene", "Lavenë"],
-      ["lavambane", "Lavambanë"],
-      ["ngrires", "Ngrirës"],
-      ["divane", "Divanë"],
-      ["tryeze", "Tryezë"],
-      ["krevate", "Krevate"],
-      ["karrike", "Karrike"],
-      ["rrobavarese", "Rrobavarëse"],
-      ["sinarke", "Sinarkë"],
-    ],
-  },
-  { id: "pajisje_sporti", label: "Pajisje Sporti", url: "/Pazar?category=bicikleta" },
-  {
-    id: "libra",
-    label: "Libra",
-    url: "/Pazar?category=libra",
-    children: [["shkence", "Shkencë"], ["histori", "Histori"], ["besim", "Besim"], ["sport", "Sport"]],
-  },
-  {
-    id: "art",
-    label: "Art",
-    url: "/Pazar?category=art",
-    children: [["koleksione", "Koleksione"], ["piktura", "Piktura"], ["skulptura", "Skulptura"], ["ze_figure", "Zë dhe Figurë"]],
-  },
-];
+const PAZAR_NAV_GROUPS = PAZAR_CATEGORIES.map((category) => ({
+  id: category.value,
+  label: cleanPazarLabel(category.label),
+  url: `/Pazar?category=${category.value}`,
+  children: (category.subcategories || []).map((sub) => [
+    sub.value,
+    sub.label,
+    `/Pazar?category=${category.value}&sub=${sub.value}`,
+  ]),
+}));
 
 const normalizeAntoktonNav = (items) => {
   if (!Array.isArray(items)) return null;
@@ -725,9 +672,9 @@ export default function Layout({ children, currentPageName }) {
                                   <ShoppingBag className="w-4 h-4 text-white/55" /> {group.label}
                                 </Link>
                               </DropdownMenuItem>
-                              {group.children?.map(([sub, label]) => (
+                              {group.children?.map(([sub, label, subUrl]) => (
                                 <DropdownMenuItem key={`${group.id}-${sub}`} asChild>
-                                  <Link to={`${group.url}&sub=${sub}`} className="flex items-center gap-2 cursor-pointer pl-7 text-xs text-white/60 hover:text-white">
+                                  <Link to={subUrl || `${group.url}&sub=${sub}`} className="flex items-center gap-2 cursor-pointer pl-7 text-xs text-white/60 hover:text-white">
                                     <Home className="w-3 h-3" /> {label}
                                   </Link>
                                 </DropdownMenuItem>
@@ -1143,8 +1090,8 @@ export default function Layout({ children, currentPageName }) {
                               </div>
                               {group.children && groupOpen && (
                                 <div className="ml-5 space-y-0.5">
-                                  {group.children.map(([sub, label]) => (
-                                    <Link key={sub} to={`${group.url}&sub=${sub}`} onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white/55 hover:text-white">
+                                  {group.children.map(([sub, label, subUrl]) => (
+                                    <Link key={sub} to={subUrl || `${group.url}&sub=${sub}`} onClick={()=>setMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white/55 hover:text-white">
                                       <Home className="w-3 h-3" /> {label}
                                     </Link>
                                   ))}

@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ShoppingBag, Home, Car, Sofa, Shirt, Smartphone, Bike,
-  Wrench, Leaf, BookOpen, Palette, Gift, Search,
+  Wrench, Leaf, BookOpen, Gift, Search,
   Plus, MapPin, Clock, Heart, X, Upload, Star,
   ExternalLink, Loader2, Tag, ArrowLeft,
   AlertCircle, CheckCircle, MoreVertical, Flag, Share2, MessageCircle, Phone, Eye, Pencil, Trash2
@@ -15,32 +15,32 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import ImageFocusControls from "@/components/media/ImageFocusControls";
 import ImageFocusPreview from "@/components/media/ImageFocusPreview";
 import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, updateImageFocus } from "@/lib/imageFocus";
+import { PAZAR_NAV_CATEGORIES, cleanPazarLabel, findPazarCategory, pazarCategoryMatches } from "@/lib/pazarCategories";
 
 /* ─── KATEGORITE ─── */
-const CATEGORIES = [
-  { key: "all", label: "Të gjitha", icon: ShoppingBag },
-  { key: "prona", label: "Prona", icon: Home },
-  { key: "makina", label: "Makina", icon: Car },
-  { key: "mobilje", label: "Mobilje", icon: Sofa },
-  { key: "shtepi", label: "Shtëpi & Kuzhinë", icon: Home },
-  { key: "elektronike", label: "Elektronikë", icon: Smartphone },
-  { key: "veshje", label: "Veshje", icon: Shirt },
-  { key: "aksesore", label: "Aksesorë", icon: Tag },
-  { key: "bicikleta", label: "Bicikleta & Sport", icon: Bike },
-  { key: "mjete", label: "Mjete & Pajisje", icon: Wrench },
-  { key: "bujqesia", label: "Bujqësi", icon: Leaf },
-  { key: "libra", label: "Libra & Edukim", icon: BookOpen },
-  { key: "art", label: "Art & Koleksione", icon: Palette },
-  { key: "dhurime", label: "Dhurime falas", icon: Gift },
-];
+const ICONS_BY_CATEGORY = {
+  all: ShoppingBag,
+  prona: Home,
+  makina: Car,
+  makineri: Wrench,
+  vegla_pune: Wrench,
+  elektronike: Smartphone,
+  mobilje_shtepi: Sofa,
+  veshje: Shirt,
+  femije: Gift,
+  sport_hobi: Bike,
+  libra_media: BookOpen,
+  ushqim_bujqesi: Leaf,
+  dhurime: Gift,
+  tjeter_pazar: Tag,
+};
 
-// Nënkategorite e Fëmijëve (shfaqen si filter shtesë)
-const FEMIJE_SUBCATS = [
-  { key: "femije_veshje", label: "Veshje fëmijësh", parent: "veshje" },
-  { key: "femije_bicikleta", label: "Bicikleta fëmijësh", parent: "bicikleta" },
-  { key: "femije_lojera", label: "Lodra & Lojëra", parent: "all" },
-  { key: "femije_mjete", label: "Mjete fëmijësh", parent: "mjete" },
-];
+const CATEGORIES = PAZAR_NAV_CATEGORIES.map((category) => ({
+  key: category.value,
+  label: cleanPazarLabel(category.label),
+  icon: ICONS_BY_CATEGORY[category.value] || ShoppingBag,
+  subcategories: category.subcategories || [],
+}));
 
 /* ─── LISTING CARD ─── */
 const REPORT_REASONS = [
@@ -399,7 +399,9 @@ function ImportModal({ onClose, onImported, user }) {
   const [extracted, setExtracted] = useState(null);
   const [step, setStep] = useState("input"); // input | preview | done
   const [category, setCategory] = useState("makina");
+  const [subcategory, setSubcategory] = useState("");
   const [jobType, setJobType] = useState("ofroj");
+  const selectedCategory = findPazarCategory(category);
 
   const setMainImage = (index) => {
     const images = Array.isArray(extracted?.image_urls) ? extracted.image_urls : [];
@@ -489,6 +491,7 @@ function ImportModal({ onClose, onImported, user }) {
       show_author_profile_url: false,
       category: "pazar",
       pazar_category: category,
+      pazar_subcategory: subcategory,
       job_type: jobType,
       status: "pending",
     });
@@ -558,7 +561,8 @@ function ImportModal({ onClose, onImported, user }) {
         import_type: "marketplace_import_assistant",
         status: "approved",
         category: "pazar",
-        pazar_category: category,
+        pazar_category: extracted.pazar_category || category,
+        pazar_subcategory: extracted.pazar_subcategory || subcategory || "",
         job_type: jobType,
       });
       setStep("done");
@@ -613,7 +617,7 @@ function ImportModal({ onClose, onImported, user }) {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-white/60 text-xs mb-1 block">Kategoria</label>
-                    <select value={category} onChange={e => setCategory(e.target.value)}
+                    <select value={category} onChange={e => { setCategory(e.target.value); setSubcategory(""); }}
                       className="w-full bg-[#1c2333] border border-white/15 rounded-xl px-3 py-2.5 text-white text-sm outline-none">
                       {CATEGORIES.filter(c => c.key !== "all").map(c => (
                         <option key={c.key} value={c.key}>{c.label}</option>
@@ -630,6 +634,18 @@ function ImportModal({ onClose, onImported, user }) {
                     </select>
                   </div>
                 </div>
+                {selectedCategory?.subcategories?.length > 0 && (
+                  <div>
+                    <label className="text-white/60 text-xs mb-1 block">Nënkategoria</label>
+                    <select value={subcategory} onChange={e => setSubcategory(e.target.value)}
+                      className="w-full bg-[#1c2333] border border-white/15 rounded-xl px-3 py-2.5 text-white text-sm outline-none">
+                      <option value="">Zgjidh...</option>
+                      {selectedCategory.subcategories.map((sub) => (
+                        <option key={sub.value} value={sub.value}>{sub.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               {error && (
@@ -699,6 +715,41 @@ function ImportModal({ onClose, onImported, user }) {
                   <label className="text-white/40 text-xs">Titulli</label>
                   <input value={extracted.title || ""} onChange={e => setExtracted({...extracted, title: e.target.value})}
                     className="w-full bg-[#1c2333] border border-white/15 rounded-xl px-3 py-2 text-white text-sm outline-none mt-1" />
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="text-white/40 text-xs">Kategoria e Pazarit</label>
+                    <select
+                      value={extracted.pazar_category || category}
+                      onChange={(e) => {
+                        setCategory(e.target.value);
+                        setSubcategory("");
+                        setExtracted({ ...extracted, pazar_category: e.target.value, pazar_subcategory: "" });
+                      }}
+                      className="mt-1 w-full rounded-xl border border-white/15 bg-[#1c2333] px-3 py-2 text-sm text-white outline-none"
+                    >
+                      {CATEGORIES.filter(c => c.key !== "all").map(c => (
+                        <option key={c.key} value={c.key}>{c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-white/40 text-xs">Nënkategoria</label>
+                    <select
+                      value={extracted.pazar_subcategory || subcategory}
+                      onChange={(e) => {
+                        setSubcategory(e.target.value);
+                        setExtracted({ ...extracted, pazar_subcategory: e.target.value });
+                      }}
+                      className="mt-1 w-full rounded-xl border border-white/15 bg-[#1c2333] px-3 py-2 text-sm text-white outline-none disabled:opacity-50"
+                      disabled={!findPazarCategory(extracted.pazar_category || category)?.subcategories?.length}
+                    >
+                      <option value="">Zgjidh...</option>
+                      {(findPazarCategory(extracted.pazar_category || category)?.subcategories || []).map((sub) => (
+                        <option key={sub.value} value={sub.value}>{sub.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <label className="text-white/40 text-xs">Çmimi</label>
@@ -784,11 +835,35 @@ function ImportModal({ onClose, onImported, user }) {
 
 /* ─── MAIN PAGE ─── */
 export default function Pazar() {
-  const [activeCategory, setActiveCategory] = useState("all");
+  const initialParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const [activeCategory, setActiveCategory] = useState(initialParams?.get("category") || "all");
+  const [activeSubcategory, setActiveSubcategory] = useState(initialParams?.get("sub") || "");
   const [search, setSearch] = useState("");
   const [showImport, setShowImport] = useState(false);
   const [user, setUser] = useState(null);
   const canImportPosts = user?.role === "admin" || user?.role === "moderator";
+  const activeCategoryData = CATEGORIES.find((item) => item.key === activeCategory);
+
+  const updatePazarUrl = (categoryKey, subcategoryKey = "") => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams();
+    if (categoryKey && categoryKey !== "all") params.set("category", categoryKey);
+    if (subcategoryKey) params.set("sub", subcategoryKey);
+    const nextUrl = params.toString() ? `/Pazar?${params.toString()}` : "/Pazar";
+    window.history.replaceState(null, "", nextUrl);
+  };
+
+  const selectCategory = (categoryKey) => {
+    setActiveCategory(categoryKey);
+    setActiveSubcategory("");
+    updatePazarUrl(categoryKey);
+  };
+
+  const selectSubcategory = (categoryKey, subcategoryKey) => {
+    setActiveCategory(categoryKey);
+    setActiveSubcategory(subcategoryKey);
+    updatePazarUrl(categoryKey, subcategoryKey);
+  };
 
   React.useEffect(() => {
     base44.auth.isAuthenticated().then(async auth => {
@@ -812,11 +887,13 @@ export default function Pazar() {
       // Filter by active category
       if (activeCategory !== "all") {
         const pazarCat = j.pazar_category || "";
-        const matchesPazarCat = pazarCat === activeCategory;
+        const matchesPazarCat = pazarCategoryMatches(pazarCat, activeCategory);
         const matchesMainCat = j.category === activeCategory;
-        // Handle femije subcategories
-        const isFemijeSubcat = FEMIJE_SUBCATS.some(s => s.key === activeCategory && (pazarCat === s.parent || pazarCat === activeCategory));
-        if (!matchesPazarCat && !matchesMainCat && !isFemijeSubcat) return false;
+        if (!matchesPazarCat && !matchesMainCat) return false;
+      }
+
+      if (activeSubcategory && j.pazar_subcategory !== activeSubcategory) {
+        return false;
       }
 
       // Search filter
@@ -826,7 +903,7 @@ export default function Pazar() {
       }
       return true;
     });
-  }, [jobs, activeCategory, search]);
+  }, [jobs, activeCategory, activeSubcategory, search]);
 
   return (
     <div className="min-h-screen bg-[#0b1020]">
@@ -864,12 +941,29 @@ export default function Pazar() {
         <div className="hidden md:flex flex-col w-64 shrink-0 p-4 border-r border-white/8 sticky top-32 h-screen overflow-y-auto">
           <p className="text-white/40 text-xs font-bold uppercase tracking-wider mb-3">Kategoritë</p>
           {CATEGORIES.map(cat => (
-            <button key={cat.key} onClick={() => setActiveCategory(cat.key)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all w-full text-left mb-0.5
-                ${activeCategory === cat.key ? "bg-[#8ab4ff]/15 text-[#8ab4ff]" : "text-white/60 hover:bg-white/5 hover:text-white"}`}>
-              <cat.icon className="w-5 h-5 shrink-0" />
-              {cat.label}
-            </button>
+            <div key={cat.key} className="mb-0.5">
+              <button onClick={() => selectCategory(cat.key)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all w-full text-left
+                  ${activeCategory === cat.key ? "bg-[#8ab4ff]/15 text-[#8ab4ff]" : "text-white/60 hover:bg-white/5 hover:text-white"}`}>
+                <cat.icon className="w-5 h-5 shrink-0" />
+                {cat.label}
+              </button>
+              {activeCategory === cat.key && cat.subcategories?.length > 0 && (
+                <div className="ml-8 mt-1 space-y-1 border-l border-white/10 pl-2">
+                  {cat.subcategories.map((sub) => (
+                    <button
+                      key={sub.value}
+                      onClick={() => selectSubcategory(cat.key, sub.value)}
+                      className={`block w-full rounded-lg px-2 py-1.5 text-left text-xs transition-all ${
+                        activeSubcategory === sub.value ? "bg-[#9bffd6]/15 text-[#9bffd6]" : "text-white/45 hover:bg-white/5 hover:text-white"
+                      }`}
+                    >
+                      {sub.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
           <div className="mt-6 pt-4 border-t border-white/8">
             <p className="text-white/40 text-xs font-bold uppercase tracking-wider mb-3">Veprimet</p>
@@ -892,7 +986,7 @@ export default function Pazar() {
           <div className="md:hidden flex gap-2 overflow-x-auto px-4 py-3 [&::-webkit-scrollbar]:hidden border-b border-white/8"
             style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}>
             {CATEGORIES.map(cat => (
-              <button key={cat.key} onClick={() => setActiveCategory(cat.key)}
+              <button key={cat.key} onClick={() => selectCategory(cat.key)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all
                   ${activeCategory === cat.key ? "bg-[#8ab4ff] text-[#0b1020]" : "bg-white/8 text-white/60 hover:bg-white/15"}`}>
                 <cat.icon className="w-3.5 h-3.5" />
@@ -900,6 +994,22 @@ export default function Pazar() {
               </button>
             ))}
           </div>
+          {activeCategoryData?.subcategories?.length > 0 && (
+            <div className="md:hidden flex gap-2 overflow-x-auto px-4 pb-3 [&::-webkit-scrollbar]:hidden border-b border-white/8"
+              style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}>
+              {activeCategoryData.subcategories.map((sub) => (
+                <button
+                  key={sub.value}
+                  onClick={() => selectSubcategory(activeCategory, sub.value)}
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
+                    activeSubcategory === sub.value ? "bg-[#9bffd6] text-[#0b1020]" : "bg-white/8 text-white/55 hover:bg-white/15"
+                  }`}
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Grid */}
           <div className="p-3">

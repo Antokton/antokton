@@ -33,7 +33,7 @@ const DEFAULT_NAV = [
       { id: "pazar-all", label: "Të gjitha", url: "/Pazar", visible: true },
       { id: "pazar-prona", label: "Prona", url: "/Pazar?category=prona", visible: true },
       { id: "pazar-makina", label: "Makina", url: "/Pazar?category=makina", visible: true },
-      { id: "pazar-mobilje", label: "Mobilje & Shtëpi", url: "/Pazar?category=mobilje", visible: true },
+      { id: "pazar-mobilje", label: "Mobilje & Shtëpi", url: "/Pazar?category=mobilje_shtepi", visible: true },
       { id: "pazar-elektronike", label: "Elektronikë", url: "/Pazar?category=elektronike", visible: true },
       { id: "pazar-veshje", label: "Veshje", url: "/Pazar?category=veshje", visible: true },
     ]

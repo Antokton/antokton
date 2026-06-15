@@ -5,9 +5,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Loader2, Pencil, Trash2, Globe } from "lucide-react";
 import { CATEGORIES, LISTING_TYPES, SOURCES, STATUS_LABELS, STATUS_COLORS } from "./importConstants";
+import { cleanPazarLabel, findPazarCategory } from "@/lib/pazarCategories";
 
-const getCategoryLabel = (value) => {
-  if (value === "prona") return "Pazar";
+const getCategoryLabel = (post) => {
+  const value = post?.category;
+  if (value === "pazar" || value === "prona" || post?.pazar_category) {
+    const pazarCategory = findPazarCategory(post?.pazar_category);
+    const subcategory = pazarCategory?.subcategories?.find((sub) => sub.value === post?.pazar_subcategory);
+    return ["Pazar", pazarCategory ? cleanPazarLabel(pazarCategory.label) : "", subcategory?.label || ""].filter(Boolean).join(" · ");
+  }
   return CATEGORIES.find(c => c.value === value)?.label || "—";
 };
 import { publishImportedPost } from "./publishImportedPost";
@@ -178,7 +184,7 @@ export default function ImportTable({ user, onEdit }) {
                     <p className="text-white/80 truncate">{post.edited_text?.slice(0, 60)}...</p>
                   </td>
                   <td className="px-3 py-2.5 text-white/70 whitespace-nowrap">{post.author_name || "—"}</td>
-                  <td className="px-3 py-2.5 text-white/70">{getCategoryLabel(post.category)}</td>
+                  <td className="px-3 py-2.5 text-white/70">{getCategoryLabel(post)}</td>
                   <td className="px-3 py-2.5 text-white/70 whitespace-nowrap">{post.country || "—"}</td>
                   <td className="px-3 py-2.5 text-white/70 whitespace-nowrap">{post.region || "—"}</td>
                   <td className="px-3 py-2.5 text-white/70 whitespace-nowrap">{post.city || "—"}</td>

@@ -133,6 +133,7 @@ const PAZAR_CATEGORIES = [
     value: "mobilje_shtepi", label: "🛋️ Mobilje & Shtëpi",
     subcategories: [
       { value: "mobilje", label: "Mobilje" },
+      { value: "kuzhine", label: "Kuzhinë" },
       { value: "pajisje_shtepie", label: "Pajisje Shtëpie" },
       { value: "dekor", label: "Dekor & Aksesorë" },
       { value: "kopshti", label: "Kopsht & Ballkon" },
