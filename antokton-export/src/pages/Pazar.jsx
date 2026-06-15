@@ -14,7 +14,7 @@ import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhon
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ImageFocusControls from "@/components/media/ImageFocusControls";
 import ImageFocusPreview from "@/components/media/ImageFocusPreview";
-import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, updateImageFocus } from "@/lib/imageFocus";
+import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, reorderImageGallery, updateImageFocus } from "@/lib/imageFocus";
 import { PAZAR_NAV_CATEGORIES, cleanPazarLabel, findPazarCategory, pazarCategoryMatches } from "@/lib/pazarCategories";
 
 /* ─── KATEGORITE ─── */
@@ -420,6 +420,13 @@ function ImportModal({ onClose, onImported, user }) {
     }));
   };
 
+  const reorderImages = (fromIndex, toIndex) => {
+    setExtracted((prev) => ({
+      ...prev,
+      ...reorderImageGallery(prev?.image_urls, fromIndex, toIndex, prev?.main_image_index),
+    }));
+  };
+
   const handleUploadImages = async (event) => {
     const files = Array.from(event.target.files || []).filter((file) => file.type.startsWith("image/"));
     event.target.value = "";
@@ -692,7 +699,19 @@ function ImportModal({ onClose, onImported, user }) {
                         const selected = Number(extracted.main_image_index || 0) === i;
                         const focus = getImageFocus(extracted.image_focus_json, imgUrl);
                         return (
-                          <div key={`${imgUrl}-${i}`} className={`relative overflow-hidden rounded-lg border ${selected ? "border-[#9bffd6]" : "border-white/10"}`}>
+                          <div
+                            key={`${imgUrl}-${i}`}
+                            draggable
+                            onDragStart={(event) => event.dataTransfer.setData("text/plain", String(i))}
+                            onDragOver={(event) => event.preventDefault()}
+                            onDrop={(event) => {
+                              event.preventDefault();
+                              const fromIndex = Number(event.dataTransfer.getData("text/plain"));
+                              reorderImages(fromIndex, i);
+                            }}
+                            className={`relative cursor-grab overflow-hidden rounded-lg border ${selected ? "border-[#9bffd6]" : "border-white/10"} active:cursor-grabbing`}
+                            title="Tërhiqe për ta riorganizuar"
+                          >
                             <img src={imgUrl} alt="" className="h-16 w-full object-cover" style={getImageFocusStyle(focus)} onError={e => e.currentTarget.style.display='none'} />
                             <button type="button" onClick={() => setMainImage(i)} className={`absolute left-1 top-1 rounded-full p-1 ${selected ? "bg-[#9bffd6] text-[#0b1020]" : "bg-black/60 text-white"}`}>
                               <Star className={`h-3 w-3 ${selected ? "fill-current" : ""}`} />

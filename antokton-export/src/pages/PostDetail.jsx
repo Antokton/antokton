@@ -24,7 +24,7 @@ import { getUserDisplayName, isStaffUser } from "@/lib/userDisplay";
 import { requireCompleteProfileForInteraction } from "@/lib/profileCompleteness";
 import ImageFocusControls from "@/components/media/ImageFocusControls";
 import ImageFocusPreview from "@/components/media/ImageFocusPreview";
-import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, updateImageFocus } from "@/lib/imageFocus";
+import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, reorderImageGallery, updateImageFocus } from "@/lib/imageFocus";
 import { PAZAR_CATEGORIES, cleanPazarLabel, findPazarCategory } from "@/lib/pazarCategories";
 
 function SimilarPosts({ currentJobId, category }) {
@@ -559,6 +559,13 @@ export default function PostDetail() {
     });
   };
 
+  const reorderEditImages = (fromIndex, toIndex) => {
+    setEditForm((current) => ({
+      ...current,
+      ...reorderImageGallery(current.image_urls, fromIndex, toIndex, current.main_image_index),
+    }));
+  };
+
   const handleEditImageUpload = async (event) => {
     const currentImages = Array.isArray(editForm.image_urls) ? editForm.image_urls : [];
     const slots = Math.max(0, 6 - currentImages.length);
@@ -947,7 +954,19 @@ export default function PostDetail() {
                           const selected = Number(editForm.main_image_index || 0) === i;
                           const focus = getImageFocus(editForm.image_focus_json, imgUrl);
                           return (
-                            <div key={`${imgUrl}-${i}`} className={`relative overflow-hidden rounded-lg border ${selected ? "border-[#9bffd6]" : "border-white/10"}`}>
+                            <div
+                              key={`${imgUrl}-${i}`}
+                              draggable
+                              onDragStart={(event) => event.dataTransfer.setData("text/plain", String(i))}
+                              onDragOver={(event) => event.preventDefault()}
+                              onDrop={(event) => {
+                                event.preventDefault();
+                                const fromIndex = Number(event.dataTransfer.getData("text/plain"));
+                                reorderEditImages(fromIndex, i);
+                              }}
+                              className={`relative cursor-grab overflow-hidden rounded-lg border ${selected ? "border-[#9bffd6]" : "border-white/10"} active:cursor-grabbing`}
+                              title="Tërhiqe për ta riorganizuar"
+                            >
                               <button type="button" onClick={() => setEditMainImage(i)} className="absolute left-1 top-1 rounded-full bg-black/60 p-1 text-white hover:text-[#ffd166]" title="Bëje foto kryesore">
                                 <Star className={`h-3.5 w-3.5 ${selected ? "fill-[#ffd166] text-[#ffd166]" : ""}`} />
                               </button>

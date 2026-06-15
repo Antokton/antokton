@@ -17,7 +17,7 @@ import { requireCompleteProfileForInteraction } from "@/lib/profileCompleteness"
 import { useLocation } from "react-router-dom";
 import ImageFocusControls from "@/components/media/ImageFocusControls";
 import ImageFocusPreview from "@/components/media/ImageFocusPreview";
-import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, updateImageFocus } from "@/lib/imageFocus";
+import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, reorderImageGallery, updateImageFocus } from "@/lib/imageFocus";
 
 const ALL_PROFESSIONS = [
   "3D Artist","Administrator","Agjent Shitjesh","Agjent Sigurimesh","Agjent Udhëtimesh",
@@ -441,6 +441,16 @@ export default function CreatePost() {
     });
   };
 
+  const reorderPazarImages = (fromIndex, toIndex) => {
+    const result = reorderImageGallery(form.image_urls, fromIndex, toIndex, form.main_image_index);
+    setForm((current) => ({
+      ...current,
+      image_urls: result.image_urls,
+      main_image_index: result.main_image_index,
+      image_url: result.image_url,
+    }));
+  };
+
   const selectedPazarImage = (form.image_urls || [])[Math.min(Number(form.main_image_index || 0), Math.max((form.image_urls || []).length - 1, 0))] || "";
 
   const updatePazarImageFocus = (focus) => {
@@ -800,7 +810,19 @@ export default function CreatePost() {
                     const selected = Number(form.main_image_index || 0) === index;
                     const focus = getImageFocus(form.image_focus_json, url);
                     return (
-                      <div key={`${url}-${index}`} className={`relative overflow-hidden rounded-lg border ${selected ? "border-[#9bffd6]" : "border-white/10"} bg-[#0b1020]`}>
+                      <div
+                        key={`${url}-${index}`}
+                        draggable
+                        onDragStart={(event) => event.dataTransfer.setData("text/plain", String(index))}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          const fromIndex = Number(event.dataTransfer.getData("text/plain"));
+                          reorderPazarImages(fromIndex, index);
+                        }}
+                        className={`relative cursor-grab overflow-hidden rounded-lg border ${selected ? "border-[#9bffd6]" : "border-white/10"} bg-[#0b1020] active:cursor-grabbing`}
+                        title="Tërhiqe për ta riorganizuar"
+                      >
                         <img src={url} alt={`Foto ${index + 1}`} className="h-20 w-full object-cover" style={getImageFocusStyle(focus)} />
                         <button
                           type="button"
