@@ -617,7 +617,7 @@ export default function PostDetail() {
         Math.max(editImages.length - 1, 0)
       );
       const imageFocus = pruneImageFocusMap(editForm.image_focus_json, editImages);
-      await base44.entities.Job.update(jobId, {
+      const updatePayload = {
         ...editForm,
         address: editForm.address || editForm.city || "",
         phone_number: phoneNumber || "",
@@ -633,9 +633,16 @@ export default function PostDetail() {
         main_image_index: editMainImageIndex,
         image_url: editImages[editMainImageIndex] || "",
         image_focus_json: imageFocus,
-      });
+      };
+      const updatedJob = await base44.entities.Job.update(jobId, updatePayload);
+      return { ...(job || {}), ...updatePayload, ...(updatedJob || {}) };
     },
-    onSuccess: () => {
+    onSuccess: (updatedJob) => {
+      if (updatedJob) {
+        queryClient.setQueryData(["job", jobId, user?.role], updatedJob);
+      }
+      const cleanUrl = `${window.location.pathname}?id=${encodeURIComponent(jobId)}${rawBackTo ? `&from=${encodeURIComponent(rawBackTo)}` : ""}`;
+      window.history.replaceState(null, "", cleanUrl);
       setIsEditing(false);
       queryClient.invalidateQueries({ queryKey: ["job", jobId] });
     },

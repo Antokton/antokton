@@ -730,6 +730,9 @@ function ImportModal({ onClose, onImported, user }) {
                   Ngarko foto manualisht
                   <input type="file" accept="image/*" multiple className="hidden" onChange={handleUploadImages} disabled={loading || (extracted.image_urls || []).length >= 6} />
                 </label>
+                <p className="text-xs text-white/40">
+                  Maksimumi i ngarkimit është 6 foto. Fotoja me yll shfaqet si kryesore dhe thumbnail në Pazar.
+                </p>
                 <div>
                   <label className="text-white/40 text-xs">Titulli</label>
                   <input value={extracted.title || ""} onChange={e => setExtracted({...extracted, title: e.target.value})}
