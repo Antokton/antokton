@@ -2,13 +2,13 @@ import React, { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { base44 } from "@/api/antoktonClient";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ShoppingBag, Home, Car, Sofa, Shirt, Smartphone, Bike,
   Wrench, Leaf, BookOpen, Palette, Gift, Search,
   Plus, MapPin, Clock, Heart, X, Upload, Star,
   ExternalLink, Loader2, Tag, ArrowLeft,
-  AlertCircle, CheckCircle, MoreVertical, Flag, Share2, MessageCircle, Copy
+  AlertCircle, CheckCircle, MoreVertical, Flag, Share2, MessageCircle, Phone, Eye, Pencil, Trash2
 } from "lucide-react";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -43,7 +43,21 @@ const FEMIJE_SUBCATS = [
 ];
 
 /* ─── LISTING CARD ─── */
-function ListingCard({ job, user }) {
+const REPORT_REASONS = [
+  { value: "i_shitur", label: "Është shitur / nuk është më në dispozicion" },
+  { value: "cmim_i_ndryshuar", label: "Çmimi është ndryshuar" },
+  { value: "fake", label: "Mashtrim / njoftim i rremë" },
+  { value: "spam", label: "Spam" },
+  { value: "inappropriate", label: "Përmbajtje e papërshtatshme" },
+  { value: "other", label: "Tjetër" },
+];
+
+function cleanText(value, max = 1200) {
+  return String(value || "").replace(/[<>]/g, "").trim().slice(0, max);
+}
+
+function ListingCard({ job, user, onChanged }) {
+  const navigate = useNavigate();
   const [liked, setLiked] = useState(() => {
     if (typeof window === "undefined") return false;
     try {
@@ -53,13 +67,21 @@ function ListingCard({ job, user }) {
     }
   });
   const [reporting, setReporting] = useState(false);
+  const [ratingOpen, setRatingOpen] = useState(false);
+  const [ratingValue, setRatingValue] = useState(0);
+  const [ratingComment, setRatingComment] = useState("");
+  const [ratingSaving, setRatingSaving] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("i_shitur");
+  const [reportDetails, setReportDetails] = useState("");
   const price = job.salary_info || "";
   const gallery = Array.isArray(job.image_urls) ? job.image_urls : [];
   const thumbnail = job.image_url || gallery[Math.min(Number(job.main_image_index || 0), Math.max(0, gallery.length - 1))] || gallery[0] || "";
   const thumbnailFocus = getImageFocus(job.image_focus_json, thumbnail);
-  const detailUrl = `/PostDetail?id=${job.id}`;
+  const detailUrl = `/PostDetail?id=${job.id}&from=/Pazar`;
   const publicContactUrl = job.show_author_profile_url === true ? (job.author_profile_url || job.import_author_profile_url || "") : "";
   const canContact = Boolean(job.phone_number || publicContactUrl);
+  const canStaffEdit = user?.role === "admin" || user?.role === "moderator";
 
   const stopCardClick = (event) => {
     event.preventDefault();
@@ -85,36 +107,19 @@ function ListingCard({ job, user }) {
     });
   };
 
-  const copyText = async (event, text, label) => {
-    stopCardClick(event);
-    if (!text) return;
-    try {
-      await navigator.clipboard.writeText(text);
-      alert(`${label} u kopjua.`);
-    } catch {
-      window.prompt(`Kopjo ${label.toLowerCase()}:`, text);
-    }
-  };
-
-  const shareText = async (event, text, title) => {
-    stopCardClick(event);
-    if (!text) return;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title, text });
-      } else {
-        await navigator.clipboard.writeText(text);
-        alert("Teksti u kopjua.");
-      }
-    } catch {
-      // User cancelled native share.
-    }
-  };
-
   const openExternal = (event, targetUrl) => {
     stopCardClick(event);
     if (!targetUrl) return;
     window.open(targetUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const contactListing = (event) => {
+    stopCardClick(event);
+    if (job.phone_number) {
+      window.location.href = `tel:${String(job.phone_number).replace(/\s+/g, "")}`;
+      return;
+    }
+    if (publicContactUrl) openExternal(event, publicContactUrl);
   };
 
   const shareListing = async (event) => {
@@ -133,15 +138,67 @@ function ListingCard({ job, user }) {
     }
   };
 
-  const reportListing = async (event) => {
+  const goToDetail = (event, edit = false) => {
+    stopCardClick(event);
+    navigate(`${detailUrl}${edit ? "&edit=1" : ""}`);
+  };
+
+  const saveRating = async () => {
+    if (!user) {
+      base44.auth.redirectToLogin();
+      return;
+    }
+    if (!ratingValue || ratingSaving) return;
+    setRatingSaving(true);
+    try {
+      await base44.entities.Rating.create({
+        post_id: job.id,
+        job_id: job.id,
+        listing_id: job.id,
+        rating_type: "marketplace_listing",
+        rater_email: user.email || "",
+        rated_user_email: job.created_by || job.author_email || "",
+        rated_entity: "Job",
+        rated_entity_id: job.id,
+        overall_rating: ratingValue,
+        rating: ratingValue,
+        comment: cleanText(ratingComment, 600),
+        status: "new",
+      });
+      setRatingOpen(false);
+      setRatingValue(0);
+      setRatingComment("");
+      alert("Vlerësimi u ruajt.");
+    } catch (error) {
+      alert(error?.message || "Vlerësimi nuk u ruajt. Provo përsëri.");
+    } finally {
+      setRatingSaving(false);
+    }
+  };
+
+  const deleteListing = async (event) => {
+    stopCardClick(event);
+    if (!canStaffEdit) return;
+    if (!window.confirm("Dëshiron ta fshish këtë njoftim?")) return;
+    try {
+      await base44.entities.Job.delete(job.id);
+      onChanged?.();
+    } catch (error) {
+      alert(error?.message || "Njoftimi nuk u fshi. Provo përsëri.");
+    }
+  };
+
+  const openReport = (event) => {
     stopCardClick(event);
     if (!user) {
       base44.auth.redirectToLogin();
       return;
     }
+    setReportOpen(true);
+  };
+
+  const reportListing = async () => {
     if (reporting) return;
-    const confirmed = window.confirm("Dëshiron ta raportosh këtë njoftim për kontroll nga stafi?");
-    if (!confirmed) return;
     setReporting(true);
     try {
       await base44.entities.Report.create({
@@ -154,11 +211,13 @@ function ListingCard({ job, user }) {
         reporter_id: user.id || "",
         reporter_email: user.email || "",
         reporter_name: user.full_name || "",
-        reason: "other",
-        description: "Raportim nga menuja e Pazarit.",
-        details: "Raportim nga menuja e Pazarit.",
+        reason: reportReason,
+        description: cleanText(reportDetails) || REPORT_REASONS.find((item) => item.value === reportReason)?.label || "Raportim nga menuja e Pazarit.",
+        details: cleanText(reportDetails),
         status: "new"
       });
+      setReportOpen(false);
+      setReportDetails("");
       alert("Raportimi u dërgua tek stafi.");
     } catch (error) {
       alert(error?.message || "Raportimi nuk u ruajt. Provo përsëri.");
@@ -167,7 +226,10 @@ function ListingCard({ job, user }) {
     }
   };
 
+  const modalBase = "fixed inset-0 z-[10000] flex items-center justify-center bg-black/75 p-4";
+
   return (
+    <>
     <Link to={detailUrl}
       className="bg-[#1c2333] rounded-xl overflow-hidden border border-white/8 hover:border-white/20 transition-all group block">
       {/* Image */}
@@ -204,53 +266,39 @@ function ListingCard({ job, user }) {
               </button>
             </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 border-white/10 bg-[#0b1020] text-white">
-            <DropdownMenuItem onClick={toggleFavorite} className="cursor-pointer gap-2 text-white/85">
-              <Heart className={`h-4 w-4 ${liked ? "fill-red-400 text-red-400" : "text-white/65"}`} />
-              {liked ? "Hiq nga të preferuarat" : "Ruaje si i preferuar"}
+            <DropdownMenuItem onClick={(event) => goToDetail(event)} className="cursor-pointer gap-2 text-white/85">
+              <Eye className="h-4 w-4 text-white/65" /> Shiko të plotë
             </DropdownMenuItem>
             <DropdownMenuItem onClick={shareListing} className="cursor-pointer gap-2 text-white/85">
               <Share2 className="h-4 w-4 text-white/65" /> Shpërndaj
             </DropdownMenuItem>
-            {job.phone_number && (
-              <DropdownMenuItem onClick={(event) => copyText(event, job.phone_number, "Telefoni")} className="cursor-pointer gap-2 text-white/85">
-                <Copy className="h-4 w-4 text-white/65" /> Kopjo telefonin
+            {canContact && (
+              <DropdownMenuItem onClick={contactListing} className="cursor-pointer gap-2 text-white/85">
+                {job.phone_number ? <Phone className="h-4 w-4 text-white/65" /> : <ExternalLink className="h-4 w-4 text-white/65" />}
+                {job.phone_number ? "Thirr" : "Shkruaj"}
               </DropdownMenuItem>
             )}
-            {job.phone_number && (
-              <DropdownMenuItem onClick={(event) => shareText(event, job.phone_number, "Telefon kontakti")} className="cursor-pointer gap-2 text-white/85">
-                <Share2 className="h-4 w-4 text-white/65" /> Shpërndaj telefonin
+            <DropdownMenuItem onClick={(event) => { stopCardClick(event); setRatingOpen(true); }} className="cursor-pointer gap-2 text-white/85">
+              <Star className="h-4 w-4 text-[#ffd166]" /> Jep vlerësim
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={openReport} className="cursor-pointer gap-2 text-orange-200">
+              <Flag className="h-4 w-4 text-orange-300" /> {reporting ? "Duke raportuar..." : "Raporto"}
+            </DropdownMenuItem>
+            {canStaffEdit && (
+              <DropdownMenuItem onClick={(event) => goToDetail(event, true)} className="cursor-pointer gap-2 text-[#8ab4ff]">
+                <Pencil className="h-4 w-4" /> Përpuno
               </DropdownMenuItem>
             )}
-            {publicContactUrl && (
-              <DropdownMenuItem onClick={(event) => openExternal(event, publicContactUrl)} className="cursor-pointer gap-2 text-white/85">
-                <ExternalLink className="h-4 w-4 text-white/65" /> Hap linkun e kontaktit
-              </DropdownMenuItem>
-            )}
-            {publicContactUrl && (
-              <DropdownMenuItem onClick={(event) => copyText(event, publicContactUrl, "Linku i kontaktit")} className="cursor-pointer gap-2 text-white/85">
-                <Copy className="h-4 w-4 text-white/65" /> Kopjo linkun e kontaktit
-              </DropdownMenuItem>
-            )}
-            {publicContactUrl && (
-              <DropdownMenuItem onClick={(event) => shareText(event, publicContactUrl, "Link kontakti")} className="cursor-pointer gap-2 text-white/85">
-                <Share2 className="h-4 w-4 text-white/65" /> Shpërndaj linkun e kontaktit
+            {canStaffEdit && (
+              <DropdownMenuItem onClick={deleteListing} className="cursor-pointer gap-2 text-red-300">
+                <Trash2 className="h-4 w-4" /> Fshi
               </DropdownMenuItem>
             )}
             {!canContact && (
-              <DropdownMenuItem asChild>
-                <Link to={detailUrl} onClick={stopCardClick} className="flex cursor-pointer items-center gap-2 text-white/85">
-                  <MessageCircle className="h-4 w-4 text-white/65" /> Shiko mënyrat e kontaktit
-                </Link>
+              <DropdownMenuItem onClick={(event) => goToDetail(event)} className="cursor-pointer gap-2 text-white/85">
+                <MessageCircle className="h-4 w-4 text-white/65" /> Shiko mënyrat e kontaktit
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem asChild>
-              <Link to={`${detailUrl}#vleresim`} onClick={stopCardClick} className="flex cursor-pointer items-center gap-2 text-white/85">
-                <Star className="h-4 w-4 text-[#ffd166]" /> Jep vlerësim
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={reportListing} className="cursor-pointer gap-2 text-orange-200">
-              <Flag className="h-4 w-4 text-orange-300" /> {reporting ? "Duke raportuar..." : "Raporto"}
-            </DropdownMenuItem>
           </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -284,6 +332,61 @@ function ListingCard({ job, user }) {
         </p>
       </div>
     </Link>
+
+    {ratingOpen && createPortal(
+      <div className={modalBase} onClick={() => setRatingOpen(false)}>
+        <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0b1020] p-4 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-base font-bold text-white">Jep vlerësim</h3>
+            <button type="button" onClick={() => setRatingOpen(false)} className="rounded-lg p-1 text-white/50 hover:bg-white/10 hover:text-white"><X className="h-4 w-4" /></button>
+          </div>
+          <div className="mb-3 flex justify-center gap-1.5">
+            {[1, 2, 3, 4, 5].map((value) => (
+              <button key={value} type="button" onClick={() => setRatingValue(value)} className="p-1">
+                <Star className={`h-8 w-8 ${value <= ratingValue ? "fill-[#ffd166] text-[#ffd166]" : "text-white/25"}`} />
+              </button>
+            ))}
+          </div>
+          <textarea
+            value={ratingComment}
+            onChange={(event) => setRatingComment(event.target.value)}
+            placeholder="Koment opsional..."
+            className="mb-3 min-h-[80px] w-full rounded-xl border border-white/10 bg-[#111a2c] px-3 py-2 text-sm text-white placeholder:text-white/35"
+          />
+          <button type="button" onClick={saveRating} disabled={!ratingValue || ratingSaving} className="w-full rounded-xl bg-[#8ab4ff] px-4 py-2.5 text-sm font-bold text-[#0b1020] disabled:opacity-50">
+            {ratingSaving ? "Duke ruajtur..." : "Ruaj vlerësimin"}
+          </button>
+        </div>
+      </div>,
+      document.body
+    )}
+
+    {reportOpen && createPortal(
+      <div className={modalBase} onClick={() => setReportOpen(false)}>
+        <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b1020] p-4 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-base font-bold text-white"><Flag className="h-4 w-4 text-orange-300" /> Raporto</h3>
+            <button type="button" onClick={() => setReportOpen(false)} className="rounded-lg p-1 text-white/50 hover:bg-white/10 hover:text-white"><X className="h-4 w-4" /></button>
+          </div>
+          <label className="mb-1 block text-xs font-semibold text-white/60">Arsyeja</label>
+          <select value={reportReason} onChange={(event) => setReportReason(event.target.value)} className="mb-3 w-full rounded-xl border border-white/10 bg-[#111a2c] px-3 py-2 text-sm text-white">
+            {REPORT_REASONS.map((item) => <option key={item.value} value={item.value} className="bg-[#0b1020]">{item.label}</option>)}
+          </select>
+          <label className="mb-1 block text-xs font-semibold text-white/60">Detaje shtesë</label>
+          <textarea
+            value={reportDetails}
+            onChange={(event) => setReportDetails(event.target.value)}
+            placeholder="Shpjego problemin nëse dëshiron..."
+            className="mb-3 min-h-[90px] w-full rounded-xl border border-white/10 bg-[#111a2c] px-3 py-2 text-sm text-white placeholder:text-white/35"
+          />
+          <button type="button" onClick={reportListing} disabled={reporting} className="w-full rounded-xl bg-orange-400 px-4 py-2.5 text-sm font-bold text-[#0b1020] disabled:opacity-50">
+            {reporting ? "Duke dërguar..." : "Dërgo raportimin"}
+          </button>
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
   );
 }
 
@@ -819,7 +922,7 @@ export default function Pazar() {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {filtered.map(job => <ListingCard key={job.id} job={job} user={user} />)}
+                {filtered.map(job => <ListingCard key={job.id} job={job} user={user} onChanged={refetch} />)}
               </div>
             )}
           </div>

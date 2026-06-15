@@ -146,6 +146,17 @@ const categoryLabels = {
 export default function PostDetail() {
   const urlParams = new URLSearchParams(window.location.search);
   const jobId = urlParams.get("id");
+  const shouldAutoEdit = urlParams.get("edit") === "1";
+  const rawBackTo = urlParams.get("from") || "";
+  const backTo = (() => {
+    try {
+      const decoded = decodeURIComponent(rawBackTo);
+      if (decoded.startsWith("/") && !decoded.startsWith("//") && !decoded.includes("://")) return decoded;
+    } catch {
+      // Fall back to Feed below.
+    }
+    return createPageUrl("Feed");
+  })();
 
   const [user, setUser] = useState(null);
   const [isAuth, setIsAuth] = useState(false);
@@ -469,7 +480,7 @@ export default function PostDetail() {
       await base44.entities.Job.delete(jobId);
     },
     onSuccess: () => {
-      window.location.href = "/Feed";
+      window.location.href = backTo;
     }
   });
 
@@ -515,6 +526,11 @@ export default function PostDetail() {
     });
     setIsEditing(true);
   };
+
+  useEffect(() => {
+    const canAutoEdit = shouldAutoEdit && job && isAuth && (user?.role === "admin" || user?.role === "moderator" || user?.email === job?.created_by);
+    if (canAutoEdit && !isEditing) startEditJob();
+  }, [shouldAutoEdit, job?.id, isAuth, user?.role, user?.email, isEditing]);
 
   const setEditMainImage = (index) => {
     setEditForm((current) => {
@@ -695,7 +711,7 @@ export default function PostDetail() {
   }
 
   if (!job || !jobId) {
-    window.location.href = createPageUrl("Feed");
+    window.location.href = backTo;
     return null;
   }
 
@@ -703,7 +719,7 @@ export default function PostDetail() {
     <div className="mx-auto max-w-3xl overflow-x-hidden px-4 py-8 sm:px-6">
       {/* Back */}
       <Link
-        to={createPageUrl("Feed")}
+        to={backTo}
         className="inline-flex items-center gap-1.5 text-sm text-white/40 hover:text-white/70 transition-colors mb-6"
       >
         <ArrowLeft className="w-4 h-4" />
