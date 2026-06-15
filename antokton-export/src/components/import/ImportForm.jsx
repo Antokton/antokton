@@ -5,9 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Sparkles, Trash2, RotateCcw, Save, Send, Globe, Archive, X, Image, Star, Upload } from "lucide-react";
 import LocationPicker from "@/components/job/LocationPicker";
+import ImageFocusControls from "@/components/media/ImageFocusControls";
+import ImageFocusPreview from "@/components/media/ImageFocusPreview";
 import { CATEGORIES, LISTING_TYPES, SOURCES } from "./importConstants";
 import { publishImportedPost } from "./publishImportedPost";
 import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
+import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, updateImageFocus } from "@/lib/imageFocus";
 import { extractImportedPostFields, sanitizeImportedText } from "@/lib/importExtractors";
 
 export default function ImportForm({ user, editingPost, onDone }) {
@@ -34,6 +37,9 @@ export default function ImportForm({ user, editingPost, onDone }) {
     address: "",
     phone_number: "",
     contact_info: "",
+    price: "",
+    salary: "",
+    salary_info: "",
     source: "facebook_group",
     show_author_publicly: false,
     show_original_post_url_publicly: false,
@@ -42,6 +48,7 @@ export default function ImportForm({ user, editingPost, onDone }) {
     image_url: "",
     image_urls: [],
     main_image_index: 0,
+    image_focus_json: {},
   };
 
   const [form, setForm] = useState(empty);
@@ -80,6 +87,16 @@ export default function ImportForm({ user, editingPost, onDone }) {
       image_urls: images,
       main_image_index: mainImageIndex,
       image_url: images[mainImageIndex] || "",
+      image_focus_json: pruneImageFocusMap(f.image_focus_json, images),
+    }));
+  };
+
+  const updateSelectedImageFocus = (focus) => {
+    const images = Array.isArray(form.image_urls) ? form.image_urls : [];
+    const selectedImage = images[Math.min(Number(form.main_image_index || 0), Math.max(images.length - 1, 0))] || "";
+    setForm((f) => ({
+      ...f,
+      image_focus_json: updateImageFocus(f.image_focus_json, selectedImage, focus),
     }));
   };
 
@@ -225,6 +242,9 @@ Kthe JSON me këto fusha.`;
       city: prepared.city || form.city || "",
       phone_number: prepared.phone_number || form.phone_number || "",
       contact_info: prepared.contact_info || form.contact_info || "",
+      price: prepared.price || prepared.salary || form.price || form.salary || form.salary_info || "",
+      salary: prepared.salary || prepared.price || form.salary || form.price || form.salary_info || "",
+      salary_info: prepared.salary_info || prepared.salary || prepared.price || form.salary_info || form.salary || form.price || "",
       original_post_url: prepared.source_url || form.original_post_url || "",
       source_url: prepared.source_url || form.source_url || form.original_post_url || "",
       import_source_url: prepared.import_source_url || prepared.source_url || form.source_url || form.original_post_url || "",
@@ -242,6 +262,10 @@ Kthe JSON me këto fusha.`;
         const images = (Array.isArray(prepared.image_urls) ? prepared.image_urls : prepared.image_url ? [prepared.image_url] : []).filter(Boolean).slice(0, 6);
         const mainIndex = Math.min(Math.max(Number.parseInt(prepared.main_image_index, 10) || 0, 0), Math.max(images.length - 1, 0));
         return images[mainIndex] || "";
+      })(),
+      image_focus_json: (() => {
+        const images = (Array.isArray(prepared.image_urls) ? prepared.image_urls : prepared.image_url ? [prepared.image_url] : []).filter(Boolean).slice(0, 6);
+        return pruneImageFocusMap(prepared.image_focus_json || form.image_focus_json, images);
       })(),
       status,
       imported_by: user.email,
@@ -472,6 +496,17 @@ Kthe JSON me këto fusha.`;
         </p>
       </div>
 
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
+        <label className="text-white text-sm font-semibold block">Çmimi / Vlera</label>
+        <Input
+          value={form.price || form.salary || form.salary_info || ""}
+          onChange={e => setForm(f => ({ ...f, price: e.target.value, salary: e.target.value, salary_info: e.target.value }))}
+          placeholder="p.sh. 50€, 900€, falas..."
+          className="bg-white/5 border-white/10 text-white placeholder-white/40 text-sm"
+          style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}
+        />
+      </div>
+
       {/* Photos */}
       <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
@@ -483,17 +518,24 @@ Kthe JSON me këto fusha.`;
         </div>
         {(form.image_urls || []).length > 0 && (
           <>
-            <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black/20">
-              <img
+            <div className="mx-auto max-w-md rounded-xl border border-white/10 bg-black/20">
+              <ImageFocusPreview
                 src={(form.image_urls || [])[Math.min(Number(form.main_image_index || 0), (form.image_urls || []).length - 1)]}
-                alt=""
-                className="h-48 w-full object-cover"
+                alt="Foto kryesore"
+                className="aspect-square w-full rounded-xl"
+                focus={getImageFocus(form.image_focus_json, (form.image_urls || [])[Math.min(Number(form.main_image_index || 0), (form.image_urls || []).length - 1)])}
+                onChange={updateSelectedImageFocus}
                 onError={(e) => { e.currentTarget.style.display = "none"; }}
               />
             </div>
+            <ImageFocusControls
+              value={getImageFocus(form.image_focus_json, (form.image_urls || [])[Math.min(Number(form.main_image_index || 0), (form.image_urls || []).length - 1)])}
+              onChange={updateSelectedImageFocus}
+            />
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {(form.image_urls || []).slice(0, 6).map((imgUrl, i) => {
                 const selected = Number(form.main_image_index || 0) === i;
+                const focus = getImageFocus(form.image_focus_json, imgUrl);
                 return (
                   <div key={`${imgUrl}-${i}`} className={`relative overflow-hidden rounded-lg border ${selected ? "border-[#9bffd6]" : "border-white/10"}`}>
                     <button type="button" onClick={() => setMainImage(i)} className="absolute left-1 top-1 rounded-full bg-black/60 p-1 text-white hover:text-[#ffd166]" title="Bëje foto kryesore">
@@ -502,7 +544,7 @@ Kthe JSON me këto fusha.`;
                     <button type="button" onClick={() => removeImage(i)} className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:text-red-300" title="Hiqe foton">
                       <X className="h-3.5 w-3.5" />
                     </button>
-                    <img src={imgUrl} alt="" className="h-20 w-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                    <img src={imgUrl} alt="" className="h-20 w-full object-cover" style={getImageFocusStyle(focus)} onError={(e) => { e.currentTarget.style.display = "none"; }} />
                   </div>
                 );
               })}

@@ -1,4 +1,5 @@
 import { extractImportedPostFields, sanitizeImportedText } from "@/lib/importExtractors";
+import { pruneImageFocusMap } from "@/lib/imageFocus";
 
 const STAFF_DEFAULT_POSTER_NAME = "Koordinator Projekti";
 
@@ -84,6 +85,7 @@ export function buildJobPayloadFromImportedPost(post = {}, user = {}) {
     image_urls: images,
     main_image_index: mainImageIndex,
     image_url: images[mainImageIndex] || "",
+    image_focus_json: pruneImageFocusMap(post.image_focus_json, images),
     status: "approved",
     moderation_status: "approved",
     imported_community_request: true,

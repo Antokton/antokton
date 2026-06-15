@@ -781,11 +781,11 @@ export default function CreatePost() {
 
             {(form.image_urls || []).length > 0 ? (
               <div className="space-y-3">
-                <div className="rounded-xl border border-white/10 bg-[#0b1020]">
+                <div className="mx-auto max-w-md rounded-xl border border-white/10 bg-[#0b1020]">
                   <ImageFocusPreview
                     src={selectedPazarImage}
                     alt="Foto kryesore"
-                    className="h-64 w-full rounded-xl"
+                    className="aspect-square w-full rounded-xl"
                     focus={getImageFocus(form.image_focus_json, selectedPazarImage)}
                     onChange={updatePazarImageFocus}
                   />

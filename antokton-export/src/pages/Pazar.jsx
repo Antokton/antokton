@@ -184,7 +184,7 @@ function ListingCard({ job, user }) {
             <ShoppingBag className="w-10 h-10 text-white/20" />
           </div>
         )}
-        <div className="absolute right-2 top-2 flex gap-1.5 rounded-full bg-black/50 p-1 backdrop-blur">
+        <div className="absolute right-2 top-2 z-30 flex gap-1.5 rounded-full bg-black/70 p-1 shadow-lg ring-1 ring-white/20 backdrop-blur">
           <button onClick={toggleFavorite}
             className={`flex h-8 w-8 items-center justify-center rounded-full transition-all
               ${liked ? "bg-red-500 text-white" : "bg-white/10 text-white hover:bg-white/20"}`}
@@ -554,11 +554,11 @@ function ImportModal({ onClose, onImported, user }) {
                 {Array.isArray(extracted.image_urls) && extracted.image_urls.length > 0 && (
                   <div className="space-y-2">
                     <label className="text-white/40 text-xs block">Fotot ({Math.min(extracted.image_urls.length, 6)}/6)</label>
-                    <div className="rounded-xl border border-white/10 bg-[#1c2333]">
+                    <div className="mx-auto max-w-md rounded-xl border border-white/10 bg-[#1c2333]">
                       <ImageFocusPreview
                         src={selectedImportImage}
                         alt="Foto kryesore"
-                        className="h-52 w-full rounded-xl"
+                        className="aspect-square w-full rounded-xl"
                         focus={getImageFocus(extracted.image_focus_json, selectedImportImage)}
                         onChange={updateImportImageFocus}
                         onError={e => e.currentTarget.style.display='none'}

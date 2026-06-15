@@ -7,6 +7,9 @@ import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhon
 import { getContactInfoInTextMessage } from "@/lib/contentContactGuard";
 import { extractImportedPostFields, sanitizeImportedText } from "@/lib/importExtractors";
 import LocationPicker from "@/components/job/LocationPicker";
+import ImageFocusControls from "@/components/media/ImageFocusControls";
+import ImageFocusPreview from "@/components/media/ImageFocusPreview";
+import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, updateImageFocus } from "@/lib/imageFocus";
 
 const CONTRACT_TYPES = [
   { value: "full-time", label: "Full-time" },
@@ -365,6 +368,7 @@ const normalizeDraft = (rawText, draft = {}, fallbackUrl = "", jobType = "ofroj"
     image_urls: imageUrls,
     main_image_index: mainImageIndex,
     image_url: imageUrls[mainImageIndex] || sanitizeImportedText(draft.image_url || ""),
+    image_focus_json: pruneImageFocusMap(draft.image_focus_json, imageUrls),
   };
   const polished = polishDraft(decodedDraft, decodedRawText);
   return extractImportedPostFields(decodedRawText || "", {
@@ -384,6 +388,7 @@ const normalizeDraft = (rawText, draft = {}, fallbackUrl = "", jobType = "ofroj"
     image_urls: imageUrls,
     main_image_index: mainImageIndex,
     image_url: imageUrls[mainImageIndex] || draft.image_url || "",
+    image_focus_json: pruneImageFocusMap(draft.image_focus_json, imageUrls),
     status: "pending",
   });
 };
@@ -634,6 +639,7 @@ ${text || importedData.description || importedData.title || ""}`;
       image_urls: images,
       main_image_index: mainImageIndex,
       image_url: images[mainImageIndex] || prepared.image_url || "",
+      image_focus_json: pruneImageFocusMap(prepared.image_focus_json || draft.image_focus_json, images),
       source_url: sourceUrl,
       author_profile_url: contactUrl,
       import_source_url: prepared.import_source_url || sourceUrl,
@@ -688,6 +694,15 @@ ${text || importedData.description || importedData.title || ""}`;
       image_urls: images,
       main_image_index: mainImageIndex,
       image_url: images[mainImageIndex] || "",
+      image_focus_json: pruneImageFocusMap(data?.image_focus_json, images),
+    });
+  };
+
+  const updateSelectedImageFocus = (focus) => {
+    const images = Array.isArray(data?.image_urls) ? data.image_urls : [];
+    const selectedImage = images[Math.min(Number(data?.main_image_index || 0), Math.max(images.length - 1, 0))] || "";
+    updateSelectedDraft({
+      image_focus_json: updateImageFocus(data?.image_focus_json, selectedImage, focus),
     });
   };
 
@@ -986,17 +1001,24 @@ ${text || importedData.description || importedData.title || ""}`;
 
             {Array.isArray(data.image_urls) && data.image_urls.length > 0 && (
               <>
-                <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black/20">
-                  <img
+                <div className="mx-auto max-w-md rounded-xl border border-white/10 bg-black/20">
+                  <ImageFocusPreview
                     src={data.image_urls[Math.min(Number(data.main_image_index || 0), data.image_urls.length - 1)]}
-                    alt=""
-                    className="h-48 w-full object-cover"
+                    alt="Foto kryesore"
+                    className="aspect-square w-full rounded-xl"
+                    focus={getImageFocus(data.image_focus_json, data.image_urls[Math.min(Number(data.main_image_index || 0), data.image_urls.length - 1)])}
+                    onChange={updateSelectedImageFocus}
                     onError={(e) => { e.currentTarget.style.display = "none"; }}
                   />
                 </div>
+                <ImageFocusControls
+                  value={getImageFocus(data.image_focus_json, data.image_urls[Math.min(Number(data.main_image_index || 0), data.image_urls.length - 1)])}
+                  onChange={updateSelectedImageFocus}
+                />
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                   {data.image_urls.slice(0, 6).map((imgUrl, i) => {
                     const selected = Number(data.main_image_index || 0) === i;
+                    const focus = getImageFocus(data.image_focus_json, imgUrl);
                     return (
                       <div key={`${imgUrl}-${i}`} className={`relative overflow-hidden rounded-lg border ${selected ? "border-[#9bffd6]" : "border-white/10"}`}>
                         <button type="button" onClick={() => setMainImage(i)} className="absolute left-1 top-1 rounded-full bg-black/60 p-1 text-white hover:text-[#ffd166]" title="Bëje foto kryesore">
@@ -1005,7 +1027,7 @@ ${text || importedData.description || importedData.title || ""}`;
                         <button type="button" onClick={() => removeImage(i)} className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:text-red-300" title="Hiqe foton">
                           <X className="h-3.5 w-3.5" />
                         </button>
-                        <img src={imgUrl} alt="" className="h-20 w-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                        <img src={imgUrl} alt="" className="h-20 w-full object-cover" style={getImageFocusStyle(focus)} onError={(e) => { e.currentTarget.style.display = "none"; }} />
                       </div>
                     );
                   })}

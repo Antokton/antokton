@@ -876,11 +876,11 @@ export default function PostDetail() {
                   </div>
                   {(editForm.image_urls || []).length > 0 && (
                     <>
-                      <div className="rounded-lg border border-white/10 bg-black/20">
+                      <div className="mx-auto max-w-md rounded-lg border border-white/10 bg-black/20">
                         <ImageFocusPreview
                           src={selectedEditImage}
                           alt="Foto kryesore"
-                          className="h-44 w-full rounded-lg"
+                          className="aspect-square w-full rounded-lg"
                           focus={getImageFocus(editForm.image_focus_json, selectedEditImage)}
                           onChange={updateEditImageFocus}
                           onError={(e) => { e.currentTarget.style.display = "none"; }}
