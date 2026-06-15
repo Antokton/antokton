@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
-import { MapPin, Clock, MessageCircle, Send, ArrowLeft, Phone, Briefcase, Flag, Share2, Copy, Users as UsersIcon, X, Pencil, Check, MoreVertical, ExternalLink, Link2, Eye, Upload, Star } from "lucide-react";
+import { MapPin, Clock, MessageCircle, Send, ArrowLeft, Phone, Briefcase, Flag, Share2, Copy, Users as UsersIcon, X, Pencil, Check, MoreVertical, ExternalLink, Link2, Eye, Upload, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import LocationPicker from "../components/job/LocationPicker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
@@ -177,6 +177,7 @@ export default function PostDetail() {
   const [timeLeft, setTimeLeft] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
+  const [editSelectedImageIndex, setEditSelectedImageIndex] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [staffProfileNotice, setStaffProfileNotice] = useState("");
   const [photoViewerUrl, setPhotoViewerUrl] = useState("");
@@ -185,7 +186,11 @@ export default function PostDetail() {
   const queryClient = useQueryClient();
   const canSeePrivateImportFields = user?.role === "admin" || user?.role === "moderator";
   const premiumAccess = hasPremiumAccess(user, hasActiveSubscription);
-  const photoViewerFocus = photoViewerUrl ? getImageFocus(job?.image_focus_json, photoViewerUrl) : null;
+  const exitEditMode = () => {
+    const cleanUrl = `${window.location.pathname}?id=${encodeURIComponent(jobId)}${rawBackTo ? `&from=${encodeURIComponent(rawBackTo)}` : ""}`;
+    window.history.replaceState(null, "", cleanUrl);
+    setIsEditing(false);
+  };
 
   useEffect(() => {
     if (!photoViewerUrl) return;
@@ -526,6 +531,7 @@ export default function PostDetail() {
       image_url: editImages[editMainImageIndex] || job.image_url || '',
       image_focus_json: pruneImageFocusMap(job.image_focus_json, editImages)
     });
+    setEditSelectedImageIndex(editMainImageIndex);
     setIsEditing(true);
   };
 
@@ -537,10 +543,11 @@ export default function PostDetail() {
   const setEditMainImage = (index) => {
     setEditForm((current) => {
       const images = Array.isArray(current.image_urls) ? current.image_urls : [];
+      const safeIndex = Math.min(Math.max(Number(index) || 0, 0), Math.max(images.length - 1, 0));
       return {
         ...current,
-        main_image_index: index,
-        image_url: images[index] || ""
+        main_image_index: safeIndex,
+        image_url: images[safeIndex] || ""
       };
     });
   };
@@ -549,6 +556,11 @@ export default function PostDetail() {
     setEditForm((current) => {
       const images = (Array.isArray(current.image_urls) ? current.image_urls : []).filter((_, i) => i !== index);
       const mainImageIndex = Math.min(Number(current.main_image_index || 0), Math.max(images.length - 1, 0));
+      const selectedImageIndex = Math.min(
+        Math.max(index > editSelectedImageIndex ? editSelectedImageIndex : editSelectedImageIndex - (index < editSelectedImageIndex ? 1 : 0), 0),
+        Math.max(images.length - 1, 0)
+      );
+      setEditSelectedImageIndex(selectedImageIndex);
       return {
         ...current,
         image_urls: images,
@@ -560,10 +572,17 @@ export default function PostDetail() {
   };
 
   const reorderEditImages = (fromIndex, toIndex) => {
-    setEditForm((current) => ({
-      ...current,
-      ...reorderImageGallery(current.image_urls, fromIndex, toIndex, current.main_image_index),
-    }));
+    setEditForm((current) => {
+      const images = Array.isArray(current.image_urls) ? current.image_urls : [];
+      const selectedImage = images[editSelectedImageIndex] || "";
+      const reordered = reorderImageGallery(images, fromIndex, toIndex, current.main_image_index);
+      const nextSelectedIndex = selectedImage ? reordered.image_urls.indexOf(selectedImage) : toIndex;
+      setEditSelectedImageIndex(Math.max(nextSelectedIndex, 0));
+      return {
+        ...current,
+        ...reordered,
+      };
+    });
   };
 
   const handleEditImageUpload = async (event) => {
@@ -583,12 +602,17 @@ export default function PostDetail() {
         main_image_index: mainImageIndex,
         image_url: nextImages[mainImageIndex] || ""
       }));
+      setEditSelectedImageIndex(mainImageIndex);
     } catch (error) {
       alert(error?.message || "Fotot nuk u ngarkuan. Provo përsëri.");
     }
   };
 
-  const selectedEditImage = (editForm.image_urls || [])[Math.min(Number(editForm.main_image_index || 0), Math.max((editForm.image_urls || []).length - 1, 0))] || "";
+  const selectedEditImageIndex = Math.min(
+    Math.max(Number(editSelectedImageIndex) || 0, 0),
+    Math.max((editForm.image_urls || []).length - 1, 0)
+  );
+  const selectedEditImage = (editForm.image_urls || [])[selectedEditImageIndex] || "";
 
   const updateEditImageFocus = (focus) => {
     if (!selectedEditImage) return;
@@ -641,9 +665,7 @@ export default function PostDetail() {
       if (updatedJob) {
         queryClient.setQueryData(["job", jobId, user?.role], updatedJob);
       }
-      const cleanUrl = `${window.location.pathname}?id=${encodeURIComponent(jobId)}${rawBackTo ? `&from=${encodeURIComponent(rawBackTo)}` : ""}`;
-      window.history.replaceState(null, "", cleanUrl);
-      setIsEditing(false);
+      exitEditMode();
       queryClient.invalidateQueries({ queryKey: ["job", jobId] });
     },
     onError: (error) => {
@@ -956,9 +978,25 @@ export default function PostDetail() {
                         value={getImageFocus(editForm.image_focus_json, selectedEditImage)}
                         onChange={updateEditImageFocus}
                       />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => setEditMainImage(selectedEditImageIndex)}
+                          disabled={Number(editForm.main_image_index || 0) === selectedEditImageIndex}
+                          className="bg-[#8ab4ff]/20 text-[#dbeafe] hover:bg-[#8ab4ff]/30 disabled:opacity-60"
+                        >
+                          <Star className={`mr-1 h-3.5 w-3.5 ${Number(editForm.main_image_index || 0) === selectedEditImageIndex ? "fill-[#ffd166] text-[#ffd166]" : ""}`} />
+                          {Number(editForm.main_image_index || 0) === selectedEditImageIndex ? "Foto kryesore" : "Vendos si foto kryesore"}
+                        </Button>
+                        <span className="text-[11px] text-white/40">
+                          Prek një foto për ta përpunuar; përdor shigjetat për renditje në mobile.
+                        </span>
+                      </div>
                       <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                         {(editForm.image_urls || []).slice(0, 6).map((imgUrl, i) => {
                           const selected = Number(editForm.main_image_index || 0) === i;
+                          const active = selectedEditImageIndex === i;
                           const focus = getImageFocus(editForm.image_focus_json, imgUrl);
                           return (
                             <div
@@ -971,15 +1009,61 @@ export default function PostDetail() {
                                 const fromIndex = Number(event.dataTransfer.getData("text/plain"));
                                 reorderEditImages(fromIndex, i);
                               }}
-                              className={`relative cursor-grab overflow-hidden rounded-lg border ${selected ? "border-[#9bffd6]" : "border-white/10"} active:cursor-grabbing`}
+                              onClick={() => setEditSelectedImageIndex(i)}
+                              className={`relative cursor-grab overflow-hidden rounded-lg border ${active ? "border-[#8ab4ff] ring-1 ring-[#8ab4ff]" : selected ? "border-[#9bffd6]" : "border-white/10"} active:cursor-grabbing`}
                               title="Tërhiqe për ta riorganizuar"
                             >
-                              <button type="button" onClick={() => setEditMainImage(i)} className="absolute left-1 top-1 rounded-full bg-black/60 p-1 text-white hover:text-[#ffd166]" title="Bëje foto kryesore">
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setEditSelectedImageIndex(i);
+                                  setEditMainImage(i);
+                                }}
+                                className="absolute left-1 top-1 z-[2] rounded-full bg-black/60 p-1 text-white hover:text-[#ffd166]"
+                                title="Vendos si foto kryesore"
+                                aria-label="Vendos si foto kryesore"
+                              >
                                 <Star className={`h-3.5 w-3.5 ${selected ? "fill-[#ffd166] text-[#ffd166]" : ""}`} />
                               </button>
-                              <button type="button" onClick={() => removeEditImage(i)} className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:text-red-300" title="Hiqe foton">
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  removeEditImage(i);
+                                }}
+                                className="absolute right-1 top-1 z-[2] rounded-full bg-black/60 p-1 text-white hover:text-red-300"
+                                title="Hiqe foton"
+                                aria-label="Hiqe foton"
+                              >
                                 <X className="h-3.5 w-3.5" />
                               </button>
+                              <div className="absolute bottom-1 left-1 right-1 z-[2] flex justify-between gap-1 sm:hidden">
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    reorderEditImages(i, Math.max(i - 1, 0));
+                                  }}
+                                  disabled={i === 0}
+                                  className="rounded-full bg-black/65 p-1 text-white disabled:opacity-35"
+                                  aria-label="Lëviz majtas"
+                                >
+                                  <ChevronLeft className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    reorderEditImages(i, Math.min(i + 1, (editForm.image_urls || []).length - 1));
+                                  }}
+                                  disabled={i >= (editForm.image_urls || []).length - 1}
+                                  className="rounded-full bg-black/65 p-1 text-white disabled:opacity-35"
+                                  aria-label="Lëviz djathtas"
+                                >
+                                  <ChevronRight className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
                               <img src={imgUrl} alt="" className="h-16 w-full object-cover" style={getImageFocusStyle(focus)} onError={(e) => { e.currentTarget.style.display = "none"; }} />
                             </div>
                           );
@@ -1006,7 +1090,7 @@ export default function PostDetail() {
                 <Button onClick={() => editJobMutation.mutate()} disabled={editJobMutation.isPending} className="bg-green-500 hover:bg-green-600 text-white gap-1.5 flex-1 min-w-[140px]">
                   <Check className="w-3.5 h-3.5" /> {editJobMutation.isPending ? "Duke ruajtur..." : "Ruaj Ndryshimet"}
                 </Button>
-                <Button onClick={() => setIsEditing(false)} variant="ghost" className="text-white/60 hover:text-white border border-white/20 flex-1 min-w-[80px]">
+                <Button onClick={exitEditMode} variant="ghost" className="text-white/60 hover:text-white border border-white/20 flex-1 min-w-[80px]">
                   <X className="w-3.5 h-3.5 mr-1" /> Anulo
                 </Button>
               </div>
@@ -1726,7 +1810,7 @@ export default function PostDetail() {
 
       {photoViewerUrl && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-3 sm:p-5"
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 p-3 sm:p-5"
           onClick={() => setPhotoViewerUrl("")}
           role="dialog"
           aria-modal="true"
@@ -1744,13 +1828,14 @@ export default function PostDetail() {
             className="flex max-h-[92vh] w-full max-w-6xl flex-col items-center gap-3"
             onClick={(event) => event.stopPropagation()}
           >
-          <ImageFocusPreview
-            src={photoViewerUrl}
-            alt="Foto e njoftimit"
-            focus={photoViewerFocus}
-            className="h-[82vh] max-h-[82vh] w-full rounded-xl border border-white/10 bg-black/40"
-            imageClassName="rounded-xl"
-          />
+            <img
+              src={photoViewerUrl}
+              alt="Foto e njoftimit"
+              className="max-h-[82vh] w-auto max-w-full rounded-xl border border-white/10 bg-black/40 object-contain shadow-2xl"
+              onError={(event) => {
+                event.currentTarget.alt = "Fotoja nuk u ngarkua";
+              }}
+            />
             <button
               type="button"
               onClick={() => setPhotoViewerUrl("")}
