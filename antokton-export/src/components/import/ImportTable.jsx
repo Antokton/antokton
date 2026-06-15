@@ -22,6 +22,7 @@ export default function ImportTable({ user, onEdit }) {
   const qc = useQueryClient();
   const [filters, setFilters] = useState({ status: "all", category: "all", listing_type: "all", source: "all", search: "" });
   const [publishingId, setPublishingId] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
 
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ["importedPosts"],
@@ -75,7 +76,28 @@ export default function ImportTable({ user, onEdit }) {
     }
   };
 
-  const isAdmin = user.role === "admin";
+  const isAdmin = user?.role === "admin";
+
+  const ActionButtons = ({ post, needsPublish }) => (
+    <div className="flex items-center gap-1.5 whitespace-nowrap">
+      <button onClick={(event) => { event.stopPropagation(); onEdit(post); }} className="inline-flex items-center gap-1 rounded border border-white/10 px-2 py-1 text-white/70 hover:text-white hover:bg-white/10 transition-colors" title="Përpuno">
+        <Pencil className="w-3.5 h-3.5" />
+        <span>Përpuno</span>
+      </button>
+      {isAdmin && needsPublish && (
+        <button onClick={(event) => { event.stopPropagation(); handleQuickPublish(post); }} disabled={publishingId === post.id} className="inline-flex items-center gap-1 rounded border border-[#9bffd6]/20 px-2 py-1 text-[#9bffd6]/80 hover:text-[#9bffd6] hover:bg-[#9bffd6]/10 transition-colors disabled:opacity-40" title="Publiko">
+          {publishingId === post.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
+          <span>{post.status === "publikuar" ? "Ripubliko" : "Publiko"}</span>
+        </button>
+      )}
+      {isAdmin && (
+        <button onClick={(event) => { event.stopPropagation(); handleDelete(post.id); }} className="inline-flex items-center gap-1 rounded border border-red-400/15 px-2 py-1 text-red-300/70 hover:text-red-300 hover:bg-red-400/10 transition-colors" title="Fshi">
+          <Trash2 className="w-3.5 h-3.5" />
+          <span>Fshi</span>
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-4">
@@ -135,8 +157,8 @@ export default function ImportTable({ user, onEdit }) {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-white/10 bg-white/5">
-                {["Teksti", "Autori", "Kategoria", "Vendi", "Rajoni", "Qyteti", "Lloji", "Burimi", "Statusi", "Importuar nga", "Data", ""].map(h => (
-                  <th key={h} className="text-left px-3 py-2.5 text-white/50 font-medium whitespace-nowrap">{h}</th>
+                {["Teksti", "Autori", "Kategoria", "Vendi", "Rajoni", "Qyteti", "Lloji", "Burimi", "Statusi", "Importuar nga", "Data", "Veprime"].map(h => (
+                  <th key={h} className={`text-left px-3 py-2.5 text-white/50 font-medium whitespace-nowrap ${h === "Veprime" ? "sticky right-0 z-10 bg-[#171d2d]" : ""}`}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -144,8 +166,14 @@ export default function ImportTable({ user, onEdit }) {
               {filtered.map(post => {
                 const reallyPublished = isPublishedInJobs(post, publishedJobLinks);
                 const needsPublish = !reallyPublished;
+                const selected = selectedId === post.id;
                 return (
-                <tr key={post.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                <React.Fragment key={post.id}>
+                <tr
+                  onClick={() => setSelectedId((current) => current === post.id ? null : post.id)}
+                  className={`border-b border-white/5 transition-colors cursor-pointer ${selected ? "bg-[#8ab4ff]/10 ring-1 ring-inset ring-[#8ab4ff]/25" : "hover:bg-white/5"}`}
+                  aria-selected={selected}
+                >
                   <td className="px-3 py-2.5 max-w-[200px]">
                     <p className="text-white/80 truncate">{post.edited_text?.slice(0, 60)}...</p>
                   </td>
@@ -166,27 +194,24 @@ export default function ImportTable({ user, onEdit }) {
                   </td>
                   <td className="px-3 py-2.5 text-white/50 whitespace-nowrap">{post.imported_by?.split("@")[0] || "—"}</td>
                   <td className="px-3 py-2.5 text-white/40 whitespace-nowrap">{moment(post.created_date).format("DD/MM/YY")}</td>
-                  <td className="px-3 py-2.5">
-                    <div className="flex items-center gap-1.5 whitespace-nowrap">
-                      <button onClick={() => onEdit(post)} className="inline-flex items-center gap-1 rounded border border-white/10 px-2 py-1 text-white/70 hover:text-white hover:bg-white/10 transition-colors" title="Përpuno">
-                        <Pencil className="w-3.5 h-3.5" />
-                        <span>Përpuno</span>
-                      </button>
-                      {isAdmin && needsPublish && (
-                        <button onClick={() => handleQuickPublish(post)} disabled={publishingId === post.id} className="inline-flex items-center gap-1 rounded border border-[#9bffd6]/20 px-2 py-1 text-[#9bffd6]/80 hover:text-[#9bffd6] hover:bg-[#9bffd6]/10 transition-colors disabled:opacity-40" title="Publiko">
-                          {publishingId === post.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
-                          <span>{post.status === "publikuar" ? "Ripubliko" : "Publiko"}</span>
-                        </button>
-                      )}
-                      {isAdmin && (
-                        <button onClick={() => handleDelete(post.id)} className="inline-flex items-center gap-1 rounded border border-red-400/15 px-2 py-1 text-red-300/70 hover:text-red-300 hover:bg-red-400/10 transition-colors" title="Fshi">
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Fshi</span>
-                        </button>
-                      )}
-                    </div>
+                  <td className="sticky right-0 z-[1] px-3 py-2.5 bg-[#0b1020]/95 shadow-[-12px_0_18px_rgba(11,16,32,0.8)]">
+                    <ActionButtons post={post} needsPublish={needsPublish} />
                   </td>
                 </tr>
+                {selected && (
+                  <tr className="border-b border-[#8ab4ff]/20 bg-[#8ab4ff]/10">
+                    <td colSpan={12} className="px-3 py-3">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0 text-white/75">
+                          <p className="font-semibold text-white truncate">{post.edited_text?.slice(0, 120) || "Njoftim i importuar"}</p>
+                          <p className="text-[11px] text-white/45">Zgjidh një veprim për këtë import. Nëse statusi është “Publikuar” por mungon postimi publik, përdor “Ripubliko”.</p>
+                        </div>
+                        <ActionButtons post={post} needsPublish={needsPublish} />
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               );})}
             </tbody>
           </table>
