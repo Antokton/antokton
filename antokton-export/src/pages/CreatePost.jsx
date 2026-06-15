@@ -17,6 +17,7 @@ import { requireCompleteProfileForInteraction } from "@/lib/profileCompleteness"
 import { useLocation } from "react-router-dom";
 import ImageFocusControls from "@/components/media/ImageFocusControls";
 import ImageFocusPreview from "@/components/media/ImageFocusPreview";
+import { ANTOKTON_REGION_NAMES, ANTOKTON_ZONES } from "@/lib/antoktonRegions";
 import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, reorderImageGallery, updateImageFocus } from "@/lib/imageFocus";
 
 const ALL_PROFESSIONS = [
@@ -227,13 +228,7 @@ const BASE_COUNTRIES = [
 ];
 
 const zonesByCountry = {
-  "Antokton": [
-    "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut",
-    "Rajoni Perëndimor — Iliria Perëndimore",
-    "Rajoni Verior — Dardania",
-    "Rajoni Jugor — Epiri",
-    "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia"
-  ],
+  "Antokton": ANTOKTON_REGION_NAMES,
   "Gjermani": ["Lindja", "Perëndimi", "Veriu", "Jugu", "Qendra"],
   "Angli": ["Londër", "Midlands", "Veriu", "Jugu", "Perëndimi", "Lindja"],
   "Austri": ["Vienna", "Tirol", "Salzburg", "Styria", "Vorarlberg"],
@@ -249,32 +244,7 @@ const zonesByCountry = {
 };
 
 const citiesByZone = {
-  "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut": [
-    "Apolloni", "Berat", "Burrel", "Durrës", "Elbasan", "Ferizaj", "Fier",
-    "Gjakovë", "Gjilan", "Gramsh", "Kavajë", "Krujë", "Kukës", "Lezhë",
-    "Librazhd", "Lushnjë", "Mitrovicë", "Pejë", "Podujevë", "Prishtinë",
-    "Prizren", "Pukë", "Rodon", "Shkodër", "Tiranë", "Vlorë", "Vushtrri"
-  ].sort(),
-  "Rajoni Perëndimor — Iliria Perëndimore": [
-    "Budva", "Guci", "Plavë", "Rozhajë", "Tivar", "Tuzi", "Ulqin"
-  ].sort(),
-  "Rajoni Verior — Dardania": [
-    "Beograd", "Bujanovc", "Jabllanicë", "Leskovac", "Medvegjë", "Nish",
-    "Novi Pazar", "Pirot", "Preshevë", "Prijepolje", "Prokuplje", "Sjenicë",
-    "Toplicë", "Tutin", "Vojvodinë", "Vranjë", "Zveçan"
-  ].sort(),
-  "Rajoni Jugor — Epiri": [
-    "Ambraki", "Arta", "Astakos", "Butrinti", "Delvinë", "Dodona",
-    "Dropull", "Filiates", "Gjirokastër", "Igumenicë", "Janinë",
-    "Konispol", "Margëlliç", "Mesologji", "Nafpaktos", "Paramithi",
-    "Patra", "Peloponez", "Prevezë", "Sarandë", "Tesproti", "Tefëri"
-  ].sort(),
-  "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia": [
-    "Dibër", "Edesa", "Farsala", "Florinë", "Gostivar", "Kavala",
-    "Kërçovë", "Kozani", "Kostur", "Larisa", "Lerin", "Liknid",
-    "Manastir", "Ohër", "Pella", "Pogradec", "Selanik", "Strumicë",
-    "Strugë", "Tetovë", "Thrakë", "Trikala", "Veria", "Volos", "Voskopojë", "Athinë"
-  ].sort(),
+  ...ANTOKTON_ZONES,
   "Lindja": ["Berlin", "Leipzig", "Dresden", "Potsdam", "Erfurt"],
   "Perëndimi": ["Köln", "Düsseldorf", "Dortmund", "Essen", "Bonn"],
   "Veriu": ["Hamburg", "Bremen", "Hannover", "Kiel", "Lübeck"],

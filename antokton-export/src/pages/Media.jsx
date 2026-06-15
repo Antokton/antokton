@@ -42,6 +42,44 @@ const STATIC_REVISTA = [
 
 const ALL_STATIC = [...STATIC_TV, ...STATIC_RADIO, ...STATIC_GAZETA, ...STATIC_REVISTA];
 const STATIC_MEDIA_CONFIG_KEY = "media_static_items";
+const STATIC_BLOG_POSTS = [
+  {
+    id: "antokton-rajonet",
+    title: "A n’TOKË tonë",
+    category: "blog",
+    description: `Çdo hartë është një mënyrë për të vendosur rregull mbi hapësirën.
+
+Disa lindin nga administrata, disa nga historia, disa nga gjeografia. Kjo hartë lindi nga një nevojë më e thjeshtë: nevoja për orientim.
+
+Ndër shekuj, Ballkani ka njohur ndryshime të panumërta. Janë ndërruar perandori, janë zhvendosur popullsi, janë vizatuar kufij të rinj dhe janë harruar të vjetrit. Megjithatë, përtej të gjitha këtyre ndryshimeve, kanë mbetur njerëzit, vendbanimet, rrugët e komunikimit dhe kujtesa e përbashkët e krahinave AuTOKtone.
+
+Kur filluam të ndërtonim Antoktonin, u përballëm me një pyetje të thjeshtë: si mund të organizohen mijëra qytete, fshatra, njoftime, shërbime dhe aktivitete në një mënyrë që të jetë e kuptueshme për të gjithë?
+
+Përgjigjja ishte krijimi i një strukture rajonale që mbështetet njëkohësisht në logjikën gjeografike, në lidhjet historike dhe në nevojat praktike të organizimit.
+
+Kështu u formuan rajonet kryesore të AnTOKton dhe nënrajonet përkatëse, të cilat shërbejnë si pikë orientimi për përdoruesit e platformës.
+
+Kjo ndarje nuk synon të ngrijë historinë në një moment të vetëm dhe as të japë një interpretim përfundimtar të saj. Përkundrazi, ajo pranon se historia e këtyre trojeve është e pasur, e ndërlikuar dhe shpeshherë e ndërthurur mes popujve, kulturave dhe qytetërimeve të ndryshme.
+
+Prandaj, rajonet e paraqitura këtu duhen parë si një mënyrë organizimi që ndihmon përdoruesin të lëvizë më lehtë në hapësirën e platformës, të gjejë më shpejt informacionin që kërkon dhe të krijojë lidhje me njerëz që ndajnë të njëjtën zonë gjeografike ose afërsi kulturore.
+
+Në fund të fundit, qëllimi i një harte nuk është vetëm të tregojë ku janë vendet.
+
+Qëllimi i saj është të ndihmojë njerëzit të orientohen.
+
+Dhe pikërisht për këtë arsye u krijua kjo hartë: që hapësira e gjerë që An’TOKtonë të jetë më e kuptueshme, më e organizuar dhe më e afërt për të gjithë ata që e përdorin.
+
+Antokton`,
+    image_url: "/assets/media/antokton-rajonet.png",
+    author_name: "Antokton",
+    author_bio: "Platformë",
+    reading_time_min: 4,
+    tags: ["Antokton", "Rajonet", "Hartë", "Orientim"],
+    is_active: true,
+    is_featured: true,
+    order: -100,
+  },
+];
 
 function parseStaticMedia(value) {
   if (!value) return ALL_STATIC;
@@ -775,7 +813,10 @@ export function MediaSection() {
   const gazetaList = allChannels.filter(ch => ch.type === "gazeta" && filterChannel(ch));
   const revistaList= allChannels.filter(ch => ch.type === "revista"&& filterChannel(ch));
 
-  const blogPosts  = visibleDbPosts.filter(p => p.category === "blog");
+  const blogPosts  = [
+    ...STATIC_BLOG_POSTS,
+    ...visibleDbPosts.filter(p => p.category === "blog" && p.id !== "antokton-rajonet"),
+  ].sort((a, b) => (Number(a.order || 0) - Number(b.order || 0)));
   const otherDbPosts = visibleDbPosts.filter(p => p.category !== "blog" && (activeCategory === "all" || p.category === activeCategory));
 
   return (

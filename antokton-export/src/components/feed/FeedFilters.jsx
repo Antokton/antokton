@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Search, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
+import { ANTOKTON_FILTER_REGIONS } from "@/lib/antoktonRegions";
 
 const categories = [
   { value: "all", label: "Të gjitha kategoritë" },
@@ -207,56 +208,7 @@ const countrySubregions = {
   },
 };
 
-const antoktonRegions = [
-  { value: "all", label: "Vendi Antokton - Të gjithë" },
-  {
-    value: "qendror",
-    label: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut",
-    cities: [
-      "Apolloni", "Berat", "Burrel", "Durrës", "Elbasan", "Ferizaj", "Fier",
-      "Gjakovë", "Gjilan", "Gramsh", "Kavajë", "Krujë", "Kukës", "Lezhë",
-      "Librazhd", "Lushnjë", "Mitrovicë", "Pejë", "Podujevë", "Prishtinë",
-      "Prizren", "Pukë", "Rodon", "Shkodër", "Tiranë", "Vlorë", "Vushtrri"
-    ].sort()
-  },
-  {
-    value: "perendimor",
-    label: "Rajoni Perëndimor — Iliria Perëndimore",
-    cities: [
-      "Budva", "Guci", "Plavë", "Rozhajë", "Tivar", "Tuzi", "Ulqin"
-    ].sort()
-  },
-  {
-    value: "verior",
-    label: "Rajoni Verior - Dardania Qendrore dhe Veriore",
-    cities: [
-      "Beograd", "Bujanovc", "Jabllanicë", "Leskovac", "Medvegjë", "Nish",
-      "Novi Pazar", "Pirot", "Preshevë", "Prijepolje", "Prokuplje", "Sjenicë",
-      "Toplicë", "Tutin", "Vojvodinë", "Vranjë", "Zveçan"
-    ].sort()
-  },
-  {
-    value: "jugor",
-    label: "Rajoni Jugor - Epiri dhe Jugu",
-    // Epiri historik + Etolia + pjesë e Thesalisë jugore
-    cities: [
-      "Ambraki", "Arta", "Astakos", "Butrinti", "Delvinë", "Dodona",
-      "Dropull", "Filiates", "Gjirokastër", "Igumenicë", "Janinë",
-      "Konispol", "Margëlliç", "Mesologji", "Nafpaktos", "Paramithi",
-      "Patra", "Peloponez", "Prevezë", "Sarandë", "Tesproti", "Tefëri"
-    ].sort()
-  },
-  {
-    value: "lindor",
-    label: "Rajoni Lindor - Thesalia dhe Makedonia",
-    cities: [
-      "Dibër", "Edesa", "Farsala", "Florinë", "Gostivar", "Kavala",
-      "Kërçovë", "Kozani", "Kostur", "Larisa", "Lerin", "Liknid",
-      "Manastir", "Ohër", "Pella", "Pogradec", "Selanik", "Strumicë",
-      "Strugë", "Tetovë", "Thrakë", "Trikala", "Veria", "Volos", "Voskopojë", "Athinë"
-    ].sort()
-  }
-];
+const antoktonRegions = ANTOKTON_FILTER_REGIONS;
 
 const experienceLevels = [
   { value: "all", label: "Çdo nivel" },

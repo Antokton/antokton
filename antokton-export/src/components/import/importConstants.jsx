@@ -1,3 +1,5 @@
+import { ANTOKTON_COUNTRY_REGIONS } from "@/lib/antoktonRegions";
+
 export const CATEGORIES = [
   { value: "pune", label: "Punë" },
   { value: "pazar", label: "Pazar" },
@@ -48,13 +50,7 @@ export const STATUS_COLORS = {
 export const COUNTRIES_DATA = [
   {
     name: "Antokton",
-    regions: [
-      { name: "Rajoni Qendror — Iliria Qendrore & Dardania e Jugut", cities: ["Tiranë", "Durrës", "Elbasan", "Shkodër", "Kavajë", "Krujë", "Lezhë", "Vlorë", "Berat", "Korçë", "Prishtinë", "Prizren", "Pejë", "Gjakovë", "Gjilan", "Ferizaj", "Mitrovicë"] },
-      { name: "Rajoni Perëndimor — Iliria Perëndimore", cities: ["Budva", "Guci", "Plavë", "Tivar", "Tuzi", "Ulqin", "Rozhajë"] },
-      { name: "Rajoni Verior — Dardania", cities: ["Bujanovc", "Medvegjë", "Nish", "Novi Pazar", "Preshevë", "Toplicë", "Jabllanicë", "Vranjë", "Pirot", "Sjenicë", "Tutin", "Vojvodinë"] },
-      { name: "Rajoni Lindor — Iliria Lindore, Maqedonia, Thesalia & Thrakia", cities: ["Shkup", "Tetovë", "Gostivar", "Kumanovë", "Ohër", "Strugë", "Manastir", "Selanik", "Larisa", "Volos", "Trikala", "Athinë", "Thrakë"] },
-      { name: "Rajoni Jugor — Epiri", cities: ["Çamëri", "Filat", "Janinë", "Prevezë", "Arta", "Igumenicë", "Mesologji", "Patra", "Peloponez"] },
-    ]
+    regions: ANTOKTON_COUNTRY_REGIONS
   },
   {
     name: "Gjermani",
