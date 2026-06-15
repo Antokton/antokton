@@ -1,5 +1,5 @@
 import React from "react";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, RotateCw } from "lucide-react";
 import { DEFAULT_IMAGE_FOCUS, normalizeImageFocus } from "@/lib/imageFocus";
 
 export default function ImageFocusControls({ value, onChange }) {
@@ -11,19 +11,29 @@ export default function ImageFocusControls({ value, onChange }) {
 
   return (
     <div className="rounded-xl border border-white/10 bg-black/15 p-3">
-      <div className="mb-2 flex items-center justify-between gap-3">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-xs font-semibold text-white/75">Zona e shikueshmërisë</p>
           <p className="text-[11px] text-white/40">Poziciono foton brenda kuadratit të thumbnail-it.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => onChange?.(DEFAULT_IMAGE_FOCUS)}
-          className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-[11px] text-white/60 hover:bg-white/10 hover:text-white"
-        >
-          <RotateCcw className="h-3 w-3" />
-          Qendër
-        </button>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => update({ rotate: (focus.rotate + 90) % 360 })}
+            className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-[11px] text-white/60 hover:bg-white/10 hover:text-white"
+          >
+            <RotateCw className="h-3 w-3" />
+            Rrotullo{focus.rotate ? ` ${focus.rotate}°` : ""}
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange?.(DEFAULT_IMAGE_FOCUS)}
+            className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-[11px] text-white/60 hover:bg-white/10 hover:text-white"
+          >
+            <RotateCcw className="h-3 w-3" />
+            Qendër
+          </button>
+        </div>
       </div>
       <div className="grid gap-2 sm:grid-cols-3">
         <label className="space-y-1 text-[11px] text-white/55">

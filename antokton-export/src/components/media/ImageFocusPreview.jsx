@@ -41,6 +41,7 @@ export default function ImageFocusPreview({
   };
 
   const frame = getFrame();
+  const imageTransform = normalizedFocus.rotate ? `rotate(${normalizedFocus.rotate}deg)` : undefined;
 
   const startGesture = () => {
     const points = [...pointersRef.current.values()];
@@ -123,7 +124,12 @@ export default function ImageFocusPreview({
           height: `${frame.height}px`,
           left: `${frame.left}px`,
           top: `${frame.top}px`,
-        } : undefined}
+          transform: imageTransform,
+          transformOrigin: "center center",
+        } : {
+          transform: imageTransform,
+          transformOrigin: "center center",
+        }}
         onLoad={(event) => {
           setImageMetrics({
             width: event.currentTarget.naturalWidth,

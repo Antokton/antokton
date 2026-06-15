@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { base44 } from "@/api/antoktonClient";
 import { useQuery } from "@tanstack/react-query";
@@ -467,6 +467,7 @@ function ImportModal({ onClose, onImported, user }) {
 
   // Force body scroll when modal open (override any layout overflow:hidden)
   useEffect(() => {
+    if (typeof document === "undefined") return undefined;
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
     return () => {
@@ -852,7 +853,7 @@ function ImportModal({ onClose, onImported, user }) {
       </div>
     </div>
   );
-  return createPortal(modal, document.body);
+  return typeof document !== "undefined" ? createPortal(modal, document.body) : modal;
 }
 
 /* ─── MAIN PAGE ─── */

@@ -1,6 +1,11 @@
-export const DEFAULT_IMAGE_FOCUS = { x: 50, y: 50, zoom: 1 };
+export const DEFAULT_IMAGE_FOCUS = { x: 50, y: 50, zoom: 1, rotate: 0 };
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const normalizeRotation = (value) => {
+  const number = Number(value ?? 0);
+  if (!Number.isFinite(number)) return 0;
+  return ((Math.round(number / 90) * 90) % 360 + 360) % 360;
+};
 
 export function parseImageFocusMap(value) {
   if (!value) return {};
@@ -20,6 +25,7 @@ export function normalizeImageFocus(value = {}) {
     x: clamp(Number(value?.x ?? DEFAULT_IMAGE_FOCUS.x), 0, 100),
     y: clamp(Number(value?.y ?? DEFAULT_IMAGE_FOCUS.y), 0, 100),
     zoom: clamp(Number(value?.zoom ?? DEFAULT_IMAGE_FOCUS.zoom), 0.2, 3),
+    rotate: normalizeRotation(value?.rotate ?? DEFAULT_IMAGE_FOCUS.rotate),
   };
 }
 
@@ -76,10 +82,14 @@ export function reorderImageGallery(imageUrls = [], fromIndex = 0, toIndex = 0, 
 export function getImageFocusStyle(focus) {
   const normalized = normalizeImageFocus(focus);
   const isZoomedOut = normalized.zoom < 1;
+  const transforms = [
+    isZoomedOut ? "scale(1)" : `scale(${normalized.zoom})`,
+    normalized.rotate ? `rotate(${normalized.rotate}deg)` : null,
+  ].filter(Boolean);
   return {
     objectFit: isZoomedOut ? "contain" : "cover",
     objectPosition: `${normalized.x}% ${normalized.y}%`,
-    transform: isZoomedOut ? "scale(1)" : `scale(${normalized.zoom})`,
+    transform: transforms.join(" "),
     transformOrigin: `${normalized.x}% ${normalized.y}%`,
   };
 }
