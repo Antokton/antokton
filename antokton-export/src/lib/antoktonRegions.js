@@ -12,8 +12,14 @@ export const ANTOKTON_REGION_DATA = [
     ],
     cities: [
       "Shkodër", "Lezhë", "Kukës", "Dibër", "Durrës", "Tiranë", "Elbasan", "Fier",
-      "Berat", "Korçë", "Vlorë", "Gjirokastër", "Prishtinë", "Prizren", "Pejë",
-      "Gjakovë", "Mitrovicë", "Gjilan", "Ferizaj"
+      "Berat", "Korçë", "Vlorë", "Gjirokastër", "Pogradec", "Peshkopi", "Bulqizë",
+      "Librazhd", "Gramsh", "Lushnjë", "Sarandë", "Kavajë", "Krujë", "Kamëz",
+      "Patos", "Mallakastër", "Kuçovë", "Devoll", "Maliq", "Tepelenë", "Përmet",
+      "Delvinë", "Himarë", "Has", "Tropojë", "Mirditë", "Kurbin", "Mat",
+      "Prishtinë", "Prizren", "Pejë", "Gjakovë", "Mitrovicë", "Gjilan", "Ferizaj",
+      "Podujevë", "Vushtrri", "Rahovec", "Suharekë", "Malishevë", "Skenderaj",
+      "Drenas", "Lipjan", "Obiliq", "Deçan", "Klinë", "Dragash", "Kamenicë",
+      "Leposaviq", "Istog", "Kaçanik", "Shtime", "Fushë Kosovë"
     ]
   },
   {

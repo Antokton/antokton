@@ -239,6 +239,28 @@ function normalizeCountryName(country = "") {
   return value;
 }
 
+function getFallbackAntoktonZone(cityName = "", countryRaw = "") {
+  const raw = normalizeSearch(countryRaw);
+  const detected = detectAntoktonZone(cityName);
+  if (detected) return detected;
+  if (["shqiperi", "shqiperia", "albania", "kosove", "kosova"].includes(raw)) {
+    return "Antokton Qendër — Iliria Perëndimore & Dardania e Jugut";
+  }
+  if (["mal i zi", "mali i zi", "montenegro", "crna gora"].includes(raw)) {
+    return "Antokton Perëndim — Malësia e Jugut, Qendrore & Veriut";
+  }
+  if (["serbi", "serbia", "srbija"].includes(raw)) {
+    return "Antokton Veri — Dardania Qendrore, Veriore & Vojvodina";
+  }
+  if (["maqedoni", "maqedonia", "maqedoni e veriut", "maqedonia e veriut", "north macedonia", "macedonia"].includes(raw)) {
+    return "Antokton Lindje — Iliria Lindore";
+  }
+  if (["greqi", "greqia", "greece", "ellada"].includes(raw)) {
+    return "Antokton Jug — Epiri, Thesalia & Morea";
+  }
+  return null;
+}
+
 function normalizeCityName(city = "") {
   const value = String(city || "").trim();
   const key = normalizeSearch(value);
@@ -331,7 +353,7 @@ async function searchNominatim(query) {
       const city = normalizeCityName(albanianPlace ? albanianPlace.city : rawCity);
 
       // Kontrollojmë nëse është territor Antokton
-      const detectedZone = albanianPlace ? albanianPlace.zone : detectAntoktonZone(city);
+      const detectedZone = albanianPlace ? albanianPlace.zone : getFallbackAntoktonZone(city, addr.country || "");
       const isAntokton = !!detectedZone;
       const country = isAntokton ? "Antokton" : normalizeCountryName(countryRaw);
 
@@ -441,7 +463,7 @@ Kthe VETËM JSON.`;
       });
       const country = normalizeCountryName(res.antokton_country || res.country_raw || "");
       const city = normalizeCityName(res.city || "");
-      const zone = res.is_antokton ? detectAntoktonZone(city) : null;
+      const zone = res.is_antokton ? getFallbackAntoktonZone(city, res.country_raw || res.antokton_country || "") : null;
       // Ruaj adresën e plotë të tipuar nga përdoruesi (rruga + qyteti), jo vetëm qytetin
       const result = {
         address: addr,        // adresa e plotë siç e tipoi përdoruesi
