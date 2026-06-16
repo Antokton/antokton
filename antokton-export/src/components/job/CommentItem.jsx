@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/antoktonClient";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Send, ChevronDown, ChevronUp, CornerDownRight, Flag, X } from "lucide-react";
+import { Send, ChevronDown, ChevronUp, CornerDownRight, Flag, X, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import moment from "moment";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 moment.locale("sq", {
   relativeTime: {
@@ -34,6 +35,7 @@ const COMMENT_REPORT_REASONS = [
 
 function CommentReportModal({ comment, user, onClose }) {
   const [reason, setReason] = useState(COMMENT_REPORT_REASONS[0].value);
+  const [details, setDetails] = useState("");
   const [sending, setSending] = useState(false);
 
   const handleSubmit = async () => {
@@ -42,6 +44,7 @@ function CommentReportModal({ comment, user, onClose }) {
       comment_id: comment.id,
       reported_by: user.email,
       reason,
+      details,
     });
     setSending(false);
     onClose();
@@ -72,6 +75,13 @@ function CommentReportModal({ comment, user, onClose }) {
             </button>
           ))}
         </div>
+        <textarea
+          value={details}
+          onChange={(e) => setDetails(e.target.value)}
+          placeholder="Shpjegim shtesë (opsional)"
+          rows={3}
+          className="w-full rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-white placeholder:text-white/35 outline-none"
+        />
         <button onClick={handleSubmit} disabled={sending}
           className="w-full py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-40 bg-red-500 hover:bg-red-600 transition-colors">
           {sending ? "Duke dërguar..." : "Dërgo Raportimin"}
@@ -160,12 +170,15 @@ export default function CommentItem({
   const [showReplies, setShowReplies] = useState(true);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedText, setEditedText] = useState(comment.text || "");
   const replyRef = useRef(null);
   const reactionBtnRef = useRef(null);
   const hoverTimer = useRef(null);
 
   const replies = allComments.filter(c => c.parent_id === comment.id);
   const myReaction = commentLikes.find(l => l.comment_id === comment.id && l.user_email === user?.email);
+  const canModerateComment = user?.role === "admin" || user?.role === "moderator" || comment.created_by === user?.email;
 
   const reactionGroups = REACTIONS.map(r => ({
     ...r,
@@ -214,6 +227,26 @@ export default function CommentItem({
     },
   });
 
+  const editMutation = useMutation({
+    mutationFn: async () => {
+      await base44.entities.JobComment.update(comment.id, { text: editedText.trim() });
+    },
+    onSuccess: () => {
+      setIsEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["comments", jobId] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      await base44.entities.JobComment.delete(comment.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["comments", jobId] });
+      queryClient.invalidateQueries({ queryKey: ["job", jobId] });
+    },
+  });
+
   const handleReact = (emoji) => {
     if (!isAuth) { base44.auth.redirectToLogin(); return; }
     reactMutation.mutate(emoji);
@@ -255,11 +288,69 @@ export default function CommentItem({
           {/* Bubble */}
           <div className="rounded-2xl rounded-tl-sm px-3 py-2" style={{ background: "rgba(255,255,255,0.07)" }}>
             {/* Name + time inline, name wraps if needed */}
-            <div className="flex items-baseline gap-1.5 flex-wrap mb-0.5">
-              <span className="text-[12px] font-semibold text-white">{comment.author_name || "Anonim"}</span>
-              <span className="text-[10px] text-white/30 whitespace-nowrap">{timeAgo}</span>
+            <div className="mb-0.5 flex items-start justify-between gap-2">
+              <div className="flex min-w-0 items-baseline gap-1.5 flex-wrap">
+                <span className="text-[12px] font-semibold text-white">{comment.author_name || "Anonim"}</span>
+                <span className="text-[10px] text-white/30 whitespace-nowrap">{timeAgo}</span>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="rounded-full p-1 text-white/35 transition-colors hover:bg-white/8 hover:text-white/80">
+                    <MoreVertical className="h-3.5 w-3.5" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44 border-white/10 bg-[#0b1020] text-white">
+                  {canModerateComment && (
+                    <DropdownMenuItem onSelect={(event) => { event.preventDefault(); setEditedText(comment.text || ""); setIsEditing(true); }} className="cursor-pointer gap-2 text-white/85">
+                      <Pencil className="h-4 w-4" /> Përpuno
+                    </DropdownMenuItem>
+                  )}
+                  {canModerateComment && (
+                    <DropdownMenuItem
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        if (window.confirm("Ta fshijmë këtë koment?")) deleteMutation.mutate();
+                      }}
+                      className="cursor-pointer gap-2 text-red-300"
+                    >
+                      <Trash2 className="h-4 w-4" /> Fshi
+                    </DropdownMenuItem>
+                  )}
+                  {(!canModerateComment || user?.email !== comment.created_by) && (
+                    <DropdownMenuItem onSelect={(event) => { event.preventDefault(); if (!isAuth) { base44.auth.redirectToLogin(); return; } setShowReportModal(true); }} className="cursor-pointer gap-2 text-orange-200">
+                      <Flag className="h-4 w-4 text-orange-300" /> Raporto
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-            <p className="text-white/85 text-sm leading-relaxed">{comment.text}</p>
+            {isEditing ? (
+              <div className="space-y-2">
+                <textarea
+                  value={editedText}
+                  onChange={(e) => setEditedText(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-xl border border-white/10 bg-[#0b1020]/70 p-2 text-sm text-white outline-none"
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => editedText.trim() && editMutation.mutate()}
+                    disabled={!editedText.trim() || editMutation.isPending}
+                    className="rounded-full bg-[#8ab4ff]/20 px-3 py-1 text-xs font-semibold text-white disabled:opacity-40"
+                  >
+                    {editMutation.isPending ? "Duke ruajtur..." : "Ruaj"}
+                  </button>
+                  <button
+                    onClick={() => { setIsEditing(false); setEditedText(comment.text || ""); }}
+                    className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/80"
+                  >
+                    Anulo
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-white/85 text-sm leading-relaxed">{comment.text}</p>
+            )}
           </div>
 
           {/* Reaction summary badges */}

@@ -248,6 +248,8 @@ Kthe JSON me këto fusha.`;
     setLoading(true);
     const payload = {
       ...form,
+      job_type: prepared.job_type || form.listing_type || form.job_type || "",
+      listing_type: prepared.listing_type || form.listing_type || form.job_type || "",
       original_text: prepared.original_text || cleanOriginalText,
       edited_text: prepared.description,
       address: prepared.address || form.address || "",

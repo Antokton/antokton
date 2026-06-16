@@ -117,6 +117,11 @@ const reportReasonLabel = (value) => {
 };
 
 const formatViewText = (count) => `${count} ${Number(count) === 1 ? "shikim" : "shikime"}`;
+const listingTypeLabel = (value, category = "pune") => {
+  if (value === "kerkoj") return category === "sherbime" ? "Kërkoj shërbim" : "Kërkoj";
+  if (value === "ofroj") return category === "sherbime" ? "Ofroj shërbim" : "Ofroj";
+  return "Zgjidh...";
+};
 const formatLocationParts = (...parts) => {
   const seen = new Set();
   return parts
@@ -182,6 +187,7 @@ export default function PostDetail() {
   const [showComments, setShowComments] = useState(false);
   const [staffProfileNotice, setStaffProfileNotice] = useState("");
   const [photoViewerIndex, setPhotoViewerIndex] = useState(-1);
+  const [showReactionDetails, setShowReactionDetails] = useState(false);
   const viewTrackedRef = React.useRef(null);
 
   const queryClient = useQueryClient();
@@ -524,6 +530,8 @@ export default function PostDetail() {
       author_profile_url: job.author_profile_url || '',
       import_author_profile_url: job.import_author_profile_url || job.author_profile_url || '',
       show_author_profile_url: Boolean(job.show_author_profile_url),
+      job_type: job.job_type || job.listing_type || 'ofroj',
+      listing_type: job.listing_type || job.job_type || 'ofroj',
       image_urls: editImages,
       main_image_index: editMainImageIndex,
       image_url: editImages[editMainImageIndex] || job.image_url || '',
@@ -645,6 +653,8 @@ export default function PostDetail() {
         phone_number: phoneNumber || "",
         phone_app: phoneNumber ? (editForm.phone_app || "telefon") : "",
         category: editForm.category,
+        job_type: editForm.job_type || editForm.listing_type || job.job_type || "ofroj",
+        listing_type: editForm.job_type || editForm.listing_type || job.listing_type || "ofroj",
         pazar_category: editForm.pazar_category || undefined,
         pazar_subcategory: editForm.pazar_subcategory || undefined,
         poster_name: editForm.poster_name || job.poster_name,
@@ -685,6 +695,22 @@ export default function PostDetail() {
   const posterIsStaff = isStaffUser(posterProfile);
   const canSeePosterProfile = isAuth && premiumAccess && !posterIsStaff && !!job?.created_by;
   const posterProfileHref = canSeePosterProfile ? `${createPageUrl("MemberProfile")}?email=${encodeURIComponent(job.created_by)}` : "";
+  const reactionSummary = React.useMemo(() => {
+    const groups = new Map();
+    reactions.forEach((reaction) => {
+      const rawType = reaction.reaction_type === "like" ? "👍" : reaction.reaction_type === "dislike" ? "👎" : reaction.reaction_type;
+      const displayName =
+        reaction.user_name ||
+        reaction.author_name ||
+        reaction.created_by_name ||
+        reaction.created_by?.split("@")[0] ||
+        reaction.user_email?.split("@")[0] ||
+        "Anëtar";
+      if (!groups.has(rawType)) groups.set(rawType, []);
+      groups.get(rawType).push(displayName);
+    });
+    return Array.from(groups.entries()).map(([emoji, names]) => ({ emoji, names }));
+  }, [reactions]);
 
   const reportPostMutation = useMutation({
     mutationFn: async () => {
@@ -916,6 +942,20 @@ export default function PostDetail() {
                   ))}
                 </select>
               </div>
+              {(editForm.category === "pune" || editForm.category === "sherbime") && (
+                <div className="space-y-1">
+                  <Label className="text-white/60 text-xs">Kërkoj / Ofroj</Label>
+                  <select
+                    value={editForm.job_type || editForm.listing_type || "ofroj"}
+                    onChange={e => setEditForm({ ...editForm, job_type: e.target.value, listing_type: e.target.value })}
+                    className="w-full rounded-md px-3 py-2 text-sm text-white border border-white/10"
+                    style={{ background: 'rgba(255,255,255,0.05)' }}
+                  >
+                    <option value="ofroj" className="bg-[#0b1020]">{listingTypeLabel("ofroj", editForm.category)}</option>
+                    <option value="kerkoj" className="bg-[#0b1020]">{listingTypeLabel("kerkoj", editForm.category)}</option>
+                  </select>
+                </div>
+              )}
               {editForm.category === "pazar" && (
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div className="space-y-1">
@@ -1438,13 +1478,13 @@ export default function PostDetail() {
               <div className="flex items-center justify-between text-xs text-white/40 mb-2 px-1">
                 <div className="flex items-center gap-1">
                   {reactions.length > 0 && (
-                    <span className="flex items-center gap-0.5">
+                    <button onClick={() => setShowReactionDetails(true)} className="flex items-center gap-0.5 hover:text-white/80 transition-colors">
                       {["👍","❤️","😂","😮","😢","😡","👎"]
                         .filter(e => reactions.some(r => r.reaction_type === e))
                         .slice(0, 3)
                         .map(e => <span key={e}>{e}</span>)}
                       <span className="ml-0.5">{reactions.length}</span>
-                    </span>
+                    </button>
                   )}
                 </div>
                 <div className="flex items-center gap-3">
@@ -1798,6 +1838,33 @@ export default function PostDetail() {
             >
               {reportPostMutation.isPending ? "Duke dërguar..." : "Dërgo Raportimin"}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showReactionDetails} onOpenChange={setShowReactionDetails}>
+        <DialogContent className="bg-[#0b1020] border-white/10 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">Kush ka reaguar</DialogTitle>
+            <DialogDescription className="text-white/45">
+              Lista e reagimeve për këtë postim.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {reactionSummary.length === 0 ? (
+              <p className="text-sm text-white/55">Nuk ka reagime ende.</p>
+            ) : reactionSummary.map((group) => (
+              <div key={group.emoji} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="mb-2 text-sm font-semibold text-white">{group.emoji} {group.names.length}</div>
+                <div className="flex flex-wrap gap-2">
+                  {group.names.map((name, index) => (
+                    <span key={`${group.emoji}-${name}-${index}`} className="rounded-full bg-white/10 px-2.5 py-1 text-xs text-white/80">
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </DialogContent>
       </Dialog>

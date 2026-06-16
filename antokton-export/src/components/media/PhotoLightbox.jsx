@@ -58,6 +58,7 @@ export default function PhotoLightbox({
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
   const [expandedText, setExpandedText] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [actionMessage, setActionMessage] = useState("");
   const dragStateRef = useRef(null);
   const pinchStateRef = useRef(null);
 
@@ -78,6 +79,12 @@ export default function PhotoLightbox({
       setNotificationsEnabled(false);
     }
   }, [notificationKey]);
+
+  useEffect(() => {
+    if (!actionMessage) return undefined;
+    const timer = window.setTimeout(() => setActionMessage(""), 1800);
+    return () => window.clearTimeout(timer);
+  }, [actionMessage]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -130,6 +137,7 @@ export default function PhotoLightbox({
   const toggleNotifications = () => {
     const next = !notificationsEnabled;
     setNotificationsEnabled(next);
+    setActionMessage(next ? "Njoftimet për këtë foto u ndezën." : "Njoftimet për këtë foto u fikën.");
     if (!notificationKey) return;
     try {
       window.localStorage.setItem(`photo_notifications:${notificationKey}`, next ? "1" : "0");
@@ -147,8 +155,12 @@ export default function PhotoLightbox({
       } else if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(currentImage);
       }
+      setActionMessage("Fotoja u kopjua.");
     } catch {
-      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(currentImage);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(currentImage);
+        setActionMessage("Linku i fotos u kopjua.");
+      }
     }
   };
 
@@ -159,19 +171,23 @@ export default function PhotoLightbox({
     anchor.target = "_blank";
     anchor.rel = "noopener noreferrer";
     anchor.click();
+    setActionMessage("Shkarkimi i fotos u nis.");
   };
 
   const handleShare = async () => {
     try {
       if (onShare) {
         await onShare();
+        setActionMessage("Fotoja u shpërnda.");
         return;
       }
       if (navigator.share) {
         await navigator.share({ title, url: currentImage, text: title });
+        setActionMessage("Fotoja u shpërnda.");
         return;
       }
       await navigator.clipboard.writeText(currentImage);
+      setActionMessage("Linku i fotos u kopjua.");
     } catch {
       // ignore cancel / fallback failures
     }
@@ -284,19 +300,19 @@ export default function PhotoLightbox({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 border-white/10 bg-[#0b1020] text-white">
-            <DropdownMenuItem onClick={handleSaveImage} className="cursor-pointer gap-2 text-white/85">
+            <DropdownMenuItem onSelect={(event) => { event.preventDefault(); handleSaveImage(); }} className="cursor-pointer gap-2 text-white/85">
               <Download className="h-4 w-4" /> Ruaje si foto
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleCopyImage} className="cursor-pointer gap-2 text-white/85">
+            <DropdownMenuItem onSelect={(event) => { event.preventDefault(); handleCopyImage(); }} className="cursor-pointer gap-2 text-white/85">
               <Copy className="h-4 w-4" /> Kopjo foto
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleShare} className="cursor-pointer gap-2 text-white/85">
+            <DropdownMenuItem onSelect={(event) => { event.preventDefault(); handleShare(); }} className="cursor-pointer gap-2 text-white/85">
               <Share2 className="h-4 w-4" /> Shpërndaje
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onReport?.()} className="cursor-pointer gap-2 text-orange-200">
+            <DropdownMenuItem onSelect={(event) => { event.preventDefault(); onReport?.(); setActionMessage("Po hapet raportimi..."); }} className="cursor-pointer gap-2 text-orange-200">
               <Flag className="h-4 w-4 text-orange-300" /> Raportoje
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={toggleNotifications} className="cursor-pointer gap-2 text-white/85">
+            <DropdownMenuItem onSelect={(event) => { event.preventDefault(); toggleNotifications(); }} className="cursor-pointer gap-2 text-white/85">
               {notificationsEnabled ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               {notificationsEnabled ? "Fik njoftimet" : "Ndiz njoftimet"}
             </DropdownMenuItem>
@@ -384,6 +400,12 @@ export default function PhotoLightbox({
                 Qendër
               </button>
             </div>
+
+            {actionMessage && (
+              <div className="rounded-xl border border-[#9bffd6]/25 bg-[#9bffd6]/10 px-3 py-2 text-center text-xs text-[#d8fff1]">
+                {actionMessage}
+              </div>
+            )}
 
             <div className="space-y-3 pb-2">
               <div className="text-sm text-white/85">

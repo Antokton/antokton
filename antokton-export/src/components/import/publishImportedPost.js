@@ -103,11 +103,13 @@ export async function publishImportedPost(base44, post = {}, user = {}) {
       const existingJobs = await base44.entities.Job.filter({ id: post.published_post_id }, "-created_date", 1);
       const existingJob = existingJobs?.[0];
       if (existingJob) {
+        const payload = buildJobPayloadFromImportedPost(post, user);
+        await base44.entities.Job.update(existingJob.id, payload);
         await base44.entities.ImportedPost.update(post.id, {
           status: "publikuar",
           published_at: post.published_at || new Date().toISOString(),
         });
-        return { id: post.published_post_id, alreadyPublished: true };
+        return { ...existingJob, ...payload, id: post.published_post_id, alreadyPublished: true };
       }
     } catch {
       // If the linked public post no longer exists, fall through and recreate it.
