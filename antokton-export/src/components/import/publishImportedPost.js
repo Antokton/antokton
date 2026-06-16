@@ -99,11 +99,19 @@ export function buildJobPayloadFromImportedPost(post = {}, user = {}) {
 
 export async function publishImportedPost(base44, post = {}, user = {}) {
   if (post.published_post_id) {
-    await base44.entities.ImportedPost.update(post.id, {
-      status: "publikuar",
-      published_at: post.published_at || new Date().toISOString(),
-    });
-    return { id: post.published_post_id, alreadyPublished: true };
+    try {
+      const existingJobs = await base44.entities.Job.filter({ id: post.published_post_id }, "-created_date", 1);
+      const existingJob = existingJobs?.[0];
+      if (existingJob) {
+        await base44.entities.ImportedPost.update(post.id, {
+          status: "publikuar",
+          published_at: post.published_at || new Date().toISOString(),
+        });
+        return { id: post.published_post_id, alreadyPublished: true };
+      }
+    } catch {
+      // If the linked public post no longer exists, fall through and recreate it.
+    }
   }
   const created = await base44.entities.Job.create(buildJobPayloadFromImportedPost(post, user));
   await base44.entities.ImportedPost.update(post.id, {

@@ -681,6 +681,11 @@ export default function PostDetail() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const posterDisplayName = job?.poster_name || getUserDisplayName(posterProfile, job?.created_by);
+  const posterIsStaff = isStaffUser(posterProfile);
+  const canSeePosterProfile = isAuth && premiumAccess && !posterIsStaff && !!job?.created_by;
+  const posterProfileHref = canSeePosterProfile ? `${createPageUrl("MemberProfile")}?email=${encodeURIComponent(job.created_by)}` : "";
+
   const reportPostMutation = useMutation({
     mutationFn: async () => {
       await base44.entities.Report.create({
@@ -1135,18 +1140,9 @@ export default function PostDetail() {
               {moment(job.created_date).format("D MMMM YYYY")}
             </span>
             {(job.poster_name || posterProfile || job.created_by) && (() => {
-              const posterDisplayName = job.poster_name || getUserDisplayName(posterProfile, job.created_by);
-              const canSeeProfile = isAuth && premiumAccess;
-              const posterIsStaff = isStaffUser(posterProfile);
-              const profileLink = job.created_by ? `/Member/${encodeURIComponent(job.created_by)}` : null;
-              const visibleProfileLink = canSeeProfile && !posterIsStaff ? profileLink : null;
               if (posterIsStaff) {
                 return (
-                  <button
-                    type="button"
-                    onClick={() => setStaffProfileNotice("Ky profil në këtë njoftim nuk hapet pasi ky është pjesë e stafit.")}
-                    className="flex items-center gap-1.5 text-[#8ab4ff] hover:text-[#9bffd6] transition-colors underline underline-offset-2"
-                  >
+                  <span className="flex items-center gap-1.5 text-white/70">
                     <UserAvatar
                       name={posterDisplayName}
                       email={job.created_by}
@@ -1154,13 +1150,13 @@ export default function PostDetail() {
                       size={24}
                     />
                     {posterDisplayName}
-                  </button>
+                  </span>
                 );
               }
-              if (visibleProfileLink) {
+              if (posterProfileHref) {
                 return (
                   <a
-                    href={visibleProfileLink}
+                    href={posterProfileHref}
                     target="_self"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 text-[#8ab4ff] hover:text-[#9bffd6] transition-colors underline underline-offset-2"
@@ -1813,11 +1809,24 @@ export default function PostDetail() {
         onClose={() => setPhotoViewerIndex(-1)}
         title={job?.title || "Foto e njoftimit"}
         postText={job?.description || ""}
-        authorName={job ? getUserDisplayName(job) : ""}
-        authorHref={!job || isStaffUser(job) || !job?.created_by ? "" : `${createPageUrl("MemberProfile")}?email=${encodeURIComponent(job.created_by)}`}
-        onLike={() => setShowPostReactionPicker(true)}
-        onComment={() => setShowComments(true)}
-        onShare={() => handleShare("copy")}
+        authorName={posterDisplayName}
+        authorHref={posterProfileHref}
+        onLike={() => handleReaction("like")}
+        onComment={() => {
+          setPhotoViewerIndex(-1);
+          setShowComments(true);
+          window.setTimeout(() => {
+            document.getElementById("comments")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }, 80);
+        }}
+        onShare={async () => {
+          if (navigator.share) {
+            await navigator.share({ title: job?.title || "Antokton", text: `${job?.title || "Njoftim"} - Antokton`, url: window.location.href });
+            return;
+          }
+          await navigator.clipboard.writeText(window.location.href);
+          alert("Linku i postimit u kopjua.");
+        }}
         onReport={() => setShowReportModal(true)}
         notificationKey={job?.id || ""}
       />

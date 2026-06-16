@@ -355,7 +355,7 @@ export default function PhotoLightbox({
         </div>
 
         <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-[100000] border-t border-white/10 bg-[#0b1020]/94 backdrop-blur">
-          <div className="pointer-events-auto mx-auto max-w-4xl px-4 pb-[max(env(safe-area-inset-bottom),16px)] pt-3">
+          <div className="pointer-events-auto mx-auto max-h-[40vh] max-w-4xl overflow-y-auto px-4 pb-[max(env(safe-area-inset-bottom),16px)] pt-3">
             <div className="mb-3 flex items-center justify-center gap-2">
               <button
                 type="button"
@@ -385,7 +385,7 @@ export default function PhotoLightbox({
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 pb-2">
               <div className="text-sm text-white/85">
                 {authorHref ? (
                   <a href={authorHref} className="font-semibold text-white hover:text-[#9bffd6]">
