@@ -14,6 +14,7 @@ import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhon
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ImageFocusControls from "@/components/media/ImageFocusControls";
 import ImageFocusPreview from "@/components/media/ImageFocusPreview";
+import LocationPicker from "@/components/job/LocationPicker";
 import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, reorderImageGallery, updateImageFocus } from "@/lib/imageFocus";
 import { PAZAR_NAV_CATEGORIES, cleanPazarLabel, findPazarCategory, pazarCategoryMatches } from "@/lib/pazarCategories";
 
@@ -266,36 +267,36 @@ function ListingCard({ job, user, onChanged }) {
               </button>
             </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 border-white/10 bg-[#0b1020] text-white">
-            <DropdownMenuItem onClick={(event) => goToDetail(event)} className="cursor-pointer gap-2 text-white/85">
+            <DropdownMenuItem onSelect={(event) => { event.preventDefault(); goToDetail(event); }} className="cursor-pointer gap-2 text-white/85">
               <Eye className="h-4 w-4 text-white/65" /> Shiko të plotë
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={shareListing} className="cursor-pointer gap-2 text-white/85">
+            <DropdownMenuItem onSelect={(event) => { event.preventDefault(); shareListing(event); }} className="cursor-pointer gap-2 text-white/85">
               <Share2 className="h-4 w-4 text-white/65" /> Shpërndaj
             </DropdownMenuItem>
             {canContact && (
-              <DropdownMenuItem onClick={contactListing} className="cursor-pointer gap-2 text-white/85">
+              <DropdownMenuItem onSelect={(event) => { event.preventDefault(); contactListing(event); }} className="cursor-pointer gap-2 text-white/85">
                 {job.phone_number ? <Phone className="h-4 w-4 text-white/65" /> : <ExternalLink className="h-4 w-4 text-white/65" />}
                 {job.phone_number ? "Thirr" : "Shkruaj"}
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onClick={(event) => { stopCardClick(event); setRatingOpen(true); }} className="cursor-pointer gap-2 text-white/85">
+            <DropdownMenuItem onSelect={(event) => { event.preventDefault(); stopCardClick(event); setRatingOpen(true); }} className="cursor-pointer gap-2 text-white/85">
               <Star className="h-4 w-4 text-[#ffd166]" /> Jep vlerësim
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={openReport} className="cursor-pointer gap-2 text-orange-200">
+            <DropdownMenuItem onSelect={(event) => { event.preventDefault(); openReport(event); }} className="cursor-pointer gap-2 text-orange-200">
               <Flag className="h-4 w-4 text-orange-300" /> {reporting ? "Duke raportuar..." : "Raporto"}
             </DropdownMenuItem>
             {canStaffEdit && (
-              <DropdownMenuItem onClick={(event) => goToDetail(event, true)} className="cursor-pointer gap-2 text-[#8ab4ff]">
+              <DropdownMenuItem onSelect={(event) => { event.preventDefault(); goToDetail(event, true); }} className="cursor-pointer gap-2 text-[#8ab4ff]">
                 <Pencil className="h-4 w-4" /> Përpuno
               </DropdownMenuItem>
             )}
             {canStaffEdit && (
-              <DropdownMenuItem onClick={deleteListing} className="cursor-pointer gap-2 text-red-300">
+              <DropdownMenuItem onSelect={(event) => { event.preventDefault(); deleteListing(event); }} className="cursor-pointer gap-2 text-red-300">
                 <Trash2 className="h-4 w-4" /> Fshi
               </DropdownMenuItem>
             )}
             {!canContact && (
-              <DropdownMenuItem onClick={(event) => goToDetail(event)} className="cursor-pointer gap-2 text-white/85">
+              <DropdownMenuItem onSelect={(event) => { event.preventDefault(); goToDetail(event); }} className="cursor-pointer gap-2 text-white/85">
                 <MessageCircle className="h-4 w-4 text-white/65" /> Shiko mënyrat e kontaktit
               </DropdownMenuItem>
             )}
@@ -781,10 +782,26 @@ function ImportModal({ onClose, onImported, user }) {
                   <input value={extracted.salary_info || ""} onChange={e => setExtracted({...extracted, salary_info: e.target.value})}
                     className="w-full bg-[#1c2333] border border-white/15 rounded-xl px-3 py-2 text-white text-sm outline-none mt-1" placeholder="Çmimi..." />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <label className="text-white/40 text-xs">Vendndodhja</label>
-                  <input value={extracted.address || extracted.city || ""} onChange={e => setExtracted({...extracted, city: e.target.value})}
-                    className="w-full bg-[#1c2333] border border-white/15 rounded-xl px-3 py-2 text-white text-sm outline-none mt-1" placeholder="Qyteti..." />
+                  <LocationPicker
+                    value={{
+                      address: extracted.address || extracted.city || "",
+                      country: extracted.country || "",
+                      zone: extracted.region || extracted.zone || "",
+                      city: extracted.city || "",
+                      location_precision: extracted.location_precision || "sakte",
+                    }}
+                    onChange={(loc) => setExtracted({
+                      ...extracted,
+                      address: loc.address,
+                      country: loc.country,
+                      region: loc.zone || "",
+                      zone: loc.zone || "",
+                      city: loc.city,
+                      location_precision: loc.location_precision,
+                    })}
+                  />
                 </div>
                 <div>
                   <label className="text-white/40 text-xs">Dhënësi</label>

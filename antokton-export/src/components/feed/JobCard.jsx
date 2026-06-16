@@ -51,6 +51,9 @@ export default function JobCard({ job }) {
   const CatIcon = cat.icon;
   const jtStyle = jobTypeStyle[job.job_type] || jobTypeStyle.ofroj;
   const thumbnail = getPostThumbnail(job);
+  const totalReactions = typeof job.total_reactions === "number"
+    ? job.total_reactions
+    : (job.likes_count || 0) + (job.dislikes_count || 0);
 
   return (
     <Link
@@ -126,7 +129,7 @@ export default function JobCard({ job }) {
         <div className="flex items-center gap-1.5 text-[10px] text-white/45">
           <span className="flex items-center gap-0.5">
             <ThumbsUp className="w-2.5 h-2.5" />
-            {job.likes_count || 0}
+            {totalReactions}
           </span>
           <span className="flex items-center gap-0.5">
             <MessageCircle className="w-2.5 h-2.5" />

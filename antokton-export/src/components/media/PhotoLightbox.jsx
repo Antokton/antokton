@@ -14,12 +14,6 @@ import {
   Share2,
   X,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -59,6 +53,8 @@ export default function PhotoLightbox({
   const [expandedText, setExpandedText] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [actionMessage, setActionMessage] = useState("");
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const actionsMenuRef = useRef(null);
   const dragStateRef = useRef(null);
   const pinchStateRef = useRef(null);
 
@@ -68,6 +64,7 @@ export default function PhotoLightbox({
     setZoom(1);
     setTranslate({ x: 0, y: 0 });
     setExpandedText(false);
+    setShowActionsMenu(false);
   }, [open, initialIndex, safeImages.length]);
 
   useEffect(() => {
@@ -108,6 +105,21 @@ export default function PhotoLightbox({
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [open, onClose, safeImages.length]);
+
+  useEffect(() => {
+    if (!showActionsMenu) return undefined;
+    const handlePointerDown = (event) => {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target)) {
+        setShowActionsMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [showActionsMenu]);
 
   if (!open || safeImages.length === 0 || typeof document === "undefined") return null;
 
@@ -190,6 +202,15 @@ export default function PhotoLightbox({
       setActionMessage("Linku i fotos u kopjua.");
     } catch {
       // ignore cancel / fallback failures
+    }
+  };
+
+  const handleMenuAction = async (fn) => {
+    try {
+      setShowActionsMenu(false);
+      await fn?.();
+    } catch {
+      // ignore menu action failures already handled by action methods
     }
   };
 
@@ -288,36 +309,47 @@ export default function PhotoLightbox({
       <div
         className="absolute right-3 z-[100001] md:right-5"
         style={{ top: "max(env(safe-area-inset-top), 12px)" }}
+        ref={actionsMenuRef}
       >
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          onClick={() => setShowActionsMenu((current) => !current)}
+          className="rounded-full border border-white/20 bg-black/70 p-3 text-white shadow-lg backdrop-blur hover:bg-white/10"
+          aria-label="Më shumë mundësi për foton"
+        >
+          <MoreVertical className="h-5 w-5" />
+        </button>
+        {showActionsMenu && (
+          <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-white/10 bg-[#0b1020] shadow-2xl">
+            <button type="button" onClick={() => handleMenuAction(handleSaveImage)} className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-white/85 hover:bg-white/10">
+              <Download className="h-4 w-4" /> Ruaje si foto
+            </button>
+            <button type="button" onClick={() => handleMenuAction(handleCopyImage)} className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-white/85 hover:bg-white/10">
+              <Copy className="h-4 w-4" /> Kopjo foto
+            </button>
+            <button type="button" onClick={() => handleMenuAction(handleShare)} className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-white/85 hover:bg-white/10">
+              <Share2 className="h-4 w-4" /> Shpërndaje
+            </button>
             <button
               type="button"
-              className="rounded-full border border-white/20 bg-black/70 p-3 text-white shadow-lg backdrop-blur hover:bg-white/10"
-              aria-label="Më shumë mundësi për foton"
+              onClick={() => handleMenuAction(() => {
+                onReport?.();
+                setActionMessage("Po hapet raportimi...");
+              })}
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-orange-200 hover:bg-white/10"
             >
-              <MoreVertical className="h-5 w-5" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 border-white/10 bg-[#0b1020] text-white">
-            <DropdownMenuItem onSelect={(event) => { event.preventDefault(); handleSaveImage(); }} className="cursor-pointer gap-2 text-white/85">
-              <Download className="h-4 w-4" /> Ruaje si foto
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={(event) => { event.preventDefault(); handleCopyImage(); }} className="cursor-pointer gap-2 text-white/85">
-              <Copy className="h-4 w-4" /> Kopjo foto
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={(event) => { event.preventDefault(); handleShare(); }} className="cursor-pointer gap-2 text-white/85">
-              <Share2 className="h-4 w-4" /> Shpërndaje
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={(event) => { event.preventDefault(); onReport?.(); setActionMessage("Po hapet raportimi..."); }} className="cursor-pointer gap-2 text-orange-200">
               <Flag className="h-4 w-4 text-orange-300" /> Raportoje
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={(event) => { event.preventDefault(); toggleNotifications(); }} className="cursor-pointer gap-2 text-white/85">
+            </button>
+            <button
+              type="button"
+              onClick={() => handleMenuAction(toggleNotifications)}
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-white/85 hover:bg-white/10"
+            >
               {notificationsEnabled ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               {notificationsEnabled ? "Fik njoftimet" : "Ndiz njoftimet"}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </button>
+          </div>
+        )}
       </div>
 
       {canGoPrev && (

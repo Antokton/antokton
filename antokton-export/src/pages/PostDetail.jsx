@@ -364,17 +364,22 @@ export default function PostDetail() {
       const allReactions = await base44.entities.JobReaction.filter({ job_id: jobId });
       const likes = allReactions.filter(r => r.reaction_type === "like").length;
       const dislikes = allReactions.filter(r => r.reaction_type === "dislike").length;
-      await base44.entities.Job.update(jobId, { likes_count: likes, dislikes_count: dislikes });
+      await base44.entities.Job.update(jobId, {
+        likes_count: likes,
+        dislikes_count: dislikes,
+        total_reactions: allReactions.length,
+      });
     },
     onMutate: async (type) => {
       await queryClient.cancelQueries({ queryKey: ["reactions", jobId] });
       await queryClient.cancelQueries({ queryKey: ["job", jobId] });
       
-      const previousJob = queryClient.getQueryData(["job", jobId]);
+      const previousJob = queryClient.getQueryData(["job", jobId]) || {};
       const updatedJob = {
         ...previousJob,
         likes_count: type === "like" ? (previousJob.likes_count || 0) + 1 : previousJob.likes_count,
         dislikes_count: type === "dislike" ? (previousJob.dislikes_count || 0) + 1 : previousJob.dislikes_count,
+        total_reactions: Math.max(Number(previousJob?.total_reactions || 0), reactions.length + (userReaction ? 0 : 1)),
       };
       
       queryClient.setQueryData(["job", jobId], updatedJob);
@@ -384,6 +389,16 @@ export default function PostDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reactions", jobId] });
       queryClient.invalidateQueries({ queryKey: ["job", jobId] });
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["pazarJobs"] });
+      queryClient.invalidateQueries({ queryKey: ["latestJobs"] });
+      queryClient.invalidateQueries({ queryKey: ["recentJobs"] });
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const head = Array.isArray(query.queryKey) ? query.queryKey[0] : "";
+          return ["myJobs", "employer-jobs", "profile-my-notice-jobs", "adminJobs"].includes(head);
+        },
+      });
     },
     onError: (_err, _newData, context) => {
       if (context?.previousJob) {
@@ -1594,6 +1609,39 @@ export default function PostDetail() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+
+            {reactions.length > 0 && (
+              <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowReactionDetails(true)}
+                    className="inline-flex items-center gap-2 text-sm font-medium text-white hover:text-[#9bffd6]"
+                  >
+                    <span className="text-base">
+                      {reactionSummary.slice(0, 3).map((group) => group.emoji).join(" ")}
+                    </span>
+                    <span>
+                      {reactions.length} {reactions.length === 1 ? "reagim" : "reagime"}
+                    </span>
+                  </button>
+                  <span className="text-xs text-white/45">Kliko për të parë kush ka reaguar</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {reactionSummary.map((group) => (
+                    <button
+                      key={group.emoji}
+                      type="button"
+                      onClick={() => setShowReactionDetails(true)}
+                      className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-xs text-white/80 hover:border-[#8ab4ff]/40 hover:text-white"
+                    >
+                      {group.emoji} {group.names.slice(0, 2).join(", ")}
+                      {group.names.length > 2 ? ` +${group.names.length - 2}` : ""}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </motion.div>
