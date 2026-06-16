@@ -75,6 +75,7 @@ export default function ImportTable({ user, onEdit }) {
       qc.invalidateQueries({ queryKey: ["importedPosts"] });
       qc.invalidateQueries({ queryKey: ["jobs"] });
       qc.invalidateQueries({ queryKey: ["jobs", "imported-links"] });
+      qc.invalidateQueries({ queryKey: ["pazarJobs"] });
     } catch (error) {
       alert(error?.message || "Publikimi dështoi. Provo përsëri.");
     } finally {

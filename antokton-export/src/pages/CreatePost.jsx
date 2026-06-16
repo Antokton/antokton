@@ -380,7 +380,9 @@ export default function CreatePost() {
       const uploads = await Promise.all(selectedFiles.map((file) => base44.integrations.Core.UploadFile({ file })));
       const newUrls = uploads.map((item) => item.file_url).filter(Boolean);
       const nextImages = [...currentImages, ...newUrls].slice(0, 6);
-      const mainIndex = Math.min(Number(form.main_image_index || 0), Math.max(0, nextImages.length - 1));
+      const mainIndex = currentImages.length === 0
+        ? 0
+        : Math.min(Number(form.main_image_index || 0), Math.max(0, nextImages.length - 1));
       setForm((prev) => ({
         ...prev,
         image_urls: nextImages,

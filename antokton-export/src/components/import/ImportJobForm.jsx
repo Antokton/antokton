@@ -718,7 +718,9 @@ ${text || importedData.description || importedData.title || ""}`;
     try {
       const uploads = await Promise.all(files.map((file) => base44.integrations.Core.UploadFile({ file })));
       const nextImages = [...currentImages, ...uploads.map((item) => item?.file_url).filter(Boolean)].slice(0, 6);
-      const mainImageIndex = Math.min(Number(data?.main_image_index || 0), Math.max(nextImages.length - 1, 0));
+      const mainImageIndex = currentImages.length === 0
+        ? 0
+        : Math.min(Number(data?.main_image_index || 0), Math.max(nextImages.length - 1, 0));
       updateSelectedDraft({
         image_urls: nextImages,
         main_image_index: mainImageIndex,

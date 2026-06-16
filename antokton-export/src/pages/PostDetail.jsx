@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { base44 } from "@/api/antoktonClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import { getUserDisplayName, isStaffUser } from "@/lib/userDisplay";
 import { requireCompleteProfileForInteraction } from "@/lib/profileCompleteness";
 import ImageFocusControls from "@/components/media/ImageFocusControls";
 import ImageFocusPreview from "@/components/media/ImageFocusPreview";
+import PhotoLightbox from "@/components/media/PhotoLightbox";
 import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, reorderImageGallery, updateImageFocus } from "@/lib/imageFocus";
 import { PAZAR_CATEGORIES, cleanPazarLabel, findPazarCategory } from "@/lib/pazarCategories";
 
@@ -180,7 +181,7 @@ export default function PostDetail() {
   const [editSelectedImageIndex, setEditSelectedImageIndex] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [staffProfileNotice, setStaffProfileNotice] = useState("");
-  const [photoViewerUrl, setPhotoViewerUrl] = useState("");
+  const [photoViewerIndex, setPhotoViewerIndex] = useState(-1);
   const viewTrackedRef = React.useRef(null);
 
   const queryClient = useQueryClient();
@@ -191,15 +192,6 @@ export default function PostDetail() {
     window.history.replaceState(null, "", cleanUrl);
     setIsEditing(false);
   };
-
-  useEffect(() => {
-    if (!photoViewerUrl) return;
-    const onKeyDown = (event) => {
-      if (event.key === "Escape") setPhotoViewerUrl("");
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [photoViewerUrl]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -452,6 +444,12 @@ export default function PostDetail() {
       alert("Gabim gjatë dërgimit të aplikimit. Ju lutem provoni përsëri.");
     },
   });
+
+  const postImages = useMemo(() => (
+    Array.isArray(job?.image_urls) && job.image_urls.length > 0
+      ? job.image_urls.slice(0, 6)
+      : job?.image_url ? [job.image_url] : []
+  ), [job?.image_url, job?.image_urls]);
 
   const deleteJobMutation = useMutation({
     mutationFn: async () => {
@@ -1221,7 +1219,7 @@ export default function PostDetail() {
                 className="mt-5 max-w-full space-y-2"
                 style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
               >
-                <button type="button" onClick={() => setPhotoViewerUrl(mainImage)} className="block w-full overflow-hidden rounded-xl border border-white/10 bg-white/5 text-left">
+                <button type="button" onClick={() => setPhotoViewerIndex(mainIndex)} className="block w-full overflow-hidden rounded-xl border border-white/10 bg-white/5 text-left">
                   <ImageFocusPreview
                     src={mainImage}
                     alt="Foto kryesore"
@@ -1235,7 +1233,7 @@ export default function PostDetail() {
                     {imgs.map((imgUrl, i) => {
                       const focus = getImageFocus(job.image_focus_json, imgUrl);
                       return (
-                        <button key={i} type="button" onClick={() => setPhotoViewerUrl(imgUrl)} className={`shrink-0 overflow-hidden rounded-lg border ${i === mainIndex ? "border-[#9bffd6]" : "border-white/10"} bg-white/5`}>
+                        <button key={i} type="button" onClick={() => setPhotoViewerIndex(i)} className={`shrink-0 overflow-hidden rounded-lg border ${i === mainIndex ? "border-[#9bffd6]" : "border-white/10"} bg-white/5`}>
                           <ImageFocusPreview
                             src={imgUrl}
                             alt={`foto ${i + 1}`}
@@ -1808,44 +1806,21 @@ export default function PostDetail() {
         </DialogContent>
       </Dialog>
 
-      {photoViewerUrl && (
-        <div
-          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 p-3 sm:p-5"
-          onClick={() => setPhotoViewerUrl("")}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Pamja e fotos"
-        >
-          <button
-            type="button"
-            onClick={() => setPhotoViewerUrl("")}
-            className="absolute right-3 top-3 z-[2] rounded-full border border-white/25 bg-black/80 p-3 text-white shadow-lg hover:bg-white/10 sm:right-5 sm:top-5"
-            aria-label="Mbyll foton"
-          >
-            <X className="h-6 w-6" />
-          </button>
-          <div
-            className="flex max-h-[92vh] w-full max-w-6xl flex-col items-center gap-3"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <img
-              src={photoViewerUrl}
-              alt="Foto e njoftimit"
-              className="max-h-[82vh] w-auto max-w-full rounded-xl border border-white/10 bg-black/40 object-contain shadow-2xl"
-              onError={(event) => {
-                event.currentTarget.alt = "Fotoja nuk u ngarkua";
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => setPhotoViewerUrl("")}
-              className="rounded-xl border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold text-white hover:bg-white/15"
-            >
-              Mbyll
-            </button>
-          </div>
-        </div>
-      )}
+      <PhotoLightbox
+        images={postImages}
+        initialIndex={photoViewerIndex}
+        open={photoViewerIndex >= 0}
+        onClose={() => setPhotoViewerIndex(-1)}
+        title={job?.title || "Foto e njoftimit"}
+        postText={job?.description || ""}
+        authorName={job ? getUserDisplayName(job) : ""}
+        authorHref={!job || isStaffUser(job) || !job?.created_by ? "" : `${createPageUrl("MemberProfile")}?email=${encodeURIComponent(job.created_by)}`}
+        onLike={() => setShowPostReactionPicker(true)}
+        onComment={() => setShowComments(true)}
+        onShare={() => handleShare("copy")}
+        onReport={() => setShowReportModal(true)}
+        notificationKey={job?.id || ""}
+      />
     </div>
   );
 }

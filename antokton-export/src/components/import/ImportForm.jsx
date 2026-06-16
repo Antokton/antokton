@@ -121,7 +121,9 @@ export default function ImportForm({ user, editingPost, onDone }) {
     try {
       const uploads = await Promise.all(files.map((file) => base44.integrations.Core.UploadFile({ file })));
       const nextImages = [...currentImages, ...uploads.map((item) => item?.file_url).filter(Boolean)].slice(0, 6);
-      const mainImageIndex = Math.min(Number(form.main_image_index || 0), Math.max(nextImages.length - 1, 0));
+      const mainImageIndex = currentImages.length === 0
+        ? 0
+        : Math.min(Number(form.main_image_index || 0), Math.max(nextImages.length - 1, 0));
       setForm((f) => ({
         ...f,
         image_urls: nextImages,
@@ -297,6 +299,8 @@ Kthe JSON me këto fusha.`;
       }
       qc.invalidateQueries({ queryKey: ["importedPosts"] });
       qc.invalidateQueries({ queryKey: ["jobs"] });
+      qc.invalidateQueries({ queryKey: ["pazarJobs"] });
+      qc.invalidateQueries({ queryKey: ["jobs", "imported-links"] });
       onDone();
     } catch (error) {
       alert(error?.message || "Ruajtja dështoi. Provo përsëri.");

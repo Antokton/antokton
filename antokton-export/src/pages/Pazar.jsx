@@ -441,7 +441,9 @@ function ImportModal({ onClose, onImported, user }) {
       setLoading(true);
       const uploads = await Promise.all(files.slice(0, slots).map((file) => base44.integrations.Core.UploadFile({ file })));
       const nextImages = [...currentImages, ...uploads.map((item) => item.file_url).filter(Boolean)].slice(0, 6);
-      const nextMain = Math.min(Number(extracted?.main_image_index || 0), Math.max(0, nextImages.length - 1));
+      const nextMain = currentImages.length === 0
+        ? 0
+        : Math.min(Number(extracted?.main_image_index || 0), Math.max(0, nextImages.length - 1));
       setExtracted((prev) => ({
         ...prev,
         image_urls: nextImages,
@@ -853,7 +855,7 @@ function ImportModal({ onClose, onImported, user }) {
       </div>
     </div>
   );
-  return typeof document !== "undefined" ? createPortal(modal, document.body) : modal;
+  return typeof document !== "undefined" ? createPortal(modal, document.body) : null;
 }
 
 /* ─── MAIN PAGE ─── */
