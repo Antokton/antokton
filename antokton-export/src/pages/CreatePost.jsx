@@ -498,12 +498,20 @@ export default function CreatePost() {
     setLoading(true);
     setSubmitError("");
     try {
-      const defaultName = user?.first_name && user?.surname
-        ? `${user.first_name} ${user.surname}`
-        : user?.first_name || user?.full_name || user?.email?.split('@')[0] || "Anonim";
+      const defaultName =
+        String(user?.display_name || user?.public_name || user?.public_display_name || "").trim() ||
+        (user?.first_name && user?.surname ? `${user.first_name} ${user.surname}` : "") ||
+        user?.full_name ||
+        user?.first_name ||
+        "";
+      if (!isAdminOrMod && !defaultName.trim()) {
+        alert("Për të postuar, vendos fillimisht emrin dhe mbiemrin ose emrin publik te profili.");
+        window.location.href = "/Profile?complete=1";
+        return;
+      }
       const displayName = isAdminOrMod
         ? (customPosterName.trim() || STAFF_DEFAULT_POSTER_NAME)
-        : defaultName;
+        : defaultName.trim();
 
       const typedProfession = (form.profession || "").trim();
       const isKnownProfession = ALL_PROFESSIONS.some((item) => item.toLowerCase() === typedProfession.toLowerCase());

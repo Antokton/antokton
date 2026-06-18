@@ -358,6 +358,7 @@ export default function PostDetail() {
           job_id: jobId,
           reaction_type: type,
           user_email: user?.email,
+          user_name: getUserDisplayName(user),
         });
       }
 
@@ -706,6 +707,32 @@ export default function PostDetail() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const reactionEmails = React.useMemo(
+    () => Array.from(new Set(reactions.map((reaction) => String(reaction.user_email || reaction.created_by || "").trim()).filter(Boolean))),
+    [reactions]
+  );
+
+  const { data: reactionUsers = [] } = useQuery({
+    queryKey: ["reactionUsers", reactionEmails.join(",")],
+    queryFn: async () => {
+      if (reactionEmails.length === 0) return [];
+      const lookups = await Promise.all(
+        reactionEmails.map((email) => base44.entities.User.filter({ email }, "-created_date", 1))
+      );
+      return lookups.map((items) => items?.[0]).filter(Boolean);
+    },
+    enabled: reactionEmails.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const reactionUsersByEmail = React.useMemo(() => {
+    const map = new Map();
+    reactionUsers.forEach((profile) => {
+      if (profile?.email) map.set(profile.email, profile);
+    });
+    return map;
+  }, [reactionUsers]);
+
   const posterDisplayName = job?.poster_name || getUserDisplayName(posterProfile, job?.created_by);
   const posterIsStaff = isStaffUser(posterProfile);
   const canSeePosterProfile = isAuth && premiumAccess && !posterIsStaff && !!job?.created_by;
@@ -714,18 +741,18 @@ export default function PostDetail() {
     const groups = new Map();
     reactions.forEach((reaction) => {
       const rawType = reaction.reaction_type === "like" ? "👍" : reaction.reaction_type === "dislike" ? "👎" : reaction.reaction_type;
+      const reactionProfile = reactionUsersByEmail.get(reaction.user_email || reaction.created_by || "");
       const displayName =
+        getUserDisplayName(reactionProfile) ||
         reaction.user_name ||
         reaction.author_name ||
         reaction.created_by_name ||
-        reaction.created_by?.split("@")[0] ||
-        reaction.user_email?.split("@")[0] ||
         "Anëtar";
       if (!groups.has(rawType)) groups.set(rawType, []);
       groups.get(rawType).push(displayName);
     });
     return Array.from(groups.entries()).map(([emoji, names]) => ({ emoji, names }));
-  }, [reactions]);
+  }, [reactions, reactionUsersByEmail]);
 
   const reportPostMutation = useMutation({
     mutationFn: async () => {

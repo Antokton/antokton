@@ -1,5 +1,5 @@
 export function getUserDisplayName(user, fallbackEmail = "") {
-  if (!user) return fallbackEmail ? String(fallbackEmail).split("@")[0] : "";
+  if (!user) return "";
   const publicName = String(user.display_name || user.public_name || user.public_display_name || "").trim();
   if (publicName) return publicName;
   const fullName = String(user.full_name || "").trim();
@@ -7,7 +7,7 @@ export function getUserDisplayName(user, fallbackEmail = "") {
   const first = String(user.first_name || "").trim();
   const surname = String(user.surname || "").trim();
   if (first && surname) return `${first} ${surname}`;
-  return first || String(user.email || fallbackEmail || "").split("@")[0];
+  return first || "";
 }
 
 export function isStaffUser(user) {
