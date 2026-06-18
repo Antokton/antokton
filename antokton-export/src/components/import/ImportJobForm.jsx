@@ -652,7 +652,7 @@ ${text || importedData.description || importedData.title || ""}`;
       importer_email: user?.email || "",
       status,
       moderation_status: status === "approved" ? "approved" : "pending",
-      is_halal_compliant: true,
+      is_halal_compliant: Number(prepared.hallall_score ?? prepared.ethical_score ?? 0) >= 60,
     });
   };
 

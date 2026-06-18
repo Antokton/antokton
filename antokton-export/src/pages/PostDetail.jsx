@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
-import { MapPin, Clock, MessageCircle, Send, ArrowLeft, Phone, Briefcase, Flag, Share2, Copy, Users as UsersIcon, X, Pencil, Check, MoreVertical, ExternalLink, Link2, Eye, Upload, Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { MapPin, Clock, MessageCircle, Send, ArrowLeft, Phone, Briefcase, Flag, Share2, Copy, Users as UsersIcon, X, Pencil, Check, MoreVertical, ExternalLink, Link2, Eye, Upload, Star, ChevronLeft, ChevronRight, Languages } from "lucide-react";
 import LocationPicker from "../components/job/LocationPicker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
@@ -1461,6 +1461,13 @@ export default function PostDetail() {
                         )}
                         <ExternalLink className="h-3 w-3 shrink-0" />
                       </a>
+                    )}
+                    {job.show_communication_language && Array.isArray(job.communication_languages) && job.communication_languages.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-white/55">
+                        <Languages className="h-3.5 w-3.5 text-white/45" />
+                        <span>Gjuha e komunikimit:</span>
+                        <span className="font-semibold text-white/75">{job.communication_languages.join(", ")}</span>
+                      </div>
                     )}
                     {canSeeContact && (job.address || job.city || job.country) && (() => {
                       const contactLocation = formatLocationParts(job.address || job.city, job.country === "Antokton" ? null : job.country);

@@ -1,3 +1,5 @@
+import { calculateImportQualityScore } from "./importQualityScoring.js";
+
 const EMAIL_RE = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
 const URL_RE = /https?:\/\/[^\s<>"')]+/gi;
 const PHONE_RE = /(?:\+\d{1,4}[\s().-]?)?(?:\d[\s().-]?){7,14}\d\b/g;
@@ -207,7 +209,7 @@ export function extractImportedPostFields(rawText = "", initial = {}) {
     ...contactOnlyLocalPhones.map((phone) => `Telefon: ${phone}`),
   ]);
 
-  return {
+  const extracted = {
     ...cleanInitial,
     description: stripContactLines(description) || description,
     import_original_text: sanitizeImportedText(cleanInitial.import_original_text || source),
@@ -223,5 +225,15 @@ export function extractImportedPostFields(rawText = "", initial = {}) {
     import_author_profile_url: cleanInitial.import_author_profile_url || authorProfileUrl,
     show_source_url: cleanInitial.show_source_url === true,
     show_author_profile_url: cleanInitial.show_author_profile_url === true,
+  };
+  return {
+    ...extracted,
+    ...calculateImportQualityScore(extracted, {
+      rawText: source,
+      sourceUrl,
+      sourceName: cleanInitial.source_name || cleanInitial.source,
+      authorName: cleanInitial.author_name,
+      authorProfileUrl,
+    }),
   };
 }

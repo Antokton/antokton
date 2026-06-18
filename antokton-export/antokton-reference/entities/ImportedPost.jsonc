@@ -131,6 +131,75 @@
       "type": "string",
       "format": "date-time",
       "description": "Data e publikimit"
+    },
+    "professional_relevance_score": {
+      "type": "number",
+      "description": "Relevanca profesionale 0-100"
+    },
+    "source_trust_score": {
+      "type": "number",
+      "description": "Besueshm\u00ebria e burimit 0-100"
+    },
+    "hallall_score": {
+      "type": "number",
+      "description": "Vler\u00ebsimi etik/hallall 0-100"
+    },
+    "ethical_score": {
+      "type": "number",
+      "description": "Alias p\u00ebr vler\u00ebsimin etik 0-100"
+    },
+    "freshness_score": {
+      "type": "number",
+      "description": "Freskia e njoftimit 0-100"
+    },
+    "completeness_score": {
+      "type": "number",
+      "description": "Plot\u00ebsia e informacionit 0-100"
+    },
+    "final_score": {
+      "type": "number",
+      "description": "Rezultati final sipas formul\u00ebs s\u00eb importit 0-100"
+    },
+    "source_priority_level": {
+      "type": "number",
+      "description": "Niveli i burimit: 1 verifikuar, 2 burim i njohur, 3 anonim/i paverifikuar"
+    },
+    "source_profile": {
+      "type": "string",
+      "description": "Profili i burimit t\u00eb importuar"
+    },
+    "source_bonus_allowed": {
+      "type": "boolean",
+      "default": false,
+      "description": "A lejohet bonus relevanc\u00eb p\u00ebr burimin"
+    },
+    "risk_level": {
+      "type": "string",
+      "description": "Risku i importit: low/medium/high"
+    },
+    "requires_manual_review": {
+      "type": "boolean",
+      "default": true,
+      "description": "A duhet shqyrtim manual para publikimit"
+    },
+    "quality_notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Sh\u00ebnime p\u00ebr cil\u00ebsin\u00eb dhe riskun"
+    },
+    "communication_languages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Gjuh\u00ebt e komunikimit me kontaktin kur nuk n\u00ebnkuptohet shqipja"
+    },
+    "show_communication_language": {
+      "type": "boolean",
+      "default": false,
+      "description": "Shfaq fush\u00ebn e gjuh\u00ebs s\u00eb komunikimit"
     }
   },
   "required": [

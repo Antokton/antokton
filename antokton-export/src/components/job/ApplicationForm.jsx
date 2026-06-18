@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, Upload, X } from "lucide-react";
+import { Languages, Loader2, Upload, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { PHONE_PLACEHOLDER, getInternationalPhoneError, isValidInternationalPhone, normalizeInternationalPhone } from "@/lib/phone";
 
@@ -13,12 +13,12 @@ const profileDisplayName = (profile = {}, fallbackEmail = "") => (
   || profile.full_name
   || profile.display_name
   || profile.public_name
-  || fallbackEmail.split("@")[0]
   || "Aplikues"
 );
 
 export default function ApplicationForm({ job, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
+  const [translating, setTranslating] = useState(false);
   const [cvFile, setCvFile] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [form, setForm] = useState({
@@ -85,6 +85,28 @@ export default function ApplicationForm({ job, onClose, onSuccess }) {
     }
   };
 
+  const contactLanguages = Array.isArray(job?.communication_languages) ? job.communication_languages : [];
+  const targetLanguage = contactLanguages[0] || "";
+  const canTranslateForContact = Boolean(job?.show_communication_language && targetLanguage);
+
+  const translateForContact = async () => {
+    if (!form.cover_letter.trim()) return;
+    setTranslating(true);
+    try {
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `Përkthe këtë mesazh nga shqipja në ${targetLanguage}. Ruaj ton profesional, të shkurtër dhe të sjellshëm. Kthe vetëm tekstin e përkthyer:\n\n${form.cover_letter}`,
+      });
+      const translated = typeof response === "string" ? response : response?.text;
+      if (translated?.trim()) {
+        setForm((prev) => ({ ...prev, cover_letter: translated.trim() }));
+      }
+    } catch {
+      alert("Përkthimi me AI nuk është aktiv për momentin. Mund ta dërgosh mesazhin shqip ose ta përkthesh manualisht.");
+    } finally {
+      setTranslating(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -138,7 +160,20 @@ export default function ApplicationForm({ job, onClose, onSuccess }) {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-white/70">Letra motivuese</Label>
+            <div className="flex items-center justify-between gap-3">
+              <Label className="text-white/70">Letra motivuese</Label>
+              {canTranslateForContact && (
+                <button
+                  type="button"
+                  onClick={translateForContact}
+                  disabled={translating || !form.cover_letter.trim()}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#8ab4ff]/25 bg-[#8ab4ff]/10 px-2 py-1 text-xs font-semibold text-[#8ab4ff] hover:bg-[#8ab4ff]/15 disabled:opacity-40"
+                >
+                  {translating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Languages className="h-3.5 w-3.5" />}
+                  Përkthe mesazhin për kontaktin
+                </button>
+              )}
+            </div>
             <Textarea
               value={form.cover_letter}
               onChange={(e) => setForm({ ...form, cover_letter: e.target.value })}

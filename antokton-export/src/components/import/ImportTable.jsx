@@ -24,6 +24,14 @@ const isPublishedInJobs = (post, publishedJobLinks) => (
   (publishedJobLinks.ids.has(post.published_post_id) || publishedJobLinks.importIds.has(post.id))
 );
 
+const scoreTone = (score) => {
+  const value = Number(score);
+  if (!Number.isFinite(value)) return "bg-white/5 text-white/45";
+  if (value >= 75) return "bg-emerald-400/15 text-emerald-300";
+  if (value >= 55) return "bg-yellow-400/15 text-yellow-300";
+  return "bg-red-400/15 text-red-300";
+};
+
 export default function ImportTable({ user, onEdit }) {
   const qc = useQueryClient();
   const [filters, setFilters] = useState({ status: "all", category: "all", listing_type: "all", source: "all", search: "" });
@@ -164,7 +172,7 @@ export default function ImportTable({ user, onEdit }) {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-white/10 bg-white/5">
-                {["Teksti", "Autori", "Kategoria", "Vendi", "Rajoni", "Qyteti", "Lloji", "Burimi", "Statusi", "Importuar nga", "Data", "Veprime"].map(h => (
+                {["Teksti", "Autori", "Kategoria", "Vendi", "Rajoni", "Qyteti", "Lloji", "Burimi", "Vlerësimi", "Statusi", "Importuar nga", "Data", "Veprime"].map(h => (
                   <th key={h} className={`text-left px-3 py-2.5 text-white/50 font-medium whitespace-nowrap ${h === "Veprime" ? "sticky right-0 z-10 bg-[#171d2d]" : ""}`}>{h}</th>
                 ))}
               </tr>
@@ -191,6 +199,14 @@ export default function ImportTable({ user, onEdit }) {
                   <td className="px-3 py-2.5 text-white/70 whitespace-nowrap">{post.city || "—"}</td>
                   <td className="px-3 py-2.5 text-white/70">{LISTING_TYPES.find(t => t.value === post.listing_type)?.label || "—"}</td>
                   <td className="px-3 py-2.5 text-white/70">{SOURCES.find(s => s.value === post.source)?.label || "—"}</td>
+                  <td className="px-3 py-2.5 text-white/70 whitespace-nowrap">
+                    <div className="flex flex-col gap-1">
+                      <span className={`w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold ${scoreTone(post.final_score)}`}>
+                        {Number.isFinite(Number(post.final_score)) ? `${post.final_score}/100` : "—"}
+                      </span>
+                      {post.requires_manual_review && <span className="text-[10px] text-yellow-300/75">shqyrtim manual</span>}
+                    </div>
+                  </td>
                   <td className="px-3 py-2.5">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${reallyPublished ? STATUS_COLORS.publikuar : "bg-yellow-400/15 text-yellow-300"}`}>
                       {reallyPublished ? (STATUS_LABELS[post.status] || post.status) : "Në pritje"}
@@ -207,11 +223,14 @@ export default function ImportTable({ user, onEdit }) {
                 </tr>
                 {selected && (
                   <tr className="border-b border-[#8ab4ff]/20 bg-[#8ab4ff]/10">
-                    <td colSpan={12} className="px-3 py-3">
+                    <td colSpan={13} className="px-3 py-3">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0 text-white/75">
                           <p className="font-semibold text-white truncate">{post.edited_text?.slice(0, 120) || "Njoftim i importuar"}</p>
                           <p className="text-[11px] text-white/45">Zgjidh një veprim për këtë import. Nëse statusi është “Publikuar” por mungon postimi publik, përdor “Ripubliko”.</p>
+                          {(post.quality_notes || []).length > 0 && (
+                            <p className="mt-1 text-[11px] text-yellow-200/75">{post.quality_notes.join(" ")}</p>
+                          )}
                         </div>
                         <ActionButtons post={post} needsPublish={needsPublish} />
                       </div>
