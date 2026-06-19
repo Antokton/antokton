@@ -42,23 +42,101 @@ async function ensureDefaultSettings(store, config) {
 }
 
 async function ensureDefaultSources(store) {
-  const sources = await store.allRecords("ImportedSource");
-  if (sources.length) return sources;
-  const created = await store.createRecord("ImportedSource", {
-    name: "Arbeitnow",
-    provider_key: "arbeitnow",
-    base_url: "https://www.arbeitnow.com/api/job-board-api",
-    is_active: true,
-    country_filter: "Gjermani",
-    category_filter: "job",
-    source_group: "global_provider",
-    parser_type: "api",
-    parser_config: {},
-    trust_level: "medium",
-    is_editable_by_admin: false,
-    failure_count: 0
-  }, "system");
-  return [created];
+  const existing = await store.allRecords("ImportedSource");
+  const defaults = [
+    {
+      name: "Arbeitnow",
+      provider_key: "arbeitnow",
+      base_url: "https://www.arbeitnow.com/api/job-board-api",
+      is_active: true,
+      country_filter: "Gjermani",
+      category_filter: "job",
+      source_group: "global_provider",
+      parser_type: "api",
+      parser_config: {},
+      trust_level: "medium",
+      is_editable_by_admin: false,
+      failure_count: 0
+    },
+    {
+      name: "Adzuna",
+      provider_key: "adzuna",
+      base_url: "https://api.adzuna.com/v1/api/jobs",
+      is_active: false,
+      country_filter: "",
+      category_filter: "job",
+      source_group: "global_provider",
+      parser_type: "api",
+      parser_config: {},
+      trust_level: "medium",
+      is_editable_by_admin: true,
+      failure_count: 0
+    },
+    {
+      name: "Jooble",
+      provider_key: "jooble",
+      base_url: "https://jooble.org/api",
+      is_active: false,
+      country_filter: "",
+      category_filter: "job",
+      source_group: "global_provider",
+      parser_type: "api",
+      parser_config: {},
+      trust_level: "medium",
+      is_editable_by_admin: true,
+      failure_count: 0
+    },
+    {
+      name: "EURES",
+      provider_key: "eures",
+      base_url: "",
+      is_active: false,
+      country_filter: "",
+      category_filter: "job",
+      source_group: "global_provider",
+      parser_type: "api",
+      parser_config: {},
+      trust_level: "high",
+      is_editable_by_admin: true,
+      failure_count: 0
+    },
+    {
+      name: "RSS/API i personalizuar",
+      provider_key: "generic_rss",
+      base_url: "",
+      is_active: false,
+      country_filter: "",
+      category_filter: "",
+      source_group: "rss",
+      parser_type: "rss",
+      parser_config: {},
+      trust_level: "unknown",
+      is_editable_by_admin: true,
+      failure_count: 0
+    },
+    {
+      name: "Burim i personalizuar",
+      provider_key: "custom",
+      base_url: "",
+      is_active: false,
+      country_filter: "",
+      category_filter: "",
+      source_group: "custom_api",
+      parser_type: "custom",
+      parser_config: {},
+      trust_level: "unknown",
+      is_editable_by_admin: true,
+      failure_count: 0
+    }
+  ];
+  const existingProviderKeys = new Set(existing.map((source) => source.provider_key).filter(Boolean));
+  const created = [];
+  for (const source of defaults) {
+    if (!existingProviderKeys.has(source.provider_key)) {
+      created.push(await store.createRecord("ImportedSource", source, "system"));
+    }
+  }
+  return [...existing, ...created];
 }
 
 function shouldUseSource(sourceId, source) {
@@ -102,8 +180,9 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
 
   try {
     const settings = await ensureDefaultSettings(store, config);
-    const sources = (await ensureDefaultSources(store))
-      .filter((source) => source.is_active !== false)
+    const allSources = await ensureDefaultSources(store);
+    const sources = allSources
+      .filter((source) => sourceId ? shouldUseSource(sourceId, source) : source.is_active !== false)
       .filter((source) => shouldUseSource(sourceId, source))
       .map((source) => applyRuntimeOptions(source, options));
     const limit = Math.max(1, Number(maxItems || settings.max_items_per_run || config.IMPORT_ASSISTANT_MAX_PER_RUN || 100));

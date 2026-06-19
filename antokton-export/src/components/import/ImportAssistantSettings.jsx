@@ -59,6 +59,13 @@ export default function ImportAssistantSettings() {
 
   const update = (key, value) => setForm((current) => ({ ...(current || settings), [key]: value }));
 
+  const savePatch = async (patch) => {
+    const next = { ...values, ...patch };
+    setForm(next);
+    await base44.importAssistant.updateSettings(next);
+    await qc.invalidateQueries({ queryKey: ["importAssistant", "settings"] });
+  };
+
   const save = async () => {
     setSaving(true);
     try {
@@ -110,7 +117,7 @@ export default function ImportAssistantSettings() {
             Auto Import
             <span className="block text-[11px] text-white/45">Importim automatik nga burimet aktive</span>
           </span>
-          <OnOffToggle checked={values.auto_import_enabled !== false} onChange={(v) => update("auto_import_enabled", v)} label="Auto Import" />
+          <OnOffToggle checked={values.auto_import_enabled !== false} onChange={(v) => savePatch({ auto_import_enabled: v })} label="Auto Import" />
         </label>
         <label className="block text-xs text-white/60">
           Frekuenca (orë)
@@ -133,12 +140,27 @@ export default function ImportAssistantSettings() {
                 <SelectItem value="all" className="text-white">Të gjitha burimet aktive</SelectItem>
                 {sources.map((source) => (
                   <SelectItem key={source.id} value={source.id} className="text-white">
-                    {source.name} · {PROVIDER_LABELS[source.provider_key] || source.provider_key}
+                    {source.name} · {PROVIDER_LABELS[source.provider_key] || source.provider_key} · {source.is_active === false ? "Fikur" : "Aktiv"}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </label>
+          <div className="rounded-lg border border-white/10 bg-white/[0.03] p-2">
+            <p className="mb-2 text-[11px] font-semibold text-white/70">Burimet e regjistruara</p>
+            <div className="max-h-32 space-y-1 overflow-y-auto pr-1">
+              {sources.map((source) => (
+                <div key={source.id} className="flex items-center justify-between gap-2 rounded-md bg-white/[0.03] px-2 py-1 text-[11px] text-white/65">
+                  <span className="min-w-0 truncate">{source.name} · {PROVIDER_LABELS[source.provider_key] || source.provider_key}</span>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 font-semibold ${source.is_active === false ? "bg-red-400/15 text-red-200" : "bg-emerald-400/15 text-emerald-200"}`}>
+                    {source.is_active === false ? "Fikur" : "Aktiv"}
+                  </span>
+                </div>
+              ))}
+              {!sources.length && <p className="py-2 text-center text-white/40">Nuk ka burime ende.</p>}
+            </div>
+            <p className="mt-2 text-[11px] text-white/40">Shto ose aktivizo burime te tabi “Burime”.</p>
+          </div>
           <label className="block text-xs text-white/60">
             Kategoria
             <Select value={values.default_category_filter || "all"} onValueChange={(v) => update("default_category_filter", v === "all" ? "" : v)}>
