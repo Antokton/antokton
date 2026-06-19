@@ -6,12 +6,24 @@
     "provider_key": { "type": "string" },
     "source_type": {
       "type": "string",
-      "enum": ["rss", "html", "facebook", "telegram", "manual", "api"],
+      "enum": ["rss", "html", "api", "facebook", "instagram", "tiktok", "linkedin", "telegram", "whatsapp", "youtube", "x_twitter", "reddit", "discord", "manual", "html_needs_review"],
       "default": "api"
+    },
+    "import_mode": {
+      "type": "string",
+      "enum": ["automatic", "manual", "mixed"],
+      "default": "manual"
     },
     "source_url": { "type": "string" },
     "base_url": { "type": "string" },
+    "jobs_url": { "type": "string" },
+    "category_url": { "type": "string" },
+    "country_scope": { "type": "string" },
+    "region_scope": { "type": "string" },
+    "language": { "type": "string" },
+    "enabled": { "type": "boolean", "default": true },
     "is_active": { "type": "boolean", "default": true },
+    "crawl_frequency_minutes": { "type": "number", "default": 360 },
     "crawl_frequency_hours": { "type": "number", "default": 6 },
     "country_filter": { "type": "string" },
     "category_filter": { "type": "string" },
@@ -23,18 +35,23 @@
     },
     "parser_type": {
       "type": "string",
-      "enum": ["api", "rss", "html", "manual", "custom"],
+      "enum": ["api", "rss", "html", "html_needs_review", "manual", "custom"],
       "default": "rss"
     },
     "parser_config": { "type": "object", "default": {} },
     "trust_level": {
       "type": "string",
-      "enum": ["high", "medium", "low", "unknown"],
-      "default": "unknown"
+      "enum": ["trusted", "needs_review", "manual_only", "high", "medium", "low", "unknown"],
+      "default": "needs_review"
     },
     "is_editable_by_admin": { "type": "boolean", "default": true },
     "last_checked_at": { "type": "string" },
+    "last_crawled_at": { "type": "string" },
     "last_success_at": { "type": "string" },
+    "last_error": { "type": "string" },
+    "original_source_required": { "type": "boolean", "default": true },
+    "moderation_required": { "type": "boolean", "default": true },
+    "notes": { "type": "string" },
     "failure_count": { "type": "number", "default": 0 }
   },
   "required": ["name", "provider_key"]

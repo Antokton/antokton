@@ -53,20 +53,37 @@ export const PROVIDER_LABELS = {
 export const SOURCE_TYPE_LABELS = {
   rss: "RSS",
   html: "HTML publik",
-  facebook: "Facebook",
-  telegram: "Telegram",
-  manual: "Manual",
   api: "API/JSON",
+  facebook: "Facebook",
+  instagram: "Instagram",
+  tiktok: "TikTok",
+  linkedin: "LinkedIn",
+  telegram: "Telegram",
+  whatsapp: "WhatsApp",
+  youtube: "YouTube",
+  x_twitter: "X/Twitter",
+  reddit: "Reddit",
+  discord: "Discord",
+  manual: "Manual",
+  html_needs_review: "HTML - kërkon shqyrtim",
 };
 
-export const CRAWL_FREQUENCY_LABELS = {
-  0: "OFF",
-  1: "Çdo 1 orë",
-  3: "Çdo 3 orë",
-  6: "Çdo 6 orë",
-  12: "Çdo 12 orë",
-  24: "Çdo 24 orë",
+export const IMPORT_MODE_LABELS = {
+  automatic: "Automatik",
+  manual: "Manual",
+  mixed: "I përzier",
 };
+
+export const CRAWL_FREQUENCY_MINUTE_LABELS = {
+  0: "OFF",
+  60: "Çdo 1 orë",
+  180: "Çdo 3 orë",
+  360: "Çdo 6 orë",
+  720: "Çdo 12 orë",
+  1440: "Çdo 24 orë",
+};
+
+export const CRAWL_FREQUENCY_LABELS = CRAWL_FREQUENCY_MINUTE_LABELS;
 
 export const SOURCE_GROUP_LABELS = {
   global_provider: "Provider global",
@@ -82,11 +99,15 @@ export const PARSER_TYPE_LABELS = {
   api: "API",
   rss: "RSS",
   html: "HTML publik",
+  html_needs_review: "HTML - kërkon shqyrtim",
   manual: "Manual",
   custom: "Parser i personalizuar",
 };
 
 export const TRUST_LEVEL_LABELS = {
+  trusted: "I besuar",
+  needs_review: "Kërkon shqyrtim",
+  manual_only: "Vetëm manual",
   high: "Besim i lartë",
   medium: "Besim mesatar",
   low: "Besim i ulët",
@@ -105,6 +126,9 @@ export const STATUS_LABELS = {
   approved: "Miratuar",
   published: "Publikuar",
   auto_published: "Publikuar automatikisht",
+  pending: "Në pritje",
+  rejected: "Refuzuar nga moderatori",
+  archived: "Arkivuar",
   duplicate: "Dublikatë",
   error: "Gabim",
 };
@@ -121,6 +145,9 @@ export const STATUS_COLORS = {
   approved: "bg-blue-500/20 text-blue-300",
   published: "bg-green-500/20 text-green-300",
   auto_published: "bg-green-500/20 text-green-300",
+  pending: "bg-yellow-500/20 text-yellow-300",
+  rejected: "bg-red-500/20 text-red-300",
+  archived: "bg-white/5 text-white/30",
   duplicate: "bg-orange-500/20 text-orange-300",
   error: "bg-red-500/20 text-red-300",
 };

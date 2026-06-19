@@ -1,6 +1,7 @@
 const crypto = require("node:crypto");
 const { normalizeImportedItem } = require("./normalizeImportedItem");
 const { isDuplicateImportedItem } = require("./deduplicateImportedItem");
+const { INITIAL_IMPORT_SOURCES } = require("./seedSources");
 
 const providers = {
   arbeitnow: require("./providers/arbeitnowProvider"),
@@ -22,7 +23,29 @@ function ensureArray(value) {
 }
 
 function sourceUrl(source = {}) {
-  return source.source_url || source.base_url || "";
+  return source.jobs_url || source.category_url || source.source_url || source.base_url || "";
+}
+
+function sourceEnabled(source = {}) {
+  if (typeof source.enabled === "boolean") return source.enabled;
+  if (source.enabled === 0 || source.enabled === "0" || source.enabled === "false") return false;
+  if (source.enabled === 1 || source.enabled === "1" || source.enabled === "true") return true;
+  return source.is_active !== false;
+}
+
+function getFrequencyMinutes(source = {}) {
+  if (source.crawl_frequency_minutes !== undefined && source.crawl_frequency_minutes !== null) {
+    return Number(source.crawl_frequency_minutes);
+  }
+  return Number(source.crawl_frequency_hours ?? 6) * 60;
+}
+
+function canonicalSourceKey(source = {}) {
+  return String(source.source_url || source.base_url || source.name || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\/(www\.)?/, "")
+    .replace(/\/+$/, "");
 }
 
 async function ensureDefaultSettings(store, config) {
@@ -47,115 +70,13 @@ async function ensureDefaultSettings(store, config) {
 
 async function ensureDefaultSources(store) {
   const existing = await store.allRecords("ImportedSource");
-  const defaults = [
-    {
-      name: "Arbeitnow",
-      provider_key: "arbeitnow",
-      source_type: "api",
-      source_url: "https://www.arbeitnow.com/api/job-board-api",
-      base_url: "https://www.arbeitnow.com/api/job-board-api",
-      is_active: true,
-      crawl_frequency_hours: 6,
-      country_filter: "Gjermani",
-      category_filter: "job",
-      source_group: "global_provider",
-      parser_type: "api",
-      parser_config: {},
-      trust_level: "medium",
-      is_editable_by_admin: false,
-      failure_count: 0
-    },
-    {
-      name: "Adzuna",
-      provider_key: "adzuna",
-      source_type: "api",
-      source_url: "https://api.adzuna.com/v1/api/jobs",
-      base_url: "https://api.adzuna.com/v1/api/jobs",
-      is_active: false,
-      crawl_frequency_hours: 6,
-      country_filter: "",
-      category_filter: "job",
-      source_group: "global_provider",
-      parser_type: "api",
-      parser_config: {},
-      trust_level: "medium",
-      is_editable_by_admin: true,
-      failure_count: 0
-    },
-    {
-      name: "Jooble",
-      provider_key: "jooble",
-      source_type: "api",
-      source_url: "https://jooble.org/api",
-      base_url: "https://jooble.org/api",
-      is_active: false,
-      crawl_frequency_hours: 6,
-      country_filter: "",
-      category_filter: "job",
-      source_group: "global_provider",
-      parser_type: "api",
-      parser_config: {},
-      trust_level: "medium",
-      is_editable_by_admin: true,
-      failure_count: 0
-    },
-    {
-      name: "EURES",
-      provider_key: "eures",
-      source_type: "api",
-      source_url: "",
-      base_url: "",
-      is_active: false,
-      crawl_frequency_hours: 6,
-      country_filter: "",
-      category_filter: "job",
-      source_group: "global_provider",
-      parser_type: "api",
-      parser_config: {},
-      trust_level: "high",
-      is_editable_by_admin: true,
-      failure_count: 0
-    },
-    {
-      name: "RSS/API i personalizuar",
-      provider_key: "generic_rss",
-      source_type: "rss",
-      source_url: "",
-      base_url: "",
-      is_active: false,
-      crawl_frequency_hours: 6,
-      country_filter: "",
-      category_filter: "",
-      source_group: "rss",
-      parser_type: "rss",
-      parser_config: {},
-      trust_level: "unknown",
-      is_editable_by_admin: true,
-      failure_count: 0
-    },
-    {
-      name: "Burim i personalizuar",
-      provider_key: "custom",
-      source_type: "api",
-      source_url: "",
-      base_url: "",
-      is_active: false,
-      crawl_frequency_hours: 6,
-      country_filter: "",
-      category_filter: "",
-      source_group: "custom_api",
-      parser_type: "custom",
-      parser_config: {},
-      trust_level: "unknown",
-      is_editable_by_admin: true,
-      failure_count: 0
-    }
-  ];
-  const existingProviderKeys = new Set(existing.map((source) => source.provider_key).filter(Boolean));
+  const existingKeys = new Set(existing.map(canonicalSourceKey).filter(Boolean));
   const created = [];
-  for (const source of defaults) {
-    if (!existingProviderKeys.has(source.provider_key)) {
+  for (const source of INITIAL_IMPORT_SOURCES) {
+    const key = canonicalSourceKey(source);
+    if (key && !existingKeys.has(key)) {
       created.push(await store.createRecord("ImportedSource", source, "system"));
+      existingKeys.add(key);
     }
   }
   return [...existing, ...created];
@@ -167,14 +88,15 @@ function shouldUseSource(sourceId, source) {
 
 function shouldCrawlSource(source = {}, { manual = false, selected = false } = {}) {
   if (manual && selected) return true;
-  if (source.is_active === false) return false;
-  const frequency = Number(source.crawl_frequency_hours ?? 6);
-  if (frequency <= 0) return false;
+  if (!sourceEnabled(source)) return false;
+  const frequencyMinutes = getFrequencyMinutes(source);
+  if (frequencyMinutes <= 0) return false;
   if (manual) return true;
-  if (!source.last_checked_at) return true;
-  const lastChecked = new Date(source.last_checked_at).getTime();
+  const last = source.last_crawled_at || source.last_checked_at;
+  if (!last) return true;
+  const lastChecked = new Date(last).getTime();
   if (!Number.isFinite(lastChecked)) return true;
-  return Date.now() - lastChecked >= frequency * 60 * 60 * 1000;
+  return Date.now() - lastChecked >= frequencyMinutes * 60 * 1000;
 }
 
 function applyRuntimeOptions(source = {}, options = {}) {
@@ -200,6 +122,23 @@ function passesRuntimeThresholds(normalized = {}, options = {}) {
   if (minRelevance && Number(normalized.relevance_score || 0) < minRelevance) return false;
   if (Number(normalized.risk_score || 0) > maxRisk) return false;
   return true;
+}
+
+function primaryContact(methods = [], type) {
+  return ensureArray(methods).find((method) => method?.type === type)?.value || "";
+}
+
+function duplicateHash(item = {}) {
+  const input = [
+    item.source_id,
+    item.external_id,
+    item.source_url,
+    item.original_title,
+    item.original_company,
+    item.country,
+    item.city
+  ].filter(Boolean).join("|").toLowerCase();
+  return crypto.createHash("sha256").update(input || crypto.randomUUID()).digest("hex");
 }
 
 async function runImport({ store, config, sourceId = "", maxItems, requestedBy = "system", force = false, options = {} } = {}) {
@@ -248,6 +187,8 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
         let duplicateCount = 0;
         for (const raw of rawItems.slice(0, limit)) {
           const normalized = await normalizeImportedItem(raw, source);
+          const sourceName = normalized.source_name || source.name || providerKey;
+          const contactMethods = normalized.contact_methods || [];
           if (!passesRuntimeThresholds(normalized, options)) {
             continue;
           }
@@ -263,19 +204,29 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
               original_text: normalized.original_description || normalized.original_title,
               edited_text: normalized.shqip_summary || normalized.original_description,
               title: normalized.shqip_title,
+              description: normalized.shqip_summary || normalized.original_description,
+              company_name: normalized.original_company || "",
+              location: normalized.original_location || "",
               category: normalized.category,
               listing_type: normalized.item_type === "job" ? "ofroj" : "tjeter",
               source: providerKey,
+              source_id: normalized.source_id || source.id,
+              source_name: sourceName,
               source_url: normalized.source_url,
               import_source_url: normalized.source_url,
               original_url: normalized.source_url,
+              original_post_id: normalized.external_id,
               original_id: normalized.external_id,
               original_published_at: normalized.original_published_at,
-              source_name: normalized.source_name,
               external_id: normalized.external_id,
               provider_key: providerKey,
               status: "duplicate",
               duplicate_reason: duplicate.reason,
+              duplicate_hash: duplicateHash(normalized),
+              contact_email: primaryContact(contactMethods, "email"),
+              contact_phone: primaryContact(contactMethods, "phone") || primaryContact(contactMethods, "whatsapp"),
+              contact_url: primaryContact(contactMethods, "website") || primaryContact(contactMethods, "application_form"),
+              raw_import_payload: raw,
               imported_by: requestedBy
             }, requestedBy);
             continue;
@@ -284,17 +235,21 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
             original_text: normalized.original_description || normalized.original_title,
             edited_text: normalized.shqip_summary || normalized.original_description,
             title: normalized.shqip_title,
+            description: normalized.shqip_summary || normalized.original_description,
+            company_name: normalized.original_company || "",
+            location: normalized.original_location || "",
             author_name: normalized.source_identity_name,
             author_profile_url: normalized.source_identity_url,
             import_author_profile_url: normalized.source_identity_url,
             original_post_url: normalized.source_url,
             source_url: normalized.source_url,
             import_source_url: normalized.source_url,
-            source_name: normalized.source_name,
+            source_name: sourceName,
             source: providerKey,
             provider_key: providerKey,
-            source_id: normalized.source_id,
+            source_id: normalized.source_id || source.id,
             original_url: normalized.source_url,
+            original_post_id: normalized.external_id,
             original_id: normalized.external_id,
             original_published_at: normalized.original_published_at,
             external_id: normalized.external_id || crypto.randomUUID(),
@@ -306,13 +261,18 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
             region: normalized.region,
             city: normalized.city || normalized.original_city,
             salary: normalized.original_salary,
-            contact_info: JSON.stringify(normalized.contact_methods || []),
-            contact_methods: normalized.contact_methods || [],
+            contact_info: JSON.stringify(contactMethods),
+            contact_methods: contactMethods,
+            contact_email: primaryContact(contactMethods, "email"),
+            contact_phone: primaryContact(contactMethods, "phone") || primaryContact(contactMethods, "whatsapp"),
+            contact_url: primaryContact(contactMethods, "website") || primaryContact(contactMethods, "application_form"),
             show_source_url: false,
             show_author_profile_url: false,
             source_public_visible: false,
             imported_public_badge_visible: false,
             status: "pending_review",
+            duplicate_hash: duplicateHash(normalized),
+            raw_import_payload: raw,
             imported_by: requestedBy,
             importer_email: requestedBy,
             relevance_score: normalized.relevance_score,
@@ -346,7 +306,9 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
         }
         await store.updateRecord("ImportedSource", source.id, {
           last_checked_at: now(),
+          last_crawled_at: now(),
           last_success_at: now(),
+          last_error: "",
           failure_count: 0
         });
         logRecord = await store.updateRecord("ImportLog", logRecord.id, {
@@ -361,6 +323,8 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
         errorTotal += 1;
         await store.updateRecord("ImportedSource", source.id, {
           last_checked_at: now(),
+          last_crawled_at: now(),
+          last_error: error.message || "Import failed",
           failure_count: Number(source.failure_count || 0) + 1
         }).catch(() => {});
         logRecord = await store.updateRecord("ImportLog", logRecord.id, {

@@ -1,6 +1,44 @@
 const { runImport, ensureDefaultSettings, ensureDefaultSources } = require("./importRunner");
 const { translateContactMessage } = require("./translateImportedItem");
 
+function normalizeSourcePayload(body = {}) {
+  const frequencyMinutes = Number(
+    body.crawl_frequency_minutes ??
+    (body.crawl_frequency_hours !== undefined ? Number(body.crawl_frequency_hours) * 60 : 360)
+  );
+  const enabled = body.enabled !== undefined
+    ? body.enabled === true
+    : (body.is_active !== undefined ? body.is_active !== false : true);
+  return {
+    name: body.name || "Burim i ri",
+    provider_key: body.provider_key || "custom",
+    source_type: body.source_type || body.parser_type || "manual",
+    import_mode: body.import_mode || (["rss", "api"].includes(body.source_type) ? "automatic" : "manual"),
+    source_url: body.source_url || body.base_url || "",
+    base_url: body.base_url || body.source_url || "",
+    jobs_url: body.jobs_url || "",
+    category_url: body.category_url || "",
+    country_scope: body.country_scope || "",
+    region_scope: body.region_scope || "",
+    language: body.language || "",
+    enabled,
+    is_active: enabled,
+    crawl_frequency_minutes: Math.max(0, frequencyMinutes || 0),
+    crawl_frequency_hours: Math.max(0, Math.round((frequencyMinutes || 0) / 60)),
+    country_filter: body.country_filter || "",
+    category_filter: body.category_filter || "",
+    profession_filter: body.profession_filter || "",
+    source_group: body.source_group || "manual_url",
+    parser_type: body.parser_type || body.source_type || "manual",
+    parser_config: body.parser_config || {},
+    trust_level: body.trust_level || "needs_review",
+    is_editable_by_admin: body.is_editable_by_admin !== false,
+    original_source_required: body.original_source_required !== false,
+    moderation_required: body.moderation_required !== false,
+    notes: body.notes || "",
+  };
+}
+
 function mapImportedToJob(post = {}, userEmail = "") {
   let contactMethods = post.contact_methods || [];
   if (typeof contactMethods === "string") {
@@ -123,21 +161,7 @@ async function handleImportAssistantRoute(deps) {
   if (req.method === "POST" && action === "sources") {
     const body = await readPayload(req);
     return send(res, 200, await store.createRecord("ImportedSource", {
-      name: body.name || "Burim i ri",
-      provider_key: body.provider_key || "generic_rss",
-      source_type: body.source_type || body.parser_type || "rss",
-      source_url: body.source_url || body.base_url || "",
-      base_url: body.base_url || body.source_url || "",
-      is_active: body.is_active !== false,
-      crawl_frequency_hours: Number(body.crawl_frequency_hours ?? 6),
-      country_filter: body.country_filter || "",
-      category_filter: body.category_filter || "",
-      profession_filter: body.profession_filter || "",
-      source_group: body.source_group || "manual_url",
-      parser_type: body.parser_type || "rss",
-      parser_config: body.parser_config || {},
-      trust_level: body.trust_level || "unknown",
-      is_editable_by_admin: body.is_editable_by_admin !== false,
+      ...normalizeSourcePayload(body),
       failure_count: 0
     }, userEmail));
   }
@@ -152,7 +176,9 @@ async function handleImportAssistantRoute(deps) {
       return send(res, 200, result);
     }
     const body = await readPayload(req);
-    return send(res, 200, await store.updateRecord("ImportedSource", id, body));
+    const existing = (await store.allRecords("ImportedSource")).find((item) => item.id === id);
+    if (!existing) return sendError(res, 404, "Source not found");
+    return send(res, 200, await store.updateRecord("ImportedSource", id, normalizeSourcePayload({ ...existing, ...body })));
   }
 
   if (req.method === "GET" && action === "logs") {
