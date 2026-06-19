@@ -1,0 +1,33 @@
+{
+  "name": "ImportedSource",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string" },
+    "provider_key": { "type": "string" },
+    "base_url": { "type": "string" },
+    "is_active": { "type": "boolean", "default": true },
+    "country_filter": { "type": "string" },
+    "category_filter": { "type": "string" },
+    "source_group": {
+      "type": "string",
+      "enum": ["global_provider", "albanian_source", "partner", "community", "rss", "custom_api", "manual_url"],
+      "default": "manual_url"
+    },
+    "parser_type": {
+      "type": "string",
+      "enum": ["api", "rss", "html", "manual", "custom"],
+      "default": "rss"
+    },
+    "parser_config": { "type": "object", "default": {} },
+    "trust_level": {
+      "type": "string",
+      "enum": ["high", "medium", "low", "unknown"],
+      "default": "unknown"
+    },
+    "is_editable_by_admin": { "type": "boolean", "default": true },
+    "last_checked_at": { "type": "string" },
+    "last_success_at": { "type": "string" },
+    "failure_count": { "type": "number", "default": 0 }
+  },
+  "required": ["name", "provider_key"]
+}

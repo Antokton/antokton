@@ -1,0 +1,17 @@
+{
+  "name": "ImportLog",
+  "type": "object",
+  "properties": {
+    "provider_key": { "type": "string" },
+    "source_id": { "type": "string" },
+    "started_at": { "type": "string" },
+    "finished_at": { "type": "string" },
+    "fetched_count": { "type": "number", "default": 0 },
+    "created_count": { "type": "number", "default": 0 },
+    "duplicate_count": { "type": "number", "default": 0 },
+    "rejected_count": { "type": "number", "default": 0 },
+    "error_count": { "type": "number", "default": 0 },
+    "status": { "type": "string" },
+    "error_message": { "type": "string" }
+  }
+}

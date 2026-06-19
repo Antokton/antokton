@@ -40,6 +40,8 @@ const {
   isStaffRecord,
   summarizePostViews
 } = require("./postViewHelpers");
+const { handleImportAssistantRoute } = require("./importAssistant/importRoutes");
+const { scheduleImportCron } = require("./importAssistant/importCron");
 
 const {
   ROOT_DIR,
@@ -2539,6 +2541,27 @@ const server = http.createServer(async (req, res) => {
       return await handlePostView(req, res, segments[2]);
     }
 
+    if (segments[0] === "api" && segments[1] === "admin" && segments[2] === "import-assistant") {
+      const store = {
+        createRecord,
+        updateRecord,
+        deleteRecord,
+        allRecords
+      };
+      return await handleImportAssistantRoute({
+        req,
+        res,
+        segments,
+        send,
+        sendError,
+        readPayload,
+        requesterHasRole,
+        getRequestUserEmail,
+        store,
+        config
+      });
+    }
+
     if (segments[0] === "api" && segments[1] === "apps" && segments[2] === "public") {
       if (segments[3] === "prod" && segments[4] === "public-settings" && segments[5] === "by-id") {
         return send(res, 200, {
@@ -2659,6 +2682,10 @@ async function initialize() {
   if (isDevAuthActive()) await ensureUser();
   await bootstrapAdminAuth();
   await cleanupKnownTestUsers();
+  await scheduleImportCron({
+    store: { createRecord, updateRecord, deleteRecord, allRecords },
+    config
+  });
 }
 
 initialize()

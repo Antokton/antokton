@@ -89,6 +89,14 @@ const SUPPORT_ACCOUNT_HOLDER = validateSingleLine("SUPPORT_ACCOUNT_HOLDER", read
 const SUPPORT_SHOW_ACCOUNT_HOLDER = readBoolean("SUPPORT_SHOW_ACCOUNT_HOLDER", false);
 const SUPPORT_PAYMENT_REFERENCE = validateSingleLine("SUPPORT_PAYMENT_REFERENCE", readString("SUPPORT_PAYMENT_REFERENCE", ""));
 const SUPPORT_TRANSPARENCY_NOTE = validateSingleLine("SUPPORT_TRANSPARENCY_NOTE", readString("SUPPORT_TRANSPARENCY_NOTE", ""));
+const IMPORT_ASSISTANT_ENABLED = readBoolean("IMPORT_ASSISTANT_ENABLED", true);
+const IMPORT_ASSISTANT_AUTO_PUBLISH = readBoolean("IMPORT_ASSISTANT_AUTO_PUBLISH", false);
+const IMPORT_ASSISTANT_MAX_PER_RUN = readPositiveInteger("IMPORT_ASSISTANT_MAX_PER_RUN", 100);
+const IMPORT_ASSISTANT_DEFAULT_FREQUENCY_HOURS = readPositiveInteger("IMPORT_ASSISTANT_DEFAULT_FREQUENCY_HOURS", 6);
+const ADZUNA_APP_ID = validateSingleLine("ADZUNA_APP_ID", readString("ADZUNA_APP_ID", ""));
+const ADZUNA_APP_KEY = validateSingleLine("ADZUNA_APP_KEY", readString("ADZUNA_APP_KEY", ""));
+const JOOBLE_API_KEY = validateSingleLine("JOOBLE_API_KEY", readString("JOOBLE_API_KEY", ""));
+const EURES_API_KEY = validateSingleLine("EURES_API_KEY", readString("EURES_API_KEY", ""));
 const ALLOW_DEV_AUTH = readBoolean("ALLOW_DEV_AUTH", NODE_ENV !== "production");
 const AUTH_TOKEN_TTL_HOURS = readPositiveInteger("AUTH_TOKEN_TTL_HOURS", DEFAULT_AUTH_TOKEN_TTL_HOURS);
 const AUTH_PASSWORD_MIN_LENGTH = readPositiveInteger("AUTH_PASSWORD_MIN_LENGTH", 10);
@@ -141,6 +149,14 @@ const config = {
   SUPPORT_SHOW_ACCOUNT_HOLDER,
   SUPPORT_PAYMENT_REFERENCE,
   SUPPORT_TRANSPARENCY_NOTE,
+  IMPORT_ASSISTANT_ENABLED,
+  IMPORT_ASSISTANT_AUTO_PUBLISH,
+  IMPORT_ASSISTANT_MAX_PER_RUN,
+  IMPORT_ASSISTANT_DEFAULT_FREQUENCY_HOURS,
+  ADZUNA_APP_ID,
+  ADZUNA_APP_KEY,
+  JOOBLE_API_KEY,
+  EURES_API_KEY,
   ALLOW_DEV_AUTH,
   AUTH_TOKEN_TTL_HOURS,
   AUTH_PASSWORD_MIN_LENGTH,
@@ -202,6 +218,15 @@ function safeConfigStatus() {
       supportAccountHolderPublic: Boolean(config.SUPPORT_SHOW_ACCOUNT_HOLDER && config.SUPPORT_ACCOUNT_HOLDER),
       supportReferenceConfigured: Boolean(config.SUPPORT_PAYMENT_REFERENCE),
       supportTransparencyNoteConfigured: Boolean(config.SUPPORT_TRANSPARENCY_NOTE)
+    },
+    importAssistant: {
+      enabled: Boolean(config.IMPORT_ASSISTANT_ENABLED),
+      autoPublishDefault: Boolean(config.IMPORT_ASSISTANT_AUTO_PUBLISH),
+      maxPerRun: config.IMPORT_ASSISTANT_MAX_PER_RUN,
+      defaultFrequencyHours: config.IMPORT_ASSISTANT_DEFAULT_FREQUENCY_HOURS,
+      adzunaConfigured: Boolean(config.ADZUNA_APP_ID && config.ADZUNA_APP_KEY),
+      joobleConfigured: Boolean(config.JOOBLE_API_KEY),
+      euresConfigured: Boolean(config.EURES_API_KEY)
     },
     auth: {
       devAuthActive: config.NODE_ENV !== "production" && config.ALLOW_DEV_AUTH && Boolean(config.ANTOKTON_DEV_USER_EMAIL),

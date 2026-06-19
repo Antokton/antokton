@@ -1,0 +1,235 @@
+const crypto = require("node:crypto");
+const { normalizeImportedItem } = require("./normalizeImportedItem");
+const { isDuplicateImportedItem } = require("./deduplicateImportedItem");
+
+const providers = {
+  arbeitnow: require("./providers/arbeitnowProvider"),
+  adzuna: require("./providers/adzunaProvider"),
+  jooble: require("./providers/joobleProvider"),
+  eures: require("./providers/euresProvider"),
+  generic_rss: require("./providers/genericRssProvider"),
+  custom: require("./providers/customSourceProvider")
+};
+
+let running = false;
+
+function now() {
+  return new Date().toISOString();
+}
+
+function ensureArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+async function ensureDefaultSettings(store, config) {
+  const existing = (await store.allRecords("ImportAssistantSettings"))[0];
+  if (existing) return existing;
+  return store.createRecord("ImportAssistantSettings", {
+    auto_import_enabled: config.IMPORT_ASSISTANT_ENABLED !== false,
+    import_frequency_hours: config.IMPORT_ASSISTANT_DEFAULT_FREQUENCY_HOURS || 6,
+    max_items_per_run: config.IMPORT_ASSISTANT_MAX_PER_RUN || 100,
+    auto_publish_enabled: Boolean(config.IMPORT_ASSISTANT_AUTO_PUBLISH)
+  }, "system");
+}
+
+async function ensureDefaultSources(store) {
+  const sources = await store.allRecords("ImportedSource");
+  if (sources.length) return sources;
+  const created = await store.createRecord("ImportedSource", {
+    name: "Arbeitnow",
+    provider_key: "arbeitnow",
+    base_url: "https://www.arbeitnow.com/api/job-board-api",
+    is_active: true,
+    country_filter: "Gjermani",
+    category_filter: "job",
+    source_group: "global_provider",
+    parser_type: "api",
+    parser_config: {},
+    trust_level: "medium",
+    is_editable_by_admin: false,
+    failure_count: 0
+  }, "system");
+  return [created];
+}
+
+function shouldUseSource(sourceId, source) {
+  return !sourceId || source.id === sourceId || source.provider_key === sourceId;
+}
+
+async function runImport({ store, config, sourceId = "", maxItems, requestedBy = "system", force = false } = {}) {
+  if (running && !force) return { success: false, status: "locked", message: "Importimi është duke u ekzekutuar." };
+  running = true;
+  const startedAt = now();
+  const logs = [];
+  const createdItems = [];
+  let fetchedTotal = 0;
+  let duplicateTotal = 0;
+  let errorTotal = 0;
+
+  try {
+    const settings = await ensureDefaultSettings(store, config);
+    const sources = (await ensureDefaultSources(store))
+      .filter((source) => source.is_active !== false)
+      .filter((source) => shouldUseSource(sourceId, source));
+    const limit = Math.max(1, Number(maxItems || settings.max_items_per_run || config.IMPORT_ASSISTANT_MAX_PER_RUN || 100));
+    const existingImported = await store.allRecords("ImportedPost");
+    const existingJobs = await store.allRecords("Job");
+
+    for (const source of sources) {
+      const providerKey = source.provider_key || "custom";
+      const provider = providers[providerKey] || providers.custom;
+      const logBase = {
+        provider_key: providerKey,
+        source_id: source.id,
+        started_at: now(),
+        fetched_count: 0,
+        created_count: 0,
+        duplicate_count: 0,
+        rejected_count: 0,
+        error_count: 0,
+        status: "running"
+      };
+      let logRecord = await store.createRecord("ImportLog", logBase, requestedBy);
+      try {
+        const rawItems = ensureArray(await provider.fetchItems({ source, config, maxItems: limit }));
+        fetchedTotal += rawItems.length;
+        let createdCount = 0;
+        let duplicateCount = 0;
+        for (const raw of rawItems.slice(0, limit)) {
+          const normalized = await normalizeImportedItem(raw, source);
+          const duplicate = isDuplicateImportedItem(
+            normalized,
+            [...existingImported, ...createdItems],
+            existingJobs
+          );
+          if (duplicate.duplicate) {
+            duplicateCount += 1;
+            duplicateTotal += 1;
+            await store.createRecord("ImportedPost", {
+              original_text: normalized.original_description || normalized.original_title,
+              edited_text: normalized.shqip_summary || normalized.original_description,
+              title: normalized.shqip_title,
+              category: normalized.category,
+              listing_type: normalized.item_type === "job" ? "ofroj" : "tjeter",
+              source: providerKey,
+              source_url: normalized.source_url,
+              import_source_url: normalized.source_url,
+              source_name: normalized.source_name,
+              external_id: normalized.external_id,
+              provider_key: providerKey,
+              status: "duplicate",
+              duplicate_reason: duplicate.reason,
+              imported_by: requestedBy
+            }, requestedBy);
+            continue;
+          }
+          const imported = await store.createRecord("ImportedPost", {
+            original_text: normalized.original_description || normalized.original_title,
+            edited_text: normalized.shqip_summary || normalized.original_description,
+            title: normalized.shqip_title,
+            author_name: normalized.source_identity_name,
+            author_profile_url: normalized.source_identity_url,
+            import_author_profile_url: normalized.source_identity_url,
+            original_post_url: normalized.source_url,
+            source_url: normalized.source_url,
+            import_source_url: normalized.source_url,
+            source_name: normalized.source_name,
+            source: providerKey,
+            provider_key: providerKey,
+            external_id: normalized.external_id || crypto.randomUUID(),
+            item_type: normalized.item_type,
+            category: normalized.category,
+            listing_type: normalized.item_type === "job" ? "ofroj" : "tjeter",
+            profession: normalized.profession,
+            country: normalized.country || normalized.original_country,
+            city: normalized.city || normalized.original_city,
+            salary: normalized.original_salary,
+            contact_info: JSON.stringify(normalized.contact_methods || []),
+            contact_methods: normalized.contact_methods || [],
+            show_source_url: false,
+            show_author_profile_url: false,
+            source_public_visible: false,
+            imported_public_badge_visible: false,
+            status: "pending_review",
+            imported_by: requestedBy,
+            importer_email: requestedBy,
+            relevance_score: normalized.relevance_score,
+            relevance_level: normalized.relevance_level,
+            relevance_reason: normalized.relevance_reason,
+            risk_score: normalized.risk_score,
+            risk_reason: normalized.risk_reason,
+            ethical_score: normalized.ethical_score,
+            hallall_score: normalized.ethical_score,
+            ethical_reason: normalized.ethical_reason,
+            source_trust_score: normalized.source_trust_score,
+            source_identity_type: normalized.source_identity_type,
+            source_identity_name: normalized.source_identity_name,
+            source_identity_url: normalized.source_identity_url,
+            source_identity_confidence: normalized.source_identity_confidence,
+            is_albanian_source: normalized.is_albanian_source,
+            albanian_source_reason: normalized.albanian_source_reason,
+            contact_language_required: normalized.contact_language_required,
+            contact_languages: normalized.contact_languages,
+            communication_languages: normalized.contact_languages,
+            show_communication_language: normalized.contact_language_required,
+            freshness_score: normalized.freshness_score,
+            completeness_score: normalized.completeness_score,
+            final_score: normalized.final_score,
+            requires_manual_review: true,
+            quality_notes: [normalized.relevance_reason, normalized.risk_reason, normalized.ethical_reason].filter(Boolean)
+          }, requestedBy);
+          createdItems.push(imported);
+          existingImported.push(imported);
+          createdCount += 1;
+        }
+        await store.updateRecord("ImportedSource", source.id, {
+          last_checked_at: now(),
+          last_success_at: now(),
+          failure_count: 0
+        });
+        logRecord = await store.updateRecord("ImportLog", logRecord.id, {
+          finished_at: now(),
+          fetched_count: rawItems.length,
+          created_count: createdCount,
+          duplicate_count: duplicateCount,
+          status: "success"
+        });
+        logs.push(logRecord);
+      } catch (error) {
+        errorTotal += 1;
+        await store.updateRecord("ImportedSource", source.id, {
+          last_checked_at: now(),
+          failure_count: Number(source.failure_count || 0) + 1
+        }).catch(() => {});
+        logRecord = await store.updateRecord("ImportLog", logRecord.id, {
+          finished_at: now(),
+          status: "error",
+          error_count: 1,
+          error_message: error.message || "Import failed"
+        });
+        logs.push(logRecord);
+      }
+    }
+
+    return {
+      success: true,
+      status: "completed",
+      started_at: startedAt,
+      finished_at: now(),
+      fetched_count: fetchedTotal,
+      created_count: createdItems.length,
+      duplicate_count: duplicateTotal,
+      error_count: errorTotal,
+      logs,
+      items: createdItems
+    };
+  } finally {
+    running = false;
+  }
+}
+
+module.exports = {
+  ensureDefaultSettings,
+  ensureDefaultSources,
+  runImport
+};

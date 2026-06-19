@@ -77,6 +77,11 @@
         "ne_pritje",
         "miratuar",
         "publikuar",
+        "pending_review",
+        "approved",
+        "published",
+        "duplicate",
+        "error",
         "refuzuar",
         "arkivuar"
       ],
@@ -132,6 +137,40 @@
       "format": "date-time",
       "description": "Data e publikimit"
     },
+    "source_id": { "type": "string" },
+    "external_id": { "type": "string" },
+    "provider_key": { "type": "string" },
+    "source_name": { "type": "string" },
+    "source_public_visible": { "type": "boolean", "default": false },
+    "imported_public_badge_visible": { "type": "boolean", "default": false },
+    "item_type": {
+      "type": "string",
+      "enum": ["job", "housing", "service", "community", "course", "business"]
+    },
+    "contact_methods": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "contact_language_required": { "type": "boolean", "default": false },
+    "contact_languages": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "relevance_score": { "type": "number" },
+    "relevance_level": { "type": "string" },
+    "relevance_reason": { "type": "string" },
+    "risk_score": { "type": "number" },
+    "risk_reason": { "type": "string" },
+    "ethical_reason": { "type": "string" },
+    "source_identity_type": { "type": "string" },
+    "source_identity_name": { "type": "string" },
+    "source_identity_url": { "type": "string" },
+    "source_identity_confidence": { "type": "number" },
+    "is_albanian_source": { "type": "boolean", "default": false },
+    "albanian_source_reason": { "type": "string" },
+    "approved_by": { "type": "string" },
+    "approved_at": { "type": "string" },
+    "published_post_id": { "type": "string" },
     "professional_relevance_score": {
       "type": "number",
       "description": "Relevanca profesionale 0-100"

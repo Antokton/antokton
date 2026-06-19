@@ -129,6 +129,20 @@
       "default": false,
       "description": "Shfaq linkun e postuesit si kontakt publik"
     },
+    "source_name": {
+      "type": "string",
+      "description": "Emri i burimit të importimit"
+    },
+    "source_public_visible": {
+      "type": "boolean",
+      "default": false,
+      "description": "Alias për shfaqjen publike të linkut burimor"
+    },
+    "imported_public_badge_visible": {
+      "type": "boolean",
+      "default": false,
+      "description": "Shfaq etiketën publike që njoftimi është importuar nga burim publik"
+    },
     "import_source_url": {
       "type": "string",
       "description": "URL origjinal i njoftimit/listimit i ruajtur vet\u00ebm p\u00ebr gjurmim t\u00eb brendsh\u00ebm"
@@ -144,6 +158,13 @@
     "import_original_text": {
       "type": "string",
       "description": "Teksti origjinal i importuar; nuk shfaqet publikisht"
+    },
+    "contact_methods": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Kontaktet e ndara sipas llojit: phone/email/website/whatsapp/application_form"
     },
     "image_urls": {
       "type": "array",

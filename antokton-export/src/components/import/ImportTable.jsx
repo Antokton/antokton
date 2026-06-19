@@ -3,7 +3,7 @@ import { base44 } from "@/api/antoktonClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Loader2, Pencil, Trash2, Globe } from "lucide-react";
+import { Loader2, Pencil, Trash2, Globe, Check, X } from "lucide-react";
 import { CATEGORIES, LISTING_TYPES, SOURCES, STATUS_LABELS, STATUS_COLORS } from "./importConstants";
 import { cleanPazarLabel, findPazarCategory } from "@/lib/pazarCategories";
 
@@ -91,6 +91,22 @@ export default function ImportTable({ user, onEdit }) {
     }
   };
 
+  const handleRobotAction = async (post, action) => {
+    setPublishingId(post.id);
+    try {
+      if (action === "approve") await base44.importAssistant.approveItem(post.id);
+      if (action === "reject") await base44.importAssistant.rejectItem(post.id);
+      if (action === "publish") await base44.importAssistant.publishItem(post.id);
+      qc.invalidateQueries({ queryKey: ["importedPosts"] });
+      qc.invalidateQueries({ queryKey: ["jobs"] });
+      qc.invalidateQueries({ queryKey: ["pazarJobs"] });
+    } catch (error) {
+      alert(error?.message || "Veprimi dështoi.");
+    } finally {
+      setPublishingId(null);
+    }
+  };
+
   const isAdmin = user?.role === "admin";
 
   const ActionButtons = ({ post, needsPublish }) => (
@@ -100,10 +116,20 @@ export default function ImportTable({ user, onEdit }) {
         <span>Përpuno</span>
       </button>
       {isAdmin && needsPublish && (
-        <button onClick={(event) => { event.stopPropagation(); handleQuickPublish(post); }} disabled={publishingId === post.id} className="inline-flex items-center gap-1 rounded border border-[#9bffd6]/20 px-2 py-1 text-[#9bffd6]/80 hover:text-[#9bffd6] hover:bg-[#9bffd6]/10 transition-colors disabled:opacity-40" title="Publiko">
+        <button onClick={(event) => { event.stopPropagation(); (post.provider_key || post.item_type) ? handleRobotAction(post, "publish") : handleQuickPublish(post); }} disabled={publishingId === post.id} className="inline-flex items-center gap-1 rounded border border-[#9bffd6]/20 px-2 py-1 text-[#9bffd6]/80 hover:text-[#9bffd6] hover:bg-[#9bffd6]/10 transition-colors disabled:opacity-40" title="Publiko">
           {publishingId === post.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
           <span>{post.status === "publikuar" ? "Ripubliko" : "Publiko"}</span>
         </button>
+      )}
+      {isAdmin && ["pending_review", "imported", "ne_pritje"].includes(post.status) && (
+        <>
+          <button onClick={(event) => { event.stopPropagation(); handleRobotAction(post, "approve"); }} disabled={publishingId === post.id} className="inline-flex items-center gap-1 rounded border border-emerald-300/20 px-2 py-1 text-emerald-200 hover:bg-emerald-300/10 disabled:opacity-40" title="Mirato">
+            <Check className="w-3.5 h-3.5" /><span>Mirato</span>
+          </button>
+          <button onClick={(event) => { event.stopPropagation(); handleRobotAction(post, "reject"); }} disabled={publishingId === post.id} className="inline-flex items-center gap-1 rounded border border-red-300/20 px-2 py-1 text-red-200 hover:bg-red-300/10 disabled:opacity-40" title="Refuzo">
+            <X className="w-3.5 h-3.5" /><span>Refuzo</span>
+          </button>
+        </>
       )}
       {isAdmin && (
         <button onClick={(event) => { event.stopPropagation(); handleDelete(post.id); }} className="inline-flex items-center gap-1 rounded border border-red-400/15 px-2 py-1 text-red-300/70 hover:text-red-300 hover:bg-red-400/10 transition-colors" title="Fshi">
@@ -209,7 +235,7 @@ export default function ImportTable({ user, onEdit }) {
                   </td>
                   <td className="px-3 py-2.5">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${reallyPublished ? STATUS_COLORS.publikuar : "bg-yellow-400/15 text-yellow-300"}`}>
-                      {reallyPublished ? (STATUS_LABELS[post.status] || post.status) : "Në pritje"}
+                      {reallyPublished ? (STATUS_LABELS[post.status] || post.status) : (STATUS_LABELS[post.status] || post.status || "Në pritje")}
                     </span>
                     {!reallyPublished && post.status === "publikuar" && (
                       <p className="mt-1 text-[10px] text-yellow-300/70">mungon postimi publik</p>

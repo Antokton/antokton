@@ -153,6 +153,104 @@ CREATE INDEX IF NOT EXISTS idx_post_views_post_user_created
 
 CREATE INDEX IF NOT EXISTS idx_post_views_post_session_created
   ON post_views (post_id, viewer_session_hash, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS imported_sources (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  provider_key TEXT NOT NULL,
+  base_url TEXT,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  country_filter TEXT,
+  category_filter TEXT,
+  source_group TEXT,
+  parser_type TEXT,
+  parser_config TEXT,
+  trust_level TEXT,
+  is_editable_by_admin INTEGER NOT NULL DEFAULT 1,
+  last_checked_at TEXT,
+  last_success_at TEXT,
+  failure_count INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS imported_items (
+  id TEXT PRIMARY KEY,
+  source_id TEXT,
+  external_id TEXT,
+  source_url TEXT,
+  source_name TEXT,
+  source_public_visible INTEGER NOT NULL DEFAULT 0,
+  imported_public_badge_visible INTEGER NOT NULL DEFAULT 0,
+  item_type TEXT,
+  original_title TEXT,
+  original_description TEXT,
+  original_language TEXT,
+  original_company TEXT,
+  original_contact TEXT,
+  original_location TEXT,
+  original_country TEXT,
+  original_city TEXT,
+  original_salary TEXT,
+  shqip_title TEXT,
+  shqip_summary TEXT,
+  category TEXT,
+  profession TEXT,
+  country TEXT,
+  city TEXT,
+  contract_type TEXT,
+  salary_min REAL,
+  salary_max REAL,
+  currency TEXT,
+  contact_methods TEXT,
+  contact_language_required INTEGER NOT NULL DEFAULT 0,
+  contact_languages TEXT,
+  relevance_score REAL,
+  relevance_level TEXT,
+  relevance_reason TEXT,
+  risk_score REAL,
+  risk_reason TEXT,
+  ethical_score REAL,
+  ethical_reason TEXT,
+  source_identity_type TEXT,
+  source_identity_name TEXT,
+  source_identity_url TEXT,
+  source_identity_confidence REAL,
+  is_albanian_source INTEGER NOT NULL DEFAULT 0,
+  albanian_source_reason TEXT,
+  status TEXT,
+  approved_by TEXT,
+  approved_at TEXT,
+  published_post_id TEXT,
+  imported_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS import_logs (
+  id TEXT PRIMARY KEY,
+  provider_key TEXT,
+  source_id TEXT,
+  started_at TEXT NOT NULL,
+  finished_at TEXT,
+  fetched_count INTEGER NOT NULL DEFAULT 0,
+  created_count INTEGER NOT NULL DEFAULT 0,
+  duplicate_count INTEGER NOT NULL DEFAULT 0,
+  rejected_count INTEGER NOT NULL DEFAULT 0,
+  error_count INTEGER NOT NULL DEFAULT 0,
+  status TEXT,
+  error_message TEXT
+);
+
+CREATE TABLE IF NOT EXISTS import_assistant_settings (
+  id TEXT PRIMARY KEY,
+  auto_import_enabled INTEGER NOT NULL DEFAULT 1,
+  import_frequency_hours INTEGER NOT NULL DEFAULT 6,
+  max_items_per_run INTEGER NOT NULL DEFAULT 100,
+  auto_publish_enabled INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
 `);
 
 const statements = {

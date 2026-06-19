@@ -292,6 +292,47 @@ export const antoktonApi = {
         body: { sessionId: getPostViewSessionId() }
       });
     }
+  },
+  importAssistant: {
+    run(payload = {}) {
+      return request('/api/admin/import-assistant/run', { method: 'POST', body: payload });
+    },
+    settings() {
+      return request('/api/admin/import-assistant/settings');
+    },
+    updateSettings(payload = {}) {
+      return request('/api/admin/import-assistant/settings', { method: 'PUT', body: payload });
+    },
+    sources() {
+      return request('/api/admin/import-assistant/sources');
+    },
+    createSource(payload = {}) {
+      return request('/api/admin/import-assistant/sources', { method: 'POST', body: payload });
+    },
+    updateSource(id, payload = {}) {
+      return request(`/api/admin/import-assistant/sources/${encodeURIComponent(id)}`, { method: 'PUT', body: payload });
+    },
+    deleteSource(id) {
+      return request(`/api/admin/import-assistant/sources/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    },
+    testSource(id) {
+      return request(`/api/admin/import-assistant/sources/${encodeURIComponent(id)}/test`, { method: 'POST', body: {} });
+    },
+    logs() {
+      return request('/api/admin/import-assistant/logs');
+    },
+    approveItem(id) {
+      return request(`/api/admin/import-assistant/items/${encodeURIComponent(id)}/approve`, { method: 'POST', body: {} });
+    },
+    rejectItem(id) {
+      return request(`/api/admin/import-assistant/items/${encodeURIComponent(id)}/reject`, { method: 'POST', body: {} });
+    },
+    publishItem(id) {
+      return request(`/api/admin/import-assistant/items/${encodeURIComponent(id)}/publish`, { method: 'POST', body: {} });
+    },
+    translateContactMessage(payload = {}) {
+      return request('/api/admin/import-assistant/translate-contact-message', { method: 'POST', body: payload });
+    }
   }
 };
 

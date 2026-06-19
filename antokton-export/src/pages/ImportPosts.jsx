@@ -3,8 +3,10 @@ import { base44 } from "@/api/antoktonClient";
 import ImportForm from "../components/import/ImportForm";
 import ImportTable from "../components/import/ImportTable";
 import ImportJobForm from "../components/import/ImportJobForm";
+import ImportAssistantSettings from "../components/import/ImportAssistantSettings";
+import ImportSources from "../components/import/ImportSources";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Table, PlusCircle, ShieldAlert, Briefcase } from "lucide-react";
+import { Download, Table, PlusCircle, ShieldAlert, Briefcase, Bot, Database } from "lucide-react";
 
 export default function ImportPosts({ defaultTab = "table" }) {
   const [user, setUser] = useState(null);
@@ -80,6 +82,12 @@ export default function ImportPosts({ defaultTab = "table" }) {
               <TabsTrigger value="job" className="text-white data-[state=active]:bg-white/10 text-xs gap-1.5 whitespace-nowrap">
                 <Briefcase className="w-3.5 h-3.5" /> Importo Punë (URL)
               </TabsTrigger>
+              <TabsTrigger value="robot" className="text-white data-[state=active]:bg-white/10 text-xs gap-1.5 whitespace-nowrap">
+                <Bot className="w-3.5 h-3.5" /> Robot
+              </TabsTrigger>
+              <TabsTrigger value="sources" className="text-white data-[state=active]:bg-white/10 text-xs gap-1.5 whitespace-nowrap">
+                <Database className="w-3.5 h-3.5" /> Burime
+              </TabsTrigger>
             </TabsList>
           </div>
         </div>
@@ -94,6 +102,14 @@ export default function ImportPosts({ defaultTab = "table" }) {
 
         <TabsContent value="job">
           <ImportJobForm user={user} onDone={() => setActiveTab("table")} />
+        </TabsContent>
+
+        <TabsContent value="robot">
+          <ImportAssistantSettings />
+        </TabsContent>
+
+        <TabsContent value="sources">
+          <ImportSources />
         </TabsContent>
       </Tabs>
     </div>

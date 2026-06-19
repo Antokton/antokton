@@ -18,6 +18,12 @@ export const LISTING_TYPES = [
   { value: "falas", label: "Falas" },
   { value: "reklame", label: "Reklamë" },
   { value: "tjeter", label: "Tjetër" },
+  { value: "arbeitnow", label: "Arbeitnow" },
+  { value: "adzuna", label: "Adzuna" },
+  { value: "jooble", label: "Jooble" },
+  { value: "eures", label: "EURES" },
+  { value: "generic_rss", label: "RSS/API" },
+  { value: "custom", label: "Burim custom" },
 ];
 
 export const SOURCES = [
@@ -36,6 +42,12 @@ export const STATUS_LABELS = {
   publikuar: "Publikuar",
   refuzuar: "Refuzuar",
   arkivuar: "Arkivuar",
+  imported: "Importuar",
+  pending_review: "Në pritje",
+  approved: "Miratuar",
+  published: "Publikuar",
+  duplicate: "Dublikatë",
+  error: "Gabim",
 };
 
 export const STATUS_COLORS = {
@@ -45,6 +57,12 @@ export const STATUS_COLORS = {
   publikuar: "bg-green-500/20 text-green-300",
   refuzuar: "bg-red-500/20 text-red-300",
   arkivuar: "bg-white/5 text-white/30",
+  imported: "bg-yellow-500/20 text-yellow-300",
+  pending_review: "bg-yellow-500/20 text-yellow-300",
+  approved: "bg-blue-500/20 text-blue-300",
+  published: "bg-green-500/20 text-green-300",
+  duplicate: "bg-orange-500/20 text-orange-300",
+  error: "bg-red-500/20 text-red-300",
 };
 
 export const COUNTRIES_DATA = [

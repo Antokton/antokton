@@ -1,0 +1,10 @@
+{
+  "name": "ImportAssistantSettings",
+  "type": "object",
+  "properties": {
+    "auto_import_enabled": { "type": "boolean", "default": true },
+    "import_frequency_hours": { "type": "number", "default": 6 },
+    "max_items_per_run": { "type": "number", "default": 100 },
+    "auto_publish_enabled": { "type": "boolean", "default": false }
+  }
+}

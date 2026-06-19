@@ -110,6 +110,104 @@ CREATE INDEX IF NOT EXISTS idx_post_views_post_user_created
   ON post_views (post_id, viewer_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_post_views_post_session_created
   ON post_views (post_id, viewer_session_hash, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS imported_sources (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  provider_key TEXT NOT NULL,
+  base_url TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  country_filter TEXT,
+  category_filter TEXT,
+  source_group TEXT,
+  parser_type TEXT,
+  parser_config JSONB DEFAULT '{}',
+  trust_level TEXT,
+  is_editable_by_admin BOOLEAN NOT NULL DEFAULT true,
+  last_checked_at TEXT,
+  last_success_at TEXT,
+  failure_count INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS imported_items (
+  id TEXT PRIMARY KEY,
+  source_id TEXT,
+  external_id TEXT,
+  source_url TEXT,
+  source_name TEXT,
+  source_public_visible BOOLEAN NOT NULL DEFAULT false,
+  imported_public_badge_visible BOOLEAN NOT NULL DEFAULT false,
+  item_type TEXT,
+  original_title TEXT,
+  original_description TEXT,
+  original_language TEXT,
+  original_company TEXT,
+  original_contact TEXT,
+  original_location TEXT,
+  original_country TEXT,
+  original_city TEXT,
+  original_salary TEXT,
+  shqip_title TEXT,
+  shqip_summary TEXT,
+  category TEXT,
+  profession TEXT,
+  country TEXT,
+  city TEXT,
+  contract_type TEXT,
+  salary_min NUMERIC,
+  salary_max NUMERIC,
+  currency TEXT,
+  contact_methods JSONB DEFAULT '[]',
+  contact_language_required BOOLEAN NOT NULL DEFAULT false,
+  contact_languages JSONB DEFAULT '[]',
+  relevance_score NUMERIC,
+  relevance_level TEXT,
+  relevance_reason TEXT,
+  risk_score NUMERIC,
+  risk_reason TEXT,
+  ethical_score NUMERIC,
+  ethical_reason TEXT,
+  source_identity_type TEXT,
+  source_identity_name TEXT,
+  source_identity_url TEXT,
+  source_identity_confidence NUMERIC,
+  is_albanian_source BOOLEAN NOT NULL DEFAULT false,
+  albanian_source_reason TEXT,
+  status TEXT,
+  approved_by TEXT,
+  approved_at TEXT,
+  published_post_id TEXT,
+  imported_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS import_logs (
+  id TEXT PRIMARY KEY,
+  provider_key TEXT,
+  source_id TEXT,
+  started_at TEXT NOT NULL,
+  finished_at TEXT,
+  fetched_count INTEGER NOT NULL DEFAULT 0,
+  created_count INTEGER NOT NULL DEFAULT 0,
+  duplicate_count INTEGER NOT NULL DEFAULT 0,
+  rejected_count INTEGER NOT NULL DEFAULT 0,
+  error_count INTEGER NOT NULL DEFAULT 0,
+  status TEXT,
+  error_message TEXT
+);
+
+CREATE TABLE IF NOT EXISTS import_assistant_settings (
+  id TEXT PRIMARY KEY,
+  auto_import_enabled BOOLEAN NOT NULL DEFAULT true,
+  import_frequency_hours INTEGER NOT NULL DEFAULT 6,
+  max_items_per_run INTEGER NOT NULL DEFAULT 100,
+  auto_publish_enabled BOOLEAN NOT NULL DEFAULT false,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
 `;
 
 async function initializeAsync() {
