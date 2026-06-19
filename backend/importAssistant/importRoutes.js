@@ -112,6 +112,7 @@ async function handleImportAssistantRoute(deps) {
       is_active: body.is_active !== false,
       country_filter: body.country_filter || "",
       category_filter: body.category_filter || "",
+      profession_filter: body.profession_filter || "",
       source_group: body.source_group || "manual_url",
       parser_type: body.parser_type || "rss",
       parser_config: body.parser_config || {},

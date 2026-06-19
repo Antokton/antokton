@@ -33,7 +33,47 @@ export const SOURCES = [
   { value: "whatsapp", label: "WhatsApp" },
   { value: "telegram", label: "Telegram" },
   { value: "tjeter", label: "Tjetër" },
+  { value: "arbeitnow", label: "Arbeitnow" },
+  { value: "adzuna", label: "Adzuna" },
+  { value: "jooble", label: "Jooble" },
+  { value: "eures", label: "EURES" },
+  { value: "generic_rss", label: "RSS/API" },
+  { value: "custom", label: "Burim i personalizuar" },
 ];
+
+export const PROVIDER_LABELS = {
+  arbeitnow: "Arbeitnow",
+  adzuna: "Adzuna",
+  jooble: "Jooble",
+  eures: "EURES",
+  generic_rss: "RSS/API publik",
+  custom: "Burim i personalizuar",
+};
+
+export const SOURCE_GROUP_LABELS = {
+  global_provider: "Provider global",
+  albanian_source: "Burim shqiptar",
+  partner: "Partner",
+  community: "Komunitet",
+  rss: "RSS",
+  custom_api: "API e personalizuar",
+  manual_url: "URL manuale",
+};
+
+export const PARSER_TYPE_LABELS = {
+  api: "API",
+  rss: "RSS",
+  html: "HTML publik",
+  manual: "Manual",
+  custom: "Parser i personalizuar",
+};
+
+export const TRUST_LEVEL_LABELS = {
+  high: "Besim i lartë",
+  medium: "Besim mesatar",
+  low: "Besim i ulët",
+  unknown: "I panjohur",
+};
 
 export const STATUS_LABELS = {
   draft: "Draft",

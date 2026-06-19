@@ -8,6 +8,7 @@
     "is_active": { "type": "boolean", "default": true },
     "country_filter": { "type": "string" },
     "category_filter": { "type": "string" },
+    "profession_filter": { "type": "string" },
     "source_group": {
       "type": "string",
       "enum": ["global_provider", "albanian_source", "partner", "community", "rss", "custom_api", "manual_url"],

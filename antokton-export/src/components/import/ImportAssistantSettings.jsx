@@ -2,8 +2,26 @@ import React, { useState } from "react";
 import { base44 } from "@/api/antoktonClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Loader2, Play, Save } from "lucide-react";
+
+function OnOffToggle({ checked, onChange, label }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={checked}
+      onClick={() => onChange(!checked)}
+      className={`inline-flex min-w-[148px] items-center justify-between rounded-full border px-1.5 py-1 text-xs font-semibold transition-colors ${
+        checked
+          ? "border-emerald-300/40 bg-emerald-300/15 text-emerald-100"
+          : "border-red-300/35 bg-red-400/10 text-red-100"
+      }`}
+      title={label}
+    >
+      <span className={`rounded-full px-3 py-1 ${checked ? "bg-emerald-300 text-[#06111f]" : "text-white/45"}`}>Ndezur</span>
+      <span className={`rounded-full px-3 py-1 ${checked ? "text-white/45" : "bg-red-300 text-[#16070b]"}`}>Fikur</span>
+    </button>
+  );
+}
 
 export default function ImportAssistantSettings() {
   const qc = useQueryClient();
@@ -63,8 +81,11 @@ export default function ImportAssistantSettings() {
           <p className="text-white/55 text-xs mt-1">Importon nga burime publike/API/RSS dhe i ruan si pending_review.</p>
         </div>
         <label className="flex items-center justify-between gap-3 text-sm text-white/80">
-          Auto Import
-          <Switch checked={values.auto_import_enabled !== false} onCheckedChange={(v) => update("auto_import_enabled", v)} />
+          <span>
+            Auto Import
+            <span className="block text-[11px] text-white/45">Importim automatik nga burimet aktive</span>
+          </span>
+          <OnOffToggle checked={values.auto_import_enabled !== false} onChange={(v) => update("auto_import_enabled", v)} label="Auto Import" />
         </label>
         <label className="block text-xs text-white/60">
           Frekuenca (orë)
@@ -75,8 +96,11 @@ export default function ImportAssistantSettings() {
           <Input type="number" min="1" value={values.max_items_per_run || 100} onChange={(e) => update("max_items_per_run", Number(e.target.value))} className="mt-1 bg-white/5 border-white/10 text-white" />
         </label>
         <label className="flex items-center justify-between gap-3 text-sm text-white/80">
-          Auto Publish
-          <Switch checked={values.auto_publish_enabled === true} onCheckedChange={(v) => update("auto_publish_enabled", v)} />
+          <span>
+            Auto Publish
+            <span className="block text-[11px] text-white/45">Publikim automatik, zakonisht duhet fikur</span>
+          </span>
+          <OnOffToggle checked={values.auto_publish_enabled === true} onChange={(v) => update("auto_publish_enabled", v)} label="Auto Publish" />
         </label>
         <p className="rounded-lg border border-yellow-300/20 bg-yellow-300/10 p-3 text-xs text-yellow-100">
           Siguria bazë: auto-publish është OFF. Njoftimet e importuara hyjnë në radhë për miratim nga stafi.
@@ -102,7 +126,7 @@ export default function ImportAssistantSettings() {
               {logs.slice(0, 12).map((log) => (
                 <tr key={log.id} className="border-t border-white/5 text-white/75">
                   <td className="py-2">{log.provider_key || "—"}</td>
-                  <td>{log.status || "—"}</td>
+                  <td>{log.status === "success" ? "Sukses" : log.status === "error" ? "Gabim" : log.status || "—"}</td>
                   <td>{log.fetched_count || 0}</td>
                   <td>{log.created_count || 0}</td>
                   <td>{log.duplicate_count || 0}</td>

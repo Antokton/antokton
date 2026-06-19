@@ -119,6 +119,7 @@ CREATE TABLE IF NOT EXISTS imported_sources (
   is_active BOOLEAN NOT NULL DEFAULT true,
   country_filter TEXT,
   category_filter TEXT,
+  profession_filter TEXT,
   source_group TEXT,
   parser_type TEXT,
   parser_config JSONB DEFAULT '{}',

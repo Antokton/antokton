@@ -162,6 +162,7 @@ CREATE TABLE IF NOT EXISTS imported_sources (
   is_active INTEGER NOT NULL DEFAULT 1,
   country_filter TEXT,
   category_filter TEXT,
+  profession_filter TEXT,
   source_group TEXT,
   parser_type TEXT,
   parser_config TEXT,
