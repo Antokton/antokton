@@ -4,21 +4,26 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Plus, Trash2, Save, Play, Pencil, X } from "lucide-react";
-import { CATEGORIES, PROVIDER_LABELS, SOURCE_GROUP_LABELS, PARSER_TYPE_LABELS, TRUST_LEVEL_LABELS } from "./importConstants";
+import { CATEGORIES, PROVIDER_LABELS, SOURCE_GROUP_LABELS, PARSER_TYPE_LABELS, TRUST_LEVEL_LABELS, SOURCE_TYPE_LABELS, CRAWL_FREQUENCY_LABELS } from "./importConstants";
 
 const PROVIDERS = Object.keys(PROVIDER_LABELS);
 const SOURCE_GROUPS = Object.keys(SOURCE_GROUP_LABELS);
 const PARSER_TYPES = Object.keys(PARSER_TYPE_LABELS);
 const TRUST_LEVELS = Object.keys(TRUST_LEVEL_LABELS);
+const SOURCE_TYPES = Object.keys(SOURCE_TYPE_LABELS);
+const CRAWL_FREQUENCIES = Object.keys(CRAWL_FREQUENCY_LABELS);
 
 const emptySource = {
   name: "",
   provider_key: "generic_rss",
+  source_type: "rss",
+  source_url: "",
   base_url: "",
   source_group: "manual_url",
   parser_type: "rss",
   trust_level: "unknown",
   is_active: true,
+  crawl_frequency_hours: 6,
   category_filter: "job",
   country_filter: "",
   profession_filter: ""
@@ -42,10 +47,13 @@ export default function ImportSources() {
     setEditForm({
       name: source.name || "",
       provider_key: source.provider_key || "generic_rss",
-      base_url: source.base_url || "",
+      source_type: source.source_type || source.parser_type || "rss",
+      source_url: source.source_url || source.base_url || "",
+      base_url: source.base_url || source.source_url || "",
       source_group: source.source_group || "manual_url",
       parser_type: source.parser_type || "rss",
       trust_level: source.trust_level || "unknown",
+      crawl_frequency_hours: Number(source.crawl_frequency_hours ?? 6),
       category_filter: source.category_filter || "",
       country_filter: source.country_filter || "",
       profession_filter: source.profession_filter || "",
@@ -99,7 +107,13 @@ export default function ImportSources() {
         <h2 className="text-white font-bold mb-3">Shto burim</h2>
         <div className="grid gap-2 md:grid-cols-3">
           <Input value={draft.name} onChange={(e) => updateDraft("name", e.target.value)} placeholder="Emri i burimit" className="bg-white/5 border-white/10 text-white" />
-          <Input value={draft.base_url} onChange={(e) => updateDraft("base_url", e.target.value)} placeholder="URL/API/RSS" className="bg-white/5 border-white/10 text-white" />
+          <Input value={draft.source_url} onChange={(e) => { updateDraft("source_url", e.target.value); updateDraft("base_url", e.target.value); }} placeholder="URL/API/RSS" className="bg-white/5 border-white/10 text-white" />
+          <Select value={draft.source_type} onValueChange={(v) => updateDraft("source_type", v)}>
+            <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Lloji i burimit" /></SelectTrigger>
+            <SelectContent className="bg-[#0b1020] border-white/10">
+              {SOURCE_TYPES.map((value) => <SelectItem key={value} value={value} className="text-white">{SOURCE_TYPE_LABELS[value]}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <Select value={draft.provider_key} onValueChange={(v) => updateDraft("provider_key", v)}>
             <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
             <SelectContent className="bg-[#0b1020] border-white/10">
@@ -124,6 +138,12 @@ export default function ImportSources() {
               {PARSER_TYPES.map((value) => <SelectItem key={value} value={value} className="text-white">{PARSER_TYPE_LABELS[value]}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Select value={String(draft.crawl_frequency_hours ?? 6)} onValueChange={(v) => updateDraft("crawl_frequency_hours", Number(v))}>
+            <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Frekuenca" /></SelectTrigger>
+            <SelectContent className="bg-[#0b1020] border-white/10">
+              {CRAWL_FREQUENCIES.map((value) => <SelectItem key={value} value={value} className="text-white">{CRAWL_FREQUENCY_LABELS[value]}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <Select value={draft.category_filter || "all"} onValueChange={(v) => updateDraft("category_filter", v === "all" ? "" : v)}>
             <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Kategoria" /></SelectTrigger>
             <SelectContent className="bg-[#0b1020] border-white/10">
@@ -141,7 +161,7 @@ export default function ImportSources() {
       <section className="overflow-x-auto rounded-xl border border-white/10">
         <table className="w-full text-xs">
           <thead className="bg-white/5 text-white/45">
-            <tr><th className="text-left p-3">Emri</th><th>Provider</th><th>URL</th><th>Grupi</th><th>Parser</th><th>Kategori/Profesion</th><th>Besueshmëria</th><th>Statusi</th><th>Veprime</th></tr>
+            <tr><th className="text-left p-3">Emri</th><th>Lloji</th><th>Provider</th><th>URL</th><th>Frekuenca</th><th>Grupi</th><th>Parser</th><th>Kategori/Profesion</th><th>Besueshmëria</th><th>Statusi</th><th>Veprime</th></tr>
           </thead>
           <tbody>
             {sources.map((source) => (
@@ -149,8 +169,10 @@ export default function ImportSources() {
                 {editingId === source.id ? (
                   <>
                     <td className="p-3"><Input value={editForm.name} onChange={(e) => updateEdit("name", e.target.value)} className="h-8 bg-white/5 border-white/10 text-white" /></td>
+                    <td><Select value={editForm.source_type} onValueChange={(v) => updateEdit("source_type", v)}><SelectTrigger className="h-8 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{SOURCE_TYPES.map((value) => <SelectItem key={value} value={value} className="text-white">{SOURCE_TYPE_LABELS[value]}</SelectItem>)}</SelectContent></Select></td>
                     <td><Select value={editForm.provider_key} onValueChange={(v) => updateEdit("provider_key", v)}><SelectTrigger className="h-8 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{PROVIDERS.map((value) => <SelectItem key={value} value={value} className="text-white">{PROVIDER_LABELS[value]}</SelectItem>)}</SelectContent></Select></td>
-                    <td><Input value={editForm.base_url} onChange={(e) => updateEdit("base_url", e.target.value)} className="h-8 min-w-[220px] bg-white/5 border-white/10 text-white" /></td>
+                    <td><Input value={editForm.source_url} onChange={(e) => { updateEdit("source_url", e.target.value); updateEdit("base_url", e.target.value); }} className="h-8 min-w-[220px] bg-white/5 border-white/10 text-white" /></td>
+                    <td><Select value={String(editForm.crawl_frequency_hours ?? 6)} onValueChange={(v) => updateEdit("crawl_frequency_hours", Number(v))}><SelectTrigger className="h-8 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{CRAWL_FREQUENCIES.map((value) => <SelectItem key={value} value={value} className="text-white">{CRAWL_FREQUENCY_LABELS[value]}</SelectItem>)}</SelectContent></Select></td>
                     <td><Select value={editForm.source_group} onValueChange={(v) => updateEdit("source_group", v)}><SelectTrigger className="h-8 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{SOURCE_GROUPS.map((value) => <SelectItem key={value} value={value} className="text-white">{SOURCE_GROUP_LABELS[value]}</SelectItem>)}</SelectContent></Select></td>
                     <td><Select value={editForm.parser_type} onValueChange={(v) => updateEdit("parser_type", v)}><SelectTrigger className="h-8 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{PARSER_TYPES.map((value) => <SelectItem key={value} value={value} className="text-white">{PARSER_TYPE_LABELS[value]}</SelectItem>)}</SelectContent></Select></td>
                     <td className="space-y-1 p-2"><Input value={editForm.category_filter} onChange={(e) => updateEdit("category_filter", e.target.value)} placeholder="Kategori" className="h-8 bg-white/5 border-white/10 text-white" /><Input value={editForm.profession_filter} onChange={(e) => updateEdit("profession_filter", e.target.value)} placeholder="Profesion" className="h-8 bg-white/5 border-white/10 text-white" /><Input value={editForm.country_filter} onChange={(e) => updateEdit("country_filter", e.target.value)} placeholder="Vend" className="h-8 bg-white/5 border-white/10 text-white" /></td>
@@ -159,8 +181,10 @@ export default function ImportSources() {
                 ) : (
                   <>
                     <td className="p-3 font-semibold text-white">{source.name}</td>
+                    <td>{SOURCE_TYPE_LABELS[source.source_type || source.parser_type] || source.source_type || "—"}</td>
                     <td>{PROVIDER_LABELS[source.provider_key] || source.provider_key}</td>
-                    <td className="max-w-[260px] truncate">{source.base_url || "—"}</td>
+                    <td className="max-w-[260px] truncate">{source.source_url || source.base_url || "—"}</td>
+                    <td>{CRAWL_FREQUENCY_LABELS[source.crawl_frequency_hours ?? 6] || `Çdo ${source.crawl_frequency_hours} orë`}</td>
                     <td>{SOURCE_GROUP_LABELS[source.source_group] || source.source_group || "—"}</td>
                     <td>{PARSER_TYPE_LABELS[source.parser_type] || source.parser_type || "—"}</td>
                     <td>

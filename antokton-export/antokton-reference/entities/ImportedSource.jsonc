@@ -4,8 +4,15 @@
   "properties": {
     "name": { "type": "string" },
     "provider_key": { "type": "string" },
+    "source_type": {
+      "type": "string",
+      "enum": ["rss", "html", "facebook", "telegram", "manual", "api"],
+      "default": "api"
+    },
+    "source_url": { "type": "string" },
     "base_url": { "type": "string" },
     "is_active": { "type": "boolean", "default": true },
+    "crawl_frequency_hours": { "type": "number", "default": 6 },
     "country_filter": { "type": "string" },
     "category_filter": { "type": "string" },
     "profession_filter": { "type": "string" },

@@ -50,6 +50,24 @@ export const PROVIDER_LABELS = {
   custom: "Burim i personalizuar",
 };
 
+export const SOURCE_TYPE_LABELS = {
+  rss: "RSS",
+  html: "HTML publik",
+  facebook: "Facebook",
+  telegram: "Telegram",
+  manual: "Manual",
+  api: "API/JSON",
+};
+
+export const CRAWL_FREQUENCY_LABELS = {
+  0: "OFF",
+  1: "Çdo 1 orë",
+  3: "Çdo 3 orë",
+  6: "Çdo 6 orë",
+  12: "Çdo 12 orë",
+  24: "Çdo 24 orë",
+};
+
 export const SOURCE_GROUP_LABELS = {
   global_provider: "Provider global",
   albanian_source: "Burim shqiptar",
@@ -86,6 +104,7 @@ export const STATUS_LABELS = {
   pending_review: "Në pritje",
   approved: "Miratuar",
   published: "Publikuar",
+  auto_published: "Publikuar automatikisht",
   duplicate: "Dublikatë",
   error: "Gabim",
 };
@@ -101,6 +120,7 @@ export const STATUS_COLORS = {
   pending_review: "bg-yellow-500/20 text-yellow-300",
   approved: "bg-blue-500/20 text-blue-300",
   published: "bg-green-500/20 text-green-300",
+  auto_published: "bg-green-500/20 text-green-300",
   duplicate: "bg-orange-500/20 text-orange-300",
   error: "bg-red-500/20 text-red-300",
 };

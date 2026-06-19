@@ -90,6 +90,7 @@ async function normalizeImportedItem(raw = {}, source = {}) {
     original_country: cleanText(raw.original_country || raw.country || ""),
     original_city: cleanText(raw.original_city || raw.city || ""),
     original_salary: cleanText(raw.original_salary || raw.salary || ""),
+    original_published_at: raw.original_published_at || raw.published_at || raw.created_at || "",
     category: raw.category || "pune",
     profession: cleanText(raw.profession || inferProfession(raw)),
     country: cleanText(raw.country || raw.original_country || ""),

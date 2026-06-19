@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Play, Save } from "lucide-react";
-import { CATEGORIES, PROVIDER_LABELS } from "./importConstants";
+import { CATEGORIES, PROVIDER_LABELS, SOURCE_TYPE_LABELS, CRAWL_FREQUENCY_LABELS } from "./importConstants";
 
 const DEFAULT_SETTINGS = {
   default_category_filter: "pune",
@@ -140,7 +140,7 @@ export default function ImportAssistantSettings() {
                 <SelectItem value="all" className="text-white">Të gjitha burimet aktive</SelectItem>
                 {sources.map((source) => (
                   <SelectItem key={source.id} value={source.id} className="text-white">
-                    {source.name} · {PROVIDER_LABELS[source.provider_key] || source.provider_key} · {source.is_active === false ? "Fikur" : "Aktiv"}
+                    {source.name} · {SOURCE_TYPE_LABELS[source.source_type || source.parser_type] || "Burim"} · {source.is_active === false ? "Fikur" : "Aktiv"}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -151,10 +151,9 @@ export default function ImportAssistantSettings() {
             <div className="max-h-32 space-y-1 overflow-y-auto pr-1">
               {sources.map((source) => (
                 <div key={source.id} className="flex items-center justify-between gap-2 rounded-md bg-white/[0.03] px-2 py-1 text-[11px] text-white/65">
-                  <span className="min-w-0 truncate">{source.name} · {PROVIDER_LABELS[source.provider_key] || source.provider_key}</span>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 font-semibold ${source.is_active === false ? "bg-red-400/15 text-red-200" : "bg-emerald-400/15 text-emerald-200"}`}>
-                    {source.is_active === false ? "Fikur" : "Aktiv"}
-                  </span>
+                  <span className="min-w-0 truncate">{source.name} · {SOURCE_TYPE_LABELS[source.source_type || source.parser_type] || PROVIDER_LABELS[source.provider_key] || source.provider_key}</span>
+                  <span className="shrink-0 text-white/40">{CRAWL_FREQUENCY_LABELS[source.crawl_frequency_hours ?? 6] || `Çdo ${source.crawl_frequency_hours} orë`}</span>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 font-semibold ${source.is_active === false ? "bg-red-400/15 text-red-200" : "bg-emerald-400/15 text-emerald-200"}`}>{source.is_active === false ? "Fikur" : "Aktiv"}</span>
                 </div>
               ))}
               {!sources.length && <p className="py-2 text-center text-white/40">Nuk ka burime ende.</p>}

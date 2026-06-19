@@ -21,6 +21,10 @@ function ensureArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function sourceUrl(source = {}) {
+  return source.source_url || source.base_url || "";
+}
+
 async function ensureDefaultSettings(store, config) {
   const existing = (await store.allRecords("ImportAssistantSettings"))[0];
   const defaults = {
@@ -47,8 +51,11 @@ async function ensureDefaultSources(store) {
     {
       name: "Arbeitnow",
       provider_key: "arbeitnow",
+      source_type: "api",
+      source_url: "https://www.arbeitnow.com/api/job-board-api",
       base_url: "https://www.arbeitnow.com/api/job-board-api",
       is_active: true,
+      crawl_frequency_hours: 6,
       country_filter: "Gjermani",
       category_filter: "job",
       source_group: "global_provider",
@@ -61,8 +68,11 @@ async function ensureDefaultSources(store) {
     {
       name: "Adzuna",
       provider_key: "adzuna",
+      source_type: "api",
+      source_url: "https://api.adzuna.com/v1/api/jobs",
       base_url: "https://api.adzuna.com/v1/api/jobs",
       is_active: false,
+      crawl_frequency_hours: 6,
       country_filter: "",
       category_filter: "job",
       source_group: "global_provider",
@@ -75,8 +85,11 @@ async function ensureDefaultSources(store) {
     {
       name: "Jooble",
       provider_key: "jooble",
+      source_type: "api",
+      source_url: "https://jooble.org/api",
       base_url: "https://jooble.org/api",
       is_active: false,
+      crawl_frequency_hours: 6,
       country_filter: "",
       category_filter: "job",
       source_group: "global_provider",
@@ -89,8 +102,11 @@ async function ensureDefaultSources(store) {
     {
       name: "EURES",
       provider_key: "eures",
+      source_type: "api",
+      source_url: "",
       base_url: "",
       is_active: false,
+      crawl_frequency_hours: 6,
       country_filter: "",
       category_filter: "job",
       source_group: "global_provider",
@@ -103,8 +119,11 @@ async function ensureDefaultSources(store) {
     {
       name: "RSS/API i personalizuar",
       provider_key: "generic_rss",
+      source_type: "rss",
+      source_url: "",
       base_url: "",
       is_active: false,
+      crawl_frequency_hours: 6,
       country_filter: "",
       category_filter: "",
       source_group: "rss",
@@ -117,8 +136,11 @@ async function ensureDefaultSources(store) {
     {
       name: "Burim i personalizuar",
       provider_key: "custom",
+      source_type: "api",
+      source_url: "",
       base_url: "",
       is_active: false,
+      crawl_frequency_hours: 6,
       country_filter: "",
       category_filter: "",
       source_group: "custom_api",
@@ -141,6 +163,18 @@ async function ensureDefaultSources(store) {
 
 function shouldUseSource(sourceId, source) {
   return !sourceId || source.id === sourceId || source.provider_key === sourceId;
+}
+
+function shouldCrawlSource(source = {}, { manual = false, selected = false } = {}) {
+  if (manual && selected) return true;
+  if (source.is_active === false) return false;
+  const frequency = Number(source.crawl_frequency_hours ?? 6);
+  if (frequency <= 0) return false;
+  if (manual) return true;
+  if (!source.last_checked_at) return true;
+  const lastChecked = new Date(source.last_checked_at).getTime();
+  if (!Number.isFinite(lastChecked)) return true;
+  return Date.now() - lastChecked >= frequency * 60 * 60 * 1000;
 }
 
 function applyRuntimeOptions(source = {}, options = {}) {
@@ -181,9 +215,11 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
   try {
     const settings = await ensureDefaultSettings(store, config);
     const allSources = await ensureDefaultSources(store);
+    const manualRun = Boolean(sourceId || options.manual_run);
+    const selectedSourceRun = Boolean(sourceId);
     const sources = allSources
-      .filter((source) => sourceId ? shouldUseSource(sourceId, source) : source.is_active !== false)
       .filter((source) => shouldUseSource(sourceId, source))
+      .filter((source) => shouldCrawlSource(source, { manual: manualRun, selected: selectedSourceRun }))
       .map((source) => applyRuntimeOptions(source, options));
     const limit = Math.max(1, Number(maxItems || settings.max_items_per_run || config.IMPORT_ASSISTANT_MAX_PER_RUN || 100));
     const existingImported = await store.allRecords("ImportedPost");
@@ -205,7 +241,8 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
       };
       let logRecord = await store.createRecord("ImportLog", logBase, requestedBy);
       try {
-        const rawItems = ensureArray(await provider.fetchItems({ source, config, maxItems: limit }));
+        const sourceForProvider = { ...source, base_url: sourceUrl(source) };
+        const rawItems = ensureArray(await provider.fetchItems({ source: sourceForProvider, config, maxItems: limit }));
         fetchedTotal += rawItems.length;
         let createdCount = 0;
         let duplicateCount = 0;
@@ -231,6 +268,9 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
               source: providerKey,
               source_url: normalized.source_url,
               import_source_url: normalized.source_url,
+              original_url: normalized.source_url,
+              original_id: normalized.external_id,
+              original_published_at: normalized.original_published_at,
               source_name: normalized.source_name,
               external_id: normalized.external_id,
               provider_key: providerKey,
@@ -253,6 +293,10 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
             source_name: normalized.source_name,
             source: providerKey,
             provider_key: providerKey,
+            source_id: normalized.source_id,
+            original_url: normalized.source_url,
+            original_id: normalized.external_id,
+            original_published_at: normalized.original_published_at,
             external_id: normalized.external_id || crypto.randomUUID(),
             item_type: normalized.item_type,
             category: normalized.category,

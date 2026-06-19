@@ -108,7 +108,8 @@ async function handleImportAssistantRoute(deps) {
         profession_filter: body.profession_filter || body.default_profession_filter || "",
         excluded_keywords: body.excluded_keywords || body.default_excluded_keywords || "",
         min_relevance_score: body.min_relevance_score,
-        max_risk_score: body.max_risk_score
+        max_risk_score: body.max_risk_score,
+        manual_run: true
       }
     });
     return send(res, 200, result);
@@ -124,8 +125,11 @@ async function handleImportAssistantRoute(deps) {
     return send(res, 200, await store.createRecord("ImportedSource", {
       name: body.name || "Burim i ri",
       provider_key: body.provider_key || "generic_rss",
-      base_url: body.base_url || "",
+      source_type: body.source_type || body.parser_type || "rss",
+      source_url: body.source_url || body.base_url || "",
+      base_url: body.base_url || body.source_url || "",
       is_active: body.is_active !== false,
+      crawl_frequency_hours: Number(body.crawl_frequency_hours ?? 6),
       country_filter: body.country_filter || "",
       category_filter: body.category_filter || "",
       profession_filter: body.profession_filter || "",
