@@ -2,7 +2,18 @@ import React, { useState } from "react";
 import { base44 } from "@/api/antoktonClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Play, Save } from "lucide-react";
+import { CATEGORIES, PROVIDER_LABELS } from "./importConstants";
+
+const DEFAULT_SETTINGS = {
+  default_category_filter: "pune",
+  default_country_filter: "",
+  default_profession_filter: "shofer, pastrim, depo, magazin, ndërtim, mekanik, elektriçist, hidraulik, kujdestar, siguri, shpërndarje, bujqësi, fabrikë, bojaxhi, furrë, pasticeri",
+  default_excluded_keywords: "senior, manager, director, professor, teacher, research, phd, software, developer, data scientist, consultant",
+  min_relevance_score: 45,
+  max_risk_score: 70,
+};
 
 function OnOffToggle({ checked, onChange, label }) {
   return (
@@ -35,8 +46,12 @@ export default function ImportAssistantSettings() {
     queryKey: ["importAssistant", "logs"],
     queryFn: () => base44.importAssistant.logs(),
   });
+  const { data: sources = [] } = useQuery({
+    queryKey: ["importAssistant", "sources"],
+    queryFn: () => base44.importAssistant.sources(),
+  });
   const [form, setForm] = useState(null);
-  const values = form || settings;
+  const values = { ...DEFAULT_SETTINGS, ...(form || settings) };
 
   React.useEffect(() => {
     if (!form && settings?.id) setForm(settings);
@@ -58,7 +73,17 @@ export default function ImportAssistantSettings() {
   const runNow = async () => {
     setRunning(true);
     try {
-      const result = await base44.importAssistant.run({ max_items: values.max_items_per_run || 100 });
+      const result = await base44.importAssistant.run({
+        max_items: values.max_items_per_run || 100,
+        source_id: values.default_source_id || "",
+        default_provider_key: values.default_provider_key || "",
+        category_filter: values.default_category_filter || "",
+        country_filter: values.default_country_filter || "",
+        profession_filter: values.default_profession_filter || "",
+        excluded_keywords: values.default_excluded_keywords || "",
+        min_relevance_score: values.min_relevance_score || 0,
+        max_risk_score: values.max_risk_score || 100,
+      });
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["importedPosts"] }),
         qc.invalidateQueries({ queryKey: ["importAssistant", "logs"] }),
@@ -78,7 +103,7 @@ export default function ImportAssistantSettings() {
       <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-4">
         <div>
           <h2 className="text-white font-bold">Roboti i importimit</h2>
-          <p className="text-white/55 text-xs mt-1">Importon nga burime publike/API/RSS dhe i ruan si pending_review.</p>
+          <p className="text-white/55 text-xs mt-1">Importon nga burime publike/API/RSS dhe i ruan në pritje për miratim.</p>
         </div>
         <label className="flex items-center justify-between gap-3 text-sm text-white/80">
           <span>
@@ -95,6 +120,68 @@ export default function ImportAssistantSettings() {
           Maksimumi për import
           <Input type="number" min="1" value={values.max_items_per_run || 100} onChange={(e) => update("max_items_per_run", Number(e.target.value))} className="mt-1 bg-white/5 border-white/10 text-white" />
         </label>
+        <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3 space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold text-white">Cilësimet para importimit</h3>
+            <p className="text-[11px] text-white/45">Këto filtra përdoren kur shtypet “Importo tani” dhe ndihmojnë të shmangen profile shumë të larta.</p>
+          </div>
+          <label className="block text-xs text-white/60">
+            Burimi / Provideri
+            <Select value={values.default_source_id || "all"} onValueChange={(v) => update("default_source_id", v === "all" ? "" : v)}>
+              <SelectTrigger className="mt-1 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10">
+                <SelectItem value="all" className="text-white">Të gjitha burimet aktive</SelectItem>
+                {sources.map((source) => (
+                  <SelectItem key={source.id} value={source.id} className="text-white">
+                    {source.name} · {PROVIDER_LABELS[source.provider_key] || source.provider_key}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
+          <label className="block text-xs text-white/60">
+            Kategoria
+            <Select value={values.default_category_filter || "all"} onValueChange={(v) => update("default_category_filter", v === "all" ? "" : v)}>
+              <SelectTrigger className="mt-1 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10">
+                <SelectItem value="all" className="text-white">Çdo kategori</SelectItem>
+                {CATEGORIES.map((category) => <SelectItem key={category.value} value={category.value} className="text-white">{category.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </label>
+          <label className="block text-xs text-white/60">
+            Profesione / fjalë kyçe të lejuara
+            <textarea
+              value={values.default_profession_filter || ""}
+              onChange={(e) => update("default_profession_filter", e.target.value)}
+              placeholder="p.sh. shofer, pastrim, depo, ndërtim, mekanik"
+              className="mt-1 min-h-[72px] w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[#8ff0cf]/50"
+            />
+          </label>
+          <label className="block text-xs text-white/60">
+            Fjalë për t’u përjashtuar
+            <textarea
+              value={values.default_excluded_keywords || ""}
+              onChange={(e) => update("default_excluded_keywords", e.target.value)}
+              placeholder="p.sh. senior, manager, professor, phd, software"
+              className="mt-1 min-h-[60px] w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[#8ff0cf]/50"
+            />
+          </label>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <label className="block text-xs text-white/60">
+              Vend/shtet
+              <Input value={values.default_country_filter || ""} onChange={(e) => update("default_country_filter", e.target.value)} placeholder="p.sh. Gjermani" className="mt-1 bg-white/5 border-white/10 text-white" />
+            </label>
+            <label className="block text-xs text-white/60">
+              Relevanca minimale
+              <Input type="number" min="0" max="100" value={values.min_relevance_score ?? 45} onChange={(e) => update("min_relevance_score", Number(e.target.value))} className="mt-1 bg-white/5 border-white/10 text-white" />
+            </label>
+            <label className="block text-xs text-white/60">
+              Risku maksimal
+              <Input type="number" min="0" max="100" value={values.max_risk_score ?? 70} onChange={(e) => update("max_risk_score", Number(e.target.value))} className="mt-1 bg-white/5 border-white/10 text-white" />
+            </label>
+          </div>
+        </div>
         <label className="flex items-center justify-between gap-3 text-sm text-white/80">
           <span>
             Auto Publish

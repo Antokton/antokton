@@ -82,7 +82,15 @@ async function handleImportAssistantRoute(deps) {
       auto_import_enabled: body.auto_import_enabled === true,
       import_frequency_hours: Math.max(1, Number(body.import_frequency_hours || 6)),
       max_items_per_run: Math.max(1, Number(body.max_items_per_run || 100)),
-      auto_publish_enabled: body.auto_publish_enabled === true
+      auto_publish_enabled: body.auto_publish_enabled === true,
+      default_source_id: body.default_source_id || "",
+      default_provider_key: body.default_provider_key || "",
+      default_category_filter: body.default_category_filter || "",
+      default_country_filter: body.default_country_filter || "",
+      default_profession_filter: body.default_profession_filter || "",
+      default_excluded_keywords: body.default_excluded_keywords || "",
+      min_relevance_score: Math.max(0, Math.min(100, Number(body.min_relevance_score || 0))),
+      max_risk_score: Math.max(0, Math.min(100, Number(body.max_risk_score || 100)))
     }));
   }
 
@@ -91,9 +99,17 @@ async function handleImportAssistantRoute(deps) {
     const result = await runImport({
       store,
       config,
-      sourceId: body.source_id || body.sourceId || "",
+      sourceId: body.source_id || body.sourceId || body.default_source_id || body.default_provider_key || "",
       maxItems: body.max_items || body.maxItems,
-      requestedBy: userEmail || "manual"
+      requestedBy: userEmail || "manual",
+      options: {
+        category_filter: body.category_filter || body.default_category_filter || "",
+        country_filter: body.country_filter || body.default_country_filter || "",
+        profession_filter: body.profession_filter || body.default_profession_filter || "",
+        excluded_keywords: body.excluded_keywords || body.default_excluded_keywords || "",
+        min_relevance_score: body.min_relevance_score,
+        max_risk_score: body.max_risk_score
+      }
     });
     return send(res, 200, result);
   }

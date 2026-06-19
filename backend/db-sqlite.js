@@ -249,6 +249,14 @@ CREATE TABLE IF NOT EXISTS import_assistant_settings (
   import_frequency_hours INTEGER NOT NULL DEFAULT 6,
   max_items_per_run INTEGER NOT NULL DEFAULT 100,
   auto_publish_enabled INTEGER NOT NULL DEFAULT 0,
+  default_source_id TEXT,
+  default_provider_key TEXT,
+  default_category_filter TEXT,
+  default_country_filter TEXT,
+  default_profession_filter TEXT,
+  default_excluded_keywords TEXT,
+  min_relevance_score INTEGER DEFAULT 45,
+  max_risk_score INTEGER DEFAULT 70,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );

@@ -5,6 +5,14 @@
     "auto_import_enabled": { "type": "boolean", "default": true },
     "import_frequency_hours": { "type": "number", "default": 6 },
     "max_items_per_run": { "type": "number", "default": 100 },
-    "auto_publish_enabled": { "type": "boolean", "default": false }
+    "auto_publish_enabled": { "type": "boolean", "default": false },
+    "default_source_id": { "type": "string" },
+    "default_provider_key": { "type": "string" },
+    "default_category_filter": { "type": "string" },
+    "default_country_filter": { "type": "string" },
+    "default_profession_filter": { "type": "string" },
+    "default_excluded_keywords": { "type": "string" },
+    "min_relevance_score": { "type": "number", "default": 45 },
+    "max_risk_score": { "type": "number", "default": 70 }
   }
 }

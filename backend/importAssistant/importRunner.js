@@ -23,13 +23,22 @@ function ensureArray(value) {
 
 async function ensureDefaultSettings(store, config) {
   const existing = (await store.allRecords("ImportAssistantSettings"))[0];
-  if (existing) return existing;
-  return store.createRecord("ImportAssistantSettings", {
+  const defaults = {
     auto_import_enabled: config.IMPORT_ASSISTANT_ENABLED !== false,
     import_frequency_hours: config.IMPORT_ASSISTANT_DEFAULT_FREQUENCY_HOURS || 6,
     max_items_per_run: config.IMPORT_ASSISTANT_MAX_PER_RUN || 100,
-    auto_publish_enabled: Boolean(config.IMPORT_ASSISTANT_AUTO_PUBLISH)
-  }, "system");
+    auto_publish_enabled: Boolean(config.IMPORT_ASSISTANT_AUTO_PUBLISH),
+    default_source_id: "",
+    default_provider_key: "",
+    default_category_filter: "pune",
+    default_country_filter: "",
+    default_profession_filter: "shofer, pastrim, depo, magazin, ndertim, ndërtim, mekanik, elektricist, elektriçist, hidraulik, kujdestar, siguri, shperndarje, shpërndarje, bujqesi, bujqësi, fabrike, fabrikë, bojaxhi, furre, furrë, pasticeri",
+    default_excluded_keywords: "senior, manager, director, professor, teacher, research, phd, software, developer, data scientist, consultant",
+    min_relevance_score: 45,
+    max_risk_score: 70
+  };
+  if (existing) return { ...defaults, ...existing };
+  return store.createRecord("ImportAssistantSettings", defaults, "system");
 }
 
 async function ensureDefaultSources(store) {
@@ -56,7 +65,32 @@ function shouldUseSource(sourceId, source) {
   return !sourceId || source.id === sourceId || source.provider_key === sourceId;
 }
 
-async function runImport({ store, config, sourceId = "", maxItems, requestedBy = "system", force = false } = {}) {
+function applyRuntimeOptions(source = {}, options = {}) {
+  const parserConfig = {
+    ...(source.parser_config || {}),
+  };
+  for (const key of ["profession_filter", "excluded_keywords", "category_filter", "country_filter"]) {
+    if (options[key]) parserConfig[key] = options[key];
+  }
+  return {
+    ...source,
+    category_filter: options.category_filter || source.category_filter,
+    country_filter: options.country_filter || source.country_filter,
+    profession_filter: options.profession_filter || source.profession_filter,
+    excluded_keywords: options.excluded_keywords || source.excluded_keywords,
+    parser_config: parserConfig,
+  };
+}
+
+function passesRuntimeThresholds(normalized = {}, options = {}) {
+  const minRelevance = Number(options.min_relevance_score || 0);
+  const maxRisk = Number(options.max_risk_score || 100);
+  if (minRelevance && Number(normalized.relevance_score || 0) < minRelevance) return false;
+  if (Number(normalized.risk_score || 0) > maxRisk) return false;
+  return true;
+}
+
+async function runImport({ store, config, sourceId = "", maxItems, requestedBy = "system", force = false, options = {} } = {}) {
   if (running && !force) return { success: false, status: "locked", message: "Importimi është duke u ekzekutuar." };
   running = true;
   const startedAt = now();
@@ -70,7 +104,8 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
     const settings = await ensureDefaultSettings(store, config);
     const sources = (await ensureDefaultSources(store))
       .filter((source) => source.is_active !== false)
-      .filter((source) => shouldUseSource(sourceId, source));
+      .filter((source) => shouldUseSource(sourceId, source))
+      .map((source) => applyRuntimeOptions(source, options));
     const limit = Math.max(1, Number(maxItems || settings.max_items_per_run || config.IMPORT_ASSISTANT_MAX_PER_RUN || 100));
     const existingImported = await store.allRecords("ImportedPost");
     const existingJobs = await store.allRecords("Job");
@@ -97,6 +132,9 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
         let duplicateCount = 0;
         for (const raw of rawItems.slice(0, limit)) {
           const normalized = await normalizeImportedItem(raw, source);
+          if (!passesRuntimeThresholds(normalized, options)) {
+            continue;
+          }
           const duplicate = isDuplicateImportedItem(
             normalized,
             [...existingImported, ...createdItems],
@@ -142,6 +180,7 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
             listing_type: normalized.item_type === "job" ? "ofroj" : "tjeter",
             profession: normalized.profession,
             country: normalized.country || normalized.original_country,
+            region: normalized.region,
             city: normalized.city || normalized.original_city,
             salary: normalized.original_salary,
             contact_info: JSON.stringify(normalized.contact_methods || []),
