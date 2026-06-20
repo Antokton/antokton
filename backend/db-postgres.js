@@ -234,8 +234,12 @@ CREATE TABLE IF NOT EXISTS import_logs (
   fetched_count INTEGER NOT NULL DEFAULT 0,
   created_count INTEGER NOT NULL DEFAULT 0,
   duplicate_count INTEGER NOT NULL DEFAULT 0,
+  skipped_count INTEGER NOT NULL DEFAULT 0,
   rejected_count INTEGER NOT NULL DEFAULT 0,
   error_count INTEGER NOT NULL DEFAULT 0,
+  target_new_count INTEGER DEFAULT 20,
+  queries_tried JSONB DEFAULT '[]'::jsonb,
+  countries_tried JSONB DEFAULT '[]'::jsonb,
   status TEXT,
   error_message TEXT
 );
@@ -267,6 +271,10 @@ ALTER TABLE imported_sources ADD COLUMN IF NOT EXISTS login_required BOOLEAN NOT
 ALTER TABLE imported_items ADD COLUMN IF NOT EXISTS original_id TEXT;
 ALTER TABLE imported_items ADD COLUMN IF NOT EXISTS original_published_at TEXT;
 ALTER TABLE import_assistant_settings ADD COLUMN IF NOT EXISTS min_new_items_per_run INTEGER DEFAULT 20;
+ALTER TABLE import_logs ADD COLUMN IF NOT EXISTS skipped_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE import_logs ADD COLUMN IF NOT EXISTS target_new_count INTEGER DEFAULT 20;
+ALTER TABLE import_logs ADD COLUMN IF NOT EXISTS queries_tried JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE import_logs ADD COLUMN IF NOT EXISTS countries_tried JSONB DEFAULT '[]'::jsonb;
 `;
 
 async function initializeAsync() {

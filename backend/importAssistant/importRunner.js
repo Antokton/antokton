@@ -169,6 +169,13 @@ function providerIsConfigured(providerKey = "", config = {}) {
   return true;
 }
 
+function providerMissingReason(providerKey = "") {
+  if (providerKey === "adzuna") return "ADZUNA_APP_ID/ADZUNA_APP_KEY mungon; u kalua te burimet e tjera.";
+  if (providerKey === "jooble") return "JOOBLE_API_KEY mungon; u kalua te burimet e tjera.";
+  if (providerKey === "eures") return "EURES_API_KEY mungon; u kalua te burimet e tjera.";
+  return "Provider nuk është i konfiguruar; u kalua te burimet e tjera.";
+}
+
 function applyRuntimeOptions(source = {}, options = {}) {
   const existingParserConfig = parserConfig(source);
   const nextParserConfig = {
@@ -399,12 +406,16 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
     const sources = allSources
       .filter((source) => shouldUseSource(sourceId, source))
       .filter((source) => shouldCrawlSource(source, { manual: manualRun, selected: selectedSourceRun }))
-      .filter((source) => providerIsConfigured(source.provider_key || "custom", config) || selectedSourceRun)
       .map((source) => applyRuntimeOptions(source, options));
-    const limit = Math.max(1, Number(maxItems || settings.max_items_per_run || config.IMPORT_ASSISTANT_MAX_PER_RUN || 100));
     const minNewItems = Math.max(0, Number(options.min_new_items_per_run || settings.min_new_items_per_run || config.IMPORT_ASSISTANT_MIN_NEW_PER_RUN || DEFAULT_MIN_NEW_PER_RUN));
+    const requestedLimit = Number(maxItems || settings.max_items_per_run || config.IMPORT_ASSISTANT_MAX_PER_RUN || 100);
+    const limit = Math.max(1, minNewItems || 0, requestedLimit);
     const existingImported = await store.allRecords("ImportedPost");
     const existingJobs = await store.allRecords("Job");
+    const runnableSourceCount = Math.max(1, sources.filter((source) => providerIsConfigured(source.provider_key || "custom", config) || selectedSourceRun).length);
+    const perSourceTargetNew = selectedSourceRun
+      ? limit
+      : Math.max(1, Math.ceil((minNewItems || limit) / Math.min(runnableSourceCount, 4)));
 
     for (const source of sources) {
       const providerKey = source.provider_key || "custom";
@@ -425,6 +436,18 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
         status: "running"
       };
       let logRecord = await store.createRecord("ImportLog", logBase, requestedBy);
+      if (!providerIsConfigured(providerKey, config) && !selectedSourceRun) {
+        skippedTotal += 1;
+        logRecord = await store.updateRecord("ImportLog", logRecord.id, {
+          finished_at: now(),
+          skipped_count: 1,
+          target_new_count: minNewItems,
+          status: "skipped",
+          error_message: providerMissingReason(providerKey)
+        });
+        logs.push(logRecord);
+        continue;
+      }
       try {
         let createdCount = 0;
         let duplicateCount = 0;
@@ -436,6 +459,7 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
         const perAttemptLimit = Math.max(5, Math.min(limit, Math.ceil(limit / Math.max(1, Math.min(attempts.length, 8)))));
         for (const attempt of attempts) {
           if (createdItems.length >= limit) break;
+          if (!selectedSourceRun && createdCount >= perSourceTargetNew) break;
           if (minNewItems && createdItems.length >= minNewItems && !selectedSourceRun) break;
           if (attempt.query) queriesTried.add(attempt.query);
           if (attempt.country) countriesTried.add(attempt.country);
@@ -457,6 +481,7 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
           fetchedTotal += rawItems.length;
           for (const raw of rawItems.slice(0, perAttemptLimit)) {
             if (createdItems.length >= limit) break;
+            if (!selectedSourceRun && createdCount >= perSourceTargetNew) break;
             const processed = await processRawImportedItem({
               raw,
               source,

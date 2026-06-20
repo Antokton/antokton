@@ -277,8 +277,12 @@ CREATE TABLE IF NOT EXISTS import_logs (
   fetched_count INTEGER NOT NULL DEFAULT 0,
   created_count INTEGER NOT NULL DEFAULT 0,
   duplicate_count INTEGER NOT NULL DEFAULT 0,
+  skipped_count INTEGER NOT NULL DEFAULT 0,
   rejected_count INTEGER NOT NULL DEFAULT 0,
   error_count INTEGER NOT NULL DEFAULT 0,
+  target_new_count INTEGER DEFAULT 20,
+  queries_tried TEXT,
+  countries_tried TEXT,
   status TEXT,
   error_message TEXT
 );
@@ -318,6 +322,10 @@ addColumnIfMissing("imported_sources", "login_required", "INTEGER NOT NULL DEFAU
 addColumnIfMissing("imported_items", "original_id", "TEXT");
 addColumnIfMissing("imported_items", "original_published_at", "TEXT");
 addColumnIfMissing("import_assistant_settings", "min_new_items_per_run", "INTEGER DEFAULT 20");
+addColumnIfMissing("import_logs", "skipped_count", "INTEGER DEFAULT 0");
+addColumnIfMissing("import_logs", "target_new_count", "INTEGER DEFAULT 20");
+addColumnIfMissing("import_logs", "queries_tried", "TEXT");
+addColumnIfMissing("import_logs", "countries_tried", "TEXT");
 
 const statements = {
   insertEntity: db.prepare(`

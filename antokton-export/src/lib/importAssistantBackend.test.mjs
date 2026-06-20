@@ -202,6 +202,84 @@ test("import fallback continues after duplicate-only first query", async () => {
   }
 });
 
+test("import run logs unconfigured API providers as skipped and continues to next source", async () => {
+  const records = { ImportedSource: [], ImportAssistantSettings: [], ImportedPost: [], Job: [], ImportLog: [] };
+  const store = {
+    async allRecords(entity) { return records[entity] || []; },
+    async createRecord(entity, data) {
+      const row = { id: `${entity}-${records[entity].length + 1}`, created_date: new Date().toISOString(), ...data };
+      records[entity].push(row);
+      return row;
+    },
+    async updateRecord(entity, id, patch) {
+      const row = records[entity].find((item) => item.id === id);
+      Object.assign(row, patch);
+      return row;
+    },
+    async deleteRecord() { return true; }
+  };
+  records.ImportedSource.push(
+    {
+      id: "adzuna-source",
+      name: "Adzuna",
+      provider_key: "adzuna",
+      source_type: "API",
+      crawl_method: "api",
+      import_mode: "automatic",
+      is_active: true,
+      enabled: true,
+      crawl_frequency_minutes: 360,
+      category_filter: "pune"
+    },
+    {
+      id: "arbeitnow-source",
+      name: "Arbeitnow",
+      provider_key: "arbeitnow",
+      source_type: "API",
+      crawl_method: "api",
+      import_mode: "automatic",
+      is_active: true,
+      enabled: true,
+      crawl_frequency_minutes: 360,
+      category_filter: "pune",
+      country_filter: "Germany",
+      profession_filter: "warehouse"
+    }
+  );
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    async json() {
+      return {
+        data: [{
+          title: "Warehouse operative",
+          description: "Warehouse logistics job",
+          company_name: "Demo Logistics",
+          location: "Berlin, Germany",
+          slug: "warehouse-operative",
+          url: "https://example.test/jobs/warehouse-operative",
+          created_at: 1760000000
+        }],
+        links: {}
+      };
+    }
+  });
+  try {
+    const result = await runImport({
+      store,
+      config: { IMPORT_ASSISTANT_MIN_NEW_PER_RUN: 1 },
+      requestedBy: "test",
+      options: { manual_run: true, min_new_items_per_run: 1, min_relevance_score: 0, max_risk_score: 100 }
+    });
+    assert.equal(result.created_count, 1);
+    assert.equal(result.skipped_count, 1);
+    assert.equal(records.ImportLog.some((log) => log.provider_key === "adzuna" && log.status === "skipped"), true);
+    assert.equal(records.ImportedPost.some((item) => item.status === "pending_review" && item.source_url === "https://example.test/jobs/warehouse-operative"), true);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test("arbeitnow provider expands Albanian import keywords before filtering", async () => {
   const originalFetch = global.fetch;
   global.fetch = async () => ({

@@ -38,6 +38,7 @@ const STATUS_LABELS = {
   partial_success: "Sukses i pjesshëm",
   duplicate_only: "Vetëm dublikata",
   no_results: "Pa rezultate",
+  skipped: "U kapërcye",
   error: "Gabim",
   running: "Duke punuar",
 };
