@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { base44 } from "@/api/antoktonClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,23 @@ const TRUST_LEVELS = Object.keys(TRUST_LEVEL_LABELS);
 const SOURCE_TYPES = Object.keys(SOURCE_TYPE_LABELS);
 const IMPORT_MODES = Object.keys(IMPORT_MODE_LABELS);
 const CRAWL_FREQUENCIES = Object.keys(CRAWL_FREQUENCY_MINUTE_LABELS);
+const COLUMN_STORAGE_KEY = "antokton.importSources.columns.v1";
+
+const DEFAULT_COLUMNS = [
+  { key: "name", label: "Emri", width: 220 },
+  { key: "source_type", label: "Lloji", width: 150 },
+  { key: "import_mode", label: "Mënyra", width: 130 },
+  { key: "provider_key", label: "Provider", width: 160 },
+  { key: "url", label: "URL", width: 260 },
+  { key: "frequency", label: "Frekuenca", width: 130 },
+  { key: "source_group", label: "Grupi", width: 150 },
+  { key: "parser_type", label: "Parser", width: 130 },
+  { key: "filters", label: "Kategori/Profesion", width: 190 },
+  { key: "trust_level", label: "Besueshmëria", width: 150 },
+  { key: "status", label: "Statusi", width: 110 },
+];
+
+const columnWidth = (column) => Math.max(90, Number(column.width || 140));
 
 const frequencyValue = (source = {}) => Number(source.crawl_frequency_minutes ?? (Number(source.crawl_frequency_hours ?? 6) * 60));
 const sourceIsActive = (source = {}) => {
@@ -50,12 +67,40 @@ export default function ImportSources() {
   const [editingId, setEditingId] = useState("");
   const [editForm, setEditForm] = useState({});
   const [busyId, setBusyId] = useState("");
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
+  const [columns, setColumns] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(COLUMN_STORAGE_KEY) || "null");
+      if (Array.isArray(saved) && saved.length) {
+        const savedKeys = new Set(saved.map((column) => column.key));
+        const merged = saved
+          .map((column) => DEFAULT_COLUMNS.find((item) => item.key === column.key) ? { ...DEFAULT_COLUMNS.find((item) => item.key === column.key), ...column } : null)
+          .filter(Boolean);
+        DEFAULT_COLUMNS.forEach((column) => {
+          if (!savedKeys.has(column.key)) merged.push(column);
+        });
+        return merged;
+      }
+    } catch {
+      // Ignore corrupted local layout settings and fall back to the default order.
+    }
+    return DEFAULT_COLUMNS;
+  });
   const { data: sources = [], isLoading } = useQuery({
     queryKey: ["importAssistant", "sources"],
     queryFn: () => base44.importAssistant.sources(),
   });
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["importAssistant", "sources"] });
+  useEffect(() => {
+    localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(columns));
+  }, [columns]);
+
+  useEffect(() => {
+    setSelectedIds((current) => current.filter((id) => sources.some((source) => source.id === id)));
+  }, [sources]);
+
   const updateDraft = (key, value) => setDraft((current) => ({ ...current, [key]: value }));
   const startEdit = (source) => {
     setEditingId(source.id);
@@ -123,6 +168,121 @@ export default function ImportSources() {
     }
   };
 
+  const sortValue = (source, key) => {
+    if (key === "url") return source.jobs_url || source.category_url || source.source_url || source.base_url || "";
+    if (key === "frequency") return frequencyValue(source);
+    if (key === "filters") return `${source.category_filter || ""} ${source.profession_filter || ""} ${source.country_filter || ""}`;
+    if (key === "status") return sourceIsActive(source) ? "1" : "0";
+    return source[key] || "";
+  };
+
+  const sortedSources = useMemo(() => {
+    const rows = [...sources];
+    rows.sort((a, b) => {
+      const left = sortValue(a, sortConfig.key);
+      const right = sortValue(b, sortConfig.key);
+      const result = String(left).localeCompare(String(right), "sq", { numeric: true, sensitivity: "base" });
+      return sortConfig.direction === "asc" ? result : -result;
+    });
+    return rows;
+  }, [sources, sortConfig]);
+
+  const allVisibleSelected = sortedSources.length > 0 && sortedSources.every((source) => selectedIds.includes(source.id));
+  const selectedCount = selectedIds.length;
+
+  const toggleSort = (key) => {
+    setSortConfig((current) => ({
+      key,
+      direction: current.key === key && current.direction === "asc" ? "desc" : "asc",
+    }));
+  };
+
+  const moveColumn = (key, direction) => {
+    setColumns((current) => {
+      const index = current.findIndex((column) => column.key === key);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
+      const next = [...current];
+      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      return next;
+    });
+  };
+
+  const resizeColumn = (key, delta) => {
+    setColumns((current) => current.map((column) => column.key === key ? { ...column, width: Math.max(90, columnWidth(column) + delta) } : column));
+  };
+
+  const resetColumns = () => setColumns(DEFAULT_COLUMNS);
+
+  const toggleRow = (id) => {
+    setSelectedIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  };
+
+  const toggleAllVisible = () => {
+    setSelectedIds((current) => {
+      if (allVisibleSelected) return current.filter((id) => !sortedSources.some((source) => source.id === id));
+      return Array.from(new Set([...current, ...sortedSources.map((source) => source.id)]));
+    });
+  };
+
+  const bulkSetEnabled = async (enabled) => {
+    const selectedSources = sources.filter((source) => selectedIds.includes(source.id));
+    if (!selectedSources.length) return;
+    setBusyId("bulk");
+    try {
+      await Promise.all(selectedSources.map((source) => base44.importAssistant.updateSource(source.id, { enabled, is_active: enabled })));
+      setSelectedIds([]);
+      refresh();
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const bulkDelete = async () => {
+    const selectedSources = sources.filter((source) => selectedIds.includes(source.id) && source.is_editable_by_admin !== false);
+    if (!selectedSources.length) return alert("Burimet e zgjedhura nuk mund të fshihen ose nuk ka zgjedhje.");
+    if (!confirm(`Të fshihen ${selectedSources.length} burime të zgjedhura?`)) return;
+    setBusyId("bulk");
+    try {
+      await Promise.all(selectedSources.map((source) => base44.importAssistant.deleteSource(source.id)));
+      setSelectedIds([]);
+      refresh();
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const renderEditCell = (source, key) => {
+    const selectClass = "h-8 bg-white/5 border-white/10 text-white";
+    if (key === "name") return <Input value={editForm.name} onChange={(e) => updateEdit("name", e.target.value)} className="h-8 bg-white/5 border-white/10 text-white" />;
+    if (key === "source_type") return <Select value={editForm.source_type} onValueChange={(v) => updateEdit("source_type", v)}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{SOURCE_TYPES.map((value) => <SelectItem key={value} value={value} className="text-white">{SOURCE_TYPE_LABELS[value]}</SelectItem>)}</SelectContent></Select>;
+    if (key === "import_mode") return <Select value={editForm.import_mode} onValueChange={(v) => updateEdit("import_mode", v)}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{IMPORT_MODES.map((value) => <SelectItem key={value} value={value} className="text-white">{IMPORT_MODE_LABELS[value]}</SelectItem>)}</SelectContent></Select>;
+    if (key === "provider_key") return <Select value={editForm.provider_key} onValueChange={(v) => updateEdit("provider_key", v)}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{PROVIDERS.map((value) => <SelectItem key={value} value={value} className="text-white">{PROVIDER_LABELS[value]}</SelectItem>)}</SelectContent></Select>;
+    if (key === "url") return <div className="space-y-1"><Input value={editForm.source_url} onChange={(e) => { updateEdit("source_url", e.target.value); updateEdit("base_url", e.target.value); }} placeholder="URL" className="h-8 bg-white/5 border-white/10 text-white" /><Input value={editForm.jobs_url} onChange={(e) => updateEdit("jobs_url", e.target.value)} placeholder="Jobs URL" className="h-8 bg-white/5 border-white/10 text-white" /><Input value={editForm.category_url} onChange={(e) => updateEdit("category_url", e.target.value)} placeholder="Category URL" className="h-8 bg-white/5 border-white/10 text-white" /></div>;
+    if (key === "frequency") return <Select value={String(editForm.crawl_frequency_minutes ?? 360)} onValueChange={(v) => updateEdit("crawl_frequency_minutes", Number(v))}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{CRAWL_FREQUENCIES.map((value) => <SelectItem key={value} value={value} className="text-white">{CRAWL_FREQUENCY_MINUTE_LABELS[value]}</SelectItem>)}</SelectContent></Select>;
+    if (key === "source_group") return <Select value={editForm.source_group} onValueChange={(v) => updateEdit("source_group", v)}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{SOURCE_GROUPS.map((value) => <SelectItem key={value} value={value} className="text-white">{SOURCE_GROUP_LABELS[value]}</SelectItem>)}</SelectContent></Select>;
+    if (key === "parser_type") return <Select value={editForm.parser_type} onValueChange={(v) => updateEdit("parser_type", v)}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{PARSER_TYPES.map((value) => <SelectItem key={value} value={value} className="text-white">{PARSER_TYPE_LABELS[value]}</SelectItem>)}</SelectContent></Select>;
+    if (key === "filters") return <div className="space-y-1"><Input value={editForm.category_filter} onChange={(e) => updateEdit("category_filter", e.target.value)} placeholder="Kategori" className="h-8 bg-white/5 border-white/10 text-white" /><Input value={editForm.profession_filter} onChange={(e) => updateEdit("profession_filter", e.target.value)} placeholder="Profesion" className="h-8 bg-white/5 border-white/10 text-white" /><Input value={editForm.country_filter} onChange={(e) => updateEdit("country_filter", e.target.value)} placeholder="Vend" className="h-8 bg-white/5 border-white/10 text-white" /><Input value={editForm.language} onChange={(e) => updateEdit("language", e.target.value)} placeholder="Gjuha" className="h-8 bg-white/5 border-white/10 text-white" /><Input value={editForm.notes} onChange={(e) => updateEdit("notes", e.target.value)} placeholder="Shënime" className="h-8 bg-white/5 border-white/10 text-white" /></div>;
+    if (key === "trust_level") return <Select value={editForm.trust_level} onValueChange={(v) => updateEdit("trust_level", v)}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{TRUST_LEVELS.map((value) => <SelectItem key={value} value={value} className="text-white">{TRUST_LEVEL_LABELS[value]}</SelectItem>)}</SelectContent></Select>;
+    if (key === "status") return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${sourceIsActive(editForm) ? "bg-emerald-400/15 text-emerald-200" : "bg-red-400/15 text-red-200"}`}>{sourceIsActive(editForm) ? "Ndezur" : "Fikur"}</span>;
+    return null;
+  };
+
+  const renderViewCell = (source, key) => {
+    if (key === "name") return <span className="font-semibold text-white">{source.name}</span>;
+    if (key === "source_type") return SOURCE_TYPE_LABELS[source.source_type || source.parser_type] || source.source_type || "—";
+    if (key === "import_mode") return IMPORT_MODE_LABELS[source.import_mode] || source.import_mode || "—";
+    if (key === "provider_key") return PROVIDER_LABELS[source.provider_key] || source.provider_key || "—";
+    if (key === "url") return <span className="block truncate" title={source.jobs_url || source.category_url || source.source_url || source.base_url || ""}>{source.jobs_url || source.category_url || source.source_url || source.base_url || "—"}</span>;
+    if (key === "frequency") return CRAWL_FREQUENCY_MINUTE_LABELS[frequencyValue(source)] || `Çdo ${frequencyValue(source)} min`;
+    if (key === "source_group") return SOURCE_GROUP_LABELS[source.source_group] || source.source_group || "—";
+    if (key === "parser_type") return PARSER_TYPE_LABELS[source.parser_type] || source.parser_type || "—";
+    if (key === "filters") return <div><div>{source.category_filter || "Çdo kategori"}</div><div className="text-white/45">{source.profession_filter || "Çdo profesion"}</div><div className="text-white/35">{source.country_filter || "Çdo vend"}</div></div>;
+    if (key === "trust_level") return TRUST_LEVEL_LABELS[source.trust_level] || "I panjohur";
+    if (key === "status") return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${sourceIsActive(source) ? "bg-emerald-400/15 text-emerald-200" : "bg-red-400/15 text-red-200"}`}>{sourceIsActive(source) ? "Ndezur" : "Fikur"}</span>;
+    return null;
+  };
+
   if (isLoading) return <div className="py-10 text-center text-white/50">Duke ngarkuar burimet...</div>;
 
   return (
@@ -188,87 +348,109 @@ export default function ImportSources() {
           <Input value={draft.category_url} onChange={(e) => updateDraft("category_url", e.target.value)} placeholder="Category URL (opsional)" className="bg-white/5 border-white/10 text-white" />
           <Input value={draft.language} onChange={(e) => updateDraft("language", e.target.value)} placeholder="Gjuha p.sh. sq/de/en" className="bg-white/5 border-white/10 text-white" />
           <Input value={draft.notes} onChange={(e) => updateDraft("notes", e.target.value)} placeholder="Shënime për burimin" className="bg-white/5 border-white/10 text-white md:col-span-2" />
-          <button onClick={createSource} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#8ff0cf] px-3 py-2 text-sm font-semibold text-[#06111f]"><Plus className="w-4 h-4" /> Shto burim</button>
+          <button type="button" onClick={createSource} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#8ff0cf] px-3 py-2 text-sm font-semibold text-[#06111f]"><Plus className="w-4 h-4" /> Shto burim</button>
         </div>
       </section>
 
-      <section className="overflow-x-auto rounded-xl border border-white/10">
-        <table className="w-full text-xs">
-          <thead className="bg-white/5 text-white/45">
-            <tr><th className="text-left p-3">Emri</th><th>Lloji</th><th>Mënyra</th><th>Provider</th><th>URL</th><th>Frekuenca</th><th>Grupi</th><th>Parser</th><th>Kategori/Profesion</th><th>Besueshmëria</th><th>Statusi</th><th>Veprime</th></tr>
-          </thead>
-          <tbody>
-            {sources.map((source) => (
-              <tr key={source.id} className="border-t border-white/5 text-white/75 align-top">
-                {editingId === source.id ? (
-                  <>
-                    <td className="p-3"><Input value={editForm.name} onChange={(e) => updateEdit("name", e.target.value)} className="h-8 bg-white/5 border-white/10 text-white" /></td>
-                    <td><Select value={editForm.source_type} onValueChange={(v) => updateEdit("source_type", v)}><SelectTrigger className="h-8 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{SOURCE_TYPES.map((value) => <SelectItem key={value} value={value} className="text-white">{SOURCE_TYPE_LABELS[value]}</SelectItem>)}</SelectContent></Select></td>
-                    <td><Select value={editForm.import_mode} onValueChange={(v) => updateEdit("import_mode", v)}><SelectTrigger className="h-8 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{IMPORT_MODES.map((value) => <SelectItem key={value} value={value} className="text-white">{IMPORT_MODE_LABELS[value]}</SelectItem>)}</SelectContent></Select></td>
-                    <td><Select value={editForm.provider_key} onValueChange={(v) => updateEdit("provider_key", v)}><SelectTrigger className="h-8 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{PROVIDERS.map((value) => <SelectItem key={value} value={value} className="text-white">{PROVIDER_LABELS[value]}</SelectItem>)}</SelectContent></Select></td>
-                    <td className="space-y-1 p-2"><Input value={editForm.source_url} onChange={(e) => { updateEdit("source_url", e.target.value); updateEdit("base_url", e.target.value); }} placeholder="URL" className="h-8 min-w-[220px] bg-white/5 border-white/10 text-white" /><Input value={editForm.jobs_url} onChange={(e) => updateEdit("jobs_url", e.target.value)} placeholder="Jobs URL" className="h-8 min-w-[220px] bg-white/5 border-white/10 text-white" /><Input value={editForm.category_url} onChange={(e) => updateEdit("category_url", e.target.value)} placeholder="Category URL" className="h-8 min-w-[220px] bg-white/5 border-white/10 text-white" /></td>
-                    <td><Select value={String(editForm.crawl_frequency_minutes ?? 360)} onValueChange={(v) => updateEdit("crawl_frequency_minutes", Number(v))}><SelectTrigger className="h-8 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{CRAWL_FREQUENCIES.map((value) => <SelectItem key={value} value={value} className="text-white">{CRAWL_FREQUENCY_MINUTE_LABELS[value]}</SelectItem>)}</SelectContent></Select></td>
-                    <td><Select value={editForm.source_group} onValueChange={(v) => updateEdit("source_group", v)}><SelectTrigger className="h-8 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{SOURCE_GROUPS.map((value) => <SelectItem key={value} value={value} className="text-white">{SOURCE_GROUP_LABELS[value]}</SelectItem>)}</SelectContent></Select></td>
-                    <td><Select value={editForm.parser_type} onValueChange={(v) => updateEdit("parser_type", v)}><SelectTrigger className="h-8 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{PARSER_TYPES.map((value) => <SelectItem key={value} value={value} className="text-white">{PARSER_TYPE_LABELS[value]}</SelectItem>)}</SelectContent></Select></td>
-                    <td className="space-y-1 p-2"><Input value={editForm.category_filter} onChange={(e) => updateEdit("category_filter", e.target.value)} placeholder="Kategori" className="h-8 bg-white/5 border-white/10 text-white" /><Input value={editForm.profession_filter} onChange={(e) => updateEdit("profession_filter", e.target.value)} placeholder="Profesion" className="h-8 bg-white/5 border-white/10 text-white" /><Input value={editForm.country_filter} onChange={(e) => updateEdit("country_filter", e.target.value)} placeholder="Vend" className="h-8 bg-white/5 border-white/10 text-white" /><Input value={editForm.language} onChange={(e) => updateEdit("language", e.target.value)} placeholder="Gjuha" className="h-8 bg-white/5 border-white/10 text-white" /><Input value={editForm.notes} onChange={(e) => updateEdit("notes", e.target.value)} placeholder="Shënime" className="h-8 bg-white/5 border-white/10 text-white" /></td>
-                    <td><Select value={editForm.trust_level} onValueChange={(v) => updateEdit("trust_level", v)}><SelectTrigger className="h-8 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{TRUST_LEVELS.map((value) => <SelectItem key={value} value={value} className="text-white">{TRUST_LEVEL_LABELS[value]}</SelectItem>)}</SelectContent></Select></td>
-                  </>
-                ) : (
-                  <>
-                    <td className="p-3 font-semibold text-white">{source.name}</td>
-                    <td>{SOURCE_TYPE_LABELS[source.source_type || source.parser_type] || source.source_type || "—"}</td>
-                    <td>{IMPORT_MODE_LABELS[source.import_mode] || source.import_mode || "—"}</td>
-                    <td>{PROVIDER_LABELS[source.provider_key] || source.provider_key}</td>
-                    <td className="max-w-[260px] truncate">{source.jobs_url || source.category_url || source.source_url || source.base_url || "—"}</td>
-                    <td>{CRAWL_FREQUENCY_MINUTE_LABELS[frequencyValue(source)] || `Çdo ${frequencyValue(source)} min`}</td>
-                    <td>{SOURCE_GROUP_LABELS[source.source_group] || source.source_group || "—"}</td>
-                    <td>{PARSER_TYPE_LABELS[source.parser_type] || source.parser_type || "—"}</td>
-                    <td>
-                      <div>{source.category_filter || "Çdo kategori"}</div>
-                      <div className="text-white/45">{source.profession_filter || "Çdo profesion"}</div>
-                      <div className="text-white/35">{source.country_filter || "Çdo vend"}</div>
-                    </td>
-                    <td>{TRUST_LEVEL_LABELS[source.trust_level] || "I panjohur"}</td>
-                  </>
-                )}
-                <td>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${sourceIsActive(source) ? "bg-emerald-400/15 text-emerald-200" : "bg-red-400/15 text-red-200"}`}>
-                    {sourceIsActive(source) ? "Ndezur" : "Fikur"}
-                  </span>
-                </td>
-                <td className="p-3">
-                  <div className="flex flex-wrap gap-1.5">
-                    {editingId === source.id ? (
-                      <>
-                        <button onClick={() => saveEdit(source)} disabled={busyId === source.id} className="rounded border border-emerald-300/20 px-2 py-1 text-emerald-200 hover:bg-emerald-300/10">
-                          <Save className="inline w-3 h-3 mr-1" /> Ruaj
-                        </button>
-                        <button onClick={() => { setEditingId(""); setEditForm({}); }} className="rounded border border-white/10 px-2 py-1 hover:bg-white/10">
-                          <X className="inline w-3 h-3 mr-1" /> Anulo
-                        </button>
-                      </>
-                    ) : (
-                      <button onClick={() => startEdit(source)} className="rounded border border-white/10 px-2 py-1 hover:bg-white/10">
-                        <Pencil className="inline w-3 h-3 mr-1" /> Përpuno
+      <section className="rounded-xl border border-white/10">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-white/[0.025] p-3 text-xs text-white/60">
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={toggleAllVisible} className="rounded border border-white/10 px-2 py-1 hover:bg-white/10">
+              {allVisibleSelected ? "Hiq zgjedhjen" : "Zgjidh të gjitha"}
+            </button>
+            {selectedCount > 0 && (
+              <>
+                <span>{selectedCount} burime të zgjedhura</span>
+                <button type="button" disabled={busyId === "bulk"} onClick={() => bulkSetEnabled(true)} className="rounded border border-emerald-300/20 px-2 py-1 text-emerald-200 hover:bg-emerald-300/10 disabled:opacity-50">Ndizi</button>
+                <button type="button" disabled={busyId === "bulk"} onClick={() => bulkSetEnabled(false)} className="rounded border border-amber-300/20 px-2 py-1 text-amber-200 hover:bg-amber-300/10 disabled:opacity-50">Fiki</button>
+                <button type="button" disabled={busyId === "bulk"} onClick={bulkDelete} className="rounded border border-red-400/20 px-2 py-1 text-red-300 hover:bg-red-400/10 disabled:opacity-50">Fshi</button>
+              </>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span>Rendit sipas:</span>
+            <Select value={sortConfig.key} onValueChange={(v) => setSortConfig((current) => ({ ...current, key: v }))}>
+              <SelectTrigger className="h-8 w-[170px] bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10">
+                {columns.map((column) => <SelectItem key={column.key} value={column.key} className="text-white">{column.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <button type="button" onClick={() => setSortConfig((current) => ({ ...current, direction: current.direction === "asc" ? "desc" : "asc" }))} className="rounded border border-white/10 px-2 py-1 hover:bg-white/10">
+              {sortConfig.direction === "asc" ? "Rritës" : "Zbritës"}
+            </button>
+            <button type="button" onClick={resetColumns} className="rounded border border-white/10 px-2 py-1 hover:bg-white/10">Rikthe kolonat</button>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full table-fixed text-xs" style={{ width: columns.reduce((sum, column) => sum + columnWidth(column), 280) + 280 }}>
+            <thead className="bg-white/5 text-white/45">
+              <tr>
+                <th className="sticky left-0 z-20 w-[44px] bg-[#111827] p-3 text-left">
+                  <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} aria-label="Zgjidh të gjitha burimet" />
+                </th>
+                {columns.map((column, index) => (
+                  <th key={column.key} className="relative p-2 text-left align-top" style={{ width: columnWidth(column) }}>
+                    <div className="flex items-start justify-between gap-1">
+                      <button type="button" onClick={() => toggleSort(column.key)} className="min-w-0 truncate text-left font-semibold hover:text-white" title="Rendit sipas kësaj kolone">
+                        {column.label}{sortConfig.key === column.key ? (sortConfig.direction === "asc" ? " ↑" : " ↓") : ""}
                       </button>
-                    )}
-                    <button onClick={() => updateSource(source, { enabled: !sourceIsActive(source), is_active: !sourceIsActive(source) })} className="rounded border border-white/10 px-2 py-1 hover:bg-white/10">
-                      <Save className="inline w-3 h-3 mr-1" /> {sourceIsActive(source) ? "Fike" : "Ndize"}
-                    </button>
-                    <button onClick={() => testSource(source)} disabled={busyId === source.id} className="rounded border border-[#8ff0cf]/20 px-2 py-1 text-[#8ff0cf] hover:bg-[#8ff0cf]/10 disabled:opacity-40">
-                      {busyId === source.id ? <Loader2 className="inline w-3 h-3 mr-1 animate-spin" /> : <Play className="inline w-3 h-3 mr-1" />} Test
-                    </button>
-                    {source.is_editable_by_admin !== false && (
-                      <button onClick={async () => { if (confirm("Ta fshij këtë burim?")) { await base44.importAssistant.deleteSource(source.id); refresh(); } }} className="rounded border border-red-400/20 px-2 py-1 text-red-300 hover:bg-red-400/10">
-                        <Trash2 className="inline w-3 h-3 mr-1" /> Fshi
-                      </button>
-                    )}
-                  </div>
-                </td>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button type="button" disabled={index === 0} onClick={() => moveColumn(column.key, -1)} className="rounded border border-white/10 px-1 text-white/50 hover:text-white disabled:opacity-20">‹</button>
+                        <button type="button" disabled={index === columns.length - 1} onClick={() => moveColumn(column.key, 1)} className="rounded border border-white/10 px-1 text-white/50 hover:text-white disabled:opacity-20">›</button>
+                        <button type="button" onClick={() => resizeColumn(column.key, -30)} className="rounded border border-white/10 px-1 text-white/50 hover:text-white">−</button>
+                        <button type="button" onClick={() => resizeColumn(column.key, 30)} className="rounded border border-white/10 px-1 text-white/50 hover:text-white">+</button>
+                      </div>
+                    </div>
+                  </th>
+                ))}
+                <th className="sticky right-0 z-20 w-[220px] bg-[#111827] p-3 text-left">Veprime</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {sortedSources.map((source) => (
+                <tr key={source.id} className={`border-t border-white/5 text-white/75 align-top hover:bg-white/[0.025] ${selectedIds.includes(source.id) ? "bg-[#8ff0cf]/5" : ""}`}>
+                  <td className="sticky left-0 z-10 bg-[#090f1f] p-3">
+                    <input type="checkbox" checked={selectedIds.includes(source.id)} onChange={() => toggleRow(source.id)} aria-label={`Zgjidh ${source.name}`} />
+                  </td>
+                  {columns.map((column) => (
+                    <td key={`${source.id}-${column.key}`} className="p-3 align-top" style={{ width: columnWidth(column) }}>
+                      {editingId === source.id ? renderEditCell(source, column.key) : renderViewCell(source, column.key)}
+                    </td>
+                  ))}
+                  <td className="sticky right-0 z-10 bg-[#090f1f] p-3 align-top shadow-[-12px_0_18px_rgba(0,0,0,0.22)]">
+                    <div className="flex max-w-[200px] flex-wrap gap-1.5">
+                      {editingId === source.id ? (
+                        <>
+                          <button type="button" onClick={() => saveEdit(source)} disabled={busyId === source.id} className="rounded border border-emerald-300/20 px-2 py-1 text-emerald-200 hover:bg-emerald-300/10 disabled:opacity-50">
+                            <Save className="inline w-3 h-3 mr-1" /> Ruaj
+                          </button>
+                          <button type="button" onClick={() => { setEditingId(""); setEditForm({}); }} className="rounded border border-white/10 px-2 py-1 hover:bg-white/10">
+                            <X className="inline w-3 h-3 mr-1" /> Anulo
+                          </button>
+                        </>
+                      ) : (
+                        <button type="button" onClick={() => startEdit(source)} className="rounded border border-white/10 px-2 py-1 hover:bg-white/10">
+                          <Pencil className="inline w-3 h-3 mr-1" /> Përpuno
+                        </button>
+                      )}
+                      <button type="button" onClick={() => updateSource(source, { enabled: !sourceIsActive(source), is_active: !sourceIsActive(source) })} disabled={busyId === source.id} className="rounded border border-white/10 px-2 py-1 hover:bg-white/10 disabled:opacity-50">
+                        <Save className="inline w-3 h-3 mr-1" /> {sourceIsActive(source) ? "Fike" : "Ndize"}
+                      </button>
+                      <button type="button" onClick={() => testSource(source)} disabled={busyId === source.id || !source.id} className="rounded border border-[#8ff0cf]/20 px-2 py-1 text-[#8ff0cf] hover:bg-[#8ff0cf]/10 disabled:opacity-40">
+                        {busyId === source.id ? <Loader2 className="inline w-3 h-3 mr-1 animate-spin" /> : <Play className="inline w-3 h-3 mr-1" />} Test
+                      </button>
+                      {source.is_editable_by_admin !== false && (
+                        <button type="button" onClick={async () => { if (confirm("Ta fshij këtë burim?")) { await base44.importAssistant.deleteSource(source.id); refresh(); } }} className="rounded border border-red-400/20 px-2 py-1 text-red-300 hover:bg-red-400/10">
+                          <Trash2 className="inline w-3 h-3 mr-1" /> Fshi
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );
