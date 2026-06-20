@@ -14,6 +14,7 @@ const { scoreEthical } = require(path.join(root, "backend/importAssistant/scoreE
 const { detectContactLanguage } = require(path.join(root, "backend/importAssistant/detectContactLanguage.js"));
 const { generateAlbanianListingTitle } = require(path.join(root, "backend/importAssistant/generateAlbanianListingTitle.js"));
 const { runImport } = require(path.join(root, "backend/importAssistant/importRunner.js"));
+const { buildExpiryFields, parseImportedExpiry, getAutomaticExpiryDays } = require(path.join(root, "backend/importAssistant/expiry.js"));
 
 test("generateAlbanianListingTitle creates natural Albanian title", () => {
   assert.equal(generateAlbanianListingTitle({ original_title: "Truck Driver CE wanted" }), "Kërkohet shofer CE");
@@ -46,6 +47,18 @@ test("normalization creates contact methods and pending review item", async () =
   assert.equal(item.contact_methods.some((method) => method.type === "phone"), true);
   assert.equal(item.contact_methods.some((method) => method.type === "email"), true);
   assert.ok(item.final_score > 0);
+});
+
+test("import expiry uses original deadline or automatic category defaults", () => {
+  const original = parseImportedExpiry({
+    original_description: "Afati i aplikimit: 25.07.2026"
+  });
+  assert.match(original, /^2026-07-25/);
+
+  const jobExpiry = buildExpiryFields({ category: "pune" }, { now: new Date("2026-06-20T00:00:00Z") });
+  assert.match(jobExpiry.expires_at, /^2026-07-20/);
+  assert.equal(jobExpiry.expiry_source, "automatic");
+  assert.equal(getAutomaticExpiryDays({ category: "pazar", pazar_category: "makina", listing_type: "shitje" }), 45);
 });
 
 test("deduplication catches source URL and similar title", () => {

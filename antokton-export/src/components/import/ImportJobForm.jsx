@@ -10,6 +10,7 @@ import LocationPicker from "@/components/job/LocationPicker";
 import ImageFocusControls from "@/components/media/ImageFocusControls";
 import ImageFocusPreview from "@/components/media/ImageFocusPreview";
 import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, updateImageFocus } from "@/lib/imageFocus";
+import { buildExpiryFields } from "@/lib/expiry";
 
 const CONTRACT_TYPES = [
   { value: "full-time", label: "Full-time" },
@@ -630,6 +631,11 @@ ${text || importedData.description || importedData.title || ""}`;
     if (phoneNumber && !isValidInternationalPhone(phoneNumber)) {
       throw new Error(getInternationalPhoneError("Numri i telefonit"));
     }
+    const expiry = buildExpiryFields({
+      ...prepared,
+      category: prepared.category || "pune",
+      job_type: prepared.job_type || prepared.listing_type || "ofroj",
+    });
     await base44.entities.Job.create({
       ...prepared,
       poster_name: platformPosterName || undefined,
@@ -653,6 +659,7 @@ ${text || importedData.description || importedData.title || ""}`;
       status,
       moderation_status: status === "approved" ? "approved" : "pending",
       is_halal_compliant: Number(prepared.hallall_score ?? prepared.ethical_score ?? 0) >= 60,
+      ...expiry,
     });
   };
 

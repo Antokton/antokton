@@ -1,5 +1,6 @@
 const { runImport, ensureDefaultSettings, ensureDefaultSources } = require("./importRunner");
 const { translateContactMessage } = require("./translateImportedItem");
+const { buildExpiryFields } = require("./expiry");
 
 function normalizeSourcePayload(body = {}) {
   const frequencyMinutes = Number(
@@ -48,6 +49,7 @@ function mapImportedToJob(post = {}, userEmail = "") {
   const email = contactMethods.find((m) => m.type === "email")?.value || "";
   const website = contactMethods.find((m) => ["website", "application_form"].includes(m.type))?.value || "";
   const title = post.title || post.shqip_title || post.edited_text?.split(/\r?\n/).find(Boolean) || "Njoftim i importuar";
+  const expiry = buildExpiryFields(post);
   return {
     title,
     description: post.edited_text || post.shqip_summary || post.original_text || "",
@@ -78,6 +80,7 @@ function mapImportedToJob(post = {}, userEmail = "") {
     ethical_score: post.ethical_score,
     hallall_score: post.hallall_score || post.ethical_score,
     final_score: post.final_score,
+    ...expiry,
     status: "approved",
     moderation_status: "approved",
     import_type: "automatic_import",

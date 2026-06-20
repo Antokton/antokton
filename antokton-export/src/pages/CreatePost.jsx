@@ -19,6 +19,7 @@ import ImageFocusControls from "@/components/media/ImageFocusControls";
 import ImageFocusPreview from "@/components/media/ImageFocusPreview";
 import { ANTOKTON_REGION_NAMES, ANTOKTON_ZONES } from "@/lib/antoktonRegions";
 import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, reorderImageGallery, updateImageFocus } from "@/lib/imageFocus";
+import { buildExpiryFields } from "@/lib/expiry";
 
 const ALL_PROFESSIONS = [
   "3D Artist","Administrator","Agjent Shitjesh","Agjent Sigurimesh","Agjent Udhëtimesh",
@@ -528,6 +529,7 @@ export default function CreatePost() {
       const pazarImages = form.category === "pazar" && Array.isArray(form.image_urls) ? form.image_urls.slice(0, 6) : [];
       const mainImageIndex = Math.min(Number(form.main_image_index || 0), Math.max(0, pazarImages.length - 1));
       const imageFocus = pruneImageFocusMap(form.image_focus_json, pazarImages);
+      const expiry = buildExpiryFields({ ...form, category: form.category, job_type: form.job_type, listing_type: form.job_type });
 
       const createdJob = await base44.entities.Job.create({
         ...form,
@@ -547,6 +549,7 @@ export default function CreatePost() {
         author_photo_url: user?.profile_photo_url || "",
         likes_count: 0, dislikes_count: 0, comments_count: 0,
         halal_standard: form.halal_standard || null,
+        ...expiry,
       });
 
       Promise.allSettled(suggestionTasks).catch(() => {});

@@ -125,6 +125,23 @@ Kur admini publikon një import, krijohet `Job` normal në Antokton me:
 
 Linku burimor dhe etiketa “Njoftim i importuar nga burim publik” ruhen, por nuk shfaqen publikisht pa miratim të stafit.
 
+## Skadenca e njoftimeve
+
+Çdo njoftim i importuar ose i krijuar manualisht merr fushat:
+
+- `expires_at`
+- `original_expires_at`
+- `expiry_source`
+- `expired_at`
+- `is_expired`
+- `auto_archive_after_expiry`
+- `renewal_count`
+- `last_renewed_at`
+
+Importuesi kërkon afate në tekst me sinjale si “Afati i aplikimit”, “Apliko deri”, “Deadline”, “Closing date”, “Valid until”, “Skadon”, “Data e fundit”, “Rok za prijavu” dhe “Краен рок”. Nëse gjen afat, e ruan si `original_expires_at` dhe `expiry_source=original`.
+
+Në mungesë të afatit origjinal, sistemi cakton afat automatik sipas kategorisë: punë 30 ditë, banesa 21 ditë, automjete 30-45 ditë, shërbime/komunitet/biznes 60-90 ditë sipas llojit. Cron-i ditor shënon postimet e skaduara me `is_expired=true`, `expired_at`, dhe i arkivon kur `auto_archive_after_expiry=true`. Postimet e skaduara nuk shfaqen në listat publike normale, por mbeten në detaj/arkiv për histori dhe auditim.
+
 ## API
 
 - `POST /api/admin/import-assistant/run`

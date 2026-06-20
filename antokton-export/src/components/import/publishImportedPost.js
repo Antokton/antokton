@@ -1,5 +1,6 @@
 import { extractImportedPostFields, sanitizeImportedText } from "@/lib/importExtractors";
 import { pruneImageFocusMap } from "@/lib/imageFocus";
+import { buildExpiryFields } from "@/lib/expiry";
 
 const STAFF_DEFAULT_POSTER_NAME = "Koordinator Projekti";
 
@@ -53,6 +54,7 @@ export function buildJobPayloadFromImportedPost(post = {}, user = {}) {
   );
   const title = sanitizeImportedText(post.title || cleanEditedText.split(/\r?\n/).find(Boolean) || "Njoftim").slice(0, 120);
   const category = normalizeImportedCategory(post);
+  const expiry = buildExpiryFields({ ...post, ...prepared, category });
 
   return {
     title,
@@ -101,6 +103,7 @@ export function buildJobPayloadFromImportedPost(post = {}, user = {}) {
     quality_notes: prepared.quality_notes || post.quality_notes || [],
     communication_languages: prepared.communication_languages || post.communication_languages || [],
     show_communication_language: prepared.show_communication_language ?? post.show_communication_language,
+    ...expiry,
     status: "approved",
     moderation_status: "approved",
     imported_community_request: true,

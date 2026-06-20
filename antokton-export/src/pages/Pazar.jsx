@@ -17,6 +17,7 @@ import ImageFocusPreview from "@/components/media/ImageFocusPreview";
 import LocationPicker from "@/components/job/LocationPicker";
 import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, reorderImageGallery, updateImageFocus } from "@/lib/imageFocus";
 import { PAZAR_NAV_CATEGORIES, cleanPazarLabel, findPazarCategory, pazarCategoryMatches } from "@/lib/pazarCategories";
+import { buildExpiryFields, filterActivePosts } from "@/lib/expiry";
 
 /* ─── KATEGORITE ─── */
 const ICONS_BY_CATEGORY = {
@@ -551,6 +552,13 @@ function ImportModal({ onClose, onImported, user }) {
     const images = Array.isArray(extracted.image_urls) ? extracted.image_urls.slice(0, 6) : [];
     const mainIndex = Math.min(Number(extracted.main_image_index || 0), Math.max(0, images.length - 1));
     const imageFocus = pruneImageFocusMap(extracted.image_focus_json, images);
+    const expiry = buildExpiryFields({
+      ...extracted,
+      category: "pazar",
+      pazar_category: extracted.pazar_category || category,
+      pazar_subcategory: extracted.pazar_subcategory || subcategory || "",
+      job_type: jobType,
+    });
     setLoading(true);
     try {
       await base44.entities.Job.create({
@@ -575,6 +583,7 @@ function ImportModal({ onClose, onImported, user }) {
         pazar_category: extracted.pazar_category || category,
         pazar_subcategory: extracted.pazar_subcategory || subcategory || "",
         job_type: jobType,
+        ...expiry,
       });
       setStep("done");
       setTimeout(() => { onClose(); onImported?.(); }, 1500);
@@ -919,7 +928,7 @@ export default function Pazar() {
   });
 
   const filtered = useMemo(() => {
-    return jobs.filter(j => {
+    return filterActivePosts(jobs).filter(j => {
       // Shfaq: njoftime me category="pazar" OSE me pazar_category OSE prona shitje/qera
       const isPazar = j.category === "pazar" || !!j.pazar_category;
       const isPronaForSaleOrRent = j.category === "prona" && (j.property_deal_type === "shitje" || j.property_deal_type === "qera");

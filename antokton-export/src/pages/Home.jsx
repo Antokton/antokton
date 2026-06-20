@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { t, getLanguage } from "../lib/translations";
 import toast from "react-hot-toast";
 import { hasEarlyMemberPremiumAccess } from "@/utils/premiumAccess";
+import { filterActivePosts } from "@/lib/expiry";
 
 // ============================================================
 // POZICIONIMI MANUAL - ndrysho këto vlera për të rregulluar
@@ -961,17 +962,18 @@ export default function Home() {
   });
 
   const displayJobs = React.useMemo(() => {
-    if (featuredJobs.length === 0) return latestJobs.slice(0, 10);
+    const activeLatestJobs = filterActivePosts(latestJobs);
+    if (featuredJobs.length === 0) return activeLatestJobs.slice(0, 10);
 
     // Merr job_id-të e featured
     const featuredJobIds = new Set(featuredJobs.map(f => f.job_id));
 
     // Filtro njoftimet premium nga lista e fundit (max 8)
-    const premiumJobs = latestJobs.filter(j => featuredJobIds.has(j.id)).slice(0, 8);
+    const premiumJobs = activeLatestJobs.filter(j => featuredJobIds.has(j.id)).slice(0, 8);
     const premiumIds = new Set(premiumJobs.map(j => j.id));
 
     // Plotëso me normale deri në 10
-    const normalJobs = latestJobs.filter(j => !premiumIds.has(j.id)).slice(0, 10 - premiumJobs.length);
+    const normalJobs = activeLatestJobs.filter(j => !premiumIds.has(j.id)).slice(0, 10 - premiumJobs.length);
 
     return [...premiumJobs, ...normalJobs];
   }, [latestJobs, featuredJobs]);

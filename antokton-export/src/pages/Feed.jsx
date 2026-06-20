@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createPageUrl } from "../utils";
+import { filterActivePosts, isExpiringSoon, isPostExpired } from "@/lib/expiry";
 
 export default function Feed({ fixedCategory = null }) {
   const urlParams = new URLSearchParams(window.location.search);
@@ -68,6 +69,7 @@ export default function Feed({ fixedCategory = null }) {
     sortBy: "newest",
     property_subcategory: initialSub !== "all" && initialCategory === "prona" ? initialSub : "all",
     property_transaction: "all",
+    expiry: "active",
   });
   const canImportPosts = user?.role === "admin" || user?.role === "moderator";
 
@@ -156,7 +158,8 @@ export default function Feed({ fixedCategory = null }) {
   // Merge charity calls into feed when category is "bamiresi" or "all".
   // /Pune uses fixedCategory="pune" and must never show other post categories.
   const allFeedItems = useMemo(() => {
-    if (fixedCategory === "pune") return jobs.filter((job) => job.category === "pune");
+    const visibleJobs = canImportPosts && filters.expiry !== "active" ? jobs : filterActivePosts(jobs);
+    if (fixedCategory === "pune") return visibleJobs.filter((job) => job.category === "pune");
     const charityCalls = charityCallsRaw.map(c => ({
       ...c,
       _isCharityCall: true,
@@ -167,15 +170,21 @@ export default function Feed({ fixedCategory = null }) {
       job_type: "ofroj",
     }));
     if (filters.category === "bamiresi") return charityCalls;
-    if (filters.category === "all") return [...jobs, ...charityCalls];
-    return jobs;
-  }, [jobs, charityCallsRaw, filters.category, fixedCategory]);
+    if (filters.category === "all") return [...visibleJobs, ...charityCalls];
+    return visibleJobs;
+  }, [jobs, charityCallsRaw, filters.category, fixedCategory, canImportPosts, filters.expiry]);
 
   const filteredJobs = useMemo(() => {
     let filtered = allFeedItems.filter(job => {
       if (fixedCategory && job.category !== fixedCategory) return false;
       if (!fixedCategory && filters.category !== "all" && job.category !== filters.category) return false;
       if (filters.profession !== "all" && job.profession !== filters.profession) return false;
+      if (canImportPosts && filters.expiry && filters.expiry !== "active") {
+        if (filters.expiry === "soon" && !isExpiringSoon(job)) return false;
+        if (filters.expiry === "expired" && !isPostExpired(job)) return false;
+        if (filters.expiry === "no_expiry" && job.expires_at) return false;
+        if (filters.expiry === "renewed" && Number(job.renewal_count || 0) <= 0) return false;
+      }
 
       // Job type filter (ofroj / kerkoj)
       if (filters.job_type && filters.job_type !== "all" && job.job_type !== filters.job_type) return false;
@@ -359,6 +368,21 @@ export default function Feed({ fixedCategory = null }) {
               <SelectItem value="discussed">Më të diskutuarat</SelectItem>
             </SelectContent>
           </Select>
+
+          {canImportPosts && (
+            <Select value={filters.expiry} onValueChange={(val) => updateFilters({...filters, expiry: val})}>
+              <SelectTrigger className="h-8 w-52 bg-white/10 border-white/20 text-white text-xs">
+                <SelectValue placeholder="Afati" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10 text-white">
+                <SelectItem value="active">Aktive</SelectItem>
+                <SelectItem value="soon">Skadojnë së shpejti</SelectItem>
+                <SelectItem value="expired">Të skaduara</SelectItem>
+                <SelectItem value="no_expiry">Pa afat</SelectItem>
+                <SelectItem value="renewed">Rinovuar</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
 
           {user && (
             !showSaveSearch ? (

@@ -10,6 +10,7 @@ import { Loader2, Briefcase, Calendar, Bell, TrendingUp, Users, FileText, CheckC
 import { Link } from "react-router-dom";
 import { createPageUrl } from "../utils";
 import moment from "moment";
+import { filterActivePosts } from "@/lib/expiry";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -63,7 +64,7 @@ export default function Dashboard() {
 
   const { data: recentJobs = [] } = useQuery({
     queryKey: ["recentJobs"],
-    queryFn: () => base44.entities.Job.filter({ status: "approved" }, "-created_date", 6),
+    queryFn: async () => filterActivePosts(await base44.entities.Job.filter({ status: "approved" }, "-created_date", 20)).slice(0, 6),
     enabled: !!user
   });
 

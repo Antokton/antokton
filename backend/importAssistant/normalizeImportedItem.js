@@ -5,6 +5,7 @@ const { scoreEthical } = require("./scoreEthical");
 const { scoreRisk } = require("./scoreRisk");
 const { scoreRelevance } = require("./scoreRelevance");
 const { translateImportedItem } = require("./translateImportedItem");
+const { buildExpiryFields } = require("./expiry");
 
 function extractContactMethods(item = {}) {
   const text = cleanText([item.original_contact, item.original_description, item.source_url].filter(Boolean).join(" "));
@@ -111,6 +112,7 @@ async function normalizeImportedItem(raw = {}, source = {}) {
   const relevance = scoreRelevance({ ...base, ...identity });
   const language = detectContactLanguage(base, identity);
   const translated = await translateImportedItem({ ...base, ...identity, ...ethical, ...risk, ...relevance });
+  const expiry = buildExpiryFields({ ...base, ...translated });
   const freshness_score = calculateFreshness(base);
   const completeness_score = calculateCompleteness(base);
   const sourceTrust = clampScore((identity.source_identity_confidence || 0) + (source.trust_level === "high" ? 15 : source.trust_level === "medium" ? 8 : 0));
@@ -132,6 +134,7 @@ async function normalizeImportedItem(raw = {}, source = {}) {
     ...ethical,
     ...risk,
     ...relevance,
+    ...expiry,
     source_trust_score: sourceTrust,
     freshness_score,
     completeness_score,

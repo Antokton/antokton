@@ -7,6 +7,7 @@ import { Search as SearchIcon, Loader2, MapPin, Briefcase, ShoppingBag, Radio, C
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "../utils";
+import { filterActivePosts } from "@/lib/expiry";
 
 const CATEGORY_PRIORITY = ["anetare", "pune", "edukim", "sherbime", "pazar", "status", "prona", "bamiresi", "tjeter"];
 
@@ -124,7 +125,7 @@ export default function Search() {
       });
 
     // Jobs
-    jobs.forEach(job => {
+    filterActivePosts(jobs).forEach(job => {
       const text = `${job.title || ""} ${job.description || ""} ${job.profession || ""} ${job.country || ""} ${job.city || ""} ${job.required_skills || ""}`.toLowerCase();
       if (text.includes(q)) {
         matches.push({

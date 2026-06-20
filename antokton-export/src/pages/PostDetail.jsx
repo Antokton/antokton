@@ -27,6 +27,7 @@ import ImageFocusPreview from "@/components/media/ImageFocusPreview";
 import PhotoLightbox from "@/components/media/PhotoLightbox";
 import { getImageFocus, getImageFocusStyle, pruneImageFocusMap, reorderImageGallery, updateImageFocus } from "@/lib/imageFocus";
 import { PAZAR_CATEGORIES, cleanPazarLabel, findPazarCategory } from "@/lib/pazarCategories";
+import { filterActivePosts, formatExpiryLabel, isExpiringSoon, isPostExpired, renewExpiryFields } from "@/lib/expiry";
 
 function SimilarPosts({ currentJobId, category }) {
   const { data: similarJobs = [] } = useQuery({
@@ -36,7 +37,7 @@ function SimilarPosts({ currentJobId, category }) {
         status: "approved",
         category: category 
       }, "-created_date", 50);
-      return jobs.filter(j => j.id !== currentJobId).slice(0, 4);
+      return filterActivePosts(jobs).filter(j => j.id !== currentJobId).slice(0, 4);
     },
     enabled: !!category && !!currentJobId
   });
@@ -707,6 +708,35 @@ export default function PostDetail() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const renewJobMutation = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        ...renewExpiryFields(job, "admin_set"),
+        status: "approved",
+        moderation_status: "approved",
+      };
+      const updatedJob = await base44.entities.Job.update(jobId, payload);
+      await base44.entities.AdminAction.create({
+        entity_id: jobId,
+        entity_type: "job",
+        entity_title: job?.title || "",
+        action_type: "renew_expiry",
+        performed_by: user?.email || "unknown",
+        previous_status: job?.status || "approved",
+        new_status: "approved",
+        reason: "Rinovim afati njoftimi",
+      }).catch(() => {});
+      return { ...(job || {}), ...payload, ...(updatedJob || {}) };
+    },
+    onSuccess: (updatedJob) => {
+      queryClient.setQueryData(["job", jobId, user?.role], updatedJob);
+      queryClient.invalidateQueries({ queryKey: ["job", jobId] });
+    },
+    onError: (error) => {
+      alert(error.message || "Gabim gjatë rinovimit të afatit");
+    }
+  });
+
   const reactionEmails = React.useMemo(
     () => Array.from(new Set(reactions.map((reaction) => String(reaction.user_email || reaction.created_by || "").trim()).filter(Boolean))),
     [reactions]
@@ -874,6 +904,12 @@ export default function PostDetail() {
                       <X className="w-4 h-4 mr-2" />
                       {deleteJobMutation.isPending ? "Duke fshirë..." : "Fshi"}
                     </DropdownMenuItem>
+                    {(user?.role === "admin" || user?.role === "moderator") && (
+                      <DropdownMenuItem onClick={() => renewJobMutation.mutate()} className="text-[#9bffd6] hover:text-[#9bffd6] cursor-pointer">
+                        <Clock className="w-4 h-4 mr-2" />
+                        {renewJobMutation.isPending ? "Duke rinovuar..." : "Rinovo afatin"}
+                      </DropdownMenuItem>
+                    )}
                   </>
                 )}
                 <DropdownMenuItem
@@ -1185,6 +1221,11 @@ export default function PostDetail() {
           <h1 className="break-words text-2xl sm:text-3xl font-bold text-white leading-tight">
             {isEditing ? editForm.title : job.title}
           </h1>
+          {isPostExpired(job) && (
+            <div className="mt-3 inline-flex items-center rounded-full border border-red-400/30 bg-red-500/15 px-3 py-1 text-sm font-semibold text-red-200">
+              I skaduar
+            </div>
+          )}
 
           {isAuth && hasEarlyMemberPremiumAccess(user) && (
             <div className="mt-3 rounded-xl border border-[#9bffd6]/25 bg-[#9bffd6]/10 px-3 py-2 text-sm text-[#d8fff1]">
@@ -1220,6 +1261,10 @@ export default function PostDetail() {
             <span className="flex items-center gap-1.5 text-white/70">
               <Clock className="w-4 h-4" />
               {moment(job.created_date).format("D MMMM YYYY")}
+            </span>
+            <span className={`flex items-center gap-1.5 ${isPostExpired(job) ? "text-red-300" : isExpiringSoon(job) ? "text-amber-300" : "text-white/70"}`}>
+              <Clock className="w-4 h-4" />
+              Afati i njoftimit: {formatExpiryLabel(job)}
             </span>
             {(job.poster_name || posterProfile || job.created_by) && (() => {
               if (posterIsStaff) {

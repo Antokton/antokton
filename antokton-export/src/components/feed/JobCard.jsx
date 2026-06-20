@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "../../utils";
 import { MapPin, Clock, ThumbsUp, MessageCircle, Briefcase, Home as HomeIcon, Scale, GraduationCap, Heart, Radio, Wrench, ChevronRight, Banknote, Eye, ShoppingBag } from "lucide-react";
 import moment from "moment";
+import { formatExpiryLabel, isExpiringSoon, isPostExpired } from "@/lib/expiry";
 
 const categoryConfig = {
   pune:     { label: "Punë",      icon: Briefcase,     accent: "#8ab4ff", bg: "rgba(138,180,255,0.12)", border: "rgba(138,180,255,0.25)" },
@@ -54,6 +55,9 @@ export default function JobCard({ job }) {
   const totalReactions = typeof job.total_reactions === "number"
     ? job.total_reactions
     : (job.likes_count || 0) + (job.dislikes_count || 0);
+  const expiryLabel = formatExpiryLabel(job);
+  const expired = isPostExpired(job);
+  const soon = isExpiringSoon(job);
 
   return (
     <Link
@@ -113,6 +117,11 @@ export default function JobCard({ job }) {
             <Clock className="w-3 h-3 sm:w-2.5 sm:h-2.5" />
             {moment(job.created_date).fromNow()}
           </span>
+          {job.expires_at && (
+            <span className={`font-medium ${expired ? "text-red-300" : soon ? "text-amber-300" : "text-white/45"}`}>
+              {expiryLabel}
+            </span>
+          )}
         </div>
       </div>
 

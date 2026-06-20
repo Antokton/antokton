@@ -42,6 +42,7 @@ const {
 } = require("./postViewHelpers");
 const { handleImportAssistantRoute } = require("./importAssistant/importRoutes");
 const { scheduleImportCron } = require("./importAssistant/importCron");
+const { scheduleExpiryCron } = require("./expiryCron");
 
 const {
   ROOT_DIR,
@@ -2685,6 +2686,9 @@ async function initialize() {
   await scheduleImportCron({
     store: { createRecord, updateRecord, deleteRecord, allRecords },
     config
+  });
+  await scheduleExpiryCron({
+    store: { createRecord, updateRecord, deleteRecord, allRecords }
   });
 }
 

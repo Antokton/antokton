@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, CheckCircle2, AlertCircle, Plus, Trash2, Send } from "lucide-react";
+import { buildExpiryFields } from "@/lib/expiry";
 
 const COUNTRIES = [
   { value: "Angli", label: "Angli" },
@@ -126,6 +127,11 @@ Kthe rezultatin SI JSON me këtë strukturë:
     updateEntry(entry.id, "status", "publishing");
 
     try {
+      const expiry = buildExpiryFields({
+        ...result,
+        category: entry.category,
+        job_type: result.job_type || "ofroj",
+      });
       await base44.entities.Job.create({
         title: result.title,
         description: result.description,
@@ -147,7 +153,8 @@ Kthe rezultatin SI JSON me këtë strukturë:
         imported_community_request: true,
         import_type: "bulk_import_assistant",
         status: "approved",
-        poster_name: user?.full_name || "Admin"
+        poster_name: user?.full_name || "Admin",
+        ...expiry,
       });
       updateEntry(entry.id, "status", "published");
     } catch (err) {

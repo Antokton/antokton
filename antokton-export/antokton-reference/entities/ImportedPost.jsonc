@@ -255,6 +255,47 @@
       "type": "boolean",
       "default": false,
       "description": "Shfaq fush\u00ebn e gjuh\u00ebs s\u00eb komunikimit"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Afati aktiv i njoftimit të importuar"
+    },
+    "original_expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Afati i marrë nga burimi origjinal, nëse ekziston"
+    },
+    "expiry_source": {
+      "type": "string",
+      "enum": ["original", "automatic", "admin_set", "user_set"],
+      "default": "automatic",
+      "description": "Burimi i afatit të njoftimit"
+    },
+    "expired_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data kur njoftimi u shënua si i skaduar"
+    },
+    "is_expired": {
+      "type": "boolean",
+      "default": false,
+      "description": "A ka skaduar njoftimi i importuar"
+    },
+    "auto_archive_after_expiry": {
+      "type": "boolean",
+      "default": true,
+      "description": "Arkivo automatikisht pas skadimit"
+    },
+    "renewal_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Sa herë është rinovuar njoftimi"
+    },
+    "last_renewed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e rinovimit të fundit"
     }
   },
   "required": [
