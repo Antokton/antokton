@@ -37,8 +37,10 @@ export function normalizeImportedListingType(post = {}) {
 export function buildJobPayloadFromImportedPost(post = {}, user = {}) {
   const cleanOriginalText = sanitizeImportedText(post.original_text || post.import_original_text || post.edited_text || "");
   const cleanEditedText = sanitizeImportedText(post.edited_text || post.description || cleanOriginalText);
+  const sourceAddress = sanitizeImportedText(post.address || post.location || post.original_location || "").trim();
   const prepared = extractImportedPostFields(cleanOriginalText, {
     ...post,
+    address: sourceAddress || post.address,
     description: cleanEditedText,
     source_url: post.source_url || post.import_source_url || post.original_post_url,
     import_source_url: post.import_source_url || post.source_url || post.original_post_url,
@@ -69,7 +71,7 @@ export function buildJobPayloadFromImportedPost(post = {}, user = {}) {
     city: prepared.city || post.city || "",
     zone: post.zone || post.region || "",
     region: post.region || post.zone || "",
-    address: prepared.address || post.address || "",
+    address: sourceAddress || prepared.address || post.address || "",
     salary: post.salary || post.price || "",
     price: post.price || post.salary || "",
     phone_number: prepared.phone_number || post.phone_number || "",

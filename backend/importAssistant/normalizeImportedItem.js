@@ -72,7 +72,21 @@ function calculateFreshness(item = {}) {
   return 45;
 }
 
+function chooseAddress(raw = {}) {
+  const address = cleanText(raw.address || raw.original_address || "");
+  const location = cleanText(raw.original_location || raw.location || "");
+  const city = cleanText(raw.original_city || raw.city || "");
+  const country = cleanText(raw.original_country || raw.country || "");
+  const candidates = [address, location, city].filter(Boolean);
+  const full = candidates.find((candidate) => {
+    const normalized = candidate.toLowerCase();
+    return candidate.length > country.length && normalized !== country.toLowerCase();
+  });
+  return full || address || location || city || "";
+}
+
 async function normalizeImportedItem(raw = {}, source = {}) {
+  const address = chooseAddress(raw);
   const base = {
     source_id: source.id || "",
     source_name: cleanText(raw.source_name || source.name || raw.provider_key || source.provider_key || ""),
@@ -88,6 +102,7 @@ async function normalizeImportedItem(raw = {}, source = {}) {
     original_company: cleanText(raw.original_company || raw.company || raw.company_name || ""),
     original_contact: cleanText(raw.original_contact || raw.contact || ""),
     original_location: cleanText(raw.original_location || raw.location || ""),
+    address,
     original_country: cleanText(raw.original_country || raw.country || ""),
     original_city: cleanText(raw.original_city || raw.city || ""),
     original_salary: cleanText(raw.original_salary || raw.salary || ""),

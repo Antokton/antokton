@@ -49,6 +49,22 @@ test("normalization creates contact methods and pending review item", async () =
   assert.ok(item.final_score > 0);
 });
 
+test("normalization preserves full imported address separately from country", async () => {
+  const item = await normalizeImportedItem({
+    provider_key: "test",
+    source_url: "https://example.com/job-address",
+    original_title: "Warehouse worker",
+    original_description: "Clear contract. Contact info@example.com.",
+    original_company: "Example GmbH",
+    original_location: "Alexanderplatz 1, Berlin, Gjermani",
+    original_country: "Gjermani",
+    original_city: "Berlin"
+  }, { name: "Example", trust_level: "medium" });
+  assert.equal(item.address, "Alexanderplatz 1, Berlin, Gjermani");
+  assert.equal(item.country, "Gjermani");
+  assert.equal(item.city, "Berlin");
+});
+
 test("import expiry uses original deadline or automatic category defaults", () => {
   const original = parseImportedExpiry({
     original_description: "Afati i aplikimit: 25.07.2026"

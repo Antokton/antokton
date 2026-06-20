@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { base44 } from "@/api/antoktonClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -69,6 +69,8 @@ export default function ImportSources() {
   const [busyId, setBusyId] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
+  const [dragColumnKey, setDragColumnKey] = useState("");
+  const resizeRef = useRef(null);
   const [columns, setColumns] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(COLUMN_STORAGE_KEY) || "null");
@@ -197,19 +199,40 @@ export default function ImportSources() {
     }));
   };
 
-  const moveColumn = (key, direction) => {
+  const moveColumnBefore = (sourceKey, targetKey) => {
+    if (!sourceKey || !targetKey || sourceKey === targetKey) return;
     setColumns((current) => {
-      const index = current.findIndex((column) => column.key === key);
-      const nextIndex = index + direction;
-      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
+      const sourceIndex = current.findIndex((column) => column.key === sourceKey);
+      const targetIndex = current.findIndex((column) => column.key === targetKey);
+      if (sourceIndex < 0 || targetIndex < 0) return current;
       const next = [...current];
-      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      const [moved] = next.splice(sourceIndex, 1);
+      next.splice(targetIndex, 0, moved);
       return next;
     });
   };
 
-  const resizeColumn = (key, delta) => {
-    setColumns((current) => current.map((column) => column.key === key ? { ...column, width: Math.max(90, columnWidth(column) + delta) } : column));
+  const startColumnResize = (event, column) => {
+    event.preventDefault();
+    event.stopPropagation();
+    resizeRef.current = {
+      key: column.key,
+      startX: event.clientX,
+      startWidth: columnWidth(column),
+    };
+    const handleMove = (moveEvent) => {
+      const resize = resizeRef.current;
+      if (!resize) return;
+      const nextWidth = Math.max(90, resize.startWidth + moveEvent.clientX - resize.startX);
+      setColumns((current) => current.map((item) => item.key === resize.key ? { ...item, width: nextWidth } : item));
+    };
+    const handleUp = () => {
+      resizeRef.current = null;
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
   };
 
   const resetColumns = () => setColumns(DEFAULT_COLUMNS);
@@ -388,19 +411,32 @@ export default function ImportSources() {
                 <th className="sticky left-0 z-20 w-[44px] bg-[#111827] p-3 text-left">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} aria-label="Zgjidh të gjitha burimet" />
                 </th>
-                {columns.map((column, index) => (
-                  <th key={column.key} className="relative p-2 text-left align-top" style={{ width: columnWidth(column) }}>
+                {columns.map((column) => (
+                  <th
+                    key={column.key}
+                    draggable
+                    onDragStart={() => setDragColumnKey(column.key)}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      moveColumnBefore(dragColumnKey, column.key);
+                      setDragColumnKey("");
+                    }}
+                    onDragEnd={() => setDragColumnKey("")}
+                    className={`relative p-2 pr-4 text-left align-top ${dragColumnKey === column.key ? "opacity-60" : ""}`}
+                    style={{ width: columnWidth(column) }}
+                    title="Tërhiq kolonën për ta zhvendosur; kap vijën djathtas për gjerësi."
+                  >
                     <div className="flex items-start justify-between gap-1">
-                      <button type="button" onClick={() => toggleSort(column.key)} className="min-w-0 truncate text-left font-semibold hover:text-white" title="Rendit sipas kësaj kolone">
+                      <button type="button" onClick={() => toggleSort(column.key)} className="min-w-0 cursor-grab truncate text-left font-semibold hover:text-white" title="Rendit sipas kësaj kolone">
                         {column.label}{sortConfig.key === column.key ? (sortConfig.direction === "asc" ? " ↑" : " ↓") : ""}
                       </button>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <button type="button" disabled={index === 0} onClick={() => moveColumn(column.key, -1)} className="rounded border border-white/10 px-1 text-white/50 hover:text-white disabled:opacity-20">‹</button>
-                        <button type="button" disabled={index === columns.length - 1} onClick={() => moveColumn(column.key, 1)} className="rounded border border-white/10 px-1 text-white/50 hover:text-white disabled:opacity-20">›</button>
-                        <button type="button" onClick={() => resizeColumn(column.key, -30)} className="rounded border border-white/10 px-1 text-white/50 hover:text-white">−</button>
-                        <button type="button" onClick={() => resizeColumn(column.key, 30)} className="rounded border border-white/10 px-1 text-white/50 hover:text-white">+</button>
-                      </div>
                     </div>
+                    <span
+                      onMouseDown={(event) => startColumnResize(event, column)}
+                      className="absolute right-0 top-0 h-full w-2 cursor-col-resize border-r border-white/10 hover:border-[#8ff0cf]"
+                      aria-hidden="true"
+                    />
                   </th>
                 ))}
                 <th className="sticky right-0 z-20 w-[220px] bg-[#111827] p-3 text-left">Veprime</th>
