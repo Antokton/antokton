@@ -295,6 +295,7 @@ CREATE TABLE IF NOT EXISTS import_assistant_settings (
   default_country_filter TEXT,
   default_profession_filter TEXT,
   default_excluded_keywords TEXT,
+  min_new_items_per_run INTEGER DEFAULT 20,
   min_relevance_score INTEGER DEFAULT 45,
   max_risk_score INTEGER DEFAULT 70,
   created_at TEXT NOT NULL,
@@ -316,6 +317,7 @@ addColumnIfMissing("imported_sources", "rss_url", "TEXT");
 addColumnIfMissing("imported_sources", "login_required", "INTEGER NOT NULL DEFAULT 0");
 addColumnIfMissing("imported_items", "original_id", "TEXT");
 addColumnIfMissing("imported_items", "original_published_at", "TEXT");
+addColumnIfMissing("import_assistant_settings", "min_new_items_per_run", "INTEGER DEFAULT 20");
 
 const statements = {
   insertEntity: db.prepare(`

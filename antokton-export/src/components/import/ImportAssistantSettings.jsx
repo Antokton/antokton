@@ -11,6 +11,7 @@ const DEFAULT_SETTINGS = {
   default_country_filter: "",
   default_profession_filter: "shofer, pastrim, depo, magazin, ndërtim, mekanik, elektriçist, hidraulik, kujdestar, siguri, shpërndarje, bujqësi, fabrikë, bojaxhi, furrë, pasticeri",
   default_excluded_keywords: "senior, manager, director, professor, teacher, research, phd, software, developer, data scientist, consultant, engineer, ingenieur, analyst, controller, support, administrator, marketing, designer, student, internship, praktikant, werkstudent, sap, bank, kredit, finanz, datenerfasser, recruiter, recruiting, personalreferent, öffentlichkeitsarbeit, architektur, stadtentwicklung, referent, controlling, leiter, produktmanagement, office management, nebenberuf",
+  min_new_items_per_run: 20,
   min_relevance_score: 45,
   max_risk_score: 70,
 };
@@ -20,6 +21,26 @@ const sourceIsActive = (source = {}) => {
   return !(value === false || value === 0 || value === "0" || value === "false");
 };
 const sourceFrequency = (source = {}) => Number(source.crawl_frequency_minutes ?? (Number(source.crawl_frequency_hours ?? 6) * 60));
+const asList = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      return value.split(",").map((item) => item.trim()).filter(Boolean);
+    }
+  }
+  return [];
+};
+const STATUS_LABELS = {
+  success: "Sukses",
+  partial_success: "Sukses i pjesshëm",
+  duplicate_only: "Vetëm dublikata",
+  no_results: "Pa rezultate",
+  error: "Gabim",
+  running: "Duke punuar",
+};
 
 function OnOffToggle({ checked, onChange, label }) {
   return (
@@ -94,6 +115,7 @@ export default function ImportAssistantSettings() {
         country_filter: values.default_country_filter || "",
         profession_filter: values.default_profession_filter || "",
         excluded_keywords: values.default_excluded_keywords || "",
+        min_new_items_per_run: values.min_new_items_per_run || 20,
         min_relevance_score: values.min_relevance_score || 0,
         max_risk_score: values.max_risk_score || 100,
       });
@@ -101,7 +123,14 @@ export default function ImportAssistantSettings() {
         qc.invalidateQueries({ queryKey: ["importedPosts"] }),
         qc.invalidateQueries({ queryKey: ["importAssistant", "logs"] }),
       ]);
-      alert(`Importimi përfundoi: ${result.created_count || 0} të reja, ${result.duplicate_count || 0} dublikata.`);
+      const summary = result.fallback_summary || {};
+      alert([
+        `Importimi përfundoi: ${result.created_count || 0} të reja, ${result.duplicate_count || 0} dublikata, ${result.skipped_count || 0} skipped.`,
+        `Provider-at: ${(summary.providers_tried || []).join(", ") || "—"}`,
+        `Queries: ${(summary.queries_tried || []).slice(0, 8).join(", ") || "—"}`,
+        `Vendet: ${(summary.countries_tried || []).slice(0, 8).join(", ") || "—"}`,
+        summary.reason || ""
+      ].filter(Boolean).join("\n"));
     } catch (error) {
       alert(error?.message || "Importimi dështoi.");
     } finally {
@@ -207,6 +236,10 @@ export default function ImportAssistantSettings() {
               Risku maksimal
               <Input type="number" min="0" max="100" value={values.max_risk_score ?? 70} onChange={(e) => update("max_risk_score", Number(e.target.value))} className="mt-1 bg-white/5 border-white/10 text-white" />
             </label>
+            <label className="block text-xs text-white/60">
+              Minimumi i të rejave
+              <Input type="number" min="0" value={values.min_new_items_per_run ?? 20} onChange={(e) => update("min_new_items_per_run", Number(e.target.value))} className="mt-1 bg-white/5 border-white/10 text-white" />
+            </label>
           </div>
         </div>
         <label className="flex items-center justify-between gap-3 text-sm text-white/80">
@@ -234,20 +267,36 @@ export default function ImportAssistantSettings() {
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead className="text-white/45">
-              <tr><th className="text-left py-2">Provider</th><th>Statusi</th><th>Të marra</th><th>Të reja</th><th>Dublikata</th><th>Gabime</th></tr>
+              <tr>
+                <th className="text-left py-2">Provider</th>
+                <th>Statusi</th>
+                <th>Të marra</th>
+                <th>Të reja</th>
+                <th>Dublikata</th>
+                <th>Skipped</th>
+                <th>Query/Vende</th>
+                <th>Shënim</th>
+                <th>Gabime</th>
+              </tr>
             </thead>
             <tbody>
               {logs.slice(0, 12).map((log) => (
                 <tr key={log.id} className="border-t border-white/5 text-white/75">
                   <td className="py-2">{log.provider_key || "—"}</td>
-                  <td>{log.status === "success" ? "Sukses" : log.status === "error" ? "Gabim" : log.status || "—"}</td>
+                  <td>{STATUS_LABELS[log.status] || log.status || "—"}</td>
                   <td>{log.fetched_count || 0}</td>
                   <td>{log.created_count || 0}</td>
                   <td>{log.duplicate_count || 0}</td>
+                  <td>{log.skipped_count || 0}</td>
+                  <td className="max-w-[260px] text-white/55">
+                    <span className="block truncate" title={asList(log.queries_tried).join(", ")}>Q: {asList(log.queries_tried).slice(0, 3).join(", ") || "—"}</span>
+                    <span className="block truncate" title={asList(log.countries_tried).join(", ")}>V: {asList(log.countries_tried).slice(0, 3).join(", ") || "—"}</span>
+                  </td>
+                  <td className="max-w-[260px] truncate text-white/45" title={log.error_message || ""}>{log.error_message || "—"}</td>
                   <td className="text-red-200">{log.error_count || 0}</td>
                 </tr>
               ))}
-              {!logs.length && <tr><td colSpan={6} className="py-8 text-center text-white/40">Ende nuk ka logs.</td></tr>}
+              {!logs.length && <tr><td colSpan={9} className="py-8 text-center text-white/40">Ende nuk ka logs.</td></tr>}
             </tbody>
           </table>
         </div>

@@ -142,6 +142,7 @@ async function handleImportAssistantRoute(deps) {
       default_country_filter: body.default_country_filter || "",
       default_profession_filter: body.default_profession_filter || "",
       default_excluded_keywords: body.default_excluded_keywords || "",
+      min_new_items_per_run: Math.max(0, Number(body.min_new_items_per_run || 20)),
       min_relevance_score: Math.max(0, Math.min(100, Number(body.min_relevance_score || 0))),
       max_risk_score: Math.max(0, Math.min(100, Number(body.max_risk_score || 100)))
     }));
@@ -160,6 +161,7 @@ async function handleImportAssistantRoute(deps) {
         country_filter: body.country_filter || body.default_country_filter || "",
         profession_filter: body.profession_filter || body.default_profession_filter || "",
         excluded_keywords: body.excluded_keywords || body.default_excluded_keywords || "",
+        min_new_items_per_run: body.min_new_items_per_run,
         min_relevance_score: body.min_relevance_score,
         max_risk_score: body.max_risk_score,
         manual_run: true

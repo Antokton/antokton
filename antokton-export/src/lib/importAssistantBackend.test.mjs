@@ -126,6 +126,82 @@ test("manual run works when auto import settings are disabled", async () => {
   assert.equal(result.success, true);
 });
 
+test("import fallback continues after duplicate-only first query", async () => {
+  const records = {
+    ImportedSource: [{
+      id: "source-1",
+      name: "Arbeitnow",
+      provider_key: "arbeitnow",
+      source_type: "api",
+      import_mode: "automatic",
+      crawl_method: "api",
+      automation_level: "full_auto",
+      enabled: true,
+      source_url: "https://example.test/jobs",
+      country_filter: "Germany",
+      category_filter: "pune",
+      profession_filter: "driver",
+      parser_config: { max_pages: 1 }
+    }],
+    ImportAssistantSettings: [{ id: "settings", auto_import_enabled: true, max_items_per_run: 10, min_new_items_per_run: 1 }],
+    ImportedPost: [{ id: "existing", source_url: "https://example.test/jobs/duplicate", original_url: "https://example.test/jobs/duplicate" }],
+    Job: [],
+    ImportLog: []
+  };
+  const store = {
+    async allRecords(entity) { return records[entity] || []; },
+    async createRecord(entity, data) {
+      const row = { id: `${entity}-${records[entity].length + 1}`, created_date: new Date().toISOString(), ...data };
+      records[entity].push(row);
+      return row;
+    },
+    async updateRecord(entity, id, patch) {
+      const row = records[entity].find((item) => item.id === id);
+      Object.assign(row, patch);
+      return row;
+    },
+    async deleteRecord() { return true; }
+  };
+  let fetchCount = 0;
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    fetchCount += 1;
+    const duplicate = fetchCount === 1;
+    return {
+      ok: true,
+      async json() {
+        return {
+          data: [{
+            title: duplicate ? "Truck Driver CE" : "Warehouse Worker",
+            description: "Clear contract and contact test@example.com.",
+            company_name: "Demo GmbH",
+            location: "Berlin, Germany",
+            slug: duplicate ? "duplicate" : "new-warehouse",
+            url: duplicate ? "https://example.test/jobs/duplicate" : "https://example.test/jobs/new-warehouse",
+            created_at: 1760000000
+          }],
+          links: {}
+        };
+      }
+    };
+  };
+  try {
+    const result = await runImport({
+      store,
+      config: { IMPORT_ASSISTANT_MAX_PER_RUN: 10, IMPORT_ASSISTANT_MIN_NEW_PER_RUN: 1 },
+      requestedBy: "test",
+      options: { manual_run: true, min_new_items_per_run: 1, min_relevance_score: 0, max_risk_score: 100 }
+    });
+    assert.equal(result.created_count, 1);
+    assert.equal(result.duplicate_count, 1);
+    assert.ok(fetchCount >= 2);
+    assert.equal(records.ImportedPost.some((item) => item.status === "pending_review" && item.source_url === "https://example.test/jobs/new-warehouse"), true);
+    assert.ok(records.ImportLog[0].queries_tried.length >= 2);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test("arbeitnow provider expands Albanian import keywords before filtering", async () => {
   const originalFetch = global.fetch;
   global.fetch = async () => ({

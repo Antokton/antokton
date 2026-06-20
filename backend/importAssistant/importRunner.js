@@ -14,12 +14,58 @@ const providers = {
 
 let running = false;
 
+const DEFAULT_MIN_NEW_PER_RUN = 20;
+const FALLBACK_QUERIES = [
+  "driver", "truck driver", "CE driver", "C driver", "warehouse", "logistics",
+  "construction", "cleaner", "cleaning", "painter", "electrician", "plumber",
+  "mechanic", "factory worker", "production worker", "bakery", "baker",
+  "pastry", "agriculture", "farm worker", "caregiver", "security", "delivery driver",
+  "chauffeur poids lourd", "chauffeur CE", "chauffeur C", "magasinier", "entrepôt",
+  "nettoyage", "peintre", "électricien", "plombier", "mécanicien", "boulanger",
+  "pâtissier", "ouvrier agricole", "vrachtwagenchauffeur", "chauffeur CE",
+  "magazijnmedewerker", "logistiek medewerker", "schoonmaak", "schilder",
+  "elektricien", "loodgieter", "monteur", "bakker", "banketbakker",
+  "productiemedewerker", "LKW Fahrer", "Fahrer CE", "Lagerarbeiter", "Lagerhelfer",
+  "Logistik", "Reinigungskraft", "Maler", "Elektriker", "Klempner", "Mechaniker",
+  "Bäcker", "Konditor", "Produktionsmitarbeiter", "Bauarbeiter", "autista camion",
+  "autista patente CE", "magazziniere", "logistica", "pulizie", "imbianchino",
+  "elettricista", "idraulico", "meccanico", "panettiere", "pasticcere", "operaio",
+  "HGV driver", "warehouse operative", "pastry chef", "construction worker"
+];
+const FALLBACK_COUNTRIES = [
+  "Belgium", "Germany", "Netherlands", "France", "Italy", "Switzerland", "Austria",
+  "Sweden", "Denmark", "Finland", "Spain", "Portugal", "Ireland", "United Kingdom"
+];
+
 function now() {
   return new Date().toISOString();
 }
 
 function ensureArray(value) {
   return Array.isArray(value) ? value : [];
+}
+
+function uniqueStrings(values = []) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
+function splitList(value) {
+  return String(value || "")
+    .split(/[,\n;]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parserConfig(source = {}) {
+  if (!source.parser_config) return {};
+  if (typeof source.parser_config === "string") {
+    try {
+      return JSON.parse(source.parser_config) || {};
+    } catch {
+      return {};
+    }
+  }
+  return typeof source.parser_config === "object" ? source.parser_config : {};
 }
 
 function sourceUrl(source = {}) {
@@ -53,6 +99,7 @@ async function ensureDefaultSettings(store, config) {
     default_country_filter: "",
     default_profession_filter: "shofer, pastrim, depo, magazin, ndertim, ndërtim, mekanik, elektricist, elektriçist, hidraulik, kujdestar, siguri, shperndarje, shpërndarje, bujqesi, bujqësi, fabrike, fabrikë, bojaxhi, furre, furrë, pasticeri",
     default_excluded_keywords: "senior, manager, director, professor, teacher, research, phd, software, developer, data scientist, consultant, engineer, ingenieur, analyst, controller, support, administrator, marketing, designer, student, internship, praktikant, werkstudent, sap, bank, kredit, finanz, datenerfasser, recruiter, recruiting, personalreferent, öffentlichkeitsarbeit, architektur, stadtentwicklung, referent, controlling, leiter, produktmanagement, office management, nebenberuf",
+    min_new_items_per_run: Number(config.IMPORT_ASSISTANT_MIN_NEW_PER_RUN || DEFAULT_MIN_NEW_PER_RUN),
     min_relevance_score: 45,
     max_risk_score: 70
   };
@@ -123,11 +170,12 @@ function providerIsConfigured(providerKey = "", config = {}) {
 }
 
 function applyRuntimeOptions(source = {}, options = {}) {
-  const parserConfig = {
-    ...(source.parser_config || {}),
+  const existingParserConfig = parserConfig(source);
+  const nextParserConfig = {
+    ...existingParserConfig,
   };
   for (const key of ["profession_filter", "excluded_keywords", "category_filter", "country_filter"]) {
-    if (options[key]) parserConfig[key] = options[key];
+    if (options[key]) nextParserConfig[key] = options[key];
   }
   return {
     ...source,
@@ -135,8 +183,39 @@ function applyRuntimeOptions(source = {}, options = {}) {
     country_filter: options.country_filter || source.country_filter,
     profession_filter: options.profession_filter || source.profession_filter,
     excluded_keywords: options.excluded_keywords || source.excluded_keywords,
-    parser_config: parserConfig,
+    parser_config: nextParserConfig,
   };
+}
+
+function supportsQueryExpansion(source = {}) {
+  const providerKey = source.provider_key || "";
+  const crawlMethod = source.crawl_method || source.parser_type || "";
+  return ["arbeitnow", "adzuna", "jooble", "eures"].includes(providerKey) || ["api", "html"].includes(crawlMethod);
+}
+
+function buildAttemptPlan(source = {}, options = {}, { selectedSourceRun = false } = {}) {
+  const config = parserConfig(source);
+  const baseQuery = options.query || config.query || source.query || "";
+  const baseQueries = uniqueStrings([
+    ...splitList(source.profession_filter || config.profession_filter),
+    ...splitList(options.profession_filter),
+    baseQuery
+  ]);
+  const queries = supportsQueryExpansion(source)
+    ? uniqueStrings([...baseQueries, ...FALLBACK_QUERIES])
+    : uniqueStrings([baseQuery || source.profession_filter || source.category_filter || ""]);
+  const countries = supportsQueryExpansion(source)
+    ? uniqueStrings([options.country_filter, source.country_filter, config.country_filter, ...FALLBACK_COUNTRIES])
+    : uniqueStrings([options.country_filter, source.country_filter, config.country_filter]);
+  const limitedQueries = (selectedSourceRun ? queries.slice(0, 20) : queries.slice(0, 8));
+  const limitedCountries = (selectedSourceRun ? countries.slice(0, 14) : countries.slice(0, 6));
+  const attempts = [];
+  for (const query of (limitedQueries.length ? limitedQueries : [""])) {
+    for (const country of (limitedCountries.length ? limitedCountries : [""])) {
+      attempts.push({ query, country });
+    }
+  }
+  return attempts.length ? attempts : [{ query: "", country: "" }];
 }
 
 function passesRuntimeThresholds(normalized = {}, options = {}) {
@@ -164,6 +243,143 @@ function duplicateHash(item = {}) {
   return crypto.createHash("sha256").update(input || crypto.randomUUID()).digest("hex");
 }
 
+async function processRawImportedItem({ raw, source, providerKey, store, requestedBy, options, existingImported, existingJobs, createdItems }) {
+  const normalized = await normalizeImportedItem(raw, source);
+  const sourceName = normalized.source_name || source.name || providerKey;
+  const contactMethods = normalized.contact_methods || [];
+  if (!passesRuntimeThresholds(normalized, options)) {
+    return { created: false, duplicate: false, skipped: true, imported: null };
+  }
+  const duplicate = isDuplicateImportedItem(
+    normalized,
+    [...existingImported, ...createdItems],
+    existingJobs
+  );
+  if (duplicate.duplicate) {
+    const duplicateRecord = await store.createRecord("ImportedPost", {
+      original_text: normalized.original_description || normalized.original_title,
+      edited_text: normalized.shqip_summary || normalized.original_description,
+      title: normalized.shqip_title,
+      description: normalized.shqip_summary || normalized.original_description,
+      company_name: normalized.original_company || "",
+      location: normalized.original_location || "",
+      category: normalized.category,
+      listing_type: normalized.item_type === "job" ? "ofroj" : "tjeter",
+      source: providerKey,
+      source_id: normalized.source_id || source.id,
+      source_name: sourceName,
+      source_url: normalized.source_url,
+      import_source_url: normalized.source_url,
+      original_url: normalized.original_url || normalized.source_url,
+      original_post_id: normalized.original_post_id || normalized.external_id,
+      original_id: normalized.original_id || normalized.external_id,
+      original_published_at: normalized.original_published_at,
+      external_id: normalized.external_id,
+      provider_key: providerKey,
+      status: "duplicate",
+      expires_at: normalized.expires_at,
+      original_expires_at: normalized.original_expires_at,
+      expiry_source: normalized.expiry_source,
+      expired_at: normalized.expired_at,
+      is_expired: normalized.is_expired,
+      auto_archive_after_expiry: normalized.auto_archive_after_expiry,
+      renewal_count: normalized.renewal_count,
+      last_renewed_at: normalized.last_renewed_at,
+      duplicate_reason: duplicate.reason,
+      duplicate_hash: duplicateHash(normalized),
+      address: normalized.address || normalized.original_location || "",
+      contact_email: primaryContact(contactMethods, "email"),
+      contact_phone: primaryContact(contactMethods, "phone") || primaryContact(contactMethods, "whatsapp"),
+      contact_url: primaryContact(contactMethods, "website") || primaryContact(contactMethods, "application_form"),
+      raw_import_payload: raw,
+      imported_by: requestedBy
+    }, requestedBy);
+    existingImported.push(duplicateRecord);
+    return { created: false, duplicate: true, skipped: false, imported: duplicateRecord };
+  }
+  const imported = await store.createRecord("ImportedPost", {
+    original_text: normalized.original_description || normalized.original_title,
+    edited_text: normalized.shqip_summary || normalized.original_description,
+    title: normalized.shqip_title,
+    description: normalized.shqip_summary || normalized.original_description,
+    company_name: normalized.original_company || "",
+    location: normalized.original_location || "",
+    address: normalized.address || normalized.original_location || "",
+    author_name: normalized.source_identity_name,
+    author_profile_url: normalized.source_identity_url,
+    import_author_profile_url: normalized.source_identity_url,
+    original_post_url: normalized.source_url,
+    source_url: normalized.source_url,
+    import_source_url: normalized.source_url,
+    source_name: sourceName,
+    source: providerKey,
+    provider_key: providerKey,
+    source_id: normalized.source_id || source.id,
+    original_url: normalized.original_url || normalized.source_url,
+    original_post_id: normalized.original_post_id || normalized.external_id,
+    original_id: normalized.original_id || normalized.external_id,
+    original_published_at: normalized.original_published_at,
+    external_id: normalized.external_id || crypto.randomUUID(),
+    item_type: normalized.item_type,
+    category: normalized.category,
+    listing_type: normalized.item_type === "job" ? "ofroj" : "tjeter",
+    profession: normalized.profession,
+    country: normalized.country || normalized.original_country,
+    region: normalized.region,
+    city: normalized.city || normalized.original_city,
+    salary: normalized.original_salary,
+    contact_info: JSON.stringify(contactMethods),
+    contact_methods: contactMethods,
+    contact_email: primaryContact(contactMethods, "email"),
+    contact_phone: primaryContact(contactMethods, "phone") || primaryContact(contactMethods, "whatsapp"),
+    contact_url: primaryContact(contactMethods, "website") || primaryContact(contactMethods, "application_form"),
+    show_source_url: false,
+    show_author_profile_url: false,
+    source_public_visible: false,
+    imported_public_badge_visible: false,
+    status: "pending_review",
+    expires_at: normalized.expires_at,
+    original_expires_at: normalized.original_expires_at,
+    expiry_source: normalized.expiry_source,
+    expired_at: normalized.expired_at,
+    is_expired: normalized.is_expired,
+    auto_archive_after_expiry: normalized.auto_archive_after_expiry,
+    renewal_count: normalized.renewal_count,
+    last_renewed_at: normalized.last_renewed_at,
+    duplicate_hash: duplicateHash(normalized),
+    raw_import_payload: raw,
+    imported_by: requestedBy,
+    importer_email: requestedBy,
+    relevance_score: normalized.relevance_score,
+    relevance_level: normalized.relevance_level,
+    relevance_reason: normalized.relevance_reason,
+    risk_score: normalized.risk_score,
+    risk_reason: normalized.risk_reason,
+    ethical_score: normalized.ethical_score,
+    hallall_score: normalized.ethical_score,
+    ethical_reason: normalized.ethical_reason,
+    source_trust_score: normalized.source_trust_score,
+    source_identity_type: normalized.source_identity_type,
+    source_identity_name: normalized.source_identity_name,
+    source_identity_url: normalized.source_identity_url,
+    source_identity_confidence: normalized.source_identity_confidence,
+    is_albanian_source: normalized.is_albanian_source,
+    albanian_source_reason: normalized.albanian_source_reason,
+    contact_language_required: normalized.contact_language_required,
+    contact_languages: normalized.contact_languages,
+    communication_languages: normalized.contact_languages,
+    show_communication_language: normalized.contact_language_required,
+    freshness_score: normalized.freshness_score,
+    completeness_score: normalized.completeness_score,
+    final_score: normalized.final_score,
+    requires_manual_review: true,
+    quality_notes: [normalized.relevance_reason, normalized.risk_reason, normalized.ethical_reason].filter(Boolean)
+  }, requestedBy);
+  createdItems.push(imported);
+  existingImported.push(imported);
+  return { created: true, duplicate: false, skipped: false, imported };
+}
+
 async function runImport({ store, config, sourceId = "", maxItems, requestedBy = "system", force = false, options = {} } = {}) {
   if (running && !force) return { success: false, status: "locked", message: "Importimi është duke u ekzekutuar." };
   running = true;
@@ -172,6 +388,7 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
   const createdItems = [];
   let fetchedTotal = 0;
   let duplicateTotal = 0;
+  let skippedTotal = 0;
   let errorTotal = 0;
 
   try {
@@ -185,6 +402,7 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
       .filter((source) => providerIsConfigured(source.provider_key || "custom", config) || selectedSourceRun)
       .map((source) => applyRuntimeOptions(source, options));
     const limit = Math.max(1, Number(maxItems || settings.max_items_per_run || config.IMPORT_ASSISTANT_MAX_PER_RUN || 100));
+    const minNewItems = Math.max(0, Number(options.min_new_items_per_run || settings.min_new_items_per_run || config.IMPORT_ASSISTANT_MIN_NEW_PER_RUN || DEFAULT_MIN_NEW_PER_RUN));
     const existingImported = await store.allRecords("ImportedPost");
     const existingJobs = await store.allRecords("Job");
 
@@ -198,153 +416,68 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
         fetched_count: 0,
         created_count: 0,
         duplicate_count: 0,
+        skipped_count: 0,
         rejected_count: 0,
         error_count: 0,
+        target_new_count: minNewItems,
+        queries_tried: [],
+        countries_tried: [],
         status: "running"
       };
       let logRecord = await store.createRecord("ImportLog", logBase, requestedBy);
       try {
-        const sourceForProvider = { ...source, base_url: sourceUrl(source) };
-        const rawItems = ensureArray(await provider.fetchItems({ source: sourceForProvider, config, maxItems: limit }));
-        fetchedTotal += rawItems.length;
         let createdCount = 0;
         let duplicateCount = 0;
-        for (const raw of rawItems.slice(0, limit)) {
-          const normalized = await normalizeImportedItem(raw, source);
-          const sourceName = normalized.source_name || source.name || providerKey;
-          const contactMethods = normalized.contact_methods || [];
-          if (!passesRuntimeThresholds(normalized, options)) {
-            continue;
+        let skippedCount = 0;
+        let fetchedCount = 0;
+        const queriesTried = new Set();
+        const countriesTried = new Set();
+        const attempts = buildAttemptPlan(source, options, { selectedSourceRun });
+        const perAttemptLimit = Math.max(5, Math.min(limit, Math.ceil(limit / Math.max(1, Math.min(attempts.length, 8)))));
+        for (const attempt of attempts) {
+          if (createdItems.length >= limit) break;
+          if (minNewItems && createdItems.length >= minNewItems && !selectedSourceRun) break;
+          if (attempt.query) queriesTried.add(attempt.query);
+          if (attempt.country) countriesTried.add(attempt.country);
+          const sourceForProvider = applyRuntimeOptions({
+            ...source,
+            base_url: sourceUrl(source),
+            parser_config: {
+              ...parserConfig(source),
+              query: attempt.query,
+              country_filter: attempt.country || source.country_filter || parserConfig(source).country_filter || "",
+            },
+          }, {
+            ...options,
+            profession_filter: attempt.query || options.profession_filter || source.profession_filter,
+            country_filter: attempt.country || options.country_filter || source.country_filter,
+          });
+          const rawItems = ensureArray(await provider.fetchItems({ source: sourceForProvider, config, maxItems: perAttemptLimit }));
+          fetchedCount += rawItems.length;
+          fetchedTotal += rawItems.length;
+          for (const raw of rawItems.slice(0, perAttemptLimit)) {
+            if (createdItems.length >= limit) break;
+            const processed = await processRawImportedItem({
+              raw,
+              source,
+              providerKey,
+              store,
+              requestedBy,
+              options,
+              existingImported,
+              existingJobs,
+              createdItems
+            });
+            if (processed.created) createdCount += 1;
+            if (processed.duplicate) {
+              duplicateCount += 1;
+              duplicateTotal += 1;
+            }
+            if (processed.skipped) {
+              skippedCount += 1;
+              skippedTotal += 1;
+            }
           }
-          const duplicate = isDuplicateImportedItem(
-            normalized,
-            [...existingImported, ...createdItems],
-            existingJobs
-          );
-          if (duplicate.duplicate) {
-            duplicateCount += 1;
-            duplicateTotal += 1;
-            await store.createRecord("ImportedPost", {
-              original_text: normalized.original_description || normalized.original_title,
-              edited_text: normalized.shqip_summary || normalized.original_description,
-              title: normalized.shqip_title,
-              description: normalized.shqip_summary || normalized.original_description,
-              company_name: normalized.original_company || "",
-              location: normalized.original_location || "",
-              category: normalized.category,
-              listing_type: normalized.item_type === "job" ? "ofroj" : "tjeter",
-              source: providerKey,
-              source_id: normalized.source_id || source.id,
-              source_name: sourceName,
-              source_url: normalized.source_url,
-              import_source_url: normalized.source_url,
-              original_url: normalized.original_url || normalized.source_url,
-              original_post_id: normalized.original_post_id || normalized.external_id,
-              original_id: normalized.original_id || normalized.external_id,
-              original_published_at: normalized.original_published_at,
-              external_id: normalized.external_id,
-              provider_key: providerKey,
-              status: "duplicate",
-              expires_at: normalized.expires_at,
-              original_expires_at: normalized.original_expires_at,
-              expiry_source: normalized.expiry_source,
-              expired_at: normalized.expired_at,
-              is_expired: normalized.is_expired,
-              auto_archive_after_expiry: normalized.auto_archive_after_expiry,
-              renewal_count: normalized.renewal_count,
-              last_renewed_at: normalized.last_renewed_at,
-              duplicate_reason: duplicate.reason,
-              duplicate_hash: duplicateHash(normalized),
-              address: normalized.address || normalized.original_location || "",
-              contact_email: primaryContact(contactMethods, "email"),
-              contact_phone: primaryContact(contactMethods, "phone") || primaryContact(contactMethods, "whatsapp"),
-              contact_url: primaryContact(contactMethods, "website") || primaryContact(contactMethods, "application_form"),
-              raw_import_payload: raw,
-              imported_by: requestedBy
-            }, requestedBy);
-            continue;
-          }
-          const imported = await store.createRecord("ImportedPost", {
-            original_text: normalized.original_description || normalized.original_title,
-            edited_text: normalized.shqip_summary || normalized.original_description,
-            title: normalized.shqip_title,
-            description: normalized.shqip_summary || normalized.original_description,
-            company_name: normalized.original_company || "",
-            location: normalized.original_location || "",
-            address: normalized.address || normalized.original_location || "",
-            author_name: normalized.source_identity_name,
-            author_profile_url: normalized.source_identity_url,
-            import_author_profile_url: normalized.source_identity_url,
-            original_post_url: normalized.source_url,
-            source_url: normalized.source_url,
-            import_source_url: normalized.source_url,
-            source_name: sourceName,
-            source: providerKey,
-            provider_key: providerKey,
-            source_id: normalized.source_id || source.id,
-            original_url: normalized.original_url || normalized.source_url,
-            original_post_id: normalized.original_post_id || normalized.external_id,
-            original_id: normalized.original_id || normalized.external_id,
-            original_published_at: normalized.original_published_at,
-            external_id: normalized.external_id || crypto.randomUUID(),
-            item_type: normalized.item_type,
-            category: normalized.category,
-            listing_type: normalized.item_type === "job" ? "ofroj" : "tjeter",
-            profession: normalized.profession,
-            country: normalized.country || normalized.original_country,
-            region: normalized.region,
-            city: normalized.city || normalized.original_city,
-            salary: normalized.original_salary,
-            contact_info: JSON.stringify(contactMethods),
-            contact_methods: contactMethods,
-            contact_email: primaryContact(contactMethods, "email"),
-            contact_phone: primaryContact(contactMethods, "phone") || primaryContact(contactMethods, "whatsapp"),
-            contact_url: primaryContact(contactMethods, "website") || primaryContact(contactMethods, "application_form"),
-            show_source_url: false,
-            show_author_profile_url: false,
-            source_public_visible: false,
-            imported_public_badge_visible: false,
-            status: "pending_review",
-            expires_at: normalized.expires_at,
-            original_expires_at: normalized.original_expires_at,
-            expiry_source: normalized.expiry_source,
-            expired_at: normalized.expired_at,
-            is_expired: normalized.is_expired,
-            auto_archive_after_expiry: normalized.auto_archive_after_expiry,
-            renewal_count: normalized.renewal_count,
-            last_renewed_at: normalized.last_renewed_at,
-            duplicate_hash: duplicateHash(normalized),
-            raw_import_payload: raw,
-            imported_by: requestedBy,
-            importer_email: requestedBy,
-            relevance_score: normalized.relevance_score,
-            relevance_level: normalized.relevance_level,
-            relevance_reason: normalized.relevance_reason,
-            risk_score: normalized.risk_score,
-            risk_reason: normalized.risk_reason,
-            ethical_score: normalized.ethical_score,
-            hallall_score: normalized.ethical_score,
-            ethical_reason: normalized.ethical_reason,
-            source_trust_score: normalized.source_trust_score,
-            source_identity_type: normalized.source_identity_type,
-            source_identity_name: normalized.source_identity_name,
-            source_identity_url: normalized.source_identity_url,
-            source_identity_confidence: normalized.source_identity_confidence,
-            is_albanian_source: normalized.is_albanian_source,
-            albanian_source_reason: normalized.albanian_source_reason,
-            contact_language_required: normalized.contact_language_required,
-            contact_languages: normalized.contact_languages,
-            communication_languages: normalized.contact_languages,
-            show_communication_language: normalized.contact_language_required,
-            freshness_score: normalized.freshness_score,
-            completeness_score: normalized.completeness_score,
-            final_score: normalized.final_score,
-            requires_manual_review: true,
-            quality_notes: [normalized.relevance_reason, normalized.risk_reason, normalized.ethical_reason].filter(Boolean)
-          }, requestedBy);
-          createdItems.push(imported);
-          existingImported.push(imported);
-          createdCount += 1;
         }
         await store.updateRecord("ImportedSource", source.id, {
           last_checked_at: now(),
@@ -355,10 +488,15 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
         });
         logRecord = await store.updateRecord("ImportLog", logRecord.id, {
           finished_at: now(),
-          fetched_count: rawItems.length,
+          fetched_count: fetchedCount,
           created_count: createdCount,
           duplicate_count: duplicateCount,
-          status: "success"
+          skipped_count: skippedCount,
+          queries_tried: [...queriesTried],
+          countries_tried: [...countriesTried],
+          target_new_count: minNewItems,
+          status: createdCount > 0 ? (createdItems.length >= minNewItems || !minNewItems ? "success" : "partial_success") : (duplicateCount > 0 ? "duplicate_only" : "no_results"),
+          error_message: createdCount === 0 && minNewItems ? `Nuk u arrit minimumi ${minNewItems}; u provuan ${queriesTried.size || 1} query dhe ${countriesTried.size || 1} vende për këtë burim.` : ""
         });
         logs.push(logRecord);
       } catch (error) {
@@ -381,13 +519,24 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
 
     return {
       success: true,
-      status: "completed",
+      status: createdItems.length === 0 && duplicateTotal > 0 ? "duplicate_only" : (createdItems.length < minNewItems ? "partial_success" : "completed"),
       started_at: startedAt,
       finished_at: now(),
       fetched_count: fetchedTotal,
       created_count: createdItems.length,
       duplicate_count: duplicateTotal,
+      skipped_count: skippedTotal,
       error_count: errorTotal,
+      target_new_count: minNewItems,
+      fallback_summary: {
+        providers_tried: uniqueStrings(logs.map((log) => log.provider_key)),
+        queries_tried: uniqueStrings(logs.flatMap((log) => ensureArray(log.queries_tried))),
+        countries_tried: uniqueStrings(logs.flatMap((log) => ensureArray(log.countries_tried))),
+        min_new_items_per_run: minNewItems,
+        reason: createdItems.length >= minNewItems
+          ? ""
+          : `U krijuan ${createdItems.length} të reja nga minimumi ${minNewItems}; u shteruan burimet/provat e disponueshme.`
+      },
       logs,
       items: createdItems
     };

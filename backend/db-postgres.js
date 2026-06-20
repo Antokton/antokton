@@ -252,6 +252,7 @@ CREATE TABLE IF NOT EXISTS import_assistant_settings (
   default_country_filter TEXT,
   default_profession_filter TEXT,
   default_excluded_keywords TEXT,
+  min_new_items_per_run INTEGER DEFAULT 20,
   min_relevance_score INTEGER DEFAULT 45,
   max_risk_score INTEGER DEFAULT 70,
   created_at TEXT NOT NULL,
@@ -265,6 +266,7 @@ ALTER TABLE imported_sources ADD COLUMN IF NOT EXISTS rss_url TEXT;
 ALTER TABLE imported_sources ADD COLUMN IF NOT EXISTS login_required BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE imported_items ADD COLUMN IF NOT EXISTS original_id TEXT;
 ALTER TABLE imported_items ADD COLUMN IF NOT EXISTS original_published_at TEXT;
+ALTER TABLE import_assistant_settings ADD COLUMN IF NOT EXISTS min_new_items_per_run INTEGER DEFAULT 20;
 `;
 
 async function initializeAsync() {
