@@ -87,12 +87,17 @@ function chooseAddress(raw = {}) {
 
 async function normalizeImportedItem(raw = {}, source = {}) {
   const address = chooseAddress(raw);
+  const originalUrl = canonicalUrl(raw.original_url || raw.source_url || raw.url || "");
+  const originalId = cleanText(raw.original_id || raw.original_post_id || raw.external_id || raw.id || raw.slug || raw.url || "");
   const base = {
     source_id: source.id || "",
     source_name: cleanText(raw.source_name || source.name || raw.provider_key || source.provider_key || ""),
     provider_key: raw.provider_key || source.provider_key || "",
-    external_id: cleanText(raw.external_id || raw.id || raw.slug || raw.url || ""),
-    source_url: canonicalUrl(raw.source_url || raw.url || ""),
+    external_id: originalId,
+    original_id: originalId,
+    original_post_id: originalId,
+    original_url: originalUrl,
+    source_url: originalUrl,
     source_public_visible: false,
     imported_public_badge_visible: false,
     item_type: raw.item_type || "job",

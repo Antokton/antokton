@@ -1,207 +1,88 @@
-function source(name, baseUrl, {
-  sourceType = "html",
-  providerKey = "custom",
-  importMode = "automatic",
-  crawlMethod = "html",
-  automationLevel = "full_auto",
-  sourceGroup = "albanian_source",
-  parserType = "html",
-  trustLevel = "needs_review",
-  categoryFilter = "",
-  countryFilter = "",
-  enabled = false,
-  frequencyMinutes = 360,
-  loginRequired = false,
-  moderationRequired = true,
-  notes = ""
-} = {}) {
+const SOURCE_TYPE_DEFAULTS = {
+  rss: {
+    provider_key: "generic_rss",
+    import_mode: "automatic",
+    crawl_method: "rss",
+    automation_level: "full_auto",
+    parser_type: "rss",
+    source_group: "rss",
+    trust_level: "needs_review",
+  },
+  api: {
+    provider_key: "custom",
+    import_mode: "automatic",
+    crawl_method: "api",
+    automation_level: "full_auto",
+    parser_type: "api",
+    source_group: "custom_api",
+    trust_level: "needs_review",
+  },
+  html: {
+    provider_key: "custom",
+    import_mode: "automatic",
+    crawl_method: "html",
+    automation_level: "full_auto",
+    parser_type: "html",
+    source_group: "community",
+    trust_level: "needs_review",
+  },
+  facebook: {
+    provider_key: "custom",
+    import_mode: "manual",
+    crawl_method: "manual",
+    automation_level: "manual",
+    parser_type: "manual",
+    source_group: "community",
+    trust_level: "manual_only",
+    moderation_required: true,
+    notes: "Përdor API zyrtare/leje të qartë ose import manual; mos përdor scraping agresiv.",
+  },
+  telegram: {
+    provider_key: "custom",
+    import_mode: "manual",
+    crawl_method: "manual",
+    automation_level: "manual",
+    parser_type: "manual",
+    source_group: "community",
+    trust_level: "manual_only",
+    moderation_required: true,
+    notes: "Përdor bot/API kur ka akses të autorizuar; grupet private mbeten manuale.",
+  },
+  manual: {
+    provider_key: "custom",
+    import_mode: "manual",
+    crawl_method: "manual",
+    automation_level: "manual",
+    parser_type: "manual",
+    source_group: "manual_url",
+    trust_level: "manual_only",
+    moderation_required: true,
+  },
+};
+
+function normalizeSourceType(type = "") {
+  const value = String(type || "").trim().toLowerCase();
+  if (value === "api/json" || value === "json") return "api";
+  if (value === "html_needs_review") return "html";
+  return SOURCE_TYPE_DEFAULTS[value] ? value : "manual";
+}
+
+function technicalDefaultsForSource(source = {}) {
+  const sourceType = normalizeSourceType(source.source_type || source.parser_type);
+  const defaults = SOURCE_TYPE_DEFAULTS[sourceType] || SOURCE_TYPE_DEFAULTS.manual;
   return {
-    name,
-    provider_key: providerKey,
+    ...defaults,
     source_type: sourceType,
-    import_mode: importMode,
-    crawl_method: crawlMethod,
-    automation_level: automationLevel,
-    source_url: baseUrl,
-    base_url: baseUrl,
-    api_endpoint: sourceType === "api" ? baseUrl : "",
-    rss_url: sourceType === "rss" ? baseUrl : "",
-    enabled,
-    is_active: enabled,
-    crawl_frequency_minutes: frequencyMinutes,
-    crawl_frequency_hours: Math.max(0, Math.round(frequencyMinutes / 60)),
-    country_filter: countryFilter,
-    category_filter: categoryFilter,
-    profession_filter: "",
-    source_group: sourceGroup,
-    parser_type: parserType,
-    parser_config: {},
-    trust_level: trustLevel,
-    login_required: loginRequired,
-    is_editable_by_admin: true,
-    original_source_required: true,
-    moderation_required: moderationRequired,
-    notes,
-    failure_count: 0
   };
 }
 
-const jobPortal = (name, url, options = {}) => source(name, url, {
-  categoryFilter: "pune",
-  sourceGroup: options.sourceGroup || "albanian_source",
-  sourceType: "html",
-  importMode: "automatic",
-  crawlMethod: "html",
-  parserType: "html",
-  automationLevel: "full_auto",
-  notes: "Burim HTML publik i editueshëm. Aktivizo kur parser-i është testuar dhe importi lejohet.",
-  ...options
-});
+// Concrete sources live in the database and are managed from the admin panel.
+// This export intentionally stays empty to prevent hardcoded source seeding.
+const INITIAL_IMPORT_SOURCES = [];
 
-const publicJobProvider = (name, url, options = {}) => source(name, url, {
-  categoryFilter: "pune",
-  sourceGroup: "global_provider",
-  sourceType: "html",
-  importMode: "automatic",
-  crawlMethod: "html",
-  parserType: "html",
-  automationLevel: "full_auto",
-  trustLevel: options.trustLevel || "trusted",
-  notes: "Burim publik/institucional ose agregator. Kontrollo kushtet dhe API/RSS para aktivizimit automatik.",
-  ...options
-});
-
-const apiProvider = (name, url, options = {}) => publicJobProvider(name, url, {
-  sourceType: "api",
-  importMode: "automatic",
-  crawlMethod: "api",
-  parserType: "api",
-  automationLevel: "full_auto",
-  ...options
-});
-
-const communityTemplate = (name, sourceType, options = {}) => source(name, "", {
-  sourceType,
-  importMode: "manual",
-  crawlMethod: "manual",
-  parserType: "manual",
-  automationLevel: "manual",
-  trustLevel: "manual_only",
-  sourceGroup: "community",
-  notes: "Burim komunitar. Përdor import manual ose API zyrtare/leje të qartë; mos bëj scraping agresiv.",
-  ...options
-});
-
-const INITIAL_IMPORT_SOURCES = [
-  source("Arbeitnow", "https://www.arbeitnow.com/api/job-board-api", {
-    sourceType: "api",
-    providerKey: "arbeitnow",
-    importMode: "automatic",
-    crawlMethod: "api",
-    sourceGroup: "global_provider",
-    parserType: "api",
-    automationLevel: "full_auto",
-    trustLevel: "trusted",
-    categoryFilter: "pune",
-    countryFilter: "Gjermani",
-    enabled: true,
-    notes: "Provider funksional pa API key; ruhet në DB dhe mund të fiket nga admini."
-  }),
-
-  jobPortal("Staff.al", "https://staff.al"),
-  jobPortal("PunaJuaj.com", "https://www.punajuaj.com"),
-  jobPortal("PortaliPunes.al", "https://www.portalipunes.al"),
-  jobPortal("AlbaniaJobs.al", "https://albaniajobs.al"),
-  jobPortal("Ekipi.al", "https://ekipi.al"),
-  jobPortal("Punesim.com", "https://punesim.com"),
-  jobPortal("PortalPune.com", "https://portalpune.com"),
-  jobPortal("KosovaJob.com", "https://kosovajob.com"),
-  jobPortal("Gjirafa Punë", "https://listime.gjirafa.com/Top/Pune"),
-  jobPortal("Lyppune.com", "https://lyppune.com"),
-  jobPortal("Kastori.net", "https://kastori.net"),
-  jobPortal("Njoftime.com", "https://www.njoftime.com", { categoryFilter: "" }),
-  jobPortal("Njoftime24.al", "https://www.njoftime24.al", { categoryFilter: "" }),
-  jobPortal("NjoftimePune.com", "https://www.njoftimepune.com"),
-  jobPortal("Gazeta Çelësi / Njoftime Pune", "https://www.gazetacelesi.al/njoftime-pune"),
-  jobPortal("MerrFal.com", "https://merrfal.com", { categoryFilter: "pazar" }),
-  jobPortal("MerrJep.al", "https://www.merrjep.al", { categoryFilter: "pazar" }),
-  jobPortal("MerrJep.com", "https://www.merrjep.com", { categoryFilter: "pazar" }),
-  jobPortal("MerrJep.mk", "https://www.merrjep.mk", { categoryFilter: "pazar" }),
-  jobPortal("Reklama5.mk", "https://www.reklama5.mk", { categoryFilter: "pazar" }),
-  jobPortal("ePunesimi.com", "https://epunesimi.com"),
-  jobPortal("ACP Punësim", "https://acp.al/punesim"),
-  publicJobProvider("Puna.gov.al", "https://www.puna.gov.al"),
-  publicJobProvider("ePunësimi Kosovë", "https://epunesimi.rks-gov.net"),
-
-  apiProvider("EURES", "https://eures.europa.eu", { providerKey: "eures" }),
-  publicJobProvider("European Job Days", "https://europeanjobdays.eu"),
-  publicJobProvider("VDAB", "https://www.vdab.be"),
-  publicJobProvider("Actiris", "https://www.actiris.brussels"),
-  publicJobProvider("Le Forem", "https://www.leforem.be"),
-  publicJobProvider("France Travail", "https://www.francetravail.fr"),
-  publicJobProvider("Bundesagentur für Arbeit", "https://www.arbeitsagentur.de"),
-  publicJobProvider("UWV Werk", "https://www.werk.nl"),
-  publicJobProvider("NAV Norway", "https://www.nav.no"),
-  publicJobProvider("Arbetsförmedlingen", "https://arbetsformedlingen.se"),
-  publicJobProvider("Jobnet Denmark", "https://job.jobnet.dk"),
-  publicJobProvider("ADEM Luxembourg", "https://adem.public.lu"),
-  publicJobProvider("AMS Austria", "https://www.ams.at"),
-  publicJobProvider("SEPE Spain", "https://www.sepe.es"),
-  publicJobProvider("ANPAL / Lavoro Italy", "https://www.lavoro.gov.it"),
-  publicJobProvider("Gov.uk Find a Job", "https://findajob.dwp.gov.uk"),
-  publicJobProvider("JobsIreland", "https://jobsireland.ie"),
-
-  publicJobProvider("Indeed", "https://www.indeed.com", { trustLevel: "needs_review" }),
-  publicJobProvider("LinkedIn Jobs", "https://www.linkedin.com/jobs", { sourceType: "linkedin", importMode: "automatic", crawlMethod: "api", parserType: "api", automationLevel: "semi_auto", trustLevel: "needs_review", loginRequired: true }),
-  apiProvider("Jooble", "https://jooble.org", { providerKey: "jooble" }),
-  apiProvider("Adzuna", "https://www.adzuna.com", { providerKey: "adzuna" }),
-  publicJobProvider("Glassdoor Jobs", "https://www.glassdoor.com/Job", { trustLevel: "needs_review" }),
-  publicJobProvider("Monster", "https://www.monster.com", { trustLevel: "needs_review" }),
-  publicJobProvider("CareerJet", "https://www.careerjet.com", { trustLevel: "needs_review" }),
-  publicJobProvider("Jobrapido", "https://www.jobrapido.com", { trustLevel: "needs_review" }),
-  publicJobProvider("Talent.com", "https://www.talent.com", { trustLevel: "needs_review" }),
-  publicJobProvider("SimplyHired", "https://www.simplyhired.com", { trustLevel: "needs_review" }),
-  publicJobProvider("ZipRecruiter", "https://www.ziprecruiter.com", { trustLevel: "needs_review" }),
-  publicJobProvider("CareerBuilder", "https://www.careerbuilder.com", { trustLevel: "needs_review" }),
-  publicJobProvider("EuroJobs", "https://www.eurojobs.com"),
-  publicJobProvider("JobsInEurope", "https://www.jobsineurope.eu"),
-
-  publicJobProvider("Remote OK", "https://remoteok.com", { categoryFilter: "pune remote" }),
-  publicJobProvider("We Work Remotely", "https://weworkremotely.com", { categoryFilter: "pune remote" }),
-  publicJobProvider("Remotive", "https://remotive.com", { categoryFilter: "pune remote" }),
-  publicJobProvider("FlexJobs", "https://www.flexjobs.com", { categoryFilter: "pune remote", trustLevel: "needs_review" }),
-  publicJobProvider("Wellfound", "https://wellfound.com", { categoryFilter: "pune remote", trustLevel: "needs_review" }),
-  publicJobProvider("NoDesk", "https://nodesk.co", { categoryFilter: "pune remote" }),
-
-  publicJobProvider("SeasonWorkers", "https://www.seasonworkers.com", { categoryFilter: "pune sezonale" }),
-  publicJobProvider("Anywork Anywhere", "https://www.anyworkanywhere.com", { categoryFilter: "pune sezonale" }),
-  publicJobProvider("FarmWork Europe", "https://farmworkeurope.com", { categoryFilter: "pune sezonale bujqësi" }),
-  publicJobProvider("TransJobs", "https://www.transjobs.eu", { categoryFilter: "transport logjistikë shofer" }),
-  publicJobProvider("TruckingJobs Europe", "https://www.truckingjobs.eu", { categoryFilter: "transport logjistikë shofer" }),
-  publicJobProvider("NHS Jobs", "https://www.jobs.nhs.uk", { categoryFilter: "shëndetësi" }),
-  publicJobProvider("HealthJobsUK", "https://www.healthjobsuk.com", { categoryFilter: "shëndetësi" }),
-  publicJobProvider("BMJ Careers", "https://www.bmj.com/careers", { categoryFilter: "shëndetësi" }),
-  publicJobProvider("EURAXESS Jobs", "https://euraxess.ec.europa.eu/jobs", { categoryFilter: "akademike kërkim" }),
-  publicJobProvider("Academic Positions", "https://academicpositions.com", { categoryFilter: "akademike kërkim" }),
-  publicJobProvider("JobTeaser", "https://www.jobteaser.com", { categoryFilter: "praktika pune" }),
-
-  communityTemplate("Facebook Groups", "facebook", { notes: "Grupet private të Facebook importohen manualisht; linku ruhet vetëm për gjurmim." }),
-  communityTemplate("Facebook Pages", "facebook", { importMode: "automatic", crawlMethod: "api", parserType: "api", automationLevel: "semi_auto", trustLevel: "needs_review", notes: "Facebook Page publike vetëm me Graph API/leje të qartë." }),
-  communityTemplate("Instagram Business Pages", "instagram", { importMode: "automatic", crawlMethod: "api", parserType: "api", automationLevel: "semi_auto", trustLevel: "needs_review", notes: "Instagram Business/Creator vetëm me API/leje të qartë." }),
-  communityTemplate("TikTok Accounts", "tiktok"),
-  communityTemplate("Telegram Channels", "telegram", { importMode: "automatic", crawlMethod: "api", parserType: "api", automationLevel: "semi_auto", trustLevel: "needs_review", notes: "Kanale publike Telegram përmes bot/API kur ka akses." }),
-  communityTemplate("Telegram Groups", "telegram", { notes: "Grupe private Telegram importohen manualisht." }),
-  communityTemplate("WhatsApp Communities", "whatsapp"),
-  communityTemplate("WhatsApp Channels", "whatsapp"),
-  communityTemplate("LinkedIn Pages të kompanive shqiptare", "linkedin", { importMode: "automatic", crawlMethod: "api", parserType: "api", automationLevel: "semi_auto", trustLevel: "needs_review", loginRequired: true }),
-  communityTemplate("YouTube Channels", "youtube", { importMode: "automatic", crawlMethod: "api", parserType: "api", automationLevel: "full_auto", providerKey: "custom", trustLevel: "needs_review" }),
-  communityTemplate("Reddit Communities", "reddit", { importMode: "automatic", crawlMethod: "api", parserType: "api", automationLevel: "full_auto", trustLevel: "needs_review" }),
-  communityTemplate("Discord Servers", "discord", { importMode: "automatic", crawlMethod: "api", parserType: "api", automationLevel: "semi_auto", trustLevel: "needs_review" }),
-  communityTemplate("Faqe kompanish shqiptare", "html", { importMode: "automatic", crawlMethod: "html", parserType: "html", automationLevel: "full_auto", sourceGroup: "albanian_source", trustLevel: "needs_review" }),
-  communityTemplate("Shoqata shqiptare në diasporë", "html", { importMode: "automatic", crawlMethod: "html", parserType: "html", automationLevel: "full_auto", sourceGroup: "community", trustLevel: "needs_review" }),
-  communityTemplate("Xhami dhe qendra komunitare shqiptare", "html", { importMode: "automatic", crawlMethod: "html", parserType: "html", automationLevel: "full_auto", sourceGroup: "community", trustLevel: "needs_review" }),
-  communityTemplate("Portale lokale lajmesh me seksion vende pune", "html", { importMode: "automatic", crawlMethod: "html", parserType: "html", automationLevel: "full_auto", sourceGroup: "community", trustLevel: "needs_review" }),
-  communityTemplate("Faqe kompanish me seksion Careers/Jobs", "html", { importMode: "automatic", crawlMethod: "html", parserType: "html", automationLevel: "full_auto", sourceGroup: "community", trustLevel: "needs_review" })
-];
-
-module.exports = { INITIAL_IMPORT_SOURCES };
+module.exports = {
+  INITIAL_IMPORT_SOURCES,
+  SOURCE_TYPE_DEFAULTS,
+  normalizeSourceType,
+  technicalDefaultsForSource,
+};

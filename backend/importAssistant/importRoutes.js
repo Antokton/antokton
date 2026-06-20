@@ -1,6 +1,7 @@
 const { runImport, ensureDefaultSettings, ensureDefaultSources } = require("./importRunner");
 const { translateContactMessage } = require("./translateImportedItem");
 const { buildExpiryFields } = require("./expiry");
+const { normalizeSourceType, technicalDefaultsForSource } = require("./seedSources");
 
 function normalizeSourcePayload(body = {}) {
   const frequencyMinutes = Number(
@@ -10,21 +11,23 @@ function normalizeSourcePayload(body = {}) {
   const enabled = body.enabled !== undefined
     ? body.enabled === true
     : (body.is_active !== undefined ? body.is_active !== false : true);
-  const sourceType = body.source_type || body.parser_type || "manual";
-  const importMode = body.import_mode || (["rss", "api", "html"].includes(sourceType) ? "automatic" : "manual");
-  const crawlMethod = body.crawl_method || (sourceType === "api" ? "api" : sourceType === "rss" ? "rss" : sourceType === "html" ? "html" : "manual");
-  const automationLevel = body.automation_level || (importMode === "automatic" ? "full_auto" : importMode === "mixed" ? "semi_auto" : "manual");
+  const sourceType = normalizeSourceType(body.source_type || body.parser_type || "manual");
+  const defaults = technicalDefaultsForSource({ source_type: sourceType });
+  const importMode = body.import_mode || defaults.import_mode;
+  const crawlMethod = body.crawl_method || defaults.crawl_method;
+  const automationLevel = body.automation_level || defaults.automation_level;
+  const sourceUrl = body.source_url || body.base_url || "";
   return {
     name: body.name || "Burim i ri",
-    provider_key: body.provider_key || "custom",
+    provider_key: body.provider_key || defaults.provider_key,
     source_type: sourceType,
     import_mode: importMode,
     crawl_method: crawlMethod,
     automation_level: automationLevel,
-    source_url: body.source_url || body.base_url || "",
+    source_url: sourceUrl,
     base_url: body.base_url || body.source_url || "",
-    api_endpoint: body.api_endpoint || (sourceType === "api" ? (body.source_url || body.base_url || "") : ""),
-    rss_url: body.rss_url || (sourceType === "rss" ? (body.source_url || body.base_url || "") : ""),
+    api_endpoint: body.api_endpoint || (crawlMethod === "api" ? sourceUrl : ""),
+    rss_url: body.rss_url || (crawlMethod === "rss" ? sourceUrl : ""),
     jobs_url: body.jobs_url || "",
     category_url: body.category_url || "",
     country_scope: body.country_scope || "",
@@ -37,15 +40,15 @@ function normalizeSourcePayload(body = {}) {
     country_filter: body.country_filter || "",
     category_filter: body.category_filter || "",
     profession_filter: body.profession_filter || "",
-    source_group: body.source_group || "manual_url",
-    parser_type: body.parser_type || crawlMethod || "manual",
+    source_group: body.source_group || defaults.source_group,
+    parser_type: body.parser_type || defaults.parser_type || crawlMethod || "manual",
     parser_config: body.parser_config || {},
-    trust_level: body.trust_level || "needs_review",
+    trust_level: body.trust_level || defaults.trust_level || "needs_review",
     login_required: body.login_required === true,
     is_editable_by_admin: body.is_editable_by_admin !== false,
     original_source_required: body.original_source_required !== false,
-    moderation_required: body.moderation_required !== false,
-    notes: body.notes || "",
+    moderation_required: body.moderation_required !== undefined ? body.moderation_required !== false : defaults.moderation_required !== false,
+    notes: body.notes || defaults.notes || "",
   };
 }
 

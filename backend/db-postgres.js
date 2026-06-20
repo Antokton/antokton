@@ -157,6 +157,7 @@ CREATE TABLE IF NOT EXISTS imported_items (
   id TEXT PRIMARY KEY,
   source_id TEXT,
   external_id TEXT,
+  original_id TEXT,
   original_post_id TEXT,
   source_url TEXT,
   original_url TEXT,
@@ -218,6 +219,7 @@ CREATE TABLE IF NOT EXISTS imported_items (
   approved_by TEXT,
   approved_at TEXT,
   published_post_id TEXT,
+  original_published_at TEXT,
   imported_at TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -261,6 +263,8 @@ ALTER TABLE imported_sources ADD COLUMN IF NOT EXISTS automation_level TEXT;
 ALTER TABLE imported_sources ADD COLUMN IF NOT EXISTS api_endpoint TEXT;
 ALTER TABLE imported_sources ADD COLUMN IF NOT EXISTS rss_url TEXT;
 ALTER TABLE imported_sources ADD COLUMN IF NOT EXISTS login_required BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE imported_items ADD COLUMN IF NOT EXISTS original_id TEXT;
+ALTER TABLE imported_items ADD COLUMN IF NOT EXISTS original_published_at TEXT;
 `;
 
 async function initializeAsync() {

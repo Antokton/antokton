@@ -200,6 +200,7 @@ CREATE TABLE IF NOT EXISTS imported_items (
   id TEXT PRIMARY KEY,
   source_id TEXT,
   external_id TEXT,
+  original_id TEXT,
   original_post_id TEXT,
   source_url TEXT,
   original_url TEXT,
@@ -261,6 +262,7 @@ CREATE TABLE IF NOT EXISTS imported_items (
   approved_by TEXT,
   approved_at TEXT,
   published_post_id TEXT,
+  original_published_at TEXT,
   imported_at TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -312,6 +314,8 @@ addColumnIfMissing("imported_sources", "automation_level", "TEXT");
 addColumnIfMissing("imported_sources", "api_endpoint", "TEXT");
 addColumnIfMissing("imported_sources", "rss_url", "TEXT");
 addColumnIfMissing("imported_sources", "login_required", "INTEGER NOT NULL DEFAULT 0");
+addColumnIfMissing("imported_items", "original_id", "TEXT");
+addColumnIfMissing("imported_items", "original_published_at", "TEXT");
 
 const statements = {
   insertEntity: db.prepare(`

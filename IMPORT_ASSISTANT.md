@@ -19,11 +19,11 @@ JOOBLE_API_KEY=
 EURES_API_KEY=
 ```
 
-Provider-i `arbeitnow` punon pa API key. `Adzuna`, `Jooble` dhe `EURES` janë të përgatitur; kur mungojnë çelësat nuk rrëzojnë importin.
+Provider-i teknik `arbeitnow` punon pa API key kur admini ka krijuar një burim `api` me `provider_key=arbeitnow`. `Adzuna`, `Jooble` dhe `EURES` janë të përgatitur; kur mungojnë çelësat nuk rrëzojnë importin.
 
 ## Burimet dinamike
 
-Burimet konkrete ruhen si rreshta `ImportedSource` në databazë. Kodi mban vetëm parser-at/provider-at teknikë (`api`, `rss`, `html`, `manual`, `custom`). Seed-et fillestare përdoren vetëm për të krijuar burime të editueshme në DB; admini mund t'i ndryshojë, çaktivizojë ose fshijë pa ndryshim kodi.
+Burimet konkrete ruhen si rreshta `ImportedSource` në databazë. Kodi mban vetëm parser-at/provider-at teknikë (`api`, `rss`, `html`, `facebook`, `telegram`, `manual`, `custom`). Burime si Staff.al, PortalPune, faqe Facebook, kanale Telegram, agjenci shqiptare ose partnerë nuk krijohen më nga lista hardcoded në kod; ato shtohen, ndryshohen, çaktivizohen ose fshihen nga admini.
 
 Admin → Import Assistant → Burime lejon:
 
@@ -48,7 +48,7 @@ Burimet pa API/RSS të qartë ose ku scraping nuk lejohet duhen regjistruar si `
 
 Import automatik lejohet vetëm për RSS, API zyrtare, HTML publik ku lejohet, ose platforma sociale kur ka API/leje të qartë. Facebook Groups pa API, WhatsApp Communities/Channels, Instagram profile personale, TikTok pa API, Messenger/Signal/Viber/Snapchat dhe burime të paqëndrueshme ruhen si manuale.
 
-Burimet fillestare përfshijnë portalet shqiptare/rajonale, burime institucionale europiane, agregatorë ndërkombëtarë, remote jobs, punë sezonale, transport/logjistikë, shëndetësi, akademike/kërkim dhe template komunitare. Ato janë seed fillestar, jo listë e mbyllur.
+Për instalime të reja, sistemi nuk krijon automatikisht burime konkrete. Admini duhet t'i shtojë nga paneli `Burime` ose përmes API/DB, duke zgjedhur tipin teknik, frekuencën dhe besueshmërinë për secilin burim.
 
 ## Settings
 

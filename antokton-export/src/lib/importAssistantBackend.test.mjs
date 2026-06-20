@@ -13,7 +13,7 @@ const { scoreRisk } = require(path.join(root, "backend/importAssistant/scoreRisk
 const { scoreEthical } = require(path.join(root, "backend/importAssistant/scoreEthical.js"));
 const { detectContactLanguage } = require(path.join(root, "backend/importAssistant/detectContactLanguage.js"));
 const { generateAlbanianListingTitle } = require(path.join(root, "backend/importAssistant/generateAlbanianListingTitle.js"));
-const { runImport } = require(path.join(root, "backend/importAssistant/importRunner.js"));
+const { ensureDefaultSources, runImport } = require(path.join(root, "backend/importAssistant/importRunner.js"));
 const { buildExpiryFields, parseImportedExpiry, getAutomaticExpiryDays } = require(path.join(root, "backend/importAssistant/expiry.js"));
 const arbeitnowProvider = require(path.join(root, "backend/importAssistant/providers/arbeitnowProvider.js"));
 
@@ -82,6 +82,27 @@ test("deduplication catches source URL and similar title", () => {
   const item = { provider_key: "x", external_id: "1", source_url: "https://example.com/a?utm_source=x", original_title: "Shofer CE", city: "Berlin", country: "Gjermani" };
   assert.equal(isDuplicateImportedItem(item, [{ provider_key: "x", external_id: "1" }], []).duplicate, true);
   assert.equal(isDuplicateImportedItem(item, [{ source_url: "https://example.com/a" }], []).duplicate, true);
+  assert.equal(isDuplicateImportedItem({ source_id: "source-1", original_id: "abc" }, [{ source_id: "source-1", original_id: "abc" }], []).reason, "source_id + original_id");
+});
+
+test("default sources do not seed concrete providers from code", async () => {
+  const created = [];
+  const store = {
+    async allRecords(entity) {
+      assert.equal(entity, "ImportedSource");
+      return [];
+    },
+    async createRecord(entity, data) {
+      created.push({ entity, data });
+      return data;
+    },
+    async updateRecord() {
+      throw new Error("No source should be updated when the database is empty");
+    }
+  };
+  const sources = await ensureDefaultSources(store);
+  assert.deepEqual(sources, []);
+  assert.deepEqual(created, []);
 });
 
 test("manual run works when auto import settings are disabled", async () => {

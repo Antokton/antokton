@@ -1,7 +1,7 @@
 const crypto = require("node:crypto");
 const { normalizeImportedItem } = require("./normalizeImportedItem");
 const { isDuplicateImportedItem } = require("./deduplicateImportedItem");
-const { INITIAL_IMPORT_SOURCES } = require("./seedSources");
+const { technicalDefaultsForSource } = require("./seedSources");
 
 const providers = {
   arbeitnow: require("./providers/arbeitnowProvider"),
@@ -40,22 +40,6 @@ function getFrequencyMinutes(source = {}) {
   return Number(source.crawl_frequency_hours ?? 6) * 60;
 }
 
-function canonicalSourceKey(source = {}) {
-  return String(source.source_url || source.base_url || source.name || "")
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\/(www\.)?/, "")
-    .replace(/\/+$/, "");
-}
-
-function shouldRefreshSeedMetadata(current = {}, seed = {}) {
-  if (!current.crawl_method || !current.automation_level) return true;
-  if (current.import_mode === "mixed") return true;
-  if (current.source_type === "html_needs_review" && seed.source_type === "html") return true;
-  if (current.parser_type === "manual" && seed.parser_type !== "manual") return true;
-  return false;
-}
-
 async function ensureDefaultSettings(store, config) {
   const existing = (await store.allRecords("ImportAssistantSettings"))[0];
   const defaults = {
@@ -78,39 +62,39 @@ async function ensureDefaultSettings(store, config) {
 
 async function ensureDefaultSources(store) {
   const existing = await store.allRecords("ImportedSource");
-  const existingByKey = new Map(existing.map((source) => [canonicalSourceKey(source), source]).filter(([key]) => Boolean(key)));
-  const created = [];
-  for (const source of INITIAL_IMPORT_SOURCES) {
-    const key = canonicalSourceKey(source);
-    if (!key) continue;
-    const current = existingByKey.get(key);
-    if (!current) {
-      created.push(await store.createRecord("ImportedSource", source, "system"));
-      existingByKey.set(key, source);
-    } else {
-      const metadataPatch = {
-        provider_key: source.provider_key,
-        source_type: source.source_type,
-        import_mode: source.import_mode,
-        crawl_method: source.crawl_method,
-        automation_level: source.automation_level,
-        api_endpoint: source.api_endpoint,
-        rss_url: source.rss_url,
-        source_group: source.source_group,
-        parser_type: source.parser_type,
-        trust_level: source.trust_level,
-        login_required: source.login_required === true,
-        moderation_required: source.moderation_required !== false,
-      };
-      const needsUpdate = shouldRefreshSeedMetadata(current, source)
-        && Object.entries(metadataPatch).some(([field, value]) => current[field] !== value);
-      if (needsUpdate) {
-        await store.updateRecord("ImportedSource", current.id, metadataPatch);
-        Object.assign(current, metadataPatch);
+  for (const source of existing) {
+    const defaults = technicalDefaultsForSource(source);
+    const patch = {};
+    for (const field of [
+      "provider_key",
+      "source_type",
+      "import_mode",
+      "crawl_method",
+      "automation_level",
+      "parser_type",
+      "source_group",
+      "trust_level",
+    ]) {
+      if (source[field] === undefined || source[field] === null || source[field] === "") {
+        patch[field] = defaults[field];
       }
     }
+    if ((source.crawl_frequency_minutes === undefined || source.crawl_frequency_minutes === null) && source.crawl_frequency_hours === undefined) {
+      patch.crawl_frequency_minutes = 360;
+      patch.crawl_frequency_hours = 6;
+    }
+    if ((source.api_endpoint === undefined || source.api_endpoint === "") && defaults.crawl_method === "api") {
+      patch.api_endpoint = source.source_url || source.base_url || "";
+    }
+    if ((source.rss_url === undefined || source.rss_url === "") && defaults.crawl_method === "rss") {
+      patch.rss_url = source.source_url || source.base_url || "";
+    }
+    if (Object.keys(patch).length) {
+      await store.updateRecord("ImportedSource", source.id, patch);
+      Object.assign(source, patch);
+    }
   }
-  return [...existing, ...created];
+  return existing;
 }
 
 function shouldUseSource(sourceId, source) {
@@ -170,8 +154,8 @@ function primaryContact(methods = [], type) {
 function duplicateHash(item = {}) {
   const input = [
     item.source_id,
-    item.external_id,
-    item.source_url,
+    item.original_id || item.external_id,
+    item.original_url || item.source_url,
     item.original_title,
     item.original_company,
     item.country,
@@ -254,9 +238,9 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
               source_name: sourceName,
               source_url: normalized.source_url,
               import_source_url: normalized.source_url,
-              original_url: normalized.source_url,
-              original_post_id: normalized.external_id,
-              original_id: normalized.external_id,
+              original_url: normalized.original_url || normalized.source_url,
+              original_post_id: normalized.original_post_id || normalized.external_id,
+              original_id: normalized.original_id || normalized.external_id,
               original_published_at: normalized.original_published_at,
               external_id: normalized.external_id,
               provider_key: providerKey,
@@ -298,9 +282,9 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
             source: providerKey,
             provider_key: providerKey,
             source_id: normalized.source_id || source.id,
-            original_url: normalized.source_url,
-            original_post_id: normalized.external_id,
-            original_id: normalized.external_id,
+            original_url: normalized.original_url || normalized.source_url,
+            original_post_id: normalized.original_post_id || normalized.external_id,
+            original_id: normalized.original_id || normalized.external_id,
             original_published_at: normalized.original_published_at,
             external_id: normalized.external_id || crypto.randomUUID(),
             item_type: normalized.item_type,
