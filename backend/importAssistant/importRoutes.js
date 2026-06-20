@@ -10,13 +10,21 @@ function normalizeSourcePayload(body = {}) {
   const enabled = body.enabled !== undefined
     ? body.enabled === true
     : (body.is_active !== undefined ? body.is_active !== false : true);
+  const sourceType = body.source_type || body.parser_type || "manual";
+  const importMode = body.import_mode || (["rss", "api", "html"].includes(sourceType) ? "automatic" : "manual");
+  const crawlMethod = body.crawl_method || (sourceType === "api" ? "api" : sourceType === "rss" ? "rss" : sourceType === "html" ? "html" : "manual");
+  const automationLevel = body.automation_level || (importMode === "automatic" ? "full_auto" : importMode === "mixed" ? "semi_auto" : "manual");
   return {
     name: body.name || "Burim i ri",
     provider_key: body.provider_key || "custom",
-    source_type: body.source_type || body.parser_type || "manual",
-    import_mode: body.import_mode || (["rss", "api"].includes(body.source_type) ? "automatic" : "manual"),
+    source_type: sourceType,
+    import_mode: importMode,
+    crawl_method: crawlMethod,
+    automation_level: automationLevel,
     source_url: body.source_url || body.base_url || "",
     base_url: body.base_url || body.source_url || "",
+    api_endpoint: body.api_endpoint || (sourceType === "api" ? (body.source_url || body.base_url || "") : ""),
+    rss_url: body.rss_url || (sourceType === "rss" ? (body.source_url || body.base_url || "") : ""),
     jobs_url: body.jobs_url || "",
     category_url: body.category_url || "",
     country_scope: body.country_scope || "",
@@ -30,9 +38,10 @@ function normalizeSourcePayload(body = {}) {
     category_filter: body.category_filter || "",
     profession_filter: body.profession_filter || "",
     source_group: body.source_group || "manual_url",
-    parser_type: body.parser_type || body.source_type || "manual",
+    parser_type: body.parser_type || crawlMethod || "manual",
     parser_config: body.parser_config || {},
     trust_level: body.trust_level || "needs_review",
+    login_required: body.login_required === true,
     is_editable_by_admin: body.is_editable_by_admin !== false,
     original_source_required: body.original_source_required !== false,
     moderation_required: body.moderation_required !== false,

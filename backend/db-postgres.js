@@ -117,8 +117,12 @@ CREATE TABLE IF NOT EXISTS imported_sources (
   provider_key TEXT NOT NULL,
   source_type TEXT,
   import_mode TEXT,
+  crawl_method TEXT,
+  automation_level TEXT,
   source_url TEXT,
   base_url TEXT,
+  api_endpoint TEXT,
+  rss_url TEXT,
   jobs_url TEXT,
   category_url TEXT,
   country_scope TEXT,
@@ -135,6 +139,7 @@ CREATE TABLE IF NOT EXISTS imported_sources (
   parser_type TEXT,
   parser_config JSONB DEFAULT '{}',
   trust_level TEXT,
+  login_required BOOLEAN NOT NULL DEFAULT false,
   is_editable_by_admin BOOLEAN NOT NULL DEFAULT true,
   last_checked_at TEXT,
   last_crawled_at TEXT,
@@ -250,6 +255,12 @@ CREATE TABLE IF NOT EXISTS import_assistant_settings (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+
+ALTER TABLE imported_sources ADD COLUMN IF NOT EXISTS crawl_method TEXT;
+ALTER TABLE imported_sources ADD COLUMN IF NOT EXISTS automation_level TEXT;
+ALTER TABLE imported_sources ADD COLUMN IF NOT EXISTS api_endpoint TEXT;
+ALTER TABLE imported_sources ADD COLUMN IF NOT EXISTS rss_url TEXT;
+ALTER TABLE imported_sources ADD COLUMN IF NOT EXISTS login_required BOOLEAN NOT NULL DEFAULT false;
 `;
 
 async function initializeAsync() {

@@ -48,6 +48,14 @@ function canonicalSourceKey(source = {}) {
     .replace(/\/+$/, "");
 }
 
+function shouldRefreshSeedMetadata(current = {}, seed = {}) {
+  if (!current.crawl_method || !current.automation_level) return true;
+  if (current.import_mode === "mixed") return true;
+  if (current.source_type === "html_needs_review" && seed.source_type === "html") return true;
+  if (current.parser_type === "manual" && seed.parser_type !== "manual") return true;
+  return false;
+}
+
 async function ensureDefaultSettings(store, config) {
   const existing = (await store.allRecords("ImportAssistantSettings"))[0];
   const defaults = {
@@ -70,13 +78,36 @@ async function ensureDefaultSettings(store, config) {
 
 async function ensureDefaultSources(store) {
   const existing = await store.allRecords("ImportedSource");
-  const existingKeys = new Set(existing.map(canonicalSourceKey).filter(Boolean));
+  const existingByKey = new Map(existing.map((source) => [canonicalSourceKey(source), source]).filter(([key]) => Boolean(key)));
   const created = [];
   for (const source of INITIAL_IMPORT_SOURCES) {
     const key = canonicalSourceKey(source);
-    if (key && !existingKeys.has(key)) {
+    if (!key) continue;
+    const current = existingByKey.get(key);
+    if (!current) {
       created.push(await store.createRecord("ImportedSource", source, "system"));
-      existingKeys.add(key);
+      existingByKey.set(key, source);
+    } else {
+      const metadataPatch = {
+        provider_key: source.provider_key,
+        source_type: source.source_type,
+        import_mode: source.import_mode,
+        crawl_method: source.crawl_method,
+        automation_level: source.automation_level,
+        api_endpoint: source.api_endpoint,
+        rss_url: source.rss_url,
+        source_group: source.source_group,
+        parser_type: source.parser_type,
+        trust_level: source.trust_level,
+        login_required: source.login_required === true,
+        moderation_required: source.moderation_required !== false,
+      };
+      const needsUpdate = shouldRefreshSeedMetadata(current, source)
+        && Object.entries(metadataPatch).some(([field, value]) => current[field] !== value);
+      if (needsUpdate) {
+        await store.updateRecord("ImportedSource", current.id, metadataPatch);
+        Object.assign(current, metadataPatch);
+      }
     }
   }
   return [...existing, ...created];

@@ -1,14 +1,18 @@
 function source(name, baseUrl, {
-  sourceType = "html_needs_review",
+  sourceType = "html",
   providerKey = "custom",
-  importMode = "manual",
-  sourceGroup = "manual_url",
-  parserType = "manual",
+  importMode = "automatic",
+  crawlMethod = "html",
+  automationLevel = "full_auto",
+  sourceGroup = "albanian_source",
+  parserType = "html",
   trustLevel = "needs_review",
   categoryFilter = "",
   countryFilter = "",
   enabled = false,
   frequencyMinutes = 360,
+  loginRequired = false,
+  moderationRequired = true,
   notes = ""
 } = {}) {
   return {
@@ -16,8 +20,12 @@ function source(name, baseUrl, {
     provider_key: providerKey,
     source_type: sourceType,
     import_mode: importMode,
+    crawl_method: crawlMethod,
+    automation_level: automationLevel,
     source_url: baseUrl,
     base_url: baseUrl,
+    api_endpoint: sourceType === "api" ? baseUrl : "",
+    rss_url: sourceType === "rss" ? baseUrl : "",
     enabled,
     is_active: enabled,
     crawl_frequency_minutes: frequencyMinutes,
@@ -29,9 +37,10 @@ function source(name, baseUrl, {
     parser_type: parserType,
     parser_config: {},
     trust_level: trustLevel,
+    login_required: loginRequired,
     is_editable_by_admin: true,
     original_source_required: true,
-    moderation_required: true,
+    moderation_required: moderationRequired,
     notes,
     failure_count: 0
   };
@@ -40,21 +49,43 @@ function source(name, baseUrl, {
 const jobPortal = (name, url, options = {}) => source(name, url, {
   categoryFilter: "pune",
   sourceGroup: options.sourceGroup || "albanian_source",
-  notes: "Burim fillestar i editueshëm. Aktivizo automatikisht vetëm kur RSS/API/HTML lejohet dhe është testuar.",
+  sourceType: "html",
+  importMode: "automatic",
+  crawlMethod: "html",
+  parserType: "html",
+  automationLevel: "full_auto",
+  notes: "Burim HTML publik i editueshëm. Aktivizo kur parser-i është testuar dhe importi lejohet.",
   ...options
 });
 
 const publicJobProvider = (name, url, options = {}) => source(name, url, {
   categoryFilter: "pune",
   sourceGroup: "global_provider",
+  sourceType: "html",
+  importMode: "automatic",
+  crawlMethod: "html",
+  parserType: "html",
+  automationLevel: "full_auto",
   trustLevel: options.trustLevel || "trusted",
   notes: "Burim publik/institucional ose agregator. Kontrollo kushtet dhe API/RSS para aktivizimit automatik.",
+  ...options
+});
+
+const apiProvider = (name, url, options = {}) => publicJobProvider(name, url, {
+  sourceType: "api",
+  importMode: "automatic",
+  crawlMethod: "api",
+  parserType: "api",
+  automationLevel: "full_auto",
   ...options
 });
 
 const communityTemplate = (name, sourceType, options = {}) => source(name, "", {
   sourceType,
   importMode: "manual",
+  crawlMethod: "manual",
+  parserType: "manual",
+  automationLevel: "manual",
   trustLevel: "manual_only",
   sourceGroup: "community",
   notes: "Burim komunitar. Përdor import manual ose API zyrtare/leje të qartë; mos bëj scraping agresiv.",
@@ -66,8 +97,10 @@ const INITIAL_IMPORT_SOURCES = [
     sourceType: "api",
     providerKey: "arbeitnow",
     importMode: "automatic",
+    crawlMethod: "api",
     sourceGroup: "global_provider",
     parserType: "api",
+    automationLevel: "full_auto",
     trustLevel: "trusted",
     categoryFilter: "pune",
     countryFilter: "Gjermani",
@@ -100,7 +133,7 @@ const INITIAL_IMPORT_SOURCES = [
   publicJobProvider("Puna.gov.al", "https://www.puna.gov.al"),
   publicJobProvider("ePunësimi Kosovë", "https://epunesimi.rks-gov.net"),
 
-  publicJobProvider("EURES", "https://eures.europa.eu", { providerKey: "eures", sourceType: "api", parserType: "api", importMode: "mixed" }),
+  apiProvider("EURES", "https://eures.europa.eu", { providerKey: "eures" }),
   publicJobProvider("European Job Days", "https://europeanjobdays.eu"),
   publicJobProvider("VDAB", "https://www.vdab.be"),
   publicJobProvider("Actiris", "https://www.actiris.brussels"),
@@ -119,9 +152,9 @@ const INITIAL_IMPORT_SOURCES = [
   publicJobProvider("JobsIreland", "https://jobsireland.ie"),
 
   publicJobProvider("Indeed", "https://www.indeed.com", { trustLevel: "needs_review" }),
-  publicJobProvider("LinkedIn Jobs", "https://www.linkedin.com/jobs", { sourceType: "linkedin", importMode: "manual", trustLevel: "needs_review" }),
-  publicJobProvider("Jooble", "https://jooble.org", { providerKey: "jooble", sourceType: "api", parserType: "api", importMode: "mixed" }),
-  publicJobProvider("Adzuna", "https://www.adzuna.com", { providerKey: "adzuna", sourceType: "api", parserType: "api", importMode: "mixed" }),
+  publicJobProvider("LinkedIn Jobs", "https://www.linkedin.com/jobs", { sourceType: "linkedin", importMode: "automatic", crawlMethod: "api", parserType: "api", automationLevel: "semi_auto", trustLevel: "needs_review", loginRequired: true }),
+  apiProvider("Jooble", "https://jooble.org", { providerKey: "jooble" }),
+  apiProvider("Adzuna", "https://www.adzuna.com", { providerKey: "adzuna" }),
   publicJobProvider("Glassdoor Jobs", "https://www.glassdoor.com/Job", { trustLevel: "needs_review" }),
   publicJobProvider("Monster", "https://www.monster.com", { trustLevel: "needs_review" }),
   publicJobProvider("CareerJet", "https://www.careerjet.com", { trustLevel: "needs_review" }),
@@ -152,23 +185,23 @@ const INITIAL_IMPORT_SOURCES = [
   publicJobProvider("Academic Positions", "https://academicpositions.com", { categoryFilter: "akademike kërkim" }),
   publicJobProvider("JobTeaser", "https://www.jobteaser.com", { categoryFilter: "praktika pune" }),
 
-  communityTemplate("Facebook Groups", "facebook"),
-  communityTemplate("Facebook Pages", "facebook", { importMode: "mixed" }),
-  communityTemplate("Instagram Business Pages", "instagram", { importMode: "mixed" }),
+  communityTemplate("Facebook Groups", "facebook", { notes: "Grupet private të Facebook importohen manualisht; linku ruhet vetëm për gjurmim." }),
+  communityTemplate("Facebook Pages", "facebook", { importMode: "automatic", crawlMethod: "api", parserType: "api", automationLevel: "semi_auto", trustLevel: "needs_review", notes: "Facebook Page publike vetëm me Graph API/leje të qartë." }),
+  communityTemplate("Instagram Business Pages", "instagram", { importMode: "automatic", crawlMethod: "api", parserType: "api", automationLevel: "semi_auto", trustLevel: "needs_review", notes: "Instagram Business/Creator vetëm me API/leje të qartë." }),
   communityTemplate("TikTok Accounts", "tiktok"),
-  communityTemplate("Telegram Channels", "telegram", { importMode: "mixed" }),
-  communityTemplate("Telegram Groups", "telegram", { importMode: "mixed" }),
+  communityTemplate("Telegram Channels", "telegram", { importMode: "automatic", crawlMethod: "api", parserType: "api", automationLevel: "semi_auto", trustLevel: "needs_review", notes: "Kanale publike Telegram përmes bot/API kur ka akses." }),
+  communityTemplate("Telegram Groups", "telegram", { notes: "Grupe private Telegram importohen manualisht." }),
   communityTemplate("WhatsApp Communities", "whatsapp"),
   communityTemplate("WhatsApp Channels", "whatsapp"),
-  communityTemplate("LinkedIn Pages të kompanive shqiptare", "linkedin", { importMode: "mixed" }),
-  communityTemplate("YouTube Channels", "youtube", { importMode: "mixed", providerKey: "custom" }),
-  communityTemplate("Reddit Communities", "reddit", { importMode: "mixed" }),
-  communityTemplate("Discord Servers", "discord", { importMode: "mixed" }),
-  communityTemplate("Faqe kompanish shqiptare", "html_needs_review"),
-  communityTemplate("Shoqata shqiptare në diasporë", "html_needs_review"),
-  communityTemplate("Xhami dhe qendra komunitare shqiptare", "html_needs_review"),
-  communityTemplate("Portale lokale lajmesh me seksion vende pune", "html_needs_review"),
-  communityTemplate("Faqe kompanish me seksion Careers/Jobs", "html_needs_review")
+  communityTemplate("LinkedIn Pages të kompanive shqiptare", "linkedin", { importMode: "automatic", crawlMethod: "api", parserType: "api", automationLevel: "semi_auto", trustLevel: "needs_review", loginRequired: true }),
+  communityTemplate("YouTube Channels", "youtube", { importMode: "automatic", crawlMethod: "api", parserType: "api", automationLevel: "full_auto", providerKey: "custom", trustLevel: "needs_review" }),
+  communityTemplate("Reddit Communities", "reddit", { importMode: "automatic", crawlMethod: "api", parserType: "api", automationLevel: "full_auto", trustLevel: "needs_review" }),
+  communityTemplate("Discord Servers", "discord", { importMode: "automatic", crawlMethod: "api", parserType: "api", automationLevel: "semi_auto", trustLevel: "needs_review" }),
+  communityTemplate("Faqe kompanish shqiptare", "html", { importMode: "automatic", crawlMethod: "html", parserType: "html", automationLevel: "full_auto", sourceGroup: "albanian_source", trustLevel: "needs_review" }),
+  communityTemplate("Shoqata shqiptare në diasporë", "html", { importMode: "automatic", crawlMethod: "html", parserType: "html", automationLevel: "full_auto", sourceGroup: "community", trustLevel: "needs_review" }),
+  communityTemplate("Xhami dhe qendra komunitare shqiptare", "html", { importMode: "automatic", crawlMethod: "html", parserType: "html", automationLevel: "full_auto", sourceGroup: "community", trustLevel: "needs_review" }),
+  communityTemplate("Portale lokale lajmesh me seksion vende pune", "html", { importMode: "automatic", crawlMethod: "html", parserType: "html", automationLevel: "full_auto", sourceGroup: "community", trustLevel: "needs_review" }),
+  communityTemplate("Faqe kompanish me seksion Careers/Jobs", "html", { importMode: "automatic", crawlMethod: "html", parserType: "html", automationLevel: "full_auto", sourceGroup: "community", trustLevel: "needs_review" })
 ];
 
 module.exports = { INITIAL_IMPORT_SOURCES };

@@ -160,8 +160,12 @@ CREATE TABLE IF NOT EXISTS imported_sources (
   provider_key TEXT NOT NULL,
   source_type TEXT,
   import_mode TEXT,
+  crawl_method TEXT,
+  automation_level TEXT,
   source_url TEXT,
   base_url TEXT,
+  api_endpoint TEXT,
+  rss_url TEXT,
   jobs_url TEXT,
   category_url TEXT,
   country_scope TEXT,
@@ -178,6 +182,7 @@ CREATE TABLE IF NOT EXISTS imported_sources (
   parser_type TEXT,
   parser_config TEXT,
   trust_level TEXT,
+  login_required INTEGER NOT NULL DEFAULT 0,
   is_editable_by_admin INTEGER NOT NULL DEFAULT 1,
   last_checked_at TEXT,
   last_crawled_at TEXT,
@@ -294,6 +299,19 @@ CREATE TABLE IF NOT EXISTS import_assistant_settings (
   updated_at TEXT NOT NULL
 );
 `);
+
+function addColumnIfMissing(tableName, columnName, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${tableName})`).all().map((column) => column.name);
+  if (!columns.includes(columnName)) {
+    db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
+  }
+}
+
+addColumnIfMissing("imported_sources", "crawl_method", "TEXT");
+addColumnIfMissing("imported_sources", "automation_level", "TEXT");
+addColumnIfMissing("imported_sources", "api_endpoint", "TEXT");
+addColumnIfMissing("imported_sources", "rss_url", "TEXT");
+addColumnIfMissing("imported_sources", "login_required", "INTEGER NOT NULL DEFAULT 0");
 
 const statements = {
   insertEntity: db.prepare(`

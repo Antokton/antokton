@@ -74,6 +74,12 @@ export const IMPORT_MODE_LABELS = {
   mixed: "I përzier",
 };
 
+export const AUTOMATION_LEVEL_LABELS = {
+  full_auto: "Full auto",
+  semi_auto: "Semi auto",
+  manual: "Manual",
+};
+
 export const CRAWL_FREQUENCY_MINUTE_LABELS = {
   0: "OFF",
   60: "Çdo 1 orë",

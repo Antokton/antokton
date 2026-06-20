@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Plus, Trash2, Save, Play, Pencil, X } from "lucide-react";
-import { CATEGORIES, PROVIDER_LABELS, SOURCE_GROUP_LABELS, PARSER_TYPE_LABELS, TRUST_LEVEL_LABELS, SOURCE_TYPE_LABELS, IMPORT_MODE_LABELS, CRAWL_FREQUENCY_MINUTE_LABELS } from "./importConstants";
+import { CATEGORIES, PROVIDER_LABELS, SOURCE_GROUP_LABELS, PARSER_TYPE_LABELS, TRUST_LEVEL_LABELS, SOURCE_TYPE_LABELS, IMPORT_MODE_LABELS, CRAWL_FREQUENCY_MINUTE_LABELS, AUTOMATION_LEVEL_LABELS } from "./importConstants";
 
 const PROVIDERS = Object.keys(PROVIDER_LABELS);
 const SOURCE_GROUPS = Object.keys(SOURCE_GROUP_LABELS);
@@ -12,24 +12,27 @@ const PARSER_TYPES = Object.keys(PARSER_TYPE_LABELS);
 const TRUST_LEVELS = Object.keys(TRUST_LEVEL_LABELS);
 const SOURCE_TYPES = Object.keys(SOURCE_TYPE_LABELS);
 const IMPORT_MODES = Object.keys(IMPORT_MODE_LABELS);
+const AUTOMATION_LEVELS = Object.keys(AUTOMATION_LEVEL_LABELS);
 const CRAWL_FREQUENCIES = Object.keys(CRAWL_FREQUENCY_MINUTE_LABELS);
 const COLUMN_STORAGE_KEY = "antokton.importSources.columns.v1";
+const COLUMN_MIN_WIDTH = 38;
 
 const DEFAULT_COLUMNS = [
-  { key: "name", label: "Emri", width: 220 },
-  { key: "source_type", label: "Lloji", width: 150 },
-  { key: "import_mode", label: "Mënyra", width: 130 },
-  { key: "provider_key", label: "Provider", width: 160 },
+  { key: "name", label: "Emri", width: 190 },
+  { key: "source_type", label: "Lloji", width: 110 },
+  { key: "import_mode", label: "Mënyra", width: 100 },
+  { key: "automation_level", label: "Auto", width: 95 },
+  { key: "provider_key", label: "Provider", width: 140 },
   { key: "url", label: "URL", width: 260 },
-  { key: "frequency", label: "Frekuenca", width: 130 },
-  { key: "source_group", label: "Grupi", width: 150 },
-  { key: "parser_type", label: "Parser", width: 130 },
-  { key: "filters", label: "Kategori/Profesion", width: 190 },
-  { key: "trust_level", label: "Besueshmëria", width: 150 },
-  { key: "status", label: "Statusi", width: 110 },
+  { key: "frequency", label: "Frekuenca", width: 110 },
+  { key: "source_group", label: "Grupi", width: 120 },
+  { key: "parser_type", label: "Parser", width: 100 },
+  { key: "filters", label: "Kategori/Profesion", width: 150 },
+  { key: "trust_level", label: "Besueshmëria", width: 120 },
+  { key: "status", label: "Statusi", width: 90 },
 ];
 
-const columnWidth = (column) => Math.max(90, Number(column.width || 140));
+const columnWidth = (column) => Math.max(COLUMN_MIN_WIDTH, Number(column.width || 120));
 
 const frequencyValue = (source = {}) => Number(source.crawl_frequency_minutes ?? (Number(source.crawl_frequency_hours ?? 6) * 60));
 const sourceIsActive = (source = {}) => {
@@ -41,9 +44,13 @@ const emptySource = {
   name: "",
   provider_key: "generic_rss",
   source_type: "rss",
-  import_mode: "manual",
+  import_mode: "automatic",
+  crawl_method: "rss",
+  automation_level: "full_auto",
   source_url: "",
   base_url: "",
+  api_endpoint: "",
+  rss_url: "",
   jobs_url: "",
   category_url: "",
   country_scope: "",
@@ -52,6 +59,8 @@ const emptySource = {
   source_group: "manual_url",
   parser_type: "rss",
   trust_level: "needs_review",
+  login_required: false,
+  moderation_required: true,
   enabled: true,
   is_active: true,
   crawl_frequency_minutes: 360,
@@ -59,6 +68,16 @@ const emptySource = {
   country_filter: "",
   profession_filter: "",
   notes: ""
+};
+
+const sourceDefaultsForType = (sourceType) => {
+  if (sourceType === "api") return { import_mode: "automatic", crawl_method: "api", parser_type: "api", automation_level: "full_auto", provider_key: "custom" };
+  if (sourceType === "rss") return { import_mode: "automatic", crawl_method: "rss", parser_type: "rss", automation_level: "full_auto", provider_key: "generic_rss", source_group: "rss" };
+  if (sourceType === "html") return { import_mode: "automatic", crawl_method: "html", parser_type: "html", automation_level: "full_auto", provider_key: "custom" };
+  if (["facebook", "instagram", "tiktok", "linkedin", "telegram", "youtube", "reddit", "discord"].includes(sourceType)) {
+    return { import_mode: "automatic", crawl_method: "api", parser_type: "api", automation_level: "semi_auto", provider_key: "custom", source_group: "community" };
+  }
+  return { import_mode: "manual", crawl_method: "manual", parser_type: "manual", automation_level: "manual", provider_key: "custom", source_group: "manual_url" };
 };
 
 export default function ImportSources() {
@@ -70,6 +89,9 @@ export default function ImportSources() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
   const [dragColumnKey, setDragColumnKey] = useState("");
+  const [sourceTypeFilter, setSourceTypeFilter] = useState("all");
+  const [automationFilter, setAutomationFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState("all");
   const resizeRef = useRef(null);
   const [columns, setColumns] = useState(() => {
     try {
@@ -111,8 +133,12 @@ export default function ImportSources() {
       provider_key: source.provider_key || "generic_rss",
       source_type: source.source_type || source.parser_type || "rss",
       import_mode: source.import_mode || "manual",
+      crawl_method: source.crawl_method || source.parser_type || source.source_type || "manual",
+      automation_level: source.automation_level || (source.import_mode === "automatic" ? "full_auto" : source.import_mode === "mixed" ? "semi_auto" : "manual"),
       source_url: source.source_url || source.base_url || "",
       base_url: source.base_url || source.source_url || "",
+      api_endpoint: source.api_endpoint || "",
+      rss_url: source.rss_url || "",
       jobs_url: source.jobs_url || "",
       category_url: source.category_url || "",
       country_scope: source.country_scope || "",
@@ -121,6 +147,8 @@ export default function ImportSources() {
       source_group: source.source_group || "manual_url",
       parser_type: source.parser_type || "rss",
       trust_level: source.trust_level || "needs_review",
+      login_required: source.login_required === true,
+      moderation_required: source.moderation_required !== false,
       enabled: sourceIsActive(source),
       is_active: sourceIsActive(source),
       crawl_frequency_minutes: frequencyValue(source),
@@ -131,6 +159,12 @@ export default function ImportSources() {
     });
   };
   const updateEdit = (key, value) => setEditForm((current) => ({ ...current, [key]: value }));
+  const updateDraftSourceType = (value) => {
+    setDraft((current) => ({ ...current, source_type: value, ...sourceDefaultsForType(value) }));
+  };
+  const updateEditSourceType = (value) => {
+    setEditForm((current) => ({ ...current, source_type: value, ...sourceDefaultsForType(value) }));
+  };
 
   const createSource = async () => {
     if (!draft.name.trim()) return alert("Vendos emrin e burimit.");
@@ -178,8 +212,27 @@ export default function ImportSources() {
     return source[key] || "";
   };
 
+  const visibleSources = useMemo(() => sources.filter((source) => {
+    if (sourceTypeFilter !== "all" && (source.source_type || source.parser_type) !== sourceTypeFilter) return false;
+    const level = source.automation_level || (source.import_mode === "automatic" ? "full_auto" : source.import_mode === "mixed" ? "semi_auto" : "manual");
+    if (automationFilter !== "all" && level !== automationFilter) return false;
+    if (activeFilter === "active" && !sourceIsActive(source)) return false;
+    if (activeFilter === "inactive" && sourceIsActive(source)) return false;
+    return true;
+  }), [sources, sourceTypeFilter, automationFilter, activeFilter]);
+
+  const sourceStats = useMemo(() => {
+    const countType = (type) => sources.filter((source) => (source.source_type || source.parser_type) === type).length;
+    return {
+      api: countType("api"),
+      rss: countType("rss"),
+      html: countType("html"),
+      manual: sources.filter((source) => (source.source_type || source.parser_type) === "manual" || (source.import_mode || "") === "manual").length,
+    };
+  }, [sources]);
+
   const sortedSources = useMemo(() => {
-    const rows = [...sources];
+    const rows = [...visibleSources];
     rows.sort((a, b) => {
       const left = sortValue(a, sortConfig.key);
       const right = sortValue(b, sortConfig.key);
@@ -187,7 +240,7 @@ export default function ImportSources() {
       return sortConfig.direction === "asc" ? result : -result;
     });
     return rows;
-  }, [sources, sortConfig]);
+  }, [visibleSources, sortConfig]);
 
   const allVisibleSelected = sortedSources.length > 0 && sortedSources.every((source) => selectedIds.includes(source.id));
   const selectedCount = selectedIds.length;
@@ -223,7 +276,7 @@ export default function ImportSources() {
     const handleMove = (moveEvent) => {
       const resize = resizeRef.current;
       if (!resize) return;
-      const nextWidth = Math.max(90, resize.startWidth + moveEvent.clientX - resize.startX);
+      const nextWidth = Math.max(COLUMN_MIN_WIDTH, resize.startWidth + moveEvent.clientX - resize.startX);
       setColumns((current) => current.map((item) => item.key === resize.key ? { ...item, width: nextWidth } : item));
     };
     const handleUp = () => {
@@ -278,8 +331,9 @@ export default function ImportSources() {
   const renderEditCell = (source, key) => {
     const selectClass = "h-8 bg-white/5 border-white/10 text-white";
     if (key === "name") return <Input value={editForm.name} onChange={(e) => updateEdit("name", e.target.value)} className="h-8 bg-white/5 border-white/10 text-white" />;
-    if (key === "source_type") return <Select value={editForm.source_type} onValueChange={(v) => updateEdit("source_type", v)}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{SOURCE_TYPES.map((value) => <SelectItem key={value} value={value} className="text-white">{SOURCE_TYPE_LABELS[value]}</SelectItem>)}</SelectContent></Select>;
+    if (key === "source_type") return <Select value={editForm.source_type} onValueChange={updateEditSourceType}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{SOURCE_TYPES.map((value) => <SelectItem key={value} value={value} className="text-white">{SOURCE_TYPE_LABELS[value]}</SelectItem>)}</SelectContent></Select>;
     if (key === "import_mode") return <Select value={editForm.import_mode} onValueChange={(v) => updateEdit("import_mode", v)}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{IMPORT_MODES.map((value) => <SelectItem key={value} value={value} className="text-white">{IMPORT_MODE_LABELS[value]}</SelectItem>)}</SelectContent></Select>;
+    if (key === "automation_level") return <Select value={editForm.automation_level || "manual"} onValueChange={(v) => updateEdit("automation_level", v)}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{AUTOMATION_LEVELS.map((value) => <SelectItem key={value} value={value} className="text-white">{AUTOMATION_LEVEL_LABELS[value]}</SelectItem>)}</SelectContent></Select>;
     if (key === "provider_key") return <Select value={editForm.provider_key} onValueChange={(v) => updateEdit("provider_key", v)}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{PROVIDERS.map((value) => <SelectItem key={value} value={value} className="text-white">{PROVIDER_LABELS[value]}</SelectItem>)}</SelectContent></Select>;
     if (key === "url") return <div className="space-y-1"><Input value={editForm.source_url} onChange={(e) => { updateEdit("source_url", e.target.value); updateEdit("base_url", e.target.value); }} placeholder="URL" className="h-8 bg-white/5 border-white/10 text-white" /><Input value={editForm.jobs_url} onChange={(e) => updateEdit("jobs_url", e.target.value)} placeholder="Jobs URL" className="h-8 bg-white/5 border-white/10 text-white" /><Input value={editForm.category_url} onChange={(e) => updateEdit("category_url", e.target.value)} placeholder="Category URL" className="h-8 bg-white/5 border-white/10 text-white" /></div>;
     if (key === "frequency") return <Select value={String(editForm.crawl_frequency_minutes ?? 360)} onValueChange={(v) => updateEdit("crawl_frequency_minutes", Number(v))}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0b1020] border-white/10">{CRAWL_FREQUENCIES.map((value) => <SelectItem key={value} value={value} className="text-white">{CRAWL_FREQUENCY_MINUTE_LABELS[value]}</SelectItem>)}</SelectContent></Select>;
@@ -295,6 +349,7 @@ export default function ImportSources() {
     if (key === "name") return <span className="font-semibold text-white">{source.name}</span>;
     if (key === "source_type") return SOURCE_TYPE_LABELS[source.source_type || source.parser_type] || source.source_type || "—";
     if (key === "import_mode") return IMPORT_MODE_LABELS[source.import_mode] || source.import_mode || "—";
+    if (key === "automation_level") return AUTOMATION_LEVEL_LABELS[source.automation_level] || (source.import_mode === "automatic" ? "Full auto" : source.import_mode === "mixed" ? "Semi auto" : "Manual");
     if (key === "provider_key") return PROVIDER_LABELS[source.provider_key] || source.provider_key || "—";
     if (key === "url") return <span className="block truncate" title={source.jobs_url || source.category_url || source.source_url || source.base_url || ""}>{source.jobs_url || source.category_url || source.source_url || source.base_url || "—"}</span>;
     if (key === "frequency") return CRAWL_FREQUENCY_MINUTE_LABELS[frequencyValue(source)] || `Çdo ${frequencyValue(source)} min`;
@@ -315,7 +370,7 @@ export default function ImportSources() {
         <div className="grid gap-2 md:grid-cols-3">
           <Input value={draft.name} onChange={(e) => updateDraft("name", e.target.value)} placeholder="Emri i burimit" className="bg-white/5 border-white/10 text-white" />
           <Input value={draft.source_url} onChange={(e) => { updateDraft("source_url", e.target.value); updateDraft("base_url", e.target.value); }} placeholder="URL kryesore/API/RSS" className="bg-white/5 border-white/10 text-white" />
-          <Select value={draft.source_type} onValueChange={(v) => updateDraft("source_type", v)}>
+          <Select value={draft.source_type} onValueChange={updateDraftSourceType}>
             <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Lloji i burimit" /></SelectTrigger>
             <SelectContent className="bg-[#0b1020] border-white/10">
               {SOURCE_TYPES.map((value) => <SelectItem key={value} value={value} className="text-white">{SOURCE_TYPE_LABELS[value]}</SelectItem>)}
@@ -325,6 +380,12 @@ export default function ImportSources() {
             <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Mënyra e importit" /></SelectTrigger>
             <SelectContent className="bg-[#0b1020] border-white/10">
               {IMPORT_MODES.map((value) => <SelectItem key={value} value={value} className="text-white">{IMPORT_MODE_LABELS[value]}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={draft.automation_level} onValueChange={(v) => updateDraft("automation_level", v)}>
+            <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Automatizimi" /></SelectTrigger>
+            <SelectContent className="bg-[#0b1020] border-white/10">
+              {AUTOMATION_LEVELS.map((value) => <SelectItem key={value} value={value} className="text-white">{AUTOMATION_LEVEL_LABELS[value]}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={draft.provider_key} onValueChange={(v) => updateDraft("provider_key", v)}>
@@ -376,6 +437,41 @@ export default function ImportSources() {
       </section>
 
       <section className="rounded-xl border border-white/10">
+        <div className="grid gap-2 border-b border-white/10 bg-white/[0.025] p-3 text-xs text-white/70 lg:grid-cols-[1fr_auto]">
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded border border-white/10 bg-white/[0.03] px-2 py-1">API: {sourceStats.api}</span>
+            <span className="rounded border border-white/10 bg-white/[0.03] px-2 py-1">RSS: {sourceStats.rss}</span>
+            <span className="rounded border border-white/10 bg-white/[0.03] px-2 py-1">HTML: {sourceStats.html}</span>
+            <span className="rounded border border-white/10 bg-white/[0.03] px-2 py-1">Manuale: {sourceStats.manual}</span>
+          </div>
+          <div className="flex flex-wrap gap-2 lg:justify-end">
+            <Select value={sourceTypeFilter} onValueChange={setSourceTypeFilter}>
+              <SelectTrigger className="h-8 w-[130px] bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10">
+                <SelectItem value="all" className="text-white">Të gjitha</SelectItem>
+                <SelectItem value="api" className="text-white">API</SelectItem>
+                <SelectItem value="rss" className="text-white">RSS</SelectItem>
+                <SelectItem value="html" className="text-white">HTML</SelectItem>
+                <SelectItem value="manual" className="text-white">Manual</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={automationFilter} onValueChange={setAutomationFilter}>
+              <SelectTrigger className="h-8 w-[130px] bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10">
+                <SelectItem value="all" className="text-white">Çdo auto</SelectItem>
+                {AUTOMATION_LEVELS.map((value) => <SelectItem key={value} value={value} className="text-white">{AUTOMATION_LEVEL_LABELS[value]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={activeFilter} onValueChange={setActiveFilter}>
+              <SelectTrigger className="h-8 w-[120px] bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10">
+                <SelectItem value="all" className="text-white">Çdo status</SelectItem>
+                <SelectItem value="active" className="text-white">Aktive</SelectItem>
+                <SelectItem value="inactive" className="text-white">Jo aktive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-white/[0.025] p-3 text-xs text-white/60">
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={toggleAllVisible} className="rounded border border-white/10 px-2 py-1 hover:bg-white/10">
@@ -405,10 +501,10 @@ export default function ImportSources() {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full table-fixed text-xs" style={{ width: columns.reduce((sum, column) => sum + columnWidth(column), 280) + 280 }}>
+          <table className="table-fixed text-[11px] leading-tight" style={{ width: columns.reduce((sum, column) => sum + columnWidth(column), 210) + 210 }}>
             <thead className="bg-white/5 text-white/45">
               <tr>
-                <th className="sticky left-0 z-20 w-[44px] bg-[#111827] p-3 text-left">
+                <th className="sticky left-0 z-20 w-[34px] bg-[#111827] p-2 text-left">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} aria-label="Zgjidh të gjitha burimet" />
                 </th>
                 {columns.map((column) => (
@@ -423,7 +519,7 @@ export default function ImportSources() {
                       setDragColumnKey("");
                     }}
                     onDragEnd={() => setDragColumnKey("")}
-                    className={`relative p-2 pr-4 text-left align-top ${dragColumnKey === column.key ? "opacity-60" : ""}`}
+                    className={`relative p-1.5 pr-3 text-left align-top ${dragColumnKey === column.key ? "opacity-60" : ""}`}
                     style={{ width: columnWidth(column) }}
                     title="Tërhiq kolonën për ta zhvendosur; kap vijën djathtas për gjerësi."
                   >
@@ -439,22 +535,24 @@ export default function ImportSources() {
                     />
                   </th>
                 ))}
-                <th className="sticky right-0 z-20 w-[220px] bg-[#111827] p-3 text-left">Veprime</th>
+                <th className="sticky right-0 z-20 w-[176px] bg-[#111827] p-2 text-left">Veprime</th>
               </tr>
             </thead>
             <tbody>
               {sortedSources.map((source) => (
                 <tr key={source.id} className={`border-t border-white/5 text-white/75 align-top hover:bg-white/[0.025] ${selectedIds.includes(source.id) ? "bg-[#8ff0cf]/5" : ""}`}>
-                  <td className="sticky left-0 z-10 bg-[#090f1f] p-3">
+                  <td className="sticky left-0 z-10 bg-[#090f1f] p-2">
                     <input type="checkbox" checked={selectedIds.includes(source.id)} onChange={() => toggleRow(source.id)} aria-label={`Zgjidh ${source.name}`} />
                   </td>
                   {columns.map((column) => (
-                    <td key={`${source.id}-${column.key}`} className="p-3 align-top" style={{ width: columnWidth(column) }}>
-                      {editingId === source.id ? renderEditCell(source, column.key) : renderViewCell(source, column.key)}
+                    <td key={`${source.id}-${column.key}`} className="p-1.5 align-top" style={{ width: columnWidth(column), maxWidth: columnWidth(column) }}>
+                      <div className={editingId === source.id ? "" : "max-h-10 overflow-hidden break-words"}>
+                        {editingId === source.id ? renderEditCell(source, column.key) : renderViewCell(source, column.key)}
+                      </div>
                     </td>
                   ))}
-                  <td className="sticky right-0 z-10 bg-[#090f1f] p-3 align-top shadow-[-12px_0_18px_rgba(0,0,0,0.22)]">
-                    <div className="flex max-w-[200px] flex-wrap gap-1.5">
+                  <td className="sticky right-0 z-10 bg-[#090f1f] p-1.5 align-top shadow-[-12px_0_18px_rgba(0,0,0,0.22)]">
+                    <div className="flex max-w-[170px] flex-wrap gap-1">
                       {editingId === source.id ? (
                         <>
                           <button type="button" onClick={() => saveEdit(source)} disabled={busyId === source.id} className="rounded border border-emerald-300/20 px-2 py-1 text-emerald-200 hover:bg-emerald-300/10 disabled:opacity-50">
