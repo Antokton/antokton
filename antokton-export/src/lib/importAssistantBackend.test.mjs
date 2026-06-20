@@ -280,6 +280,100 @@ test("import run logs unconfigured API providers as skipped and continues to nex
   }
 });
 
+test("selected import source is treated as starting point and falls back to other active sources", async () => {
+  const records = {
+    ImportedSource: [
+      {
+        id: "source-duplicate",
+        name: "Arbeitnow duplicate",
+        provider_key: "arbeitnow",
+        source_type: "api",
+        import_mode: "automatic",
+        crawl_method: "api",
+        enabled: true,
+        source_url: "https://example.test/duplicate",
+        category_filter: "pune",
+        country_filter: "Germany",
+        profession_filter: "warehouse"
+      },
+      {
+        id: "source-new",
+        name: "Arbeitnow fallback",
+        provider_key: "arbeitnow",
+        source_type: "api",
+        import_mode: "automatic",
+        crawl_method: "api",
+        enabled: true,
+        source_url: "https://example.test/new",
+        category_filter: "pune",
+        country_filter: "Germany",
+        profession_filter: "warehouse"
+      }
+    ],
+    ImportAssistantSettings: [],
+    ImportedPost: [{ provider_key: "arbeitnow", external_id: "duplicate-job", source_url: "https://example.test/jobs/duplicate" }],
+    Job: [],
+    ImportLog: []
+  };
+  const store = {
+    async allRecords(entity) { return records[entity] || []; },
+    async createRecord(entity, data) {
+      const row = { id: `${entity}-${records[entity].length + 1}`, created_date: new Date().toISOString(), ...data };
+      records[entity].push(row);
+      return row;
+    },
+    async updateRecord(entity, id, patch) {
+      const row = records[entity].find((item) => item.id === id);
+      Object.assign(row, patch);
+      return row;
+    },
+    async deleteRecord() { return true; }
+  };
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => ({
+    ok: true,
+    async json() {
+      const duplicate = String(url).includes("/duplicate");
+      return {
+        data: [duplicate ? {
+          title: "Warehouse operative",
+          description: "Warehouse logistics job",
+          company_name: "Demo",
+          location: "Berlin, Germany",
+          slug: "duplicate-job",
+          url: "https://example.test/jobs/duplicate",
+          created_at: 1760000000
+        } : {
+          title: "Cleaner",
+          description: "Cleaning job with clear contract",
+          company_name: "Clean Demo",
+          location: "Hamburg, Germany",
+          slug: "new-cleaner",
+          url: "https://example.test/jobs/new-cleaner",
+          created_at: 1760000000
+        }],
+        links: {}
+      };
+    }
+  });
+  try {
+    const result = await runImport({
+      store,
+      config: { IMPORT_ASSISTANT_MIN_NEW_PER_RUN: 1 },
+      sourceId: "source-duplicate",
+      requestedBy: "test",
+      options: { manual_run: true, min_new_items_per_run: 1, min_relevance_score: 0, max_risk_score: 100 }
+    });
+    assert.equal(result.created_count, 1);
+    assert.equal(result.duplicate_count > 0, true);
+    assert.deepEqual(result.fallback_summary.providers_tried, ["arbeitnow"]);
+    assert.equal(records.ImportLog.length >= 2, true);
+    assert.equal(records.ImportedPost.some((item) => item.status === "pending_review" && item.source_url === "https://example.test/jobs/new-cleaner"), true);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test("arbeitnow provider expands Albanian import keywords before filtering", async () => {
   const originalFetch = global.fetch;
   global.fetch = async () => ({

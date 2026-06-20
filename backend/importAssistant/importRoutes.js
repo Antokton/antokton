@@ -189,7 +189,7 @@ async function handleImportAssistantRoute(deps) {
     if (tail[2] === "test") {
       const source = (await store.allRecords("ImportedSource")).find((item) => item.id === id);
       if (!source) return sendError(res, 404, "Source not found");
-      const result = await runImport({ store, config, sourceId: id, maxItems: 3, requestedBy: userEmail, force: true });
+      const result = await runImport({ store, config, sourceId: id, maxItems: 3, requestedBy: userEmail, force: true, options: { strict_source: true } });
       return send(res, 200, result);
     }
     const body = await readPayload(req);

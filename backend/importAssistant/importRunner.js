@@ -401,12 +401,19 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
   try {
     const settings = await ensureDefaultSettings(store, config);
     const allSources = await ensureDefaultSources(store);
+    const strictSource = Boolean(options.strict_source);
     const manualRun = Boolean(sourceId || options.manual_run);
-    const selectedSourceRun = Boolean(sourceId);
+    const selectedSourceRun = Boolean(sourceId && strictSource);
     const sources = allSources
-      .filter((source) => shouldUseSource(sourceId, source))
+      .filter((source) => !strictSource || shouldUseSource(sourceId, source))
       .filter((source) => shouldCrawlSource(source, { manual: manualRun, selected: selectedSourceRun }))
-      .map((source) => applyRuntimeOptions(source, options));
+      .map((source) => applyRuntimeOptions(source, options))
+      .sort((a, b) => {
+        if (!sourceId || strictSource) return 0;
+        const aSelected = shouldUseSource(sourceId, a) ? 0 : 1;
+        const bSelected = shouldUseSource(sourceId, b) ? 0 : 1;
+        return aSelected - bSelected;
+      });
     const minNewItems = Math.max(0, Number(options.min_new_items_per_run || settings.min_new_items_per_run || config.IMPORT_ASSISTANT_MIN_NEW_PER_RUN || DEFAULT_MIN_NEW_PER_RUN));
     const requestedLimit = Number(maxItems || settings.max_items_per_run || config.IMPORT_ASSISTANT_MAX_PER_RUN || 100);
     const limit = Math.max(1, minNewItems || 0, requestedLimit);
