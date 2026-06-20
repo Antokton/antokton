@@ -83,8 +83,9 @@ function passesSourceFilters(job, source = {}) {
   const country = String(source.country_filter || source.parser_config?.country_filter || "").toLowerCase();
   if (category && !["job", "pune", "punë"].includes(category)) return false;
   if (country && !["gjermani", "germany", "deutschland"].includes(country)) return false;
-  const include = expandKeywords(splitKeywords(source.profession_filter || source.parser_config?.profession_filter));
-  const exclude = expandKeywords(splitKeywords(source.excluded_keywords || source.parser_config?.excluded_keywords));
+  const enforceTextFilters = source.parser_config?.enforce_profession_filter === true || source.parser_config?.enforce_text_filters === true;
+  const include = enforceTextFilters ? expandKeywords(splitKeywords(source.profession_filter || source.parser_config?.profession_filter)) : [];
+  const exclude = enforceTextFilters ? expandKeywords(splitKeywords(source.excluded_keywords || source.parser_config?.excluded_keywords)) : [];
   const defaultExclude = [
     "senior", "lead", "head of", "director", "manager", "principal", "architect",
     "professor", "teacher", "research", "phd", "master degree", "university degree",
@@ -99,8 +100,8 @@ function passesSourceFilters(job, source = {}) {
     "controlling", "leiter", "produktmanagement", "office management",
     "nebenberuf"
   ];
-  if (include.length && !include.some((keyword) => text.includes(keyword))) return false;
-  if ([...defaultExclude, ...exclude].some((keyword) => text.includes(keyword))) return false;
+  if (enforceTextFilters && include.length && !include.some((keyword) => text.includes(keyword))) return false;
+  if (enforceTextFilters && [...defaultExclude, ...exclude].some((keyword) => text.includes(keyword))) return false;
   return true;
 }
 
@@ -108,7 +109,7 @@ async function fetchArbeitnowJobs({ maxItems = 50, source = {} } = {}) {
   const endpoint = source.base_url || "https://www.arbeitnow.com/api/job-board-api";
   const rows = [];
   let nextUrl = endpoint;
-  const maxPages = Math.max(1, Math.min(10, Number(source.parser_config?.max_pages || 5)));
+  const maxPages = Math.max(1, Math.min(50, Number(source.parser_config?.max_pages || 5)));
   for (let page = 0; nextUrl && page < maxPages && rows.length < maxItems; page += 1) {
     const response = await fetch(nextUrl, {
       headers: { Accept: "application/json", "User-Agent": "AntoktonImportAssistant/1.0" }
@@ -119,7 +120,15 @@ async function fetchArbeitnowJobs({ maxItems = 50, source = {} } = {}) {
     rows.push(...pageRows.filter((job) => passesSourceFilters(job, source)));
     nextUrl = json.links?.next || "";
   }
-  return rows.slice(0, maxItems).map((job) => {
+  const uniqueRows = [];
+  const seen = new Set();
+  for (const job of rows) {
+    const key = job.url || job.slug || job.id || job.title;
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    uniqueRows.push(job);
+  }
+  return uniqueRows.slice(0, maxItems).map((job) => {
     const location = parseLocation(job.location);
     return ({
     provider_key: "arbeitnow",

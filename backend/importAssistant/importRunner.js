@@ -1,7 +1,7 @@
 const crypto = require("node:crypto");
 const { normalizeImportedItem } = require("./normalizeImportedItem");
 const { isDuplicateImportedItem } = require("./deduplicateImportedItem");
-const { technicalDefaultsForSource } = require("./seedSources");
+const { INITIAL_IMPORT_SOURCES, technicalDefaultsForSource } = require("./seedSources");
 
 const providers = {
   arbeitnow: require("./providers/arbeitnowProvider"),
@@ -108,7 +108,21 @@ async function ensureDefaultSettings(store, config) {
 }
 
 async function ensureDefaultSources(store) {
-  const existing = await store.allRecords("ImportedSource");
+  const existing = [...await store.allRecords("ImportedSource")];
+  const seenSeedKeys = new Set(existing.map((source) => source.seed_key).filter(Boolean));
+  const seenUrls = new Set(existing.map((source) => source.source_url || source.base_url).filter(Boolean));
+  for (const initial of INITIAL_IMPORT_SOURCES) {
+    if (seenSeedKeys.has(initial.seed_key) || seenUrls.has(initial.source_url || initial.base_url)) continue;
+    const created = await store.createRecord("ImportedSource", {
+      ...initial,
+      parser_config: initial.parser_config || {},
+      is_editable_by_admin: true,
+      failure_count: 0
+    }, "system");
+    existing.push(created);
+    if (created.seed_key) seenSeedKeys.add(created.seed_key);
+    if (created.source_url || created.base_url) seenUrls.add(created.source_url || created.base_url);
+  }
   for (const source of existing) {
     const defaults = technicalDefaultsForSource(source);
     const patch = {};
@@ -135,6 +149,16 @@ async function ensureDefaultSources(store) {
     }
     if ((source.rss_url === undefined || source.rss_url === "") && defaults.crawl_method === "rss") {
       patch.rss_url = source.source_url || source.base_url || "";
+    }
+    if ((source.provider_key || "").toLowerCase() === "arbeitnow") {
+      const currentConfig = parserConfig(source);
+      if (!currentConfig.max_pages || Number(currentConfig.max_pages) < 25) {
+        patch.parser_config = { ...currentConfig, max_pages: 25 };
+      }
+      if (!source.source_url && !source.base_url) {
+        patch.source_url = "https://www.arbeitnow.com/api/job-board-api";
+        patch.base_url = "https://www.arbeitnow.com/api/job-board-api";
+      }
     }
     if (Object.keys(patch).length) {
       await store.updateRecord("ImportedSource", source.id, patch);
@@ -196,8 +220,7 @@ function applyRuntimeOptions(source = {}, options = {}) {
 
 function supportsQueryExpansion(source = {}) {
   const providerKey = source.provider_key || "";
-  const crawlMethod = source.crawl_method || source.parser_type || "";
-  return ["arbeitnow", "adzuna", "jooble", "eures"].includes(providerKey) || ["api", "html"].includes(crawlMethod);
+  return ["adzuna", "jooble", "eures"].includes(providerKey);
 }
 
 function buildAttemptPlan(source = {}, options = {}, { selectedSourceRun = false } = {}) {
@@ -226,6 +249,7 @@ function buildAttemptPlan(source = {}, options = {}, { selectedSourceRun = false
 }
 
 function passesRuntimeThresholds(normalized = {}, options = {}) {
+  if (!options.enforce_runtime_quality_filters) return true;
   const minRelevance = Number(options.min_relevance_score || 0);
   const maxRisk = Number(options.max_risk_score || 100);
   if (minRelevance && Number(normalized.relevance_score || 0) < minRelevance) return false;
@@ -417,8 +441,8 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
     const minNewItems = Math.max(0, Number(options.min_new_items_per_run || settings.min_new_items_per_run || config.IMPORT_ASSISTANT_MIN_NEW_PER_RUN || DEFAULT_MIN_NEW_PER_RUN));
     const requestedLimit = Number(maxItems || settings.max_items_per_run || config.IMPORT_ASSISTANT_MAX_PER_RUN || 100);
     const limit = Math.max(1, minNewItems || 0, requestedLimit);
-    const existingImported = await store.allRecords("ImportedPost");
-    const existingJobs = await store.allRecords("Job");
+    const existingImported = [...await store.allRecords("ImportedPost")];
+    const existingJobs = [...await store.allRecords("Job")];
     const runnableSourceCount = Math.max(1, sources.filter((source) => providerIsConfigured(source.provider_key || "custom", config) || selectedSourceRun).length);
     const perSourceTargetNew = selectedSourceRun
       ? limit

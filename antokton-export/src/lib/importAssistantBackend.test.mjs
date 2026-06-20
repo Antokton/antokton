@@ -16,6 +16,8 @@ const { generateAlbanianListingTitle } = require(path.join(root, "backend/import
 const { ensureDefaultSources, runImport } = require(path.join(root, "backend/importAssistant/importRunner.js"));
 const { buildExpiryFields, parseImportedExpiry, getAutomaticExpiryDays } = require(path.join(root, "backend/importAssistant/expiry.js"));
 const arbeitnowProvider = require(path.join(root, "backend/importAssistant/providers/arbeitnowProvider.js"));
+const customSourceProvider = require(path.join(root, "backend/importAssistant/providers/customSourceProvider.js"));
+const genericRssProvider = require(path.join(root, "backend/importAssistant/providers/genericRssProvider.js"));
 
 test("generateAlbanianListingTitle creates natural Albanian title", () => {
   assert.equal(generateAlbanianListingTitle({ original_title: "Truck Driver CE wanted" }), "Kërkohet shofer CE");
@@ -85,7 +87,7 @@ test("deduplication catches source URL and similar title", () => {
   assert.equal(isDuplicateImportedItem({ source_id: "source-1", original_id: "abc" }, [{ source_id: "source-1", original_id: "abc" }], []).reason, "source_id + original_id");
 });
 
-test("default sources do not seed concrete providers from code", async () => {
+test("default sources seed editable working public providers", async () => {
   const created = [];
   const store = {
     async allRecords(entity) {
@@ -93,16 +95,90 @@ test("default sources do not seed concrete providers from code", async () => {
       return [];
     },
     async createRecord(entity, data) {
-      created.push({ entity, data });
-      return data;
+      const row = { id: `${entity}-${created.length + 1}`, ...data };
+      created.push({ entity, data: row });
+      return row;
     },
-    async updateRecord() {
-      throw new Error("No source should be updated when the database is empty");
-    }
+    async updateRecord() {}
   };
   const sources = await ensureDefaultSources(store);
-  assert.deepEqual(sources, []);
-  assert.deepEqual(created, []);
+  assert.equal(sources.some((source) => source.seed_key === "arbeitnow-public-api"), true);
+  assert.equal(sources.some((source) => source.seed_key === "weworkremotely-rss"), true);
+  assert.equal(sources.some((source) => source.seed_key === "punajuaj-html"), true);
+  assert.equal(created.every((row) => row.data.is_editable_by_admin === true), true);
+});
+
+test("RSS provider reads RSS and Atom feeds", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    async text() {
+      return `<feed><entry><id>1</id><title>Warehouse operative</title><link href="https://example.test/atom-job"/><summary>Job summary</summary><updated>2026-06-20</updated></entry></feed>`;
+    }
+  });
+  try {
+    const rows = await genericRssProvider.fetchItems({ source: { source_url: "https://example.test/feed", name: "Atom" }, maxItems: 10 });
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].source_url, "https://example.test/atom-job");
+    assert.equal(rows[0].original_title, "Warehouse operative");
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("custom provider imports public HTML listing links", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    async text() {
+      return `<html><body><a href="/jobs/cleaner-1">Kërkohet pastruese në Bruksel</a><a href="/about">Rreth nesh</a></body></html>`;
+    }
+  });
+  try {
+    const rows = await customSourceProvider.fetchItems({
+      source: {
+        name: "Demo HTML",
+        parser_type: "html",
+        source_url: "https://example.test",
+        category_filter: "pune",
+        country_filter: "Belgjikë"
+      },
+      maxItems: 10
+    });
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].source_url, "https://example.test/jobs/cleaner-1");
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("custom provider imports Remote OK API without blocking by profession filter", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    async json() {
+      return [
+        { legal: "ok" },
+        { id: 1, position: "Customer Support", company: "Demo", url: "https://remoteok.com/remote-jobs/1", apply_url: "https://demo.test/apply" },
+        { id: 2, position: "Senior Software Engineer", company: "Demo", url: "https://remoteok.com/remote-jobs/2" }
+      ];
+    }
+  });
+  try {
+    const rows = await customSourceProvider.fetchItems({
+      source: {
+        name: "Remote OK",
+        parser_type: "api",
+        source_url: "https://remoteok.com/api",
+        profession_filter: "warehouse",
+        parser_config: { api_format: "remoteok" }
+      },
+      maxItems: 10
+    });
+    assert.equal(rows.length, 2);
+  } finally {
+    global.fetch = originalFetch;
+  }
 });
 
 test("manual run works when auto import settings are disabled", async () => {
@@ -126,7 +202,7 @@ test("manual run works when auto import settings are disabled", async () => {
   assert.equal(result.success, true);
 });
 
-test("import fallback continues after duplicate-only first query", async () => {
+test("import fallback continues after duplicate-only first source", async () => {
   const records = {
     ImportedSource: [{
       id: "source-1",
@@ -194,9 +270,9 @@ test("import fallback continues after duplicate-only first query", async () => {
     });
     assert.equal(result.created_count, 1);
     assert.equal(result.duplicate_count, 1);
-    assert.ok(fetchCount >= 2);
+    assert.ok(fetchCount >= 1);
     assert.equal(records.ImportedPost.some((item) => item.status === "pending_review" && item.source_url === "https://example.test/jobs/new-warehouse"), true);
-    assert.ok(records.ImportLog[0].queries_tried.length >= 2);
+    assert.ok(result.fallback_summary.providers_tried.includes("arbeitnow"));
   } finally {
     global.fetch = originalFetch;
   }
@@ -366,7 +442,7 @@ test("selected import source is treated as starting point and falls back to othe
     });
     assert.equal(result.created_count, 1);
     assert.equal(result.duplicate_count > 0, true);
-    assert.deepEqual(result.fallback_summary.providers_tried, ["arbeitnow"]);
+    assert.equal(result.fallback_summary.providers_tried.includes("arbeitnow"), true);
     assert.equal(records.ImportLog.length >= 2, true);
     assert.equal(records.ImportedPost.some((item) => item.status === "pending_review" && item.source_url === "https://example.test/jobs/new-cleaner"), true);
   } finally {
@@ -396,7 +472,8 @@ test("arbeitnow provider expands Albanian import keywords before filtering", asy
         category_filter: "pune",
         country_filter: "Gjermani",
         profession_filter: "shofer, depo",
-        excluded_keywords: "software, developer, senior"
+        excluded_keywords: "software, developer, senior",
+        parser_config: { enforce_profession_filter: true }
       }
     });
     assert.deepEqual(rows.map((row) => row.original_title), ["Truck Driver CE", "Lager Mitarbeiter"]);
