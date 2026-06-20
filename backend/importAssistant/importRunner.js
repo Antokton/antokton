@@ -60,7 +60,7 @@ async function ensureDefaultSettings(store, config) {
     default_category_filter: "pune",
     default_country_filter: "",
     default_profession_filter: "shofer, pastrim, depo, magazin, ndertim, ndërtim, mekanik, elektricist, elektriçist, hidraulik, kujdestar, siguri, shperndarje, shpërndarje, bujqesi, bujqësi, fabrike, fabrikë, bojaxhi, furre, furrë, pasticeri",
-    default_excluded_keywords: "senior, manager, director, professor, teacher, research, phd, software, developer, data scientist, consultant",
+    default_excluded_keywords: "senior, manager, director, professor, teacher, research, phd, software, developer, data scientist, consultant, engineer, ingenieur, analyst, controller, support, administrator, marketing, designer, student, internship, praktikant, werkstudent, sap, bank, kredit, finanz, datenerfasser, recruiter, recruiting, personalreferent, öffentlichkeitsarbeit, architektur, stadtentwicklung, referent, controlling, leiter, produktmanagement, office management, nebenberuf",
     min_relevance_score: 45,
     max_risk_score: 70
   };
@@ -89,6 +89,7 @@ function shouldUseSource(sourceId, source) {
 function shouldCrawlSource(source = {}, { manual = false, selected = false } = {}) {
   if (manual && selected) return true;
   if (!sourceEnabled(source)) return false;
+  if (manual && !selected && source.import_mode === "manual") return false;
   const frequencyMinutes = getFrequencyMinutes(source);
   if (frequencyMinutes <= 0) return false;
   if (manual) return true;
@@ -97,6 +98,13 @@ function shouldCrawlSource(source = {}, { manual = false, selected = false } = {
   const lastChecked = new Date(last).getTime();
   if (!Number.isFinite(lastChecked)) return true;
   return Date.now() - lastChecked >= frequencyMinutes * 60 * 1000;
+}
+
+function providerIsConfigured(providerKey = "", config = {}) {
+  if (providerKey === "adzuna") return Boolean(config.ADZUNA_APP_ID && config.ADZUNA_APP_KEY);
+  if (providerKey === "jooble") return Boolean(config.JOOBLE_API_KEY);
+  if (providerKey === "eures") return Boolean(config.EURES_API_KEY);
+  return true;
 }
 
 function applyRuntimeOptions(source = {}, options = {}) {
@@ -159,6 +167,7 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
     const sources = allSources
       .filter((source) => shouldUseSource(sourceId, source))
       .filter((source) => shouldCrawlSource(source, { manual: manualRun, selected: selectedSourceRun }))
+      .filter((source) => providerIsConfigured(source.provider_key || "custom", config) || selectedSourceRun)
       .map((source) => applyRuntimeOptions(source, options));
     const limit = Math.max(1, Number(maxItems || settings.max_items_per_run || config.IMPORT_ASSISTANT_MAX_PER_RUN || 100));
     const existingImported = await store.allRecords("ImportedPost");

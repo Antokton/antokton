@@ -42,18 +42,62 @@ function splitKeywords(value) {
     .filter(Boolean);
 }
 
+const KEYWORD_ALIASES = {
+  shofer: ["driver", "fahrer", "kraftfahrer", "truck", "lieferfahrer", "delivery"],
+  pastrim: ["clean", "cleaner", "cleaning", "reinigung", "reiniger", "housekeeping"],
+  depo: ["warehouse", "lager", "lagerist", "logistik", "logistics"],
+  magazin: ["warehouse", "lager", "lagerist", "logistik", "logistics"],
+  "ndërtim": ["construction", "bau", "baustelle", "handwerker"],
+  ndertim: ["construction", "bau", "baustelle", "handwerker"],
+  mekanik: ["mechanic", "mechaniker", "mechatroniker"],
+  "elektriçist": ["electrician", "elektriker", "elektro"],
+  elektricist: ["electrician", "elektriker", "elektro"],
+  hidraulik: ["plumber", "sanitär", "heizung"],
+  kujdestar: ["caregiver", "pflege"],
+  siguri: ["security", "sicherheit"],
+  "shpërndarje": ["delivery", "lieferung", "kurier", "fahrer"],
+  shperndarje: ["delivery", "lieferung", "kurier", "fahrer"],
+  bujqesi: ["farm", "agriculture", "landwirtschaft", "ernte"],
+  "bujqësi": ["farm", "agriculture", "landwirtschaft", "ernte"],
+  fabrike: ["factory", "produktion", "production", "fertigung"],
+  "fabrikë": ["factory", "produktion", "production", "fertigung"],
+  bojaxhi: ["painter", "maler", "lackierer"],
+  furre: ["bakery", "baker", "bäcker", "baecker", "backerei", "bäckerei"],
+  "furrë": ["bakery", "baker", "bäcker", "baecker", "backerei", "bäckerei"],
+  pasticeri: ["pastry", "confectioner", "konditor", "bäckerei"]
+};
+
+function expandKeywords(keywords = []) {
+  const expanded = new Set();
+  for (const keyword of keywords) {
+    expanded.add(keyword);
+    const aliases = KEYWORD_ALIASES[keyword] || KEYWORD_ALIASES[keyword.normalize("NFD").replace(/[\u0300-\u036f]/g, "")];
+    if (aliases) aliases.forEach((alias) => expanded.add(alias));
+  }
+  return [...expanded];
+}
+
 function passesSourceFilters(job, source = {}) {
   const text = cleanText([job.title, job.description, job.company_name, Array.isArray(job.tags) ? job.tags.join(" ") : ""].join(" ")).toLowerCase();
   const category = String(source.category_filter || source.parser_config?.category_filter || "").toLowerCase();
   const country = String(source.country_filter || source.parser_config?.country_filter || "").toLowerCase();
   if (category && !["job", "pune", "punë"].includes(category)) return false;
   if (country && !["gjermani", "germany", "deutschland"].includes(country)) return false;
-  const include = splitKeywords(source.profession_filter || source.parser_config?.profession_filter);
-  const exclude = splitKeywords(source.excluded_keywords || source.parser_config?.excluded_keywords);
+  const include = expandKeywords(splitKeywords(source.profession_filter || source.parser_config?.profession_filter));
+  const exclude = expandKeywords(splitKeywords(source.excluded_keywords || source.parser_config?.excluded_keywords));
   const defaultExclude = [
     "senior", "lead", "head of", "director", "manager", "principal", "architect",
     "professor", "teacher", "research", "phd", "master degree", "university degree",
-    "software engineer", "developer", "data scientist", "consultant"
+    "software engineer", "developer", "data scientist", "consultant",
+    "werkstudent", "praktikant", "praktikum", "internship", "trainee",
+    "power bi", "power apps", "office der geschäftsführung", "unternehmensberatung",
+    "geschäftsführung", "consulting", "analyst", "ingenieur", "engineer",
+    "sachbearbeiter", "buchhalter", "kreditoren", "kredit", "assistenz",
+    "projektassistenz", "customer service", "kundenbetreuung", "sap",
+    "finanz", "datenerfasser", "recruiter", "recruiting", "personalreferent",
+    "öffentlichkeitsarbeit", "architektur", "stadtentwicklung", "referent",
+    "controlling", "leiter", "produktmanagement", "office management",
+    "nebenberuf"
   ];
   if (include.length && !include.some((keyword) => text.includes(keyword))) return false;
   if ([...defaultExclude, ...exclude].some((keyword) => text.includes(keyword))) return false;
@@ -62,13 +106,20 @@ function passesSourceFilters(job, source = {}) {
 
 async function fetchArbeitnowJobs({ maxItems = 50, source = {} } = {}) {
   const endpoint = source.base_url || "https://www.arbeitnow.com/api/job-board-api";
-  const response = await fetch(endpoint, {
-    headers: { Accept: "application/json", "User-Agent": "AntoktonImportAssistant/1.0" }
-  });
-  if (!response.ok) throw new Error(`Arbeitnow returned ${response.status}`);
-  const json = await response.json();
-  const rows = Array.isArray(json.data) ? json.data : [];
-  return rows.filter((job) => passesSourceFilters(job, source)).slice(0, maxItems).map((job) => {
+  const rows = [];
+  let nextUrl = endpoint;
+  const maxPages = Math.max(1, Math.min(10, Number(source.parser_config?.max_pages || 5)));
+  for (let page = 0; nextUrl && page < maxPages && rows.length < maxItems; page += 1) {
+    const response = await fetch(nextUrl, {
+      headers: { Accept: "application/json", "User-Agent": "AntoktonImportAssistant/1.0" }
+    });
+    if (!response.ok) throw new Error(`Arbeitnow returned ${response.status}`);
+    const json = await response.json();
+    const pageRows = Array.isArray(json.data) ? json.data : [];
+    rows.push(...pageRows.filter((job) => passesSourceFilters(job, source)));
+    nextUrl = json.links?.next || "";
+  }
+  return rows.slice(0, maxItems).map((job) => {
     const location = parseLocation(job.location);
     return ({
     provider_key: "arbeitnow",

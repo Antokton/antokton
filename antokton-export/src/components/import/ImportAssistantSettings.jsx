@@ -10,7 +10,7 @@ const DEFAULT_SETTINGS = {
   default_category_filter: "pune",
   default_country_filter: "",
   default_profession_filter: "shofer, pastrim, depo, magazin, ndërtim, mekanik, elektriçist, hidraulik, kujdestar, siguri, shpërndarje, bujqësi, fabrikë, bojaxhi, furrë, pasticeri",
-  default_excluded_keywords: "senior, manager, director, professor, teacher, research, phd, software, developer, data scientist, consultant",
+  default_excluded_keywords: "senior, manager, director, professor, teacher, research, phd, software, developer, data scientist, consultant, engineer, ingenieur, analyst, controller, support, administrator, marketing, designer, student, internship, praktikant, werkstudent, sap, bank, kredit, finanz, datenerfasser, recruiter, recruiting, personalreferent, öffentlichkeitsarbeit, architektur, stadtentwicklung, referent, controlling, leiter, produktmanagement, office management, nebenberuf",
   min_relevance_score: 45,
   max_risk_score: 70,
 };

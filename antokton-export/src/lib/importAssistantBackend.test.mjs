@@ -15,6 +15,7 @@ const { detectContactLanguage } = require(path.join(root, "backend/importAssista
 const { generateAlbanianListingTitle } = require(path.join(root, "backend/importAssistant/generateAlbanianListingTitle.js"));
 const { runImport } = require(path.join(root, "backend/importAssistant/importRunner.js"));
 const { buildExpiryFields, parseImportedExpiry, getAutomaticExpiryDays } = require(path.join(root, "backend/importAssistant/expiry.js"));
+const arbeitnowProvider = require(path.join(root, "backend/importAssistant/providers/arbeitnowProvider.js"));
 
 test("generateAlbanianListingTitle creates natural Albanian title", () => {
   assert.equal(generateAlbanianListingTitle({ original_title: "Truck Driver CE wanted" }), "Kërkohet shofer CE");
@@ -102,4 +103,35 @@ test("manual run works when auto import settings are disabled", async () => {
   records.ImportAssistantSettings.push({ id: "settings", auto_import_enabled: false, max_items_per_run: 1 });
   const result = await runImport({ store, config: { IMPORT_ASSISTANT_MAX_PER_RUN: 1 }, maxItems: 0, requestedBy: "test" });
   assert.equal(result.success, true);
+});
+
+test("arbeitnow provider expands Albanian import keywords before filtering", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    async json() {
+      return {
+        data: [
+          { title: "Truck Driver CE", description: "Delivery logistics", company_name: "Demo", location: "Berlin", slug: "driver" },
+          { title: "Lager Mitarbeiter", description: "Warehouse work", company_name: "Demo", location: "Hamburg", slug: "lager" },
+          { title: "Senior Software Engineer", description: "Developer role", company_name: "Demo", location: "Munich", slug: "software" }
+        ]
+      };
+    }
+  });
+  try {
+    const rows = await arbeitnowProvider.fetchItems({
+      maxItems: 10,
+      source: {
+        base_url: "https://example.test/jobs",
+        category_filter: "pune",
+        country_filter: "Gjermani",
+        profession_filter: "shofer, depo",
+        excluded_keywords: "software, developer, senior"
+      }
+    });
+    assert.deepEqual(rows.map((row) => row.original_title), ["Truck Driver CE", "Lager Mitarbeiter"]);
+  } finally {
+    global.fetch = originalFetch;
+  }
 });
