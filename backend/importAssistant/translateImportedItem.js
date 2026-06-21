@@ -3,12 +3,12 @@ const { generateAlbanianListingTitle } = require("./generateAlbanianListingTitle
 
 function summarize(item = {}) {
   const parts = [];
-  const profession = item.profession || "punonjës";
+  const profession = item.profession || "";
   const location = [item.city, item.region, item.country].filter(Boolean).join(", ");
   if (item.item_type === "job" || item.category === "pune") {
-    parts.push(`Kërkohet ${profession}${location ? ` në ${location}` : ""}.`);
+    if (profession || location) parts.push(`Kërkohet ${profession || "punëtor"}${location ? ` në ${location}` : ""}.`);
   } else {
-    parts.push(`${item.shqip_title || item.original_title || "Njoftim i importuar"}${location ? ` në ${location}` : ""}.`);
+    parts.push(`${item.shqip_title || item.original_title || ""}${location ? ` në ${location}` : ""}.`);
   }
   if (item.original_company) parts.push(`Kompania: ${item.original_company}.`);
   if (item.original_salary) parts.push(`Paga: ${item.original_salary}.`);
@@ -18,8 +18,8 @@ function summarize(item = {}) {
   const looksAlbanian = /(?:\bpun[eë]\b|\bk[eë]rkohet\b|\bofrohet\b|\bpag[aë]\b|\bqytet\b|\bkontakt\b)/i.test(description);
   if (description && (language === "sq" || looksAlbanian)) {
     parts.push(description.slice(0, 300));
-  } else if (description) {
-    parts.push("Detajet e plota verifikohen nga burimi origjinal para publikimit.");
+  } else if (description && description.length > 120) {
+    parts.push(description.slice(0, 300));
   }
   return cleanText(parts.join(" ")).slice(0, 600);
 }

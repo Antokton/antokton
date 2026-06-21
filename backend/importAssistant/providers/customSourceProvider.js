@@ -1,6 +1,6 @@
 const genericRssProvider = require("./genericRssProvider");
 const { cleanText } = require("../textUtils");
-const { isBlockedNonJobUrl } = require("../validateImportedItem");
+const { isBlockedNonJobUrl, isListingOrCategoryUrl } = require("../validateImportedItem");
 
 function parserConfig(source = {}) {
   if (!source.parser_config) return {};
@@ -230,6 +230,65 @@ function htmlDescription(html = "") {
   return htmlDecode(meta?.[1] || "");
 }
 
+function htmlHeading(html = "") {
+  return tagless(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i.exec(html)?.[1] || "");
+}
+
+function bodyText(html = "") {
+  const main = /<main\b[^>]*>([\s\S]*?)<\/main>/i.exec(html)?.[1]
+    || /<article\b[^>]*>([\s\S]*?)<\/article>/i.exec(html)?.[1]
+    || /<body\b[^>]*>([\s\S]*?)<\/body>/i.exec(html)?.[1]
+    || html;
+  return tagless(main).slice(0, 3000);
+}
+
+function extractEmail(text = "") {
+  return cleanText((text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i) || [])[0] || "");
+}
+
+function extractPhone(text = "") {
+  return cleanText((text.match(/(?:\+\d{1,3}[\s.-]?)?(?:\(?\d{2,4}\)?[\s.-]?){2,}\d{2,}/) || [])[0] || "");
+}
+
+function extractLocationFromText(text = "", source = {}) {
+  const value = cleanText(text);
+  const match = /(?:lokacioni|vendndodhja|location|ort|standort|lieu|sede)\s*:?\s*([^\n\r.]{3,80})/i.exec(value);
+  return cleanText(match?.[1] || source.country_filter || "");
+}
+
+async function enrichItemFromDetailPage(item = {}, source = {}) {
+  if (!item.source_url || isListingOrCategoryUrl(item.source_url) || isBlockedNonJobUrl(item.source_url)) return item;
+  try {
+    const response = await fetch(item.source_url, {
+      headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": "AntoktonImportAssistant/1.0" }
+    });
+    if (!response.ok) return { ...item, _detail_page_loaded: false };
+    const html = await response.text();
+    const title = htmlHeading(html) || htmlTitle(html) || item.original_title;
+    const description = bodyText(html) || htmlDescription(html) || item.original_description;
+    const email = extractEmail(description);
+    const phone = extractPhone(description);
+    const contactMethods = [...(Array.isArray(item.contact_methods) ? item.contact_methods : [])];
+    if (email && !contactMethods.some((method) => method.value === email)) contactMethods.push({ type: "email", value: email });
+    if (phone && !contactMethods.some((method) => method.value === phone)) contactMethods.push({ type: "phone", value: phone });
+    const location = item.original_location && item.original_location !== source.country_filter
+      ? item.original_location
+      : extractLocationFromText(description, source);
+    return {
+      ...item,
+      _detail_page_loaded: true,
+      original_title: cleanText(title || item.original_title),
+      original_description: cleanText(description || item.original_description),
+      original_company: item.original_company && item.original_company !== source.name ? item.original_company : "",
+      original_location: location,
+      original_country: normalizeCountry(item.original_country || source.country_filter || ""),
+      contact_methods: contactMethods
+    };
+  } catch {
+    return { ...item, _detail_page_loaded: false };
+  }
+}
+
 function tagless(value = "") {
   return htmlDecode(String(value || "").replace(/<[^>]+>/g, " "));
 }
@@ -314,6 +373,7 @@ function parseHtmlAnchors(html = "", source = {}, baseUrl = "") {
     const title = tagless(anchor[2] || "");
     if (!url || seen.has(url) || title.length < 8) continue;
     if (isBlockedNonJobUrl(url)) continue;
+    if (isListingOrCategoryUrl(url)) continue;
     if (sameListingIndex(url, baseUrl) || isNavigationTitle(title) || isCategoryPath(url)) continue;
     if (!looksLikeListingUrl(url, title, source)) continue;
     seen.add(url);
@@ -325,12 +385,14 @@ function parseHtmlAnchors(html = "", source = {}, baseUrl = "") {
       item_type: "job",
       category: source.category_filter || "pune",
       original_title: title.slice(0, 180),
-      original_description: title,
-      original_company: source.name || "",
-      original_location: source.country_filter || "",
+      original_description: "",
+      original_company: "",
+      original_location: "",
       original_country: normalizeCountry(source.country_filter || ""),
       original_city: "",
-      contact_methods: [{ type: "application_form", value: url }]
+      contact_methods: [{ type: "application_form", value: url }],
+      _requires_detail_page: true,
+      _detail_page_loaded: false
     });
   }
   return items;
@@ -360,10 +422,14 @@ async function fetchHtmlPage({ maxItems = 50, source = {} } = {}) {
     seen.add(key);
     merged.push({
       ...item,
-      original_description: item.original_description || htmlDescription(html) || htmlTitle(html)
+      original_description: item.original_description || ""
     });
   }
-  return merged.slice(0, maxItems);
+  const enriched = [];
+  for (const item of merged.slice(0, maxItems)) {
+    enriched.push(await enrichItemFromDetailPage(item, source));
+  }
+  return enriched;
 }
 
 async function fetchTelegramPublic({ maxItems = 50, source = {} } = {}) {

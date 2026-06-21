@@ -8,6 +8,8 @@
     "raw_payload": { "type": "object" },
     "reason": { "type": "string" },
     "status": { "type": "string" },
+    "quality_score": { "type": "number", "default": 0 },
+    "quality_reasons": { "type": "array", "items": { "type": "string" }, "default": [] },
     "original_url": { "type": "string" },
     "original_title": { "type": "string" },
     "created_at": { "type": "string" }

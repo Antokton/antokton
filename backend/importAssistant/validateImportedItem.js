@@ -18,11 +18,24 @@ const NON_JOB_PATH_KEYWORDS = [
   "/advertise"
 ];
 
+const LISTING_PATH_PATTERNS = [
+  /^\/(?:jobs?|pune|remote-jobs|category|categories|search|results|njoftime\/biznes-pune\/pune)\/?$/i,
+  /\/(?:category|categories|search|results|job-type|job-category|tags?)\/?$/i
+];
+
 const ARTIFICIAL_TITLE_PATTERNS = [
   /^k[eë]rkohet\s+punonj[eë]s(?:\s+n[eë]\s+.+)?$/i,
   /^k[eë]rkohen\s+punonj[eë]s(?:\s+n[eë]\s+.+)?$/i,
+  /^k[eë]rkohet\s+pastrues\/e$/i,
   /^njoftim\s+i\s+importuar$/i,
   /^job\s+posting$/i
+];
+
+const BAD_ENCODING_PATTERNS = [
+  /�/,
+  /[ÃÂÐØ][^\s]{0,3}/,
+  /(?:ã|â|ð|ø)/i,
+  /(?:Ã|Â|Ð|Ø).*(?:Ã|Â|Ð|Ø)/
 ];
 
 function asArray(value) {
@@ -55,6 +68,22 @@ function isBlockedNonJobUrl(value = "") {
   } catch {
     const lower = url.toLowerCase();
     return NON_JOB_PATH_KEYWORDS.some((keyword) => lower.includes(keyword));
+  }
+}
+
+function isListingOrCategoryUrl(value = "") {
+  const url = realUrl(value);
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname.replace(/\/+$/, "") || "/";
+    const privateOnly = parsed.searchParams.has("Private") || parsed.searchParams.has("private");
+    if (privateOnly) return true;
+    if (path === "/") return true;
+    return LISTING_PATH_PATTERNS.some((pattern) => pattern.test(path));
+  } catch {
+    const lower = url.toLowerCase();
+    return lower === "/" || lower.includes("?private=true") || LISTING_PATH_PATTERNS.some((pattern) => pattern.test(lower));
   }
 }
 
@@ -95,6 +124,44 @@ function qualityFields(item = {}) {
   return Object.entries(fields).filter(([, present]) => present).map(([key]) => key);
 }
 
+function hasBadEncoding(value = "") {
+  const text = String(value || "");
+  if (!text) return false;
+  const suspiciousHits = BAD_ENCODING_PATTERNS.filter((pattern) => pattern.test(text)).length;
+  if (suspiciousHits > 0) return true;
+  const weirdCount = (text.match(/[^\x09\x0a\x0d\x20-\x7e\u00a0-\u024f\u0370-\u03ff\u0400-\u04ff]/g) || []).length;
+  return weirdCount >= 3 && weirdCount / Math.max(text.length, 1) > 0.02;
+}
+
+function calculateImportQualityScore(item = {}, raw = {}, source = {}) {
+  let score = 0;
+  const reasons = [];
+  const originalTitle = cleanText(raw.original_title || raw.title || item.original_title || "");
+  const url = realUrl(item.original_url || item.source_url || raw.original_url || raw.source_url || raw.url);
+  const sourceName = cleanText(item.source_name || source.name);
+  const description = cleanText(item.original_description || raw.original_description || raw.description || "");
+  const applyUrl = cleanText(item.apply_url || raw.apply_url || item.contact_url || "");
+  const methods = asArray(item.contact_methods);
+  const hasContact = methods.some((method) => cleanText(method?.value)) || cleanText(item.contact_email || item.contact_phone || item.contact_url);
+  const hasCompany = Boolean(cleanText(item.original_company || raw.original_company || raw.company || raw.company_name));
+  const hasLocation = Boolean(cleanText(item.original_location || raw.original_location || raw.location || item.address));
+  const hasCityCountry = Boolean(cleanText(item.city || item.original_city || item.country || item.original_country));
+
+  if (hasRealTitle(originalTitle)) { score += 20; reasons.push("title"); }
+  if (url && !isPlaceholderUrl(url) && !isListingOrCategoryUrl(url) && !isBlockedNonJobUrl(url)) { score += 20; reasons.push("individual_url"); }
+  if (cleanText(item.source_id || source.id) && sourceName && !/^burim i personalizuar$/i.test(sourceName)) { score += 15; reasons.push("source"); }
+  if (description.length > 120 || applyUrl || contactValue(item, ["application_form", "website"])) { score += 15; reasons.push("description_or_apply"); }
+  if (hasCompany) { score += 10; reasons.push("company"); }
+  if (hasLocation || hasCityCountry) { score += 10; reasons.push("location"); }
+  if (hasContact) { score += 5; reasons.push("contact"); }
+  if (cleanText(item.published_at || item.original_published_at || raw.published_at)) { score += 3; reasons.push("published_at"); }
+  if (cleanText(item.expires_at || item.original_expires_at || raw.expires_at)) { score += 2; reasons.push("expires_at"); }
+  if (cleanText(item.original_salary || raw.salary || item.salary)) { score += 2; reasons.push("salary"); }
+  if (cleanText(item.contract_type || raw.contract_type)) { score += 2; reasons.push("contract_type"); }
+
+  return { score: Math.min(100, score), reasons };
+}
+
 function hasAnyRequiredDetail(item = {}) {
   const description = cleanText(item.original_description || item.description || item.shqip_summary || "");
   return Boolean(
@@ -115,6 +182,15 @@ function validateImportedItem(item = {}, raw = {}, source = {}) {
     };
   }
 
+  if (raw?._requires_detail_page && raw?._detail_page_loaded !== true) {
+    return {
+      valid: false,
+      status: "rejected_low_quality_import",
+      reason: "Individual detail page could not be opened or parsed",
+      quality_score: 0
+    };
+  }
+
   const url = realUrl(item.original_url || item.source_url || raw.original_url || raw.source_url || raw.url);
   if (isBlockedNonJobUrl(url)) {
     return {
@@ -124,11 +200,22 @@ function validateImportedItem(item = {}, raw = {}, source = {}) {
     };
   }
 
-  if (!hasRealTitle(item.original_title || item.title || item.shqip_title)) {
+  if (isListingOrCategoryUrl(url)) {
+    return {
+      valid: false,
+      status: "rejected_low_quality_import",
+      reason: "Original URL is a listing/category page, not an individual job posting.",
+      quality_score: 0
+    };
+  }
+
+  const originalTitle = raw.original_title || raw.title || item.original_title || "";
+  if (!hasRealTitle(originalTitle)) {
     return {
       valid: false,
       status: "rejected_missing_title",
-      reason: "Imported item missing required job title"
+      reason: "Imported item missing required job title",
+      quality_score: 0
     };
   }
 
@@ -136,7 +223,8 @@ function validateImportedItem(item = {}, raw = {}, source = {}) {
     return {
       valid: false,
       status: "rejected_missing_original_url",
-      reason: "Imported item missing original URL"
+      reason: "Imported item missing original URL",
+      quality_score: 0
     };
   }
 
@@ -144,7 +232,26 @@ function validateImportedItem(item = {}, raw = {}, source = {}) {
     return {
       valid: false,
       status: "rejected_placeholder_url",
-      reason: "Imported item has placeholder original URL"
+      reason: "Imported item has placeholder original URL",
+      quality_score: 0
+    };
+  }
+
+  const encodingText = [
+    originalTitle,
+    item.original_description,
+    raw.original_description || raw.description,
+    item.original_company,
+    item.original_location,
+    item.city,
+    item.country
+  ].filter(Boolean).join(" ");
+  if (hasBadEncoding(encodingText)) {
+    return {
+      valid: false,
+      status: "rejected_bad_encoding",
+      reason: "Imported item contains broken text encoding",
+      quality_score: 0
     };
   }
 
@@ -154,7 +261,8 @@ function validateImportedItem(item = {}, raw = {}, source = {}) {
     return {
       valid: false,
       status: "rejected_low_quality_import",
-      reason: "Imported item missing required source fields"
+      reason: "Imported item missing required source fields",
+      quality_score: 0
     };
   }
 
@@ -163,34 +271,70 @@ function validateImportedItem(item = {}, raw = {}, source = {}) {
     return {
       valid: false,
       status: "rejected_low_quality_import",
-      reason: "Automatic import source_name is generic"
+      reason: "Automatic import source_name is generic",
+      quality_score: 0
+    };
+  }
+
+  const description = cleanText(item.original_description || raw.original_description || raw.description || "");
+  const hasDescriptionOrApply = description.length > 120
+    || cleanText(item.apply_url || raw.apply_url || item.contact_url)
+    || contactValue(item, ["application_form", "website"]);
+  if (!hasDescriptionOrApply) {
+    const quality = calculateImportQualityScore(item, raw, source);
+    return {
+      valid: false,
+      status: "rejected_low_quality_import",
+      reason: "Imported item missing real description or application URL",
+      quality_score: quality.score,
+      quality_reasons: quality.reasons
     };
   }
 
   if (!hasAnyRequiredDetail(item)) {
+    const quality = calculateImportQualityScore(item, raw, source);
     return {
       valid: false,
       status: "rejected_low_quality_import",
-      reason: "Imported item missing required job fields"
+      reason: "Imported item missing required job fields",
+      quality_score: quality.score,
+      quality_reasons: quality.reasons
     };
   }
 
   const present = qualityFields(item);
   if (present.length < 2) {
+    const quality = calculateImportQualityScore(item, raw, source);
     return {
       valid: false,
       status: "rejected_low_quality_import",
-      reason: "Imported item missing required job fields"
+      reason: "Imported item missing required job fields",
+      quality_score: quality.score,
+      quality_reasons: quality.reasons
     };
   }
 
-  return { valid: true, status: "valid", reason: "", quality_fields: present };
+  const quality = calculateImportQualityScore(item, raw, source);
+  if (quality.score < 70) {
+    return {
+      valid: false,
+      status: "rejected_low_quality_import",
+      reason: "Imported item quality score is below the minimum threshold",
+      quality_score: quality.score,
+      quality_reasons: quality.reasons
+    };
+  }
+
+  return { valid: true, status: "valid", reason: "", quality_score: quality.score, quality_reasons: quality.reasons, quality_fields: present };
 }
 
 module.exports = {
   NON_JOB_PATH_KEYWORDS,
+  calculateImportQualityScore,
+  hasBadEncoding,
   hasRealTitle,
   isBlockedNonJobUrl,
+  isListingOrCategoryUrl,
   isPlaceholderUrl,
   qualityFields,
   validateImportedItem

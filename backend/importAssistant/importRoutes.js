@@ -1,4 +1,4 @@
-const { runImport, ensureDefaultSettings, ensureDefaultSources } = require("./importRunner");
+const { runImport, testImportSource, ensureDefaultSettings, ensureDefaultSources } = require("./importRunner");
 const { translateContactMessage } = require("./translateImportedItem");
 const { buildExpiryFields } = require("./expiry");
 const { normalizeSourceType, technicalDefaultsForSource } = require("./seedSources");
@@ -187,9 +187,10 @@ async function handleImportAssistantRoute(deps) {
     const id = tail[1];
     if (req.method === "DELETE") return send(res, 200, { success: await store.deleteRecord("ImportedSource", id) });
     if (tail[2] === "test") {
+      if (!id) return sendError(res, 400, "Missing source_id");
       const source = (await store.allRecords("ImportedSource")).find((item) => item.id === id);
       if (!source) return sendError(res, 404, "Source not found");
-      const result = await runImport({ store, config, sourceId: id, maxItems: 3, requestedBy: userEmail, force: true, options: { strict_source: true } });
+      const result = await testImportSource({ store, config, sourceId: id, maxItems: 5, requestedBy: userEmail });
       return send(res, 200, result);
     }
     const body = await readPayload(req);

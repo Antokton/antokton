@@ -294,6 +294,8 @@ async function createImportFailure({ raw, source, providerKey, store, requestedB
     raw_payload: raw || {},
     reason: validation?.reason || "Imported item failed validation",
     status: validation?.status || "rejected_low_quality_import",
+    quality_score: Number(validation?.quality_score || 0),
+    quality_reasons: validation?.quality_reasons || validation?.quality_fields || [],
     original_url: normalized?.original_url || normalized?.source_url || raw?.original_url || raw?.source_url || raw?.url || "",
     original_title: normalized?.original_title || raw?.original_title || raw?.title || "",
     created_at: now()
@@ -363,10 +365,12 @@ async function processRawImportedItem({ raw, source, providerKey, store, request
       address: normalized.address || normalized.original_location || "",
       contact_email: primaryContact(contactMethods, "email"),
       contact_phone: primaryContact(contactMethods, "phone") || primaryContact(contactMethods, "whatsapp"),
-      contact_url: primaryContact(contactMethods, "website") || primaryContact(contactMethods, "application_form"),
-      raw_import_payload: raw,
-      imported_by: requestedBy
-    }, requestedBy);
+    contact_url: primaryContact(contactMethods, "website") || primaryContact(contactMethods, "application_form"),
+    quality_score: validation.quality_score,
+    quality_reasons: validation.quality_reasons || validation.quality_fields || [],
+    raw_import_payload: raw,
+    imported_by: requestedBy
+  }, requestedBy);
     existingImported.push(duplicateRecord);
     return { created: false, duplicate: true, skipped: false, imported: duplicateRecord };
   }
@@ -445,12 +449,118 @@ async function processRawImportedItem({ raw, source, providerKey, store, request
     freshness_score: normalized.freshness_score,
     completeness_score: normalized.completeness_score,
     final_score: normalized.final_score,
+    import_quality_score: validation.quality_score,
+    import_quality_reasons: validation.quality_reasons || validation.quality_fields || [],
     requires_manual_review: true,
     quality_notes: [normalized.relevance_reason, normalized.risk_reason, normalized.ethical_reason].filter(Boolean)
   }, requestedBy);
   createdItems.push(imported);
   existingImported.push(imported);
   return { created: true, duplicate: false, skipped: false, imported };
+}
+
+async function testImportSource({ store, config, sourceId = "", maxItems = 5, requestedBy = "system" } = {}) {
+  if (!sourceId) {
+    const error = new Error("Missing source_id");
+    error.statusCode = 400;
+    throw error;
+  }
+  const allSources = await store.allRecords("ImportedSource");
+  const source = allSources.find((item) => item.id === sourceId || item.provider_key === sourceId);
+  if (!source) {
+    const error = new Error("Source not found");
+    error.statusCode = 404;
+    throw error;
+  }
+  const providerKey = source.provider_key || "custom";
+  const provider = providers[providerKey] || providers.custom;
+  const startedAt = now();
+  const logBase = {
+    provider_key: providerKey,
+    source_id: source.id,
+    started_at: startedAt,
+    fetched_count: 0,
+    valid_count: 0,
+    imported_count: 0,
+    created_count: 0,
+    duplicate_count: 0,
+    skipped_count: 0,
+    rejected_count: 0,
+    error_count: 0,
+    target_new_count: 0,
+    queries_tried: [],
+    countries_tried: [],
+    status: "test_running",
+    error_message: ""
+  };
+  let logRecord = await store.createRecord("ImportLog", logBase, requestedBy);
+  if (!providerIsConfigured(providerKey, config)) {
+    logRecord = await store.updateRecord("ImportLog", logRecord.id, {
+      finished_at: now(),
+      status: "test_skipped",
+      skipped_count: 1,
+      error_message: providerMissingReason(providerKey)
+    });
+    return { success: true, dry_run: true, ...logRecord, samples: [] };
+  }
+  try {
+    const sourceForProvider = applyRuntimeOptions({ ...source, base_url: sourceUrl(source) }, {});
+    const rawItems = ensureArray(await provider.fetchItems({ source: sourceForProvider, config, maxItems }));
+    const samples = [];
+    let validCount = 0;
+    let rejectedCount = 0;
+    for (const raw of rawItems.slice(0, maxItems)) {
+      const normalized = await normalizeImportedItem(raw, source);
+      const validation = validateImportedItem(normalized, raw, source);
+      if (validation.valid) validCount += 1;
+      else rejectedCount += 1;
+      samples.push({
+        original_title: normalized.original_title || raw.original_title || raw.title || "",
+        original_url: normalized.original_url || raw.original_url || raw.source_url || "",
+        status: validation.valid ? "valid" : validation.status,
+        reason: validation.reason || "",
+        quality_score: validation.quality_score || 0
+      });
+    }
+    logRecord = await store.updateRecord("ImportLog", logRecord.id, {
+      finished_at: now(),
+      fetched_count: rawItems.length,
+      valid_count: validCount,
+      rejected_count: rejectedCount,
+      status: rawItems.length && !validCount ? "test_zero_valid_items" : "test_completed",
+      error_message: rawItems.length && !validCount ? "Items fetched but failed validation" : ""
+    });
+    return {
+      success: true,
+      dry_run: true,
+      fetched_count: rawItems.length,
+      valid_count: validCount,
+      rejected_count: rejectedCount,
+      created_count: 0,
+      duplicate_count: 0,
+      samples,
+      log: logRecord
+    };
+  } catch (error) {
+    logRecord = await store.updateRecord("ImportLog", logRecord.id, {
+      finished_at: now(),
+      status: "test_error",
+      error_count: 1,
+      error_message: error.message || "Source test failed"
+    });
+    return {
+      success: false,
+      dry_run: true,
+      fetched_count: 0,
+      valid_count: 0,
+      rejected_count: 0,
+      created_count: 0,
+      duplicate_count: 0,
+      error_count: 1,
+      message: error.message || "Source test failed",
+      log: logRecord
+    };
+  }
 }
 
 async function runImport({ store, config, sourceId = "", maxItems, requestedBy = "system", force = false, options = {} } = {}) {
@@ -676,5 +786,6 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
 module.exports = {
   ensureDefaultSettings,
   ensureDefaultSources,
-  runImport
+  runImport,
+  testImportSource
 };

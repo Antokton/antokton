@@ -13,7 +13,8 @@ const { scoreRisk } = require(path.join(root, "backend/importAssistant/scoreRisk
 const { scoreEthical } = require(path.join(root, "backend/importAssistant/scoreEthical.js"));
 const { detectContactLanguage } = require(path.join(root, "backend/importAssistant/detectContactLanguage.js"));
 const { generateAlbanianListingTitle } = require(path.join(root, "backend/importAssistant/generateAlbanianListingTitle.js"));
-const { ensureDefaultSources, runImport } = require(path.join(root, "backend/importAssistant/importRunner.js"));
+const { ensureDefaultSources, runImport, testImportSource } = require(path.join(root, "backend/importAssistant/importRunner.js"));
+const { cleanupInvalidImportedPosts } = require(path.join(root, "backend/importAssistant/cleanupInvalidImports.js"));
 const { buildExpiryFields, parseImportedExpiry, getAutomaticExpiryDays } = require(path.join(root, "backend/importAssistant/expiry.js"));
 const { validateImportedItem } = require(path.join(root, "backend/importAssistant/validateImportedItem.js"));
 const arbeitnowProvider = require(path.join(root, "backend/importAssistant/providers/arbeitnowProvider.js"));
@@ -245,6 +246,123 @@ test("runImport stores corporate JobTeaser page as import failure instead of pos
   assert.equal(records.ImportedPost.length, 0);
   assert.equal(records.ImportFailure[0].status, "rejected_non_job_page");
   assert.equal(records.ImportLog[0].status, "imported_zero_valid_items");
+});
+
+test("source test is a dry run and does not create imported posts or failures", async () => {
+  const records = {
+    ImportedSource: [{
+      id: "html-source",
+      name: "Demo Jobs",
+      provider_key: "custom",
+      source_type: "html",
+      import_mode: "automatic",
+      crawl_method: "html",
+      parser_type: "html",
+      enabled: true,
+      source_url: "https://example.test/jobs",
+      category_filter: "pune",
+      parser_config: { item_url_patterns: "jobs" }
+    }],
+    ImportAssistantSettings: [],
+    ImportedPost: [],
+    Job: [],
+    ImportLog: [],
+    ImportFailure: []
+  };
+  const store = {
+    async allRecords(entity) { return records[entity] || []; },
+    async createRecord(entity, data) {
+      const row = { id: `${entity}-${records[entity].length + 1}`, created_date: new Date().toISOString(), ...data };
+      records[entity].push(row);
+      return row;
+    },
+    async updateRecord(entity, id, patch) {
+      const row = records[entity].find((item) => item.id === id);
+      Object.assign(row, patch);
+      return row;
+    },
+    async deleteRecord() { return true; }
+  };
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => {
+    if (String(url).endsWith("/jobs")) {
+      return { ok: true, async text() { return `<a href="/jobs/cleaner-1">Cleaner job in Brussels</a>`; } };
+    }
+    return { ok: true, async text() { return `<html><body><h1>Cleaner job in Brussels</h1><main>Cleaning job with a real employer, clear schedule, Brussels location, application link and contact details for candidates. This description is intentionally long enough to pass validation.</main></body></html>`; } };
+  };
+  try {
+    const result = await testImportSource({ store, config: {}, sourceId: "html-source", requestedBy: "test" });
+    assert.equal(result.dry_run, true);
+    assert.equal(result.fetched_count, 1);
+    assert.equal(result.valid_count, 1);
+    assert.equal(records.ImportedPost.length, 0);
+    assert.equal(records.ImportFailure.length, 0);
+    assert.equal(records.ImportedSource.length, 1);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("validator rejects listing URLs and broken mojibake text", () => {
+  const source = { id: "src", name: "MerrJep.al Punë", import_mode: "automatic" };
+  const listing = validateImportedItem({
+    source_id: "src",
+    source_name: "MerrJep.al Punë",
+    original_title: "Kërkohet pastruese për shtëpi",
+    original_url: "https://merrjep.al/njoftime/biznes-pune/pune?Private=True",
+    source_url: "https://merrjep.al/njoftime/biznes-pune/pune?Private=True",
+    original_description: "Kërkohet pastruese për shtëpi me orar dhe lokacion të qartë. Kontaktoni për aplikim.",
+    original_company: "Demo",
+    original_location: "Tiranë"
+  }, {}, source);
+  assert.equal(listing.valid, false);
+  assert.equal(listing.status, "rejected_low_quality_import");
+
+  const mojibake = validateImportedItem({
+    source_id: "src",
+    source_name: "Remote OK",
+    original_title: "KÃ«rkohet punonjÃ«s ÃÂÐ",
+    original_url: "https://example.test/jobs/1",
+    source_url: "https://example.test/jobs/1",
+    original_description: "KÃ«rkohet punonjÃ«s me pÃ«rvojÃ« dhe kontratÃ«. Ky tekst është i prishur dhe nuk duhet të publikohet.",
+    original_company: "Demo",
+    original_location: "Remote"
+  }, {}, { id: "src", name: "Remote OK", import_mode: "automatic" });
+  assert.equal(mojibake.valid, false);
+  assert.equal(mojibake.status, "rejected_bad_encoding");
+});
+
+test("cleanup archives invalid imported posts without deleting them", async () => {
+  const records = {
+    ImportedPost: [{
+      id: "bad-1",
+      title: "Kërkohet punonjës",
+      source_id: "src",
+      source_name: "MerrJep.al Punë",
+      source_url: "https://merrjep.al/njoftime/biznes-pune/pune?Private=True",
+      original_url: "https://merrjep.al/njoftime/biznes-pune/pune?Private=True",
+      original_text: "Detajet e plota verifikohen nga burimi origjinal para publikimit.",
+      status: "pending_review"
+    }]
+  };
+  const store = {
+    async allRecords(entity) { return records[entity] || []; },
+    async updateRecord(entity, id, patch) {
+      const row = records[entity].find((item) => item.id === id);
+      Object.assign(row, patch);
+      return row;
+    }
+  };
+
+  const dryRun = await cleanupInvalidImportedPosts({ store, dryRun: true });
+  assert.equal(dryRun.invalid_count, 1);
+  assert.equal(records.ImportedPost[0].status, "pending_review");
+
+  const result = await cleanupInvalidImportedPosts({ store, dryRun: false, requestedBy: "admin@test" });
+  assert.equal(result.invalid_count, 1);
+  assert.equal(records.ImportedPost.length, 1);
+  assert.equal(records.ImportedPost[0].status, "archived_invalid_import");
+  assert.equal(records.ImportedPost[0].invalid_import_status, "rejected_low_quality_import");
 });
 
 test("custom provider imports Remote OK API without blocking by profession filter", async () => {

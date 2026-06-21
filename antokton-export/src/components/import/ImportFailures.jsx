@@ -10,6 +10,7 @@ const STATUS_LABELS = {
   rejected_missing_original_url: "Refuzuar: mungon URL",
   rejected_missing_title: "Refuzuar: mungon titulli",
   rejected_placeholder_url: "Refuzuar: URL placeholder",
+  rejected_bad_encoding: "Refuzuar: tekst i prishur",
   skipped_missing_parser_config: "Kapërcyer: mungon parser-i",
 };
 
@@ -37,6 +38,7 @@ export default function ImportFailures() {
             <thead>
               <tr className="border-b border-white/10 bg-white/5 text-left text-white/50">
                 <th className="px-3 py-2.5">Statusi</th>
+                <th className="px-3 py-2.5">Cilësia</th>
                 <th className="px-3 py-2.5">Arsyeja</th>
                 <th className="px-3 py-2.5">Burimi</th>
                 <th className="px-3 py-2.5">Titulli</th>
@@ -51,6 +53,9 @@ export default function ImportFailures() {
                     <span className="rounded-full bg-red-400/15 px-2 py-0.5 text-[10px] font-semibold text-red-200">
                       {STATUS_LABELS[failure.status] || failure.status || "Refuzuar"}
                     </span>
+                  </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    {Number.isFinite(Number(failure.quality_score)) ? `${Math.round(Number(failure.quality_score))}/100` : "—"}
                   </td>
                   <td className="px-3 py-2.5 min-w-[220px]">{failure.reason || "—"}</td>
                   <td className="px-3 py-2.5 whitespace-nowrap">{failure.source_name || failure.provider || "—"}</td>

@@ -190,13 +190,16 @@ export default function ImportSources() {
   };
 
   const testSource = async (source) => {
+    if (!source?.id) return alert("Missing source_id");
     setBusyId(source.id);
     try {
       const result = await base44.importAssistant.testSource(source.id);
-      alert(`Testi përfundoi: ${result.created_count || 0} të reja, ${result.duplicate_count || 0} dublikata.`);
+      const samples = Array.isArray(result.samples) && result.samples.length
+        ? `\nShembuj:\n${result.samples.slice(0, 3).map((item) => `- ${item.status}: ${item.original_title || item.original_url || "pa titull"}${item.reason ? ` (${item.reason})` : ""}`).join("\n")}`
+        : "";
+      alert(`Testi përfundoi (pa krijuar postime): ${result.fetched_count || 0} të marra, ${result.valid_count || 0} të vlefshme, ${result.rejected_count || 0} refuzime.${samples}`);
       await Promise.all([
         refresh(),
-        qc.invalidateQueries({ queryKey: ["importedPosts"] }),
         qc.invalidateQueries({ queryKey: ["importAssistant", "logs"] }),
       ]);
     } finally {
