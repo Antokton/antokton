@@ -92,6 +92,18 @@ test("import validation requires real title, URL, source and quality fields", ()
     contact_methods: [{ type: "application_form", value: "https://example.test/job/2/apply" }]
   }, {}, source);
   assert.equal(valid.valid, true);
+
+  const pendingQuality = validateImportedItem({
+    source_id: "source-1",
+    source_name: "Arbeitnow",
+    original_title: "Cleaner",
+    original_company: "Clean Demo",
+    original_location: "Brussels, Belgium",
+    original_url: "https://example.test/job/3",
+    source_url: "https://example.test/job/3"
+  }, {}, source);
+  assert.equal(pendingQuality.valid, true);
+  assert.ok(pendingQuality.quality_score >= 50);
 });
 
 test("normalization preserves full imported address separately from country", async () => {
@@ -486,6 +498,75 @@ test("import fallback continues after duplicate-only first source", async () => 
     assert.ok(fetchCount >= 1);
     assert.equal(records.ImportedPost.some((item) => item.status === "pending_review" && item.source_url === "https://example.test/jobs/new-warehouse"), true);
     assert.ok(result.fallback_summary.providers_tried.includes("arbeitnow"));
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("all active source selection runs enabled automatic sources", async () => {
+  const records = {
+    ImportedSource: [{
+      id: "arbeitnow-source",
+      name: "Arbeitnow",
+      provider_key: "arbeitnow",
+      source_type: "api",
+      import_mode: "automatic",
+      crawl_method: "api",
+      enabled: true,
+      source_url: "https://example.test/jobs",
+      category_filter: "pune",
+      country_filter: "Germany",
+      profession_filter: "cleaner"
+    }],
+    ImportAssistantSettings: [{ id: "settings", auto_import_enabled: true, max_items_per_run: 10, min_new_items_per_run: 1 }],
+    ImportedPost: [],
+    Job: [],
+    ImportLog: [],
+    ImportFailure: []
+  };
+  const store = {
+    async allRecords(entity) { return records[entity] || []; },
+    async createRecord(entity, data) {
+      const row = { id: `${entity}-${records[entity].length + 1}`, created_date: new Date().toISOString(), ...data };
+      records[entity].push(row);
+      return row;
+    },
+    async updateRecord(entity, id, patch) {
+      const row = records[entity].find((item) => item.id === id);
+      Object.assign(row, patch);
+      return row;
+    },
+    async deleteRecord() { return true; }
+  };
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    async json() {
+      return {
+        data: [{
+          title: "Cleaner",
+          description: "Cleaning role",
+          company_name: "Clean Demo",
+          location: "Brussels, Belgium",
+          slug: "cleaner-brussels",
+          url: "https://example.test/jobs/cleaner-brussels",
+          created_at: 1760000000
+        }],
+        links: {}
+      };
+    }
+  });
+  try {
+    const result = await runImport({
+      store,
+      config: { IMPORT_ASSISTANT_MIN_NEW_PER_RUN: 1 },
+      sourceId: "all",
+      requestedBy: "test",
+      options: { manual_run: true, min_new_items_per_run: 1, min_relevance_score: 0, max_risk_score: 100 }
+    });
+    assert.equal(result.created_count, 1);
+    assert.equal(result.fallback_summary.providers_tried.includes("arbeitnow"), true);
+    assert.equal(records.ImportedPost[0].status, "pending_review");
   } finally {
     global.fetch = originalFetch;
   }

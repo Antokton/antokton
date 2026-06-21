@@ -1,4 +1,4 @@
-const { runImport, testImportSource, ensureDefaultSettings, ensureDefaultSources } = require("./importRunner");
+const { runImport, testImportSource, ensureDefaultSettings, ensureDefaultSources, normalizeSelectedSourceId } = require("./importRunner");
 const { translateContactMessage } = require("./translateImportedItem");
 const { buildExpiryFields } = require("./expiry");
 const { normalizeSourceType, technicalDefaultsForSource } = require("./seedSources");
@@ -150,13 +150,16 @@ async function handleImportAssistantRoute(deps) {
 
   if (req.method === "POST" && action === "run") {
     const body = await readPayload(req);
+    const selectedSourceId = normalizeSelectedSourceId(body.source_id || body.sourceId || body.default_source_id || "");
+    const selectedProviderKey = normalizeSelectedSourceId(body.provider_key || "");
     const result = await runImport({
       store,
       config,
-      sourceId: body.source_id || body.sourceId || body.default_source_id || body.default_provider_key || "",
+      sourceId: selectedSourceId,
       maxItems: body.max_items || body.maxItems,
       requestedBy: userEmail || "manual",
       options: {
+        provider_filter: selectedProviderKey,
         category_filter: body.category_filter || body.default_category_filter || "",
         country_filter: body.country_filter || body.default_country_filter || "",
         profession_filter: body.profession_filter || body.default_profession_filter || "",

@@ -95,7 +95,7 @@ function isArtificialTitle(value = "") {
 
 function hasRealTitle(value = "") {
   const title = cleanText(value);
-  if (title.length < 8) return false;
+  if (title.length < 4) return false;
   if (isArtificialTitle(title)) return false;
   if (/^(home|about|contact|pricing|recruiters|employers|companies|blog|academy)$/i.test(title)) return false;
   return true;
@@ -114,7 +114,7 @@ function qualityFields(item = {}) {
     company_name: Boolean(cleanText(item.original_company || item.company_name || item.company)),
     location: Boolean(cleanText(item.original_location || item.location || item.address)),
     city_country: Boolean(city || country),
-    long_description: description.length > 120,
+    long_description: description.length > 80,
     apply_url: Boolean(cleanText(item.apply_url || item.contact_url)) || contactValue(item, ["application_form", "website"]),
     published_at: Boolean(cleanText(item.published_at || item.original_published_at)),
     expires_at: Boolean(cleanText(item.expires_at || item.original_expires_at)),
@@ -147,17 +147,17 @@ function calculateImportQualityScore(item = {}, raw = {}, source = {}) {
   const hasLocation = Boolean(cleanText(item.original_location || raw.original_location || raw.location || item.address));
   const hasCityCountry = Boolean(cleanText(item.city || item.original_city || item.country || item.original_country));
 
-  if (hasRealTitle(originalTitle)) { score += 20; reasons.push("title"); }
-  if (url && !isPlaceholderUrl(url) && !isListingOrCategoryUrl(url) && !isBlockedNonJobUrl(url)) { score += 20; reasons.push("individual_url"); }
+  if (hasRealTitle(originalTitle)) { score += 25; reasons.push("title"); }
+  if (url && !isPlaceholderUrl(url) && !isListingOrCategoryUrl(url) && !isBlockedNonJobUrl(url)) { score += 30; reasons.push("individual_url"); }
   if (cleanText(item.source_id || source.id) && sourceName && !/^burim i personalizuar$/i.test(sourceName)) { score += 15; reasons.push("source"); }
-  if (description.length > 120 || applyUrl || contactValue(item, ["application_form", "website"])) { score += 15; reasons.push("description_or_apply"); }
+  if (description.length > 80) { score += 15; reasons.push("description"); }
   if (hasCompany) { score += 10; reasons.push("company"); }
   if (hasLocation || hasCityCountry) { score += 10; reasons.push("location"); }
-  if (hasContact) { score += 5; reasons.push("contact"); }
-  if (cleanText(item.published_at || item.original_published_at || raw.published_at)) { score += 3; reasons.push("published_at"); }
-  if (cleanText(item.expires_at || item.original_expires_at || raw.expires_at)) { score += 2; reasons.push("expires_at"); }
-  if (cleanText(item.original_salary || raw.salary || item.salary)) { score += 2; reasons.push("salary"); }
-  if (cleanText(item.contract_type || raw.contract_type)) { score += 2; reasons.push("contract_type"); }
+  if (hasContact || applyUrl || contactValue(item, ["application_form", "website"])) { score += 10; reasons.push("apply_or_contact"); }
+  if (cleanText(item.published_at || item.original_published_at || raw.published_at)) reasons.push("published_at");
+  if (cleanText(item.expires_at || item.original_expires_at || raw.expires_at)) reasons.push("expires_at");
+  if (cleanText(item.original_salary || raw.salary || item.salary)) reasons.push("salary");
+  if (cleanText(item.contract_type || raw.contract_type)) reasons.push("contract_type");
 
   return { score: Math.min(100, score), reasons };
 }
@@ -276,21 +276,6 @@ function validateImportedItem(item = {}, raw = {}, source = {}) {
     };
   }
 
-  const description = cleanText(item.original_description || raw.original_description || raw.description || "");
-  const hasDescriptionOrApply = description.length > 120
-    || cleanText(item.apply_url || raw.apply_url || item.contact_url)
-    || contactValue(item, ["application_form", "website"]);
-  if (!hasDescriptionOrApply) {
-    const quality = calculateImportQualityScore(item, raw, source);
-    return {
-      valid: false,
-      status: "rejected_low_quality_import",
-      reason: "Imported item missing real description or application URL",
-      quality_score: quality.score,
-      quality_reasons: quality.reasons
-    };
-  }
-
   if (!hasAnyRequiredDetail(item)) {
     const quality = calculateImportQualityScore(item, raw, source);
     return {
@@ -303,19 +288,8 @@ function validateImportedItem(item = {}, raw = {}, source = {}) {
   }
 
   const present = qualityFields(item);
-  if (present.length < 2) {
-    const quality = calculateImportQualityScore(item, raw, source);
-    return {
-      valid: false,
-      status: "rejected_low_quality_import",
-      reason: "Imported item missing required job fields",
-      quality_score: quality.score,
-      quality_reasons: quality.reasons
-    };
-  }
-
   const quality = calculateImportQualityScore(item, raw, source);
-  if (quality.score < 70) {
+  if (quality.score < 50) {
     return {
       valid: false,
       status: "rejected_low_quality_import",

@@ -113,7 +113,6 @@ export default function ImportAssistantSettings() {
       const result = await base44.importAssistant.run({
         max_items: values.max_items_per_run || 100,
         source_id: values.default_source_id || "",
-        default_provider_key: values.default_provider_key || "",
         category_filter: values.default_category_filter || "",
         country_filter: values.default_country_filter || "",
         profession_filter: values.default_profession_filter || "",

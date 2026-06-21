@@ -184,6 +184,27 @@ function shouldUseSource(sourceId, source) {
   return !sourceId || source.id === sourceId || source.provider_key === sourceId;
 }
 
+const ALL_SOURCE_SELECTIONS = new Set([
+  "all",
+  "__all",
+  "all-active",
+  "all_active",
+  "all-active-sources",
+  "all_active_sources",
+  "all-sources",
+  "all_sources",
+  "te gjitha",
+  "të gjitha",
+  "te_gjitha",
+  "të_gjitha"
+]);
+
+function normalizeSelectedSourceId(value = "") {
+  const selected = String(value || "").trim();
+  if (!selected) return "";
+  return ALL_SOURCE_SELECTIONS.has(selected.toLowerCase()) ? "" : selected;
+}
+
 function shouldCrawlSource(source = {}, { manual = false, selected = false } = {}) {
   if (manual && selected) return true;
   if (!sourceEnabled(source)) return false;
@@ -566,6 +587,8 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
 async function runImport({ store, config, sourceId = "", maxItems, requestedBy = "system", force = false, options = {} } = {}) {
   if (running && !force) return { success: false, status: "locked", message: "Importimi është duke u ekzekutuar." };
   running = true;
+  sourceId = normalizeSelectedSourceId(sourceId);
+  const providerFilter = normalizeSelectedSourceId(options.provider_filter || "");
   const startedAt = now();
   const logs = [];
   const createdItems = [];
@@ -584,6 +607,7 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
     const selectedSourceRun = Boolean(sourceId && strictSource);
     const sources = allSources
       .filter((source) => !strictSource || shouldUseSource(sourceId, source))
+      .filter((source) => !providerFilter || shouldUseSource(providerFilter, source))
       .filter((source) => shouldCrawlSource(source, { manual: manualRun, selected: selectedSourceRun }))
       .map((source) => applyRuntimeOptions(source, options))
       .sort((a, b) => {
@@ -601,6 +625,53 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
     const perSourceTargetNew = selectedSourceRun
       ? limit
       : Math.max(1, Math.ceil((minNewItems || limit) / Math.min(runnableSourceCount, 4)));
+
+    if (!sources.length) {
+      const logRecord = await store.createRecord("ImportLog", {
+        provider_key: providerFilter || sourceId || "none",
+        source_id: sourceId || "",
+        started_at: startedAt,
+        finished_at: now(),
+        fetched_count: 0,
+        valid_count: 0,
+        imported_count: 0,
+        created_count: 0,
+        duplicate_count: 0,
+        skipped_count: 0,
+        rejected_count: 0,
+        error_count: 0,
+        target_new_count: minNewItems,
+        queries_tried: [],
+        countries_tried: [],
+        status: "no_runnable_sources",
+        error_message: "Nuk u gjet asnjë burim aktiv automatik/semi-auto për import. Kontrollo Burimet ose zgjedhjen e burimit."
+      }, requestedBy);
+      logs.push(logRecord);
+      return {
+        success: true,
+        status: "no_runnable_sources",
+        started_at: startedAt,
+        finished_at: now(),
+        fetched_count: 0,
+        valid_count: 0,
+        imported_count: 0,
+        created_count: 0,
+        duplicate_count: 0,
+        skipped_count: 0,
+        rejected_count: 0,
+        error_count: 0,
+        target_new_count: minNewItems,
+        fallback_summary: {
+          providers_tried: [],
+          queries_tried: [],
+          countries_tried: [],
+          min_new_items_per_run: minNewItems,
+          reason: logRecord.error_message
+        },
+        logs,
+        items: []
+      };
+    }
 
     for (const source of sources) {
       const providerKey = source.provider_key || "custom";
@@ -786,6 +857,7 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
 module.exports = {
   ensureDefaultSettings,
   ensureDefaultSources,
+  normalizeSelectedSourceId,
   runImport,
   testImportSource
 };
