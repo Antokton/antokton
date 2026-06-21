@@ -43,6 +43,15 @@ const labelOf = (items, value, fallback = "—") => items.find((item) => item.va
 const sourceLabel = (post) => PROVIDER_LABELS[post.provider_key] || labelOf(SOURCES, post.source, post.source_name || post.source || post.provider_key || "—");
 const statusLabel = (status) => STATUS_LABELS[status] || status || "Në pritje";
 const normalizedText = (value) => String(value || "").toLowerCase();
+const HIDDEN_IMPORT_STATUSES = new Set([
+  "duplicate",
+  "rejected_low_quality_import",
+  "rejected_non_job_page",
+  "rejected_missing_original_url",
+  "rejected_missing_title",
+  "rejected_placeholder_url",
+  "skipped_missing_parser_config",
+]);
 
 function FilterSelect({ value, onValueChange, label, children, width = "w-40" }) {
   return (
@@ -131,6 +140,7 @@ export default function ImportTable({ user, onEdit }) {
 
   const filtered = React.useMemo(() => {
     const rows = posts.filter(p => {
+      if (HIDDEN_IMPORT_STATUSES.has(p.status)) return false;
       if (filters.status !== "all" && p.status !== filters.status) return false;
       if (filters.category !== "all" && p.category !== filters.category) return false;
       if (filters.listing_type !== "all" && p.listing_type !== filters.listing_type) return false;

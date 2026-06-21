@@ -1,0 +1,15 @@
+{
+  "name": "ImportFailure",
+  "type": "object",
+  "properties": {
+    "source_id": { "type": "string" },
+    "source_name": { "type": "string" },
+    "provider": { "type": "string" },
+    "raw_payload": { "type": "object" },
+    "reason": { "type": "string" },
+    "status": { "type": "string" },
+    "original_url": { "type": "string" },
+    "original_title": { "type": "string" },
+    "created_at": { "type": "string" }
+  }
+}

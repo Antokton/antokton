@@ -37,6 +37,8 @@ const STATUS_LABELS = {
   success: "Sukses",
   partial_success: "Sukses i pjesshëm",
   duplicate_only: "Vetëm dublikata",
+  imported_with_rejections: "Importuar me refuzime",
+  imported_zero_valid_items: "Zero të vlefshme",
   no_results: "Pa rezultate",
   skipped: "U kapërcye",
   error: "Gabim",
@@ -123,10 +125,12 @@ export default function ImportAssistantSettings() {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["importedPosts"] }),
         qc.invalidateQueries({ queryKey: ["importAssistant", "logs"] }),
+        qc.invalidateQueries({ queryKey: ["importAssistant", "failures"] }),
       ]);
       const summary = result.fallback_summary || {};
       alert([
-        `Importimi përfundoi: ${result.created_count || 0} të reja, ${result.duplicate_count || 0} dublikata, ${result.skipped_count || 0} skipped.`,
+        `Importimi përfundoi: ${result.imported_count || result.created_count || 0} të reja, ${result.duplicate_count || 0} dublikata, ${result.rejected_count || 0} refuzime, ${result.skipped_count || 0} skipped.`,
+        `Të marra: ${result.fetched_count || 0}; të vlefshme: ${result.valid_count || 0}.`,
         `Provider-at: ${(summary.providers_tried || []).join(", ") || "—"}`,
         `Queries: ${(summary.queries_tried || []).slice(0, 8).join(", ") || "—"}`,
         `Vendet: ${(summary.countries_tried || []).slice(0, 8).join(", ") || "—"}`,

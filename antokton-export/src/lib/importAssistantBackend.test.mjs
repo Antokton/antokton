@@ -15,6 +15,7 @@ const { detectContactLanguage } = require(path.join(root, "backend/importAssista
 const { generateAlbanianListingTitle } = require(path.join(root, "backend/importAssistant/generateAlbanianListingTitle.js"));
 const { ensureDefaultSources, runImport } = require(path.join(root, "backend/importAssistant/importRunner.js"));
 const { buildExpiryFields, parseImportedExpiry, getAutomaticExpiryDays } = require(path.join(root, "backend/importAssistant/expiry.js"));
+const { validateImportedItem } = require(path.join(root, "backend/importAssistant/validateImportedItem.js"));
 const arbeitnowProvider = require(path.join(root, "backend/importAssistant/providers/arbeitnowProvider.js"));
 const customSourceProvider = require(path.join(root, "backend/importAssistant/providers/customSourceProvider.js"));
 const genericRssProvider = require(path.join(root, "backend/importAssistant/providers/genericRssProvider.js"));
@@ -50,6 +51,46 @@ test("normalization creates contact methods and pending review item", async () =
   assert.equal(item.contact_methods.some((method) => method.type === "phone"), true);
   assert.equal(item.contact_methods.some((method) => method.type === "email"), true);
   assert.ok(item.final_score > 0);
+});
+
+test("import validation rejects corporate pages and placeholder URLs", () => {
+  const base = {
+    source_id: "source-1",
+    source_name: "JobTeaser",
+    original_title: "JobTeaser recruiters",
+    original_description: "Corporate landing page for recruiters",
+    original_company: "JobTeaser",
+    original_location: "France",
+    source_url: "https://www.jobteaser.com/en/corporate/recruiters",
+    original_url: "https://www.jobteaser.com/en/corporate/recruiters"
+  };
+  assert.equal(validateImportedItem(base, {}, { id: "source-1", name: "JobTeaser", import_mode: "automatic" }).status, "rejected_non_job_page");
+  assert.equal(validateImportedItem({ ...base, source_url: "https://facebook.com/...", original_url: "https://facebook.com/..." }, {}, { id: "source-1", name: "Facebook", import_mode: "automatic" }).status, "rejected_placeholder_url");
+});
+
+test("import validation requires real title, URL, source and quality fields", () => {
+  const source = { id: "source-1", name: "Arbeitnow", import_mode: "automatic" };
+  const invalid = validateImportedItem({
+    source_id: "source-1",
+    source_name: "Arbeitnow",
+    original_title: "Kërkohet punonjës",
+    original_url: "https://example.test/job/1",
+    source_url: "https://example.test/job/1"
+  }, {}, source);
+  assert.equal(invalid.status, "rejected_missing_title");
+
+  const valid = validateImportedItem({
+    source_id: "source-1",
+    source_name: "Arbeitnow",
+    original_title: "Warehouse operative",
+    original_description: "Clear warehouse role with picking, packing and stable contract. The description is long enough to explain the work and requirements.",
+    original_company: "Demo GmbH",
+    original_location: "Berlin, Germany",
+    original_url: "https://example.test/job/2",
+    source_url: "https://example.test/job/2",
+    contact_methods: [{ type: "application_form", value: "https://example.test/job/2/apply" }]
+  }, {}, source);
+  assert.equal(valid.valid, true);
 });
 
 test("normalization preserves full imported address separately from country", async () => {
@@ -141,7 +182,8 @@ test("custom provider imports public HTML listing links", async () => {
         parser_type: "html",
         source_url: "https://example.test",
         category_filter: "pune",
-        country_filter: "Belgjikë"
+        country_filter: "Belgjikë",
+        parser_config: { item_url_patterns: "jobs" }
       },
       maxItems: 10
     });
@@ -150,6 +192,59 @@ test("custom provider imports public HTML listing links", async () => {
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+test("runImport stores corporate JobTeaser page as import failure instead of post", async () => {
+  const records = {
+    ImportedSource: [{
+      id: "jobteaser-bad",
+      name: "JobTeaser Recruiters",
+      provider_key: "custom",
+      source_type: "html",
+      import_mode: "automatic",
+      crawl_method: "html",
+      parser_type: "html",
+      enabled: true,
+      is_active: true,
+      source_url: "https://www.jobteaser.com/en/corporate/recruiters",
+      category_filter: "pune",
+      parser_config: { item_url_patterns: "jobs" }
+    }],
+    ImportAssistantSettings: [{ id: "settings", auto_import_enabled: true, max_items_per_run: 5, min_new_items_per_run: 1 }],
+    ImportedPost: [],
+    Job: [],
+    ImportLog: [],
+    ImportFailure: []
+  };
+  const store = {
+    async allRecords(entity) { return records[entity] || []; },
+    async createRecord(entity, data) {
+      const row = { id: `${entity}-${(records[entity] || []).length + 1}`, created_date: new Date().toISOString(), ...data };
+      records[entity] = records[entity] || [];
+      records[entity].push(row);
+      return row;
+    },
+    async updateRecord(entity, id, patch) {
+      const row = records[entity].find((item) => item.id === id);
+      Object.assign(row, patch);
+      return row;
+    },
+    async deleteRecord() { return true; }
+  };
+
+  const result = await runImport({
+    store,
+    config: { IMPORT_ASSISTANT_MIN_NEW_PER_RUN: 1 },
+    sourceId: "jobteaser-bad",
+    requestedBy: "test",
+    options: { strict_source: true, manual_run: true, min_new_items_per_run: 1, min_relevance_score: 0, max_risk_score: 100 }
+  });
+
+  assert.equal(result.created_count, 0);
+  assert.equal(result.rejected_count, 1);
+  assert.equal(records.ImportedPost.length, 0);
+  assert.equal(records.ImportFailure[0].status, "rejected_non_job_page");
+  assert.equal(records.ImportLog[0].status, "imported_zero_valid_items");
 });
 
 test("custom provider imports Remote OK API without blocking by profession filter", async () => {
@@ -182,7 +277,7 @@ test("custom provider imports Remote OK API without blocking by profession filte
 });
 
 test("manual run works when auto import settings are disabled", async () => {
-  const records = { ImportedSource: [], ImportAssistantSettings: [], ImportedPost: [], Job: [], ImportLog: [] };
+  const records = { ImportedSource: [], ImportAssistantSettings: [], ImportedPost: [], Job: [], ImportLog: [], ImportFailure: [] };
   const store = {
     async allRecords(entity) { return records[entity] || []; },
     async createRecord(entity, data) {
@@ -222,7 +317,7 @@ test("import fallback continues after duplicate-only first source", async () => 
     ImportAssistantSettings: [{ id: "settings", auto_import_enabled: true, max_items_per_run: 10, min_new_items_per_run: 1 }],
     ImportedPost: [{ id: "existing", source_url: "https://example.test/jobs/duplicate", original_url: "https://example.test/jobs/duplicate" }],
     Job: [],
-    ImportLog: []
+    ImportLog: [], ImportFailure: []
   };
   const store = {
     async allRecords(entity) { return records[entity] || []; },
@@ -279,7 +374,7 @@ test("import fallback continues after duplicate-only first source", async () => 
 });
 
 test("import run logs unconfigured API providers as skipped and continues to next source", async () => {
-  const records = { ImportedSource: [], ImportAssistantSettings: [], ImportedPost: [], Job: [], ImportLog: [] };
+  const records = { ImportedSource: [], ImportAssistantSettings: [], ImportedPost: [], Job: [], ImportLog: [], ImportFailure: [] };
   const store = {
     async allRecords(entity) { return records[entity] || []; },
     async createRecord(entity, data) {
@@ -329,7 +424,7 @@ test("import run logs unconfigured API providers as skipped and continues to nex
       return {
         data: [{
           title: "Warehouse operative",
-          description: "Warehouse logistics job",
+          description: "Warehouse logistics job with picking, packing, loading goods, stable contract, clear employer details, published location and application information for candidates.",
           company_name: "Demo Logistics",
           location: "Berlin, Germany",
           slug: "warehouse-operative",
@@ -389,7 +484,7 @@ test("selected import source is treated as starting point and falls back to othe
     ImportAssistantSettings: [],
     ImportedPost: [{ provider_key: "arbeitnow", external_id: "duplicate-job", source_url: "https://example.test/jobs/duplicate" }],
     Job: [],
-    ImportLog: []
+    ImportLog: [], ImportFailure: []
   };
   const store = {
     async allRecords(entity) { return records[entity] || []; },
@@ -420,8 +515,8 @@ test("selected import source is treated as starting point and falls back to othe
           url: "https://example.test/jobs/duplicate",
           created_at: 1760000000
         } : {
-          title: "Cleaner",
-          description: "Cleaning job with clear contract",
+          title: "Cleaning worker",
+          description: "Cleaning job with a clear contract, stable schedule, direct employer information, published city, start details and application information for candidates.",
           company_name: "Clean Demo",
           location: "Hamburg, Germany",
           slug: "new-cleaner",

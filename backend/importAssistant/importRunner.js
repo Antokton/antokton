@@ -2,6 +2,7 @@ const crypto = require("node:crypto");
 const { normalizeImportedItem } = require("./normalizeImportedItem");
 const { isDuplicateImportedItem } = require("./deduplicateImportedItem");
 const { INITIAL_IMPORT_SOURCES, technicalDefaultsForSource } = require("./seedSources");
+const { validateImportedItem } = require("./validateImportedItem");
 
 const providers = {
   arbeitnow: require("./providers/arbeitnowProvider"),
@@ -160,6 +161,17 @@ async function ensureDefaultSources(store) {
         patch.base_url = "https://www.arbeitnow.com/api/job-board-api";
       }
     }
+    const sourceUrlValue = String(source.source_url || source.base_url || source.jobs_url || "").toLowerCase();
+    if (sourceUrlValue.includes("jobteaser.com/en/corporate/recruiters")) {
+      patch.enabled = false;
+      patch.is_active = false;
+      patch.blocked_for_jobs = true;
+      patch.trust_level = "manual_only";
+      patch.import_mode = "manual";
+      patch.crawl_method = "manual";
+      patch.parser_type = "manual";
+      patch.notes = "Blocked for jobs: URL is a corporate/recruiters landing page, not a jobs feed.";
+    }
     if (Object.keys(patch).length) {
       await store.updateRecord("ImportedSource", source.id, patch);
       Object.assign(source, patch);
@@ -274,12 +286,42 @@ function duplicateHash(item = {}) {
   return crypto.createHash("sha256").update(input || crypto.randomUUID()).digest("hex");
 }
 
+async function createImportFailure({ raw, source, providerKey, store, requestedBy, normalized, validation }) {
+  const payload = {
+    source_id: normalized?.source_id || source?.id || "",
+    source_name: normalized?.source_name || raw?.source_name || source?.name || providerKey || "",
+    provider: providerKey || source?.provider_key || raw?.provider_key || "",
+    raw_payload: raw || {},
+    reason: validation?.reason || "Imported item failed validation",
+    status: validation?.status || "rejected_low_quality_import",
+    original_url: normalized?.original_url || normalized?.source_url || raw?.original_url || raw?.source_url || raw?.url || "",
+    original_title: normalized?.original_title || raw?.original_title || raw?.title || "",
+    created_at: now()
+  };
+  try {
+    return await store.createRecord("ImportFailure", payload, requestedBy);
+  } catch (error) {
+    return { id: "", ...payload, error: error?.message || "Failed to store import failure" };
+  }
+}
+
 async function processRawImportedItem({ raw, source, providerKey, store, requestedBy, options, existingImported, existingJobs, createdItems }) {
   const normalized = await normalizeImportedItem(raw, source);
   const sourceName = normalized.source_name || source.name || providerKey;
   const contactMethods = normalized.contact_methods || [];
+  const validation = validateImportedItem(normalized, raw, source);
+  if (!validation.valid) {
+    await createImportFailure({ raw, source, providerKey, store, requestedBy, normalized, validation });
+    return { created: false, duplicate: false, skipped: false, rejected: true, imported: null, validation };
+  }
   if (!passesRuntimeThresholds(normalized, options)) {
-    return { created: false, duplicate: false, skipped: true, imported: null };
+    const runtimeValidation = {
+      valid: false,
+      status: "rejected_low_quality_import",
+      reason: "Imported item did not pass runtime relevance/risk filters"
+    };
+    await createImportFailure({ raw, source, providerKey, store, requestedBy, normalized, validation: runtimeValidation });
+    return { created: false, duplicate: false, skipped: false, rejected: true, imported: null, validation: runtimeValidation };
   }
   const duplicate = isDuplicateImportedItem(
     normalized,
@@ -420,6 +462,8 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
   let fetchedTotal = 0;
   let duplicateTotal = 0;
   let skippedTotal = 0;
+  let rejectedTotal = 0;
+  let validTotal = 0;
   let errorTotal = 0;
 
   try {
@@ -456,6 +500,8 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
         source_id: source.id,
         started_at: now(),
         fetched_count: 0,
+        valid_count: 0,
+        imported_count: 0,
         created_count: 0,
         duplicate_count: 0,
         skipped_count: 0,
@@ -483,6 +529,8 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
         let createdCount = 0;
         let duplicateCount = 0;
         let skippedCount = 0;
+        let rejectedCount = 0;
+        let validCount = 0;
         let fetchedCount = 0;
         const queriesTried = new Set();
         const countriesTried = new Set();
@@ -529,9 +577,17 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
               duplicateCount += 1;
               duplicateTotal += 1;
             }
+            if (processed.created || processed.duplicate) {
+              validCount += 1;
+              validTotal += 1;
+            }
             if (processed.skipped) {
               skippedCount += 1;
               skippedTotal += 1;
+            }
+            if (processed.rejected) {
+              rejectedCount += 1;
+              rejectedTotal += 1;
             }
           }
         }
@@ -545,14 +601,25 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
         logRecord = await store.updateRecord("ImportLog", logRecord.id, {
           finished_at: now(),
           fetched_count: fetchedCount,
+          valid_count: validCount,
+          imported_count: createdCount,
           created_count: createdCount,
           duplicate_count: duplicateCount,
           skipped_count: skippedCount,
+          rejected_count: rejectedCount,
           queries_tried: [...queriesTried],
           countries_tried: [...countriesTried],
           target_new_count: minNewItems,
-          status: createdCount > 0 ? (createdItems.length >= minNewItems || !minNewItems ? "success" : "partial_success") : (duplicateCount > 0 ? "duplicate_only" : "no_results"),
-          error_message: createdCount === 0 && minNewItems ? `Nuk u arrit minimumi ${minNewItems}; u provuan ${queriesTried.size || 1} query dhe ${countriesTried.size || 1} vende për këtë burim.` : ""
+          status: createdCount > 0 && rejectedCount > 0
+            ? "imported_with_rejections"
+            : createdCount > 0
+              ? (createdItems.length >= minNewItems || !minNewItems ? "success" : "partial_success")
+              : (fetchedCount > 0 && rejectedCount > 0 && validCount === 0)
+                ? "imported_zero_valid_items"
+                : (duplicateCount > 0 ? "duplicate_only" : "no_results"),
+          error_message: fetchedCount > 0 && rejectedCount > 0 && validCount === 0
+            ? "Items fetched but failed quality validation"
+            : (createdCount === 0 && minNewItems ? `Nuk u arrit minimumi ${minNewItems}; u provuan ${queriesTried.size || 1} query dhe ${countriesTried.size || 1} vende për këtë burim.` : "")
         });
         logs.push(logRecord);
       } catch (error) {
@@ -575,13 +642,18 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
 
     return {
       success: true,
-      status: createdItems.length === 0 && duplicateTotal > 0 ? "duplicate_only" : (createdItems.length < minNewItems ? "partial_success" : "completed"),
+      status: createdItems.length === 0 && rejectedTotal > 0 && validTotal === 0
+        ? "imported_zero_valid_items"
+        : (createdItems.length === 0 && duplicateTotal > 0 ? "duplicate_only" : (createdItems.length < minNewItems ? "partial_success" : "completed")),
       started_at: startedAt,
       finished_at: now(),
       fetched_count: fetchedTotal,
+      valid_count: validTotal,
+      imported_count: createdItems.length,
       created_count: createdItems.length,
       duplicate_count: duplicateTotal,
       skipped_count: skippedTotal,
+      rejected_count: rejectedTotal,
       error_count: errorTotal,
       target_new_count: minNewItems,
       fallback_summary: {

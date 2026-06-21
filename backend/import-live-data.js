@@ -40,6 +40,7 @@ const FALLBACK_ENTITIES = [
   "EventRegistration",
   "FeaturedJob",
   "ImportedPost",
+  "ImportFailure",
   "Job",
   "JobApplication",
   "JobComment",

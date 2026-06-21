@@ -321,6 +321,9 @@ export const antoktonApi = {
     logs() {
       return request('/api/admin/import-assistant/logs');
     },
+    failures() {
+      return request('/api/admin/import-assistant/failures');
+    },
     approveItem(id) {
       return request(`/api/admin/import-assistant/items/${encodeURIComponent(id)}/approve`, { method: 'POST', body: {} });
     },

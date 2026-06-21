@@ -202,6 +202,12 @@ async function handleImportAssistantRoute(deps) {
     return send(res, 200, (await store.allRecords("ImportLog")).sort((a, b) => String(b.created_date || "").localeCompare(String(a.created_date || ""))).slice(0, 100));
   }
 
+  if (req.method === "GET" && action === "failures") {
+    return send(res, 200, (await store.allRecords("ImportFailure"))
+      .sort((a, b) => String(b.created_date || b.created_at || "").localeCompare(String(a.created_date || a.created_at || "")))
+      .slice(0, 200));
+  }
+
   if (req.method === "POST" && action === "translate-contact-message") {
     return send(res, 200, await translateContactMessage(await readPayload(req)));
   }

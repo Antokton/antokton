@@ -7,6 +7,8 @@
     "started_at": { "type": "string" },
     "finished_at": { "type": "string" },
     "fetched_count": { "type": "number", "default": 0 },
+    "valid_count": { "type": "number", "default": 0 },
+    "imported_count": { "type": "number", "default": 0 },
     "created_count": { "type": "number", "default": 0 },
     "duplicate_count": { "type": "number", "default": 0 },
     "rejected_count": { "type": "number", "default": 0 },

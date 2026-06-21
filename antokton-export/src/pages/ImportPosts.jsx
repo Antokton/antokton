@@ -5,8 +5,9 @@ import ImportTable from "../components/import/ImportTable";
 import ImportJobForm from "../components/import/ImportJobForm";
 import ImportAssistantSettings from "../components/import/ImportAssistantSettings";
 import ImportSources from "../components/import/ImportSources";
+import ImportFailures from "../components/import/ImportFailures";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Table, PlusCircle, ShieldAlert, Briefcase, Bot, Database } from "lucide-react";
+import { Download, Table, PlusCircle, ShieldAlert, Briefcase, Bot, Database, AlertTriangle } from "lucide-react";
 
 export default function ImportPosts({ defaultTab = "table" }) {
   const [user, setUser] = useState(null);
@@ -88,6 +89,9 @@ export default function ImportPosts({ defaultTab = "table" }) {
               <TabsTrigger value="sources" className="text-white data-[state=active]:bg-white/10 text-xs gap-1.5 whitespace-nowrap">
                 <Database className="w-3.5 h-3.5" /> Burime
               </TabsTrigger>
+              <TabsTrigger value="failures" className="text-white data-[state=active]:bg-white/10 text-xs gap-1.5 whitespace-nowrap">
+                <AlertTriangle className="w-3.5 h-3.5" /> Të refuzuara
+              </TabsTrigger>
             </TabsList>
           </div>
         </div>
@@ -110,6 +114,10 @@ export default function ImportPosts({ defaultTab = "table" }) {
 
         <TabsContent value="sources">
           <ImportSources />
+        </TabsContent>
+
+        <TabsContent value="failures">
+          <ImportFailures />
         </TabsContent>
       </Tabs>
     </div>

@@ -1,5 +1,6 @@
 const genericRssProvider = require("./genericRssProvider");
 const { cleanText } = require("../textUtils");
+const { isBlockedNonJobUrl } = require("../validateImportedItem");
 
 function parserConfig(source = {}) {
   if (!source.parser_config) return {};
@@ -247,6 +248,34 @@ function looksLikeListingUrl(url = "", text = "", source = {}) {
   return patterns.some((pattern) => haystack.includes(pattern));
 }
 
+function missingParserConfigFailure(source = {}, url = "") {
+  return [{
+    provider_key: source.provider_key || "custom",
+    source_url: url,
+    source_name: source.name || "HTML",
+    item_type: "job",
+    category: source.category_filter || "pune",
+    original_title: source.name || "HTML source",
+    original_description: "",
+    _import_rejection_status: "skipped_missing_parser_config",
+    _import_rejection_reason: "HTML source missing clear parser configuration"
+  }];
+}
+
+function nonJobPageFailure(source = {}, url = "") {
+  return [{
+    provider_key: source.provider_key || "custom",
+    source_url: url,
+    source_name: source.name || "HTML",
+    item_type: "job",
+    category: source.category_filter || "pune",
+    original_title: source.name || "HTML source",
+    original_description: "",
+    _import_rejection_status: "rejected_non_job_page",
+    _import_rejection_reason: "URL is a corporate/marketing page, not a job posting."
+  }];
+}
+
 function sameListingIndex(url = "", baseUrl = "") {
   try {
     const current = new URL(url);
@@ -284,6 +313,7 @@ function parseHtmlAnchors(html = "", source = {}, baseUrl = "") {
     const url = absoluteUrl(htmlDecode(href), baseUrl);
     const title = tagless(anchor[2] || "");
     if (!url || seen.has(url) || title.length < 8) continue;
+    if (isBlockedNonJobUrl(url)) continue;
     if (sameListingIndex(url, baseUrl) || isNavigationTitle(title) || isCategoryPath(url)) continue;
     if (!looksLikeListingUrl(url, title, source)) continue;
     seen.add(url);
@@ -309,6 +339,11 @@ function parseHtmlAnchors(html = "", source = {}, baseUrl = "") {
 async function fetchHtmlPage({ maxItems = 50, source = {} } = {}) {
   const url = getUrl(source);
   if (!url) return [];
+  if (isBlockedNonJobUrl(url)) return nonJobPageFailure(source, url);
+  const config = parserConfig(source);
+  if (!config.item_selector && !config.item_url_patterns && !config.json_ld_jobs) {
+    return missingParserConfigFailure(source, url);
+  }
   const response = await fetch(url, {
     headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": "AntoktonImportAssistant/1.0" }
   });
@@ -321,6 +356,7 @@ async function fetchHtmlPage({ maxItems = 50, source = {} } = {}) {
   for (const item of [...jsonLd, ...anchors]) {
     const key = item.source_url || item.external_id || item.original_title;
     if (!key || seen.has(key)) continue;
+    if (isBlockedNonJobUrl(item.source_url)) continue;
     seen.add(key);
     merged.push({
       ...item,
@@ -387,6 +423,8 @@ async function fetchFacebookApi({ maxItems = 50, source = {}, config = {} } = {}
 }
 
 async function fetchItems(options = {}) {
+  const url = getUrl(options.source || {});
+  if (options.source?.blocked_for_jobs || isBlockedNonJobUrl(url)) return nonJobPageFailure(options.source || {}, url);
   const parserType = String(options.source?.parser_type || options.source?.crawl_method || "").toLowerCase() || "rss";
   if (parserType === "rss") return genericRssProvider.fetchItems(options);
   if (parserType === "api") return fetchJsonApi(options);
