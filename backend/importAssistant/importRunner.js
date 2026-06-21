@@ -219,6 +219,34 @@ function shouldCrawlSource(source = {}, { manual = false, selected = false } = {
   return Date.now() - lastChecked >= frequencyMinutes * 60 * 1000;
 }
 
+function isAutomaticRunnableSource(source = {}) {
+  if (!sourceEnabled(source)) return false;
+  return String(source.import_mode || "").toLowerCase() !== "manual";
+}
+
+async function forceSeedRunnableSources(store) {
+  const existing = [...await store.allRecords("ImportedSource")];
+  const seenSeedKeys = new Set(existing.map((source) => source.seed_key).filter(Boolean));
+  const seenUrls = new Set(existing.map((source) => source.source_url || source.base_url || source.rss_url || source.api_endpoint).filter(Boolean));
+  const created = [];
+  for (const initial of INITIAL_IMPORT_SOURCES.filter(isAutomaticRunnableSource)) {
+    const initialUrl = initial.source_url || initial.base_url || initial.rss_url || initial.api_endpoint || "";
+    if (seenSeedKeys.has(initial.seed_key) || (initialUrl && seenUrls.has(initialUrl))) continue;
+    const row = await store.createRecord("ImportedSource", {
+      ...initial,
+      parser_config: initial.parser_config || {},
+      is_editable_by_admin: true,
+      failure_count: 0
+    }, "system");
+    created.push(row);
+    if (row.seed_key) seenSeedKeys.add(row.seed_key);
+    if (row.source_url || row.base_url || row.rss_url || row.api_endpoint) {
+      seenUrls.add(row.source_url || row.base_url || row.rss_url || row.api_endpoint);
+    }
+  }
+  return [...existing, ...created];
+}
+
 function providerIsConfigured(providerKey = "", config = {}) {
   if (providerKey === "adzuna") return Boolean(config.ADZUNA_APP_ID && config.ADZUNA_APP_KEY);
   if (providerKey === "jooble") return Boolean(config.JOOBLE_API_KEY);
@@ -605,7 +633,7 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
     const strictSource = Boolean(options.strict_source);
     const manualRun = Boolean(sourceId || options.manual_run);
     const selectedSourceRun = Boolean(sourceId && strictSource);
-    const sources = allSources
+    let sources = allSources
       .filter((source) => !strictSource || shouldUseSource(sourceId, source))
       .filter((source) => !providerFilter || shouldUseSource(providerFilter, source))
       .filter((source) => shouldCrawlSource(source, { manual: manualRun, selected: selectedSourceRun }))
@@ -616,6 +644,14 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
         const bSelected = shouldUseSource(sourceId, b) ? 0 : 1;
         return aSelected - bSelected;
       });
+
+    if (!sources.length && manualRun && !strictSource && !providerFilter) {
+      const reseededSources = await forceSeedRunnableSources(store);
+      sources = reseededSources
+        .filter(isAutomaticRunnableSource)
+        .filter((source) => shouldCrawlSource(source, { manual: true, selected: false }))
+        .map((source) => applyRuntimeOptions(source, options));
+    }
     const minNewItems = Math.max(0, Number(options.min_new_items_per_run || settings.min_new_items_per_run || config.IMPORT_ASSISTANT_MIN_NEW_PER_RUN || DEFAULT_MIN_NEW_PER_RUN));
     const requestedLimit = Number(maxItems || settings.max_items_per_run || config.IMPORT_ASSISTANT_MAX_PER_RUN || 100);
     const limit = Math.max(1, minNewItems || 0, requestedLimit);
