@@ -2,7 +2,7 @@ const crypto = require("node:crypto");
 const { normalizeImportedItem } = require("./normalizeImportedItem");
 const { isDuplicateImportedItem } = require("./deduplicateImportedItem");
 const { INITIAL_IMPORT_SOURCES, technicalDefaultsForSource } = require("./seedSources");
-const { validateImportedItem } = require("./validateImportedItem");
+const { validateImportedItem, isBlockedNonJobUrl } = require("./validateImportedItem");
 
 const providers = {
   arbeitnow: require("./providers/arbeitnowProvider"),
@@ -16,6 +16,15 @@ const providers = {
 let running = false;
 
 const DEFAULT_MIN_NEW_PER_RUN = 20;
+const DEFAULT_IMPORT_QUERIES = [
+  "shofer", "pastrim", "depo", "magazin", "ndertim", "mekanik",
+  "elektricist", "hidraulik", "kuzhinier", "siguri", "bujqesi",
+  "fabrike", "pasticeri"
+];
+const DEFAULT_IMPORT_COUNTRIES = [
+  "Germany", "Belgium", "Netherlands", "France", "Italy", "Austria",
+  "Switzerland", "United Kingdom", "Remote"
+];
 const FALLBACK_QUERIES = [
   "driver", "truck driver", "CE driver", "C driver", "warehouse", "logistics",
   "construction", "cleaner", "cleaning", "painter", "electrician", "plumber",
@@ -286,18 +295,31 @@ function supportsQueryExpansion(source = {}) {
 
 function buildAttemptPlan(source = {}, options = {}, { selectedSourceRun = false } = {}) {
   const config = parserConfig(source);
+  if (isBlockedNonJobUrl(sourceUrl(source))) {
+    return [{ query: "", country: "" }];
+  }
   const baseQuery = options.query || config.query || source.query || "";
-  const baseQueries = uniqueStrings([
-    ...splitList(source.profession_filter || config.profession_filter),
+  const requestedQueries = uniqueStrings([
+    ...ensureArray(options.queries),
+    ...splitList(options.queries),
     ...splitList(options.profession_filter),
+  ]);
+  const requestedCountries = uniqueStrings([
+    ...ensureArray(options.countries),
+    ...splitList(options.countries),
+    ...splitList(options.country_filter),
+  ]);
+  const baseQueries = uniqueStrings([
+    ...(requestedQueries.length ? requestedQueries : DEFAULT_IMPORT_QUERIES),
+    ...splitList(source.profession_filter || config.profession_filter),
     baseQuery
   ]);
   const queries = supportsQueryExpansion(source)
     ? uniqueStrings([...baseQueries, ...FALLBACK_QUERIES])
-    : uniqueStrings([baseQuery || source.profession_filter || source.category_filter || ""]);
+    : uniqueStrings([...(baseQueries.length ? baseQueries : DEFAULT_IMPORT_QUERIES), baseQuery || source.category_filter || ""]);
   const countries = supportsQueryExpansion(source)
-    ? uniqueStrings([options.country_filter, source.country_filter, config.country_filter, ...FALLBACK_COUNTRIES])
-    : uniqueStrings([options.country_filter, source.country_filter, config.country_filter]);
+    ? uniqueStrings([...(requestedCountries.length ? requestedCountries : DEFAULT_IMPORT_COUNTRIES), source.country_filter, config.country_filter, ...FALLBACK_COUNTRIES])
+    : uniqueStrings([...(requestedCountries.length ? requestedCountries : DEFAULT_IMPORT_COUNTRIES), source.country_filter, config.country_filter]);
   const limitedQueries = (selectedSourceRun ? queries.slice(0, 20) : queries.slice(0, 8));
   const limitedCountries = (selectedSourceRun ? countries.slice(0, 14) : countries.slice(0, 6));
   const attempts = [];

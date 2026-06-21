@@ -16,6 +16,16 @@ const DEFAULT_SETTINGS = {
   max_risk_score: 70,
 };
 
+const DEFAULT_IMPORT_QUERIES = [
+  "shofer", "pastrim", "depo", "magazin", "ndertim", "mekanik",
+  "elektricist", "hidraulik", "kuzhinier", "siguri", "bujqesi",
+  "fabrike", "pasticeri"
+];
+const DEFAULT_IMPORT_COUNTRIES = [
+  "Germany", "Belgium", "Netherlands", "France", "Italy", "Austria",
+  "Switzerland", "United Kingdom", "Remote"
+];
+
 const sourceIsActive = (source = {}) => {
   const value = source.enabled ?? source.is_active;
   return !(value === false || value === 0 || value === "0" || value === "false");
@@ -110,17 +120,33 @@ export default function ImportAssistantSettings() {
   const runNow = async () => {
     setRunning(true);
     try {
-      const result = await base44.importAssistant.run({
+      const selectedSourceId = values.default_source_id || "";
+      const allActiveSources = !selectedSourceId || selectedSourceId === "all";
+      const queries = asList(values.default_profession_filter).length
+        ? asList(values.default_profession_filter)
+        : DEFAULT_IMPORT_QUERIES;
+      const countries = asList(values.default_country_filter).length
+        ? asList(values.default_country_filter)
+        : DEFAULT_IMPORT_COUNTRIES;
+      const payload = {
+        allActiveSources,
+        sourceId: allActiveSources ? null : selectedSourceId,
+        source_id: allActiveSources ? "" : selectedSourceId,
+        queries,
+        countries,
+        maxResults: values.max_items_per_run || 100,
         max_items: values.max_items_per_run || 100,
-        source_id: values.default_source_id || "",
+        minQualityScore: 50,
         category_filter: values.default_category_filter || "",
-        country_filter: values.default_country_filter || "",
+        country_filter: countries.join(", "),
         profession_filter: values.default_profession_filter || "",
         excluded_keywords: values.default_excluded_keywords || "",
         min_new_items_per_run: values.min_new_items_per_run || 20,
         min_relevance_score: values.min_relevance_score || 0,
         max_risk_score: values.max_risk_score || 100,
-      });
+      };
+      console.log("IMPORT PAYLOAD", payload);
+      const result = await base44.importAssistant.run(payload);
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["importedPosts"] }),
         qc.invalidateQueries({ queryKey: ["importAssistant", "logs"] }),

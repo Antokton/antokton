@@ -150,21 +150,28 @@ async function handleImportAssistantRoute(deps) {
 
   if (req.method === "POST" && action === "run") {
     const body = await readPayload(req);
-    const selectedSourceId = normalizeSelectedSourceId(body.source_id || body.sourceId || body.default_source_id || "");
+    console.log("IMPORT BODY", body);
+    console.log("IMPORT QUERY", req.query || {});
+    const allActiveSources = body.allActiveSources === true || body.all_active_sources === true;
+    const selectedSourceId = allActiveSources ? "" : normalizeSelectedSourceId(body.source_id || body.sourceId || body.default_source_id || "");
     const selectedProviderKey = normalizeSelectedSourceId(body.provider_key || "");
     const result = await runImport({
       store,
       config,
       sourceId: selectedSourceId,
-      maxItems: body.max_items || body.maxItems,
+      maxItems: body.maxResults || body.max_items || body.maxItems,
       requestedBy: userEmail || "manual",
       options: {
+        all_active_sources: allActiveSources,
         provider_filter: selectedProviderKey,
         category_filter: body.category_filter || body.default_category_filter || "",
         country_filter: body.country_filter || body.default_country_filter || "",
+        countries: body.countries || [],
         profession_filter: body.profession_filter || body.default_profession_filter || "",
+        queries: body.queries || [],
         excluded_keywords: body.excluded_keywords || body.default_excluded_keywords || "",
         min_new_items_per_run: body.min_new_items_per_run,
+        min_quality_score: body.minQualityScore || body.min_quality_score,
         min_relevance_score: body.min_relevance_score,
         max_risk_score: body.max_risk_score,
         manual_run: true
