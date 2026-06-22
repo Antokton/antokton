@@ -64,6 +64,7 @@ function isBlockedNonJobUrl(value = "") {
   try {
     const parsed = new URL(url);
     const path = parsed.pathname.toLowerCase();
+    if (/^\/jobs?\/companies\//.test(path)) return false;
     return NON_JOB_PATH_KEYWORDS.some((keyword) => path.includes(keyword));
   } catch {
     const lower = url.toLowerCase();

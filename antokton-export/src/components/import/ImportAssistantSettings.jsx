@@ -138,7 +138,7 @@ export default function ImportAssistantSettings() {
         max_items: values.max_items_per_run || 100,
         minQualityScore: 50,
         category_filter: values.default_category_filter || "",
-        country_filter: countries.join(", "),
+        country_filter: values.default_country_filter || "",
         profession_filter: values.default_profession_filter || "",
         excluded_keywords: values.default_excluded_keywords || "",
         min_new_items_per_run: values.min_new_items_per_run || 20,

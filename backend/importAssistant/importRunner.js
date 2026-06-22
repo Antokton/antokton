@@ -285,13 +285,16 @@ function applyRuntimeOptions(source = {}, options = {}) {
   const nextParserConfig = {
     ...existingParserConfig,
   };
+  const runtimeCountryFilter = String(options.country_filter || "").trim();
+  const hasMultiCountryFilter = /[,\n;]/.test(runtimeCountryFilter);
   for (const key of ["profession_filter", "excluded_keywords", "category_filter", "country_filter"]) {
+    if (key === "country_filter" && hasMultiCountryFilter) continue;
     if (options[key]) nextParserConfig[key] = options[key];
   }
   return {
     ...source,
     category_filter: options.category_filter || source.category_filter,
-    country_filter: options.country_filter || source.country_filter,
+    country_filter: hasMultiCountryFilter ? source.country_filter : (options.country_filter || source.country_filter),
     profession_filter: options.profession_filter || source.profession_filter,
     excluded_keywords: options.excluded_keywords || source.excluded_keywords,
     parser_config: nextParserConfig,
@@ -307,6 +310,12 @@ function buildAttemptPlan(source = {}, options = {}, { selectedSourceRun = false
   const config = parserConfig(source);
   if (isBlockedNonJobUrl(sourceUrl(source))) {
     return [{ query: "", country: "" }];
+  }
+  if (!supportsQueryExpansion(source)) {
+    return [{
+      query: config.query || source.query || "",
+      country: source.country_filter || config.country_filter || ""
+    }];
   }
   const baseQuery = options.query || config.query || source.query || "";
   const requestedQueries = uniqueStrings([
@@ -324,12 +333,8 @@ function buildAttemptPlan(source = {}, options = {}, { selectedSourceRun = false
     ...splitList(source.profession_filter || config.profession_filter),
     baseQuery
   ]);
-  const queries = supportsQueryExpansion(source)
-    ? uniqueStrings([...baseQueries, ...FALLBACK_QUERIES])
-    : uniqueStrings([...(baseQueries.length ? baseQueries : DEFAULT_IMPORT_QUERIES), baseQuery || source.category_filter || ""]);
-  const countries = supportsQueryExpansion(source)
-    ? uniqueStrings([...(requestedCountries.length ? requestedCountries : DEFAULT_IMPORT_COUNTRIES), source.country_filter, config.country_filter, ...FALLBACK_COUNTRIES])
-    : uniqueStrings([...(requestedCountries.length ? requestedCountries : DEFAULT_IMPORT_COUNTRIES), source.country_filter, config.country_filter]);
+  const queries = uniqueStrings([...baseQueries, ...FALLBACK_QUERIES]);
+  const countries = uniqueStrings([...(requestedCountries.length ? requestedCountries : DEFAULT_IMPORT_COUNTRIES), source.country_filter, config.country_filter, ...FALLBACK_COUNTRIES]);
   const limitedQueries = (selectedSourceRun ? queries.slice(0, 20) : queries.slice(0, 8));
   const limitedCountries = (selectedSourceRun ? countries.slice(0, 14) : countries.slice(0, 6));
   const attempts = [];

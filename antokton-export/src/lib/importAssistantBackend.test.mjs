@@ -68,6 +68,18 @@ test("import validation rejects corporate pages and placeholder URLs", () => {
   };
   assert.equal(validateImportedItem(base, {}, { id: "source-1", name: "JobTeaser", import_mode: "automatic" }).status, "rejected_non_job_page");
   assert.equal(validateImportedItem({ ...base, source_url: "https://facebook.com/...", original_url: "https://facebook.com/..." }, {}, { id: "source-1", name: "Facebook", import_mode: "automatic" }).status, "rejected_placeholder_url");
+  const arbeitnowJob = validateImportedItem({
+    ...base,
+    source_name: "Arbeitnow",
+    original_title: "Warehouse operative",
+    original_description: "Clear warehouse role with picking, packing and stable contract. The description is long enough to explain the work and requirements.",
+    original_company: "Demo GmbH",
+    original_location: "Berlin, Germany",
+    source_url: "https://www.arbeitnow.com/jobs/companies/demo-gmbh/warehouse-operative-berlin-123456",
+    original_url: "https://www.arbeitnow.com/jobs/companies/demo-gmbh/warehouse-operative-berlin-123456",
+    contact_methods: [{ type: "application_form", value: "https://www.arbeitnow.com/jobs/companies/demo-gmbh/warehouse-operative-berlin-123456" }]
+  }, {}, { id: "source-1", name: "Arbeitnow", import_mode: "automatic" });
+  assert.equal(arbeitnowJob.valid, true);
 });
 
 test("import validation requires real title, URL, source and quality fields", () => {
