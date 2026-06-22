@@ -43,6 +43,39 @@ const asList = (value) => {
   }
   return [];
 };
+const numberValue = (value) => Number(value || 0);
+const normalizeRunResult = (result = {}) => result?.data && typeof result.data === "object" ? result.data : (result || {});
+const logTime = (log = {}) => new Date(log.started_at || log.created_date || 0).getTime();
+const summarizeLogs = (logs = [], sinceMs = 0) => {
+  const runLogs = logs.filter((log) => logTime(log) >= sinceMs - 1000);
+  return {
+    imported_count: runLogs.reduce((sum, log) => sum + numberValue(log.imported_count ?? log.created_count), 0),
+    created_count: runLogs.reduce((sum, log) => sum + numberValue(log.created_count ?? log.imported_count), 0),
+    duplicate_count: runLogs.reduce((sum, log) => sum + numberValue(log.duplicate_count), 0),
+    rejected_count: runLogs.reduce((sum, log) => sum + numberValue(log.rejected_count), 0),
+    skipped_count: runLogs.reduce((sum, log) => sum + numberValue(log.skipped_count), 0),
+    fetched_count: runLogs.reduce((sum, log) => sum + numberValue(log.fetched_count), 0),
+    valid_count: runLogs.reduce((sum, log) => sum + numberValue(log.valid_count), 0),
+    fallback_summary: {
+      providers_tried: [...new Set(runLogs.map((log) => log.provider_key).filter(Boolean))],
+      queries_tried: [...new Set(runLogs.flatMap((log) => asList(log.queries_tried)))],
+      countries_tried: [...new Set(runLogs.flatMap((log) => asList(log.countries_tried)))],
+    },
+    logs: runLogs,
+  };
+};
+const mergeRunSummary = (result = {}, logSummary = {}) => {
+  const hasResultCounts = [
+    "imported_count", "created_count", "duplicate_count", "rejected_count",
+    "skipped_count", "fetched_count", "valid_count"
+  ].some((key) => numberValue(result[key]) > 0);
+  if (hasResultCounts) return result;
+  const hasLogCounts = [
+    "imported_count", "created_count", "duplicate_count", "rejected_count",
+    "skipped_count", "fetched_count", "valid_count"
+  ].some((key) => numberValue(logSummary[key]) > 0);
+  return hasLogCounts ? { ...result, ...logSummary, fallback_summary: { ...(result.fallback_summary || {}), ...(logSummary.fallback_summary || {}) } } : result;
+};
 const STATUS_LABELS = {
   success: "Sukses",
   partial_success: "Sukses i pjesshëm",
@@ -120,6 +153,7 @@ export default function ImportAssistantSettings() {
   const runNow = async () => {
     setRunning(true);
     try {
+      const runStartedAt = Date.now();
       const selectedSourceId = values.default_source_id || "";
       const allActiveSources = !selectedSourceId || selectedSourceId === "all";
       const queries = asList(values.default_profession_filter).length
@@ -146,12 +180,18 @@ export default function ImportAssistantSettings() {
         max_risk_score: values.max_risk_score || 100,
       };
       console.log("IMPORT PAYLOAD", payload);
-      const result = await base44.importAssistant.run(payload);
+      const response = await base44.importAssistant.run(payload);
+      const rawResult = normalizeRunResult(response);
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["importedPosts"] }),
         qc.invalidateQueries({ queryKey: ["importAssistant", "logs"] }),
         qc.invalidateQueries({ queryKey: ["importAssistant", "failures"] }),
       ]);
+      const freshLogs = await qc.fetchQuery({
+        queryKey: ["importAssistant", "logs"],
+        queryFn: () => base44.importAssistant.logs(),
+      });
+      const result = mergeRunSummary(rawResult, summarizeLogs(freshLogs, runStartedAt));
       const summary = result.fallback_summary || {};
       alert([
         `Importimi përfundoi: ${result.imported_count || result.created_count || 0} të reja, ${result.duplicate_count || 0} dublikata, ${result.rejected_count || 0} refuzime, ${result.skipped_count || 0} skipped.`,
