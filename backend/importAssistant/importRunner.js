@@ -280,6 +280,35 @@ function providerMissingReason(providerKey = "") {
   return "Provider nuk është i konfiguruar; u kalua te burimet e tjera.";
 }
 
+function runtimeSeedFallbackSources(config = {}) {
+  return INITIAL_IMPORT_SOURCES
+    .filter(isAutomaticRunnableSource)
+    .filter((source) => providerIsConfigured(source.provider_key || "custom", config))
+    .map((source) => ({
+      ...source,
+      id: source.id || source.seed_key || source.provider_key || source.name,
+      parser_config: source.parser_config || {},
+      _runtime_seed_fallback: true
+    }));
+}
+
+function appendMissingRuntimeSeedFallbacks(sources = [], config = {}) {
+  const seen = new Set(sources.flatMap((source) => [
+    source.seed_key,
+    source.source_url,
+    source.base_url,
+    source.rss_url,
+    source.api_endpoint
+  ].filter(Boolean)));
+  const missing = runtimeSeedFallbackSources(config)
+    .filter((source) => !seen.has(source.seed_key)
+      && !seen.has(source.source_url)
+      && !seen.has(source.base_url)
+      && !seen.has(source.rss_url)
+      && !seen.has(source.api_endpoint));
+  return [...sources, ...missing];
+}
+
 function applyRuntimeOptions(source = {}, options = {}) {
   const existingParserConfig = parserConfig(source);
   const nextParserConfig = {
@@ -687,6 +716,14 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
       sources = reseededSources
         .filter(isAutomaticRunnableSource)
         .filter((source) => shouldCrawlSource(source, { manual: true, selected: false }))
+        .map((source) => applyRuntimeOptions(source, options));
+    }
+    if (!sources.length && manualRun && !strictSource && !providerFilter) {
+      sources = runtimeSeedFallbackSources(config)
+        .map((source) => applyRuntimeOptions(source, options));
+    }
+    if (sources.length && manualRun && !strictSource && !providerFilter) {
+      sources = appendMissingRuntimeSeedFallbacks(sources, config)
         .map((source) => applyRuntimeOptions(source, options));
     }
     const minNewItems = Math.max(0, Number(options.min_new_items_per_run || settings.min_new_items_per_run || config.IMPORT_ASSISTANT_MIN_NEW_PER_RUN || DEFAULT_MIN_NEW_PER_RUN));

@@ -600,6 +600,81 @@ test("all active source selection runs enabled automatic sources", async () => {
   }
 });
 
+test("manual import uses public seed fallback when stored runnable sources are unavailable", async () => {
+  const records = {
+    ImportedSource: [{
+      id: "stale-arbeitnow",
+      seed_key: "arbeitnow-public-api",
+      name: "Arbeitnow",
+      provider_key: "arbeitnow",
+      source_type: "api",
+      import_mode: "automatic",
+      crawl_method: "api",
+      enabled: false,
+      is_active: false,
+      source_url: "https://www.arbeitnow.com/api/job-board-api",
+      base_url: "https://www.arbeitnow.com/api/job-board-api",
+      category_filter: "pune",
+      country_filter: "Germany"
+    }],
+    ImportAssistantSettings: [{ id: "settings", auto_import_enabled: true, max_items_per_run: 5, min_new_items_per_run: 1 }],
+    ImportedPost: [],
+    Job: [],
+    ImportLog: [],
+    ImportFailure: []
+  };
+  const store = {
+    async allRecords(entity) { return records[entity] || []; },
+    async createRecord(entity, data) {
+      const row = { id: `${entity}-${records[entity].length + 1}`, created_date: new Date().toISOString(), ...data };
+      records[entity].push(row);
+      return row;
+    },
+    async updateRecord(entity, id, patch) {
+      const row = records[entity].find((item) => item.id === id);
+      Object.assign(row, patch);
+      return row;
+    },
+    async deleteRecord() { return true; }
+  };
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => {
+    if (String(url).includes("arbeitnow")) {
+      return {
+        ok: true,
+        async json() {
+          return {
+            data: [{
+              title: "Warehouse Worker",
+              description: "Clear warehouse role with stable contract and direct application details for the candidate.",
+              company_name: "Demo GmbH",
+              location: "Berlin, Germany",
+              slug: "warehouse-worker-berlin",
+              url: "https://www.arbeitnow.com/jobs/companies/demo-gmbh/warehouse-worker-berlin-123456",
+              created_at: 1760000000
+            }],
+            links: {}
+          };
+        }
+      };
+    }
+    return { ok: true, async text() { return "<rss></rss>"; }, async json() { return []; } };
+  };
+  try {
+    const result = await runImport({
+      store,
+      config: {},
+      requestedBy: "test",
+      options: { manual_run: true, min_new_items_per_run: 1, min_relevance_score: 0, max_risk_score: 100 }
+    });
+    assert.equal(result.created_count, 1);
+    assert.equal(result.fallback_summary.providers_tried.includes("arbeitnow"), true);
+    assert.notEqual(result.status, "no_runnable_sources");
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test("import run logs unconfigured API providers as skipped and continues to next source", async () => {
   const records = { ImportedSource: [], ImportAssistantSettings: [], ImportedPost: [], Job: [], ImportLog: [], ImportFailure: [] };
   const store = {
