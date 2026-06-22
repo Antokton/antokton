@@ -139,16 +139,26 @@ async function ensureDefaultSources(store) {
     for (const field of [
       "provider_key",
       "source_type",
-      "import_mode",
       "crawl_method",
       "automation_level",
       "parser_type",
       "source_group",
-      "trust_level",
     ]) {
-      if (source[field] === undefined || source[field] === null || source[field] === "") {
+      if (source[field] !== defaults[field]) {
         patch[field] = defaults[field];
       }
+    }
+    if (
+      source.import_mode === undefined ||
+      source.import_mode === null ||
+      source.import_mode === "" ||
+      source.import_mode === "mixed" ||
+      (["api", "rss", "html"].includes(defaults.source_type) && source.import_mode !== defaults.import_mode)
+    ) {
+      patch.import_mode = defaults.import_mode;
+    }
+    if (source.trust_level === undefined || source.trust_level === null || source.trust_level === "") {
+      patch.trust_level = defaults.trust_level;
     }
     if ((source.crawl_frequency_minutes === undefined || source.crawl_frequency_minutes === null) && source.crawl_frequency_hours === undefined) {
       patch.crawl_frequency_minutes = 360;

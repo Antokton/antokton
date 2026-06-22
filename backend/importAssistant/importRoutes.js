@@ -11,15 +11,21 @@ function normalizeSourcePayload(body = {}) {
   const enabled = body.enabled !== undefined
     ? body.enabled === true
     : (body.is_active !== undefined ? body.is_active !== false : true);
-  const sourceType = normalizeSourceType(body.source_type || body.parser_type || "manual");
-  const defaults = technicalDefaultsForSource({ source_type: sourceType });
+  const defaults = technicalDefaultsForSource(body);
+  const sourceType = normalizeSourceType(defaults.source_type || body.source_type || body.parser_type || "manual");
   const importMode = body.import_mode || defaults.import_mode;
   const crawlMethod = body.crawl_method || defaults.crawl_method;
   const automationLevel = body.automation_level || defaults.automation_level;
   const sourceUrl = body.source_url || body.base_url || "";
+  const providerKey = defaults.provider_key !== "custom"
+    ? defaults.provider_key
+    : (body.provider_key || defaults.provider_key);
+  const sourceGroup = defaults.source_group !== "manual_url"
+    ? defaults.source_group
+    : (body.source_group || defaults.source_group);
   return {
     name: body.name || "Burim i ri",
-    provider_key: body.provider_key || defaults.provider_key,
+    provider_key: providerKey,
     source_type: sourceType,
     import_mode: importMode,
     crawl_method: crawlMethod,
@@ -40,7 +46,7 @@ function normalizeSourcePayload(body = {}) {
     country_filter: body.country_filter || "",
     category_filter: body.category_filter || "",
     profession_filter: body.profession_filter || "",
-    source_group: body.source_group || defaults.source_group,
+    source_group: sourceGroup,
     parser_type: body.parser_type || defaults.parser_type || crawlMethod || "manual",
     parser_config: body.parser_config || {},
     trust_level: body.trust_level || defaults.trust_level || "needs_review",

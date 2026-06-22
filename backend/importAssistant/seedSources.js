@@ -48,6 +48,94 @@ const SOURCE_TYPE_DEFAULTS = {
     moderation_required: true,
     notes: "Përdor bot/API kur ka akses të autorizuar; grupet private mbeten manuale.",
   },
+  instagram: {
+    provider_key: "custom",
+    import_mode: "manual",
+    crawl_method: "manual",
+    automation_level: "manual",
+    parser_type: "manual",
+    source_group: "community",
+    trust_level: "manual_only",
+    moderation_required: true,
+    notes: "Vetëm API zyrtare/leje të qartë; profilet personale mbeten manuale.",
+  },
+  tiktok: {
+    provider_key: "custom",
+    import_mode: "manual",
+    crawl_method: "manual",
+    automation_level: "manual",
+    parser_type: "manual",
+    source_group: "community",
+    trust_level: "manual_only",
+    moderation_required: true,
+    notes: "Vetëm API zyrtare/leje të qartë; mos përdor scraping të paqëndrueshëm.",
+  },
+  linkedin: {
+    provider_key: "custom",
+    import_mode: "manual",
+    crawl_method: "manual",
+    automation_level: "manual",
+    parser_type: "manual",
+    source_group: "community",
+    trust_level: "manual_only",
+    moderation_required: true,
+    notes: "Vetëm API/leje për faqe kompanish; përmbajtja private mbetet manuale.",
+  },
+  whatsapp: {
+    provider_key: "custom",
+    import_mode: "manual",
+    crawl_method: "manual",
+    automation_level: "manual",
+    parser_type: "manual",
+    source_group: "community",
+    trust_level: "manual_only",
+    moderation_required: true,
+    notes: "WhatsApp importohet vetëm manualisht nga tekst/link i dhënë nga stafi.",
+  },
+  youtube: {
+    provider_key: "custom",
+    import_mode: "manual",
+    crawl_method: "manual",
+    automation_level: "manual",
+    parser_type: "manual",
+    source_group: "community",
+    trust_level: "manual_only",
+    moderation_required: true,
+    notes: "Aktivizohet automatikisht vetëm kur vendoset API/leje e qartë.",
+  },
+  x_twitter: {
+    provider_key: "custom",
+    import_mode: "manual",
+    crawl_method: "manual",
+    automation_level: "manual",
+    parser_type: "manual",
+    source_group: "community",
+    trust_level: "manual_only",
+    moderation_required: true,
+    notes: "Aktivizohet automatikisht vetëm kur vendoset API/leje e qartë.",
+  },
+  reddit: {
+    provider_key: "custom",
+    import_mode: "manual",
+    crawl_method: "manual",
+    automation_level: "manual",
+    parser_type: "manual",
+    source_group: "community",
+    trust_level: "manual_only",
+    moderation_required: true,
+    notes: "Aktivizohet automatikisht vetëm kur vendoset API/leje e qartë.",
+  },
+  discord: {
+    provider_key: "custom",
+    import_mode: "manual",
+    crawl_method: "manual",
+    automation_level: "manual",
+    parser_type: "manual",
+    source_group: "community",
+    trust_level: "manual_only",
+    moderation_required: true,
+    notes: "Discord importohet me webhook/API kur ka akses; serverët privatë mbeten manualë.",
+  },
   manual: {
     provider_key: "custom",
     import_mode: "manual",
@@ -62,18 +150,106 @@ const SOURCE_TYPE_DEFAULTS = {
 
 function normalizeSourceType(type = "") {
   const value = String(type || "").trim().toLowerCase();
-  if (value === "api/json" || value === "json") return "api";
-  if (value === "html_needs_review") return "html";
+  const compact = value.replace(/[\s_-]+/g, "");
+  if (["api/json", "json", "apijson", "api"].includes(value) || compact === "apijson") return "api";
+  if (["html_needs_review", "html publik", "html public", "htmlpublik", "html"].includes(value) || compact === "htmlpublik") return "html";
+  if (["rss", "feed"].includes(value)) return "rss";
+  if (["x", "twitter", "x/twitter", "xtwitter"].includes(value) || compact === "xtwitter") return "x_twitter";
+  if (value === "facebook group" || value === "facebook page") return "facebook";
   return SOURCE_TYPE_DEFAULTS[value] ? value : "manual";
 }
 
+function textForSource(source = {}) {
+  return [
+    source.name,
+    source.provider_key,
+    source.source_type,
+    source.parser_type,
+    source.source_url,
+    source.base_url,
+    source.api_endpoint,
+    source.rss_url,
+    source.jobs_url,
+    source.category_url
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
+function inferSourceType(source = {}) {
+  const explicit = normalizeSourceType(source.source_type || "");
+  const text = textForSource(source);
+  if (/arbeitnow/.test(text)) return "api";
+  if (/remoteok\.com\/api|adzuna|jooble|eures|jobicy|himalayas/.test(text)) return "api";
+  if (/\.rss\b|\/rss\b|rss\.|feed\b|\/feed\b/.test(text)) return "rss";
+  if (/facebook|fb\.com/.test(text)) return "facebook";
+  if (/instagram/.test(text)) return "instagram";
+  if (/tiktok/.test(text)) return "tiktok";
+  if (/linkedin/.test(text)) return "linkedin";
+  if (/telegram|t\.me/.test(text)) return "telegram";
+  if (/whatsapp|wa\.me/.test(text)) return "whatsapp";
+  if (/youtube|youtu\.be/.test(text)) return "youtube";
+  if (/twitter|x\.com/.test(text)) return "x_twitter";
+  if (/reddit/.test(text)) return "reddit";
+  if (/discord/.test(text)) return "discord";
+  if (explicit !== "manual") return explicit;
+  if (/^https?:\/\//.test(String(source.source_url || source.base_url || source.jobs_url || source.category_url || ""))) return "html";
+  return explicit;
+}
+
+function providerForSource(source = {}, sourceType = "") {
+  const text = textForSource(source);
+  if (/arbeitnow/.test(text)) return "arbeitnow";
+  if (/adzuna/.test(text)) return "adzuna";
+  if (/jooble/.test(text)) return "jooble";
+  if (/eures/.test(text)) return "eures";
+  if (sourceType === "rss") return "generic_rss";
+  return "custom";
+}
+
+function sourceGroupForSource(source = {}, sourceType = "") {
+  const text = textForSource(source);
+  if (["api"].includes(sourceType) && /arbeitnow|remoteok|adzuna|jooble|eures|jobicy|himalayas|remote|europe|gov|arbeitsagentur|francetravail|vdab|actiris|leforem|nav|jobnet|ams|sepe|findajob|jobsireland/.test(text)) {
+    return "global_provider";
+  }
+  if (sourceType === "rss") return "rss";
+  if (/staff\.al|punajuaj|portalpune|albaniajobs|ekipi|punesim|kosovajob|gjirafa|lyppune|kastori|njoftime|merrjep|reklama5|epunesimi|puna\.gov|acp\.al|gazetacelesi/.test(text)) {
+    return "albanian_source";
+  }
+  if (["facebook", "instagram", "tiktok", "linkedin", "telegram", "whatsapp", "youtube", "x_twitter", "reddit", "discord"].includes(sourceType)) {
+    return "community";
+  }
+  return SOURCE_TYPE_DEFAULTS[sourceType]?.source_group || "manual_url";
+}
+
 function technicalDefaultsForSource(source = {}) {
-  const sourceType = normalizeSourceType(source.source_type || source.parser_type);
+  const sourceType = inferSourceType(source);
   const defaults = SOURCE_TYPE_DEFAULTS[sourceType] || SOURCE_TYPE_DEFAULTS.manual;
-  return {
+  const providerKey = providerForSource(source, sourceType);
+  const sourceGroup = sourceGroupForSource(source, sourceType);
+  const next = {
     ...defaults,
+    provider_key: providerKey || defaults.provider_key,
+    source_group: sourceGroup || defaults.source_group,
     source_type: sourceType,
   };
+  if (sourceType === "api") {
+    next.import_mode = "automatic";
+    next.crawl_method = "api";
+    next.automation_level = "full_auto";
+    next.parser_type = "api";
+  }
+  if (sourceType === "rss") {
+    next.import_mode = "automatic";
+    next.crawl_method = "rss";
+    next.automation_level = "full_auto";
+    next.parser_type = "rss";
+  }
+  if (sourceType === "html") {
+    next.import_mode = "automatic";
+    next.crawl_method = "html";
+    next.automation_level = "full_auto";
+    next.parser_type = "html";
+  }
+  return next;
 }
 
 const INITIAL_IMPORT_SOURCES = [
@@ -250,6 +426,7 @@ const INITIAL_IMPORT_SOURCES = [
 module.exports = {
   INITIAL_IMPORT_SOURCES,
   SOURCE_TYPE_DEFAULTS,
+  inferSourceType,
   normalizeSourceType,
   technicalDefaultsForSource,
 };

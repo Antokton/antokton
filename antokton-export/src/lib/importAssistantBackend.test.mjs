@@ -14,6 +14,7 @@ const { scoreEthical } = require(path.join(root, "backend/importAssistant/scoreE
 const { detectContactLanguage } = require(path.join(root, "backend/importAssistant/detectContactLanguage.js"));
 const { generateAlbanianListingTitle } = require(path.join(root, "backend/importAssistant/generateAlbanianListingTitle.js"));
 const { ensureDefaultSources, runImport, testImportSource } = require(path.join(root, "backend/importAssistant/importRunner.js"));
+const { technicalDefaultsForSource } = require(path.join(root, "backend/importAssistant/seedSources.js"));
 const { cleanupInvalidImportedPosts } = require(path.join(root, "backend/importAssistant/cleanupInvalidImports.js"));
 const { buildExpiryFields, parseImportedExpiry, getAutomaticExpiryDays } = require(path.join(root, "backend/importAssistant/expiry.js"));
 const { validateImportedItem } = require(path.join(root, "backend/importAssistant/validateImportedItem.js"));
@@ -160,6 +161,21 @@ test("default sources seed editable working public providers", async () => {
   assert.equal(sources.some((source) => source.seed_key === "weworkremotely-rss"), true);
   assert.equal(sources.some((source) => source.seed_key === "punajuaj-html"), true);
   assert.equal(created.every((row) => row.data.is_editable_by_admin === true), true);
+});
+
+test("import source classifier maps real sources to their technical function", () => {
+  assert.deepEqual(
+    {
+      source_type: technicalDefaultsForSource({ name: "EURES", source_url: "https://eures.europa.eu" }).source_type,
+      provider_key: technicalDefaultsForSource({ name: "EURES", source_url: "https://eures.europa.eu" }).provider_key,
+      import_mode: technicalDefaultsForSource({ name: "EURES", source_url: "https://eures.europa.eu" }).import_mode,
+    },
+    { source_type: "api", provider_key: "eures", import_mode: "automatic" }
+  );
+  assert.equal(technicalDefaultsForSource({ name: "We Work Remotely RSS", source_url: "https://weworkremotely.com/remote-jobs.rss" }).source_type, "rss");
+  assert.equal(technicalDefaultsForSource({ name: "MerrJep.al Punë", source_url: "https://www.merrjep.al/njoftime/pune" }).source_type, "html");
+  assert.equal(technicalDefaultsForSource({ name: "Facebook Groups", source_url: "https://facebook.com/groups/demo" }).import_mode, "manual");
+  assert.equal(technicalDefaultsForSource({ name: "WhatsApp Communities" }).source_type, "whatsapp");
 });
 
 test("RSS provider reads RSS and Atom feeds", async () => {

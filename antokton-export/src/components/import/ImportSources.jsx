@@ -56,7 +56,7 @@ const emptySource = {
   country_scope: "",
   region_scope: "",
   language: "",
-  source_group: "manual_url",
+  source_group: "rss",
   parser_type: "rss",
   trust_level: "needs_review",
   login_required: false,
@@ -71,11 +71,11 @@ const emptySource = {
 };
 
 const sourceDefaultsForType = (sourceType) => {
-  if (sourceType === "api") return { import_mode: "automatic", crawl_method: "api", parser_type: "api", automation_level: "full_auto", provider_key: "custom" };
+  if (sourceType === "api") return { import_mode: "automatic", crawl_method: "api", parser_type: "api", automation_level: "full_auto", provider_key: "custom", source_group: "custom_api" };
   if (sourceType === "rss") return { import_mode: "automatic", crawl_method: "rss", parser_type: "rss", automation_level: "full_auto", provider_key: "generic_rss", source_group: "rss" };
   if (sourceType === "html") return { import_mode: "automatic", crawl_method: "html", parser_type: "html", automation_level: "full_auto", provider_key: "custom" };
-  if (["facebook", "instagram", "tiktok", "linkedin", "telegram", "youtube", "reddit", "discord"].includes(sourceType)) {
-    return { import_mode: "automatic", crawl_method: "api", parser_type: "api", automation_level: "semi_auto", provider_key: "custom", source_group: "community" };
+  if (["facebook", "instagram", "tiktok", "linkedin", "telegram", "whatsapp", "youtube", "x_twitter", "reddit", "discord"].includes(sourceType)) {
+    return { import_mode: "manual", crawl_method: "manual", parser_type: "manual", automation_level: "manual", provider_key: "custom", source_group: "community" };
   }
   return { import_mode: "manual", crawl_method: "manual", parser_type: "manual", automation_level: "manual", provider_key: "custom", source_group: "manual_url" };
 };
