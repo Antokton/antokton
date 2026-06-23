@@ -3,8 +3,10 @@ const { translateContactMessage } = require("./translateImportedItem");
 const { buildExpiryFields } = require("./expiry");
 const { normalizeSourceType, technicalDefaultsForSource } = require("./seedSources");
 const { discoverSourceConfig } = require("./discoverSourceConfig");
+const { applyKnownSourceConfig } = require("./sourceConfigRules");
 
 function normalizeSourcePayload(body = {}) {
+  body = applyKnownSourceConfig(body);
   let parserConfig = body.parser_config || {};
   if (typeof body.parser_config_json === "string" && body.parser_config_json.trim()) {
     try { parserConfig = JSON.parse(body.parser_config_json); } catch { parserConfig = body.parser_config || {}; }
@@ -199,7 +201,7 @@ async function handleImportAssistantRoute(deps) {
 
   if (req.method === "GET" && action === "sources") {
     await ensureDefaultSources(store);
-    return send(res, 200, await store.allRecords("ImportedSource"));
+    return send(res, 200, (await store.allRecords("ImportedSource")).map(applyKnownSourceConfig));
   }
 
   if (req.method === "POST" && action === "sources") {

@@ -293,6 +293,16 @@ function tagless(value = "") {
   return htmlDecode(String(value || "").replace(/<[^>]+>/g, " "));
 }
 
+function looksJavascriptRendered(html = "") {
+  const visibleText = tagless(/<body\b[^>]*>([\s\S]*?)<\/body>/i.exec(html)?.[1] || html);
+  const scriptCount = (html.match(/<script\b/gi) || []).length;
+  return /id=["'](?:root|app|__next|__nuxt)["']/i.test(html) && scriptCount >= 5 && visibleText.length < 900;
+}
+
+function looksBotProtected(html = "", status = 0) {
+  return status === 403 || /cloudflare|cf-ray|captcha|bot protection|access denied|verify you are human|checking your browser/i.test(html);
+}
+
 function looksLikeListingUrl(url = "", text = "", source = {}) {
   const config = parserConfig(source);
   const patterns = splitKeywords(config.item_url_patterns || "job,jobs,pune,puna,punesim,vende-pune,vend-pune,konkurs,karriere,career,careers,vacancy,vacancies,position,listing,njoftim,njoftime");
@@ -432,6 +442,85 @@ async function fetchHtmlPage({ maxItems = 50, source = {} } = {}) {
   return enriched;
 }
 
+async function inspectHtmlSource(source = {}) {
+  const url = getUrl(source);
+  const config = parserConfig(source);
+  const selectorsTried = {
+    item_selector: config.item_selector || "",
+    item_url_patterns: config.item_url_patterns || "",
+    json_ld_jobs: config.json_ld_jobs === true,
+    title_selector: config.title_selector || "",
+    link_selector: config.link_selector || "a[href]",
+    company_selector: config.company_selector || "",
+    location_selector: config.location_selector || "",
+    date_selector: config.date_selector || "",
+    summary_selector: config.summary_selector || "",
+  };
+  if (!url) {
+    return {
+      url: "",
+      http_status: 0,
+      html_size: 0,
+      selectors_tried: selectorsTried,
+      reason: "Nuk ka URL për lexim.",
+    };
+  }
+  if (isBlockedNonJobUrl(url)) {
+    return {
+      url,
+      http_status: 0,
+      html_size: 0,
+      selectors_tried: selectorsTried,
+      reason: "URL është e bllokuar si faqe jo-njoftim ose faqe marketingu.",
+    };
+  }
+  if (!config.item_selector && !config.item_url_patterns && !config.json_ld_jobs) {
+    return {
+      url,
+      http_status: 0,
+      html_size: 0,
+      selectors_tried: selectorsTried,
+      reason: "Mungon parser_config: item_selector, item_url_patterns ose json_ld_jobs.",
+    };
+  }
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": "AntoktonImportAssistant/1.0" }
+    });
+    const html = await response.text();
+    const anchors = parseHtmlAnchors(html, source, response.url || url);
+    const jsonLd = parseJsonLdJobs(html, source, response.url || url);
+    const javascriptRendered = looksJavascriptRendered(html);
+    const botProtection = looksBotProtected(html, response.status);
+    let reason = "";
+    if (!response.ok) reason = `URL ktheu HTTP ${response.status}.`;
+    else if (!html.trim()) reason = "HTML bosh.";
+    else if (botProtection) reason = "Faqja duket me Cloudflare/bot protection ose CAPTCHA.";
+    else if (javascriptRendered) reason = "Faqja duket JavaScript-rendered; HTML publik nuk përmban kartat e njoftimeve.";
+    else if (!anchors.length && !jsonLd.length) reason = "HTML u lexua, por nuk u kapën linke njoftimesh me selectorët/patterns aktualë.";
+    else reason = `U gjetën ${anchors.length} linke dhe ${jsonLd.length} JSON-LD, por mund të kenë dështuar në validim.`;
+    return {
+      url: response.url || url,
+      http_status: response.status,
+      html_size: html.length,
+      selectors_tried: selectorsTried,
+      javascript_rendered: javascriptRendered,
+      bot_protection: botProtection,
+      anchors_found: anchors.length,
+      json_ld_jobs_found: jsonLd.length,
+      reason,
+    };
+  } catch (error) {
+    return {
+      url,
+      http_status: 0,
+      html_size: 0,
+      selectors_tried: selectorsTried,
+      reason: error?.message || "HTML nuk u lexua.",
+    };
+  }
+}
+
 async function fetchTelegramPublic({ maxItems = 50, source = {} } = {}) {
   const url = getUrl(source);
   if (!url || !/t\.me\//i.test(url)) return [];
@@ -500,4 +589,4 @@ async function fetchItems(options = {}) {
   return [];
 }
 
-module.exports = { fetchItems };
+module.exports = { fetchItems, inspectHtmlSource };

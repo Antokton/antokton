@@ -3,6 +3,7 @@ const { normalizeImportedItem } = require("./normalizeImportedItem");
 const { isDuplicateImportedItem } = require("./deduplicateImportedItem");
 const { INITIAL_IMPORT_SOURCES, technicalDefaultsForSource } = require("./seedSources");
 const { validateImportedItem, isBlockedNonJobUrl } = require("./validateImportedItem");
+const { applyKnownSourceConfig } = require("./sourceConfigRules");
 
 const providers = {
   arbeitnow: require("./providers/arbeitnowProvider"),
@@ -79,7 +80,8 @@ function parserConfig(source = {}) {
 }
 
 function sourceUrl(source = {}) {
-  return source.jobs_url || source.category_url || source.source_url || source.base_url || "";
+  const normalized = applyKnownSourceConfig(source);
+  return normalized.api_endpoint || normalized.rss_url || normalized.jobs_url || normalized.category_url || normalized.source_url || normalized.base_url || "";
 }
 
 function sourceEnabled(source = {}) {
@@ -617,12 +619,13 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
     throw error;
   }
   const allSources = await store.allRecords("ImportedSource");
-  const source = allSources.find((item) => item.id === sourceId || item.provider_key === sourceId);
-  if (!source) {
+  const foundSource = allSources.find((item) => item.id === sourceId || item.provider_key === sourceId);
+  if (!foundSource) {
     const error = new Error("Source not found");
     error.statusCode = 404;
     throw error;
   }
+  const source = applyKnownSourceConfig(foundSource);
   const providerKey = source.provider_key || "custom";
   const provider = providers[providerKey] || providers.custom;
   const startedAt = now();
@@ -715,13 +718,28 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
       status: rawItems.length && !validCount ? "test_zero_valid_items" : "test_completed",
       error_message: rawItems.length && !validCount ? "Items fetched but failed validation" : (rawItems.length ? "" : "Test returned zero items")
     });
+    const htmlDiagnostics = rawItems.length === 0
+      && providerKey === "custom"
+      && String(source.parser_type || source.crawl_method || source.source_type || "").toLowerCase() === "html"
+      && typeof provider.inspectHtmlSource === "function"
+        ? await provider.inspectHtmlSource(source)
+        : null;
     const diagnostics = {
       provider: providerKey,
       source_url: sourceUrl(source),
+      read_url: htmlDiagnostics?.url || sourceUrl(source),
+      http_status: htmlDiagnostics?.http_status,
+      html_size: htmlDiagnostics?.html_size,
+      selectors_tried: htmlDiagnostics?.selectors_tried,
+      javascript_rendered: htmlDiagnostics?.javascript_rendered,
+      bot_protection: htmlDiagnostics?.bot_protection,
+      anchors_found: htmlDiagnostics?.anchors_found,
+      json_ld_jobs_found: htmlDiagnostics?.json_ld_jobs_found,
+      zero_reason: htmlDiagnostics?.reason,
       missing_fields: diagnoseSourceConfig(source, providerKey),
       queries_tried: [...queriesTried],
       countries_tried: [...countriesTried],
-      recommendation: sourceTestRecommendation(source, config, rawItems.length, validCount, rejectedCount)
+      recommendation: htmlDiagnostics?.reason || sourceTestRecommendation(source, config, rawItems.length, validCount, rejectedCount)
     };
     return {
       success: true,
@@ -755,6 +773,7 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
       diagnostics: {
         provider: providerKey,
         source_url: sourceUrl(source),
+        read_url: sourceUrl(source),
         missing_fields: diagnoseSourceConfig(source, providerKey),
         queries_tried: [],
         countries_tried: [],
@@ -787,6 +806,7 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
     const manualRun = Boolean(sourceId || options.manual_run);
     const selectedSourceRun = Boolean(sourceId && strictSource);
     let sources = allSources
+      .map(applyKnownSourceConfig)
       .filter((source) => !strictSource || shouldUseSource(sourceId, source))
       .filter((source) => !providerFilter || shouldUseSource(providerFilter, source))
       .filter((source) => shouldCrawlSource(source, { manual: manualRun, selected: selectedSourceRun }))
@@ -801,16 +821,19 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
     if (!sources.length && manualRun && !strictSource && !providerFilter) {
       const reseededSources = await forceSeedRunnableSources(store);
       sources = reseededSources
+        .map(applyKnownSourceConfig)
         .filter(isAutomaticRunnableSource)
         .filter((source) => shouldCrawlSource(source, { manual: true, selected: false }))
         .map((source) => applyRuntimeOptions(source, options));
     }
     if (!sources.length && manualRun && !strictSource && !providerFilter) {
       sources = runtimeSeedFallbackSources(config)
+        .map(applyKnownSourceConfig)
         .map((source) => applyRuntimeOptions(source, options));
     }
     if (sources.length && manualRun && !strictSource && !providerFilter) {
       sources = appendMissingRuntimeSeedFallbacks(sources, config)
+        .map(applyKnownSourceConfig)
         .map((source) => applyRuntimeOptions(source, options));
     }
     const minNewItems = Math.max(0, Number(options.min_new_items_per_run || settings.min_new_items_per_run || config.IMPORT_ASSISTANT_MIN_NEW_PER_RUN || DEFAULT_MIN_NEW_PER_RUN));

@@ -128,6 +128,20 @@ test("auto-discover source config turns a domain into a usable HTML jobs source"
   }
 });
 
+test("auto-discover uses known Academic Positions jobs URL without placeholders", async () => {
+  const result = await discoverSourceConfig({ url: "https://academicpositions.com", name: "Academic Positions" });
+  assert.equal(result.success, true);
+  assert.equal(result.source.source_url, "https://academicpositions.com/find-jobs");
+  assert.equal(result.source.base_url, "https://academicpositions.com");
+  assert.equal(result.source.jobs_url, "https://academicpositions.com/find-jobs");
+  assert.equal(result.source.rss_url, "");
+  assert.equal(result.source.api_endpoint, "");
+  assert.equal(result.source.category_url, "");
+  assert.equal(result.source.login_required, false);
+  assert.equal(result.source.original_source_required, true);
+  assert.equal(result.source.enabled, true);
+});
+
 test("import validation requires real title, URL, source and quality fields", () => {
   const source = { id: "source-1", name: "Arbeitnow", import_mode: "automatic" };
   const invalid = validateImportedItem({

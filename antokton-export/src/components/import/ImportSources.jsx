@@ -316,6 +316,15 @@ export default function ImportSources() {
         : "";
       const tried = [
         diagnostics.provider ? `Provider: ${diagnostics.provider}` : "",
+        diagnostics.read_url ? `URL e lexuar: ${diagnostics.read_url}` : "",
+        diagnostics.http_status !== undefined ? `HTTP status: ${diagnostics.http_status}` : "",
+        diagnostics.html_size !== undefined ? `HTML size: ${diagnostics.html_size} bytes` : "",
+        diagnostics.javascript_rendered !== undefined ? `JavaScript-rendered: ${diagnostics.javascript_rendered ? "po" : "jo"}` : "",
+        diagnostics.bot_protection !== undefined ? `Cloudflare/bot protection: ${diagnostics.bot_protection ? "po" : "jo"}` : "",
+        diagnostics.anchors_found !== undefined ? `Linke të kapura: ${diagnostics.anchors_found}` : "",
+        diagnostics.json_ld_jobs_found !== undefined ? `JSON-LD jobs: ${diagnostics.json_ld_jobs_found}` : "",
+        diagnostics.selectors_tried ? `Selectorë/patterns: ${JSON.stringify(diagnostics.selectors_tried)}` : "",
+        diagnostics.zero_reason ? `Arsye teknike: ${diagnostics.zero_reason}` : "",
         Array.isArray(diagnostics.queries_tried) && diagnostics.queries_tried.length ? `Queries: ${diagnostics.queries_tried.join(", ")}` : "",
         Array.isArray(diagnostics.countries_tried) && diagnostics.countries_tried.length ? `Vende: ${diagnostics.countries_tried.join(", ")}` : "",
       ].filter(Boolean).join("\n");

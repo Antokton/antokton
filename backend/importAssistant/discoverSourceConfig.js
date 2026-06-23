@@ -1,4 +1,5 @@
 const { cleanText } = require("./textUtils");
+const { applyKnownSourceConfig, isAcademicPositions } = require("./sourceConfigRules");
 
 const JOB_PATHS = [
   "/jobs",
@@ -308,6 +309,29 @@ async function discoverSourceConfig(input = {}) {
   const inputUrl = normalizeInputUrl(input.url || input.source_url || input.base_url || "");
   if (!inputUrl) {
     return { success: false, reason: "Vendos domain ose URL të vlefshme.", diagnostics: { tried: [] } };
+  }
+
+  const knownSource = applyKnownSourceConfig({
+    name: input.name || "",
+    source_url: inputUrl,
+    base_url: inputUrl,
+    category_filter: input.category_filter || "pune",
+    country_filter: input.country_filter || "",
+    profession_filter: input.profession_filter || "",
+    source_group: input.source_group || "community",
+  });
+  if (isAcademicPositions(knownSource)) {
+    return {
+      success: true,
+      reason: "Konfigurim i njohur: Academic Positions përdor /find-jobs si Jobs URL.",
+      source: knownSource,
+      diagnostics: {
+        tried: [{ type: "known_source", url: inputUrl, status: 200, ok: true }],
+        feeds: [],
+        apis: [],
+        html: [{ url: knownSource.jobs_url, status: 0, ok: true, score: 100, jobLinks: 0, jsonLd: true }],
+      },
+    };
   }
 
   const diagnostics = { tried: [], feeds: [], apis: [], html: [] };
