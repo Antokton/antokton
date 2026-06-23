@@ -314,6 +314,18 @@ export default function ImportSources() {
       const missing = Array.isArray(diagnostics.missing_fields) && diagnostics.missing_fields.length
         ? `\nMungojnë: ${diagnostics.missing_fields.join(", ")}`
         : "";
+      const selectorMatches = diagnostics.selector_matches
+        ? `Selector matches: ${JSON.stringify(diagnostics.selector_matches)}`
+        : "";
+      const candidateUrls = Array.isArray(diagnostics.first_candidate_urls) && diagnostics.first_candidate_urls.length
+        ? `First candidate URLs:\n${diagnostics.first_candidate_urls.map((url) => `- ${url}`).join("\n")}`
+        : "";
+      const acceptedUrls = Array.isArray(diagnostics.first_accepted_urls) && diagnostics.first_accepted_urls.length
+        ? `First accepted URLs:\n${diagnostics.first_accepted_urls.map((url) => `- ${url}`).join("\n")}`
+        : "";
+      const htmlPreview = diagnostics.html_preview
+        ? `First 1000 HTML chars:\n${String(diagnostics.html_preview).slice(0, 1000)}`
+        : "";
       const tried = [
         diagnostics.provider ? `Provider: ${diagnostics.provider}` : "",
         diagnostics.read_url ? `URL e lexuar: ${diagnostics.read_url}` : "",
@@ -321,9 +333,16 @@ export default function ImportSources() {
         diagnostics.html_size !== undefined ? `HTML size: ${diagnostics.html_size} bytes` : "",
         diagnostics.javascript_rendered !== undefined ? `JavaScript-rendered: ${diagnostics.javascript_rendered ? "po" : "jo"}` : "",
         diagnostics.bot_protection !== undefined ? `Cloudflare/bot protection: ${diagnostics.bot_protection ? "po" : "jo"}` : "",
+        diagnostics.all_links_found !== undefined ? `Number of links found: ${diagnostics.all_links_found}` : "",
+        diagnostics.candidate_job_links_found !== undefined ? `Candidate job links: ${diagnostics.candidate_job_links_found}` : "",
+        diagnostics.accepted_job_links_found !== undefined ? `Accepted job links: ${diagnostics.accepted_job_links_found}` : "",
+        selectorMatches,
         diagnostics.anchors_found !== undefined ? `Linke të kapura: ${diagnostics.anchors_found}` : "",
         diagnostics.json_ld_jobs_found !== undefined ? `JSON-LD jobs: ${diagnostics.json_ld_jobs_found}` : "",
         diagnostics.selectors_tried ? `Selectorë/patterns: ${JSON.stringify(diagnostics.selectors_tried)}` : "",
+        candidateUrls,
+        acceptedUrls,
+        htmlPreview,
         diagnostics.zero_reason ? `Arsye teknike: ${diagnostics.zero_reason}` : "",
         Array.isArray(diagnostics.queries_tried) && diagnostics.queries_tried.length ? `Queries: ${diagnostics.queries_tried.join(", ")}` : "",
         Array.isArray(diagnostics.countries_tried) && diagnostics.countries_tried.length ? `Vende: ${diagnostics.countries_tried.join(", ")}` : "",

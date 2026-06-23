@@ -731,10 +731,17 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
       http_status: htmlDiagnostics?.http_status,
       html_size: htmlDiagnostics?.html_size,
       selectors_tried: htmlDiagnostics?.selectors_tried,
+      selector_matches: htmlDiagnostics?.selector_matches,
       javascript_rendered: htmlDiagnostics?.javascript_rendered,
       bot_protection: htmlDiagnostics?.bot_protection,
+      all_links_found: htmlDiagnostics?.all_links_found,
+      candidate_job_links_found: htmlDiagnostics?.candidate_job_links_found,
+      accepted_job_links_found: htmlDiagnostics?.accepted_job_links_found,
+      first_candidate_urls: htmlDiagnostics?.first_candidate_urls,
+      first_accepted_urls: htmlDiagnostics?.first_accepted_urls,
       anchors_found: htmlDiagnostics?.anchors_found,
       json_ld_jobs_found: htmlDiagnostics?.json_ld_jobs_found,
+      html_preview: htmlDiagnostics?.html_preview,
       zero_reason: htmlDiagnostics?.reason,
       missing_fields: diagnoseSourceConfig(source, providerKey),
       queries_tried: [...queriesTried],
@@ -754,11 +761,16 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
       log: logRecord
     };
   } catch (error) {
+    const htmlDiagnostics = providerKey === "custom"
+      && String(source.parser_type || source.crawl_method || source.source_type || "").toLowerCase() === "html"
+      && typeof provider.inspectHtmlSource === "function"
+        ? await provider.inspectHtmlSource(source)
+        : null;
     logRecord = await store.updateRecord("ImportLog", logRecord.id, {
       finished_at: now(),
       status: "test_error",
       error_count: 1,
-      error_message: error.message || "Source test failed"
+      error_message: htmlDiagnostics?.reason || error.message || "Source test failed"
     });
     return {
       success: false,
@@ -773,11 +785,26 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
       diagnostics: {
         provider: providerKey,
         source_url: sourceUrl(source),
-        read_url: sourceUrl(source),
+        read_url: htmlDiagnostics?.url || sourceUrl(source),
+        http_status: htmlDiagnostics?.http_status,
+        html_size: htmlDiagnostics?.html_size,
+        selectors_tried: htmlDiagnostics?.selectors_tried,
+        selector_matches: htmlDiagnostics?.selector_matches,
+        javascript_rendered: htmlDiagnostics?.javascript_rendered,
+        bot_protection: htmlDiagnostics?.bot_protection,
+        all_links_found: htmlDiagnostics?.all_links_found,
+        candidate_job_links_found: htmlDiagnostics?.candidate_job_links_found,
+        accepted_job_links_found: htmlDiagnostics?.accepted_job_links_found,
+        first_candidate_urls: htmlDiagnostics?.first_candidate_urls,
+        first_accepted_urls: htmlDiagnostics?.first_accepted_urls,
+        anchors_found: htmlDiagnostics?.anchors_found,
+        json_ld_jobs_found: htmlDiagnostics?.json_ld_jobs_found,
+        html_preview: htmlDiagnostics?.html_preview,
+        zero_reason: htmlDiagnostics?.reason,
         missing_fields: diagnoseSourceConfig(source, providerKey),
         queries_tried: [],
         countries_tried: [],
-        recommendation: error.message || "Source test failed"
+        recommendation: htmlDiagnostics?.reason || error.message || "Source test failed"
       },
       log: logRecord
     };

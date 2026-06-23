@@ -408,6 +408,74 @@ function parseHtmlAnchors(html = "", source = {}, baseUrl = "") {
   return items;
 }
 
+function countSimpleSelectorMatches(html = "", selector = "") {
+  const value = String(selector || "").trim();
+  if (!value) return 0;
+  if (value === "a[href]") return (html.match(/<a\b[^>]*href=/gi) || []).length;
+  if (/^[a-z][a-z0-9-]*$/i.test(value)) {
+    return (html.match(new RegExp(`<${value}\\b`, "gi")) || []).length;
+  }
+  const className = /^\.([a-z0-9_-]+)$/i.exec(value)?.[1] || /\[class\*=['"]([^'"]+)['"]\]/i.exec(value)?.[1];
+  if (className) {
+    return (html.match(new RegExp(`class=["'][^"']*${className.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[^"']*["']`, "gi")) || []).length;
+  }
+  const idName = /^#([a-z0-9_-]+)$/i.exec(value)?.[1];
+  if (idName) {
+    return (html.match(new RegExp(`id=["']${idName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["']`, "gi")) || []).length;
+  }
+  return 0;
+}
+
+function selectorMatchSummary(html = "", source = {}) {
+  const config = parserConfig(source);
+  const selectors = [
+    ["item_selector", config.item_selector],
+    ["title_selector", config.title_selector],
+    ["link_selector", config.link_selector || "a[href]"],
+    ["company_selector", config.company_selector],
+    ["location_selector", config.location_selector],
+    ["date_selector", config.date_selector],
+    ["summary_selector", config.summary_selector],
+  ].filter(([, selector]) => selector);
+  const summary = {};
+  for (const [name, selectorText] of selectors) {
+    summary[name] = String(selectorText)
+      .split(",")
+      .map((selector) => selector.trim())
+      .filter(Boolean)
+      .map((selector) => ({ selector, matches: countSimpleSelectorMatches(html, selector) }));
+  }
+  return summary;
+}
+
+function inspectAnchorCandidates(html = "", source = {}, baseUrl = "") {
+  const anchors = [...html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)];
+  const candidateUrls = [];
+  const acceptedUrls = [];
+  const seenCandidates = new Set();
+  for (const anchor of anchors) {
+    const attrs = anchor[1] || "";
+    const href = /href=["']([^"']+)["']/i.exec(attrs)?.[1] || "";
+    const url = absoluteUrl(htmlDecode(href), baseUrl);
+    const title = tagless(anchor[2] || "");
+    if (!url || seenCandidates.has(url)) continue;
+    if (looksLikeListingUrl(url, title, source)) {
+      seenCandidates.add(url);
+      candidateUrls.push(url);
+      if (!isBlockedNonJobUrl(url) && !isListingOrCategoryUrl(url) && !sameListingIndex(url, baseUrl) && !isNavigationTitle(title) && !isCategoryPath(url)) {
+        acceptedUrls.push(url);
+      }
+    }
+  }
+  return {
+    all_links_found: anchors.length,
+    candidate_job_links_found: candidateUrls.length,
+    accepted_job_links_found: acceptedUrls.length,
+    first_candidate_urls: candidateUrls.slice(0, 10),
+    first_accepted_urls: acceptedUrls.slice(0, 10),
+  };
+}
+
 async function fetchHtmlPage({ maxItems = 50, source = {} } = {}) {
   const url = getUrl(source);
   if (!url) return [];
@@ -490,12 +558,14 @@ async function inspectHtmlSource(source = {}) {
     const html = await response.text();
     const anchors = parseHtmlAnchors(html, source, response.url || url);
     const jsonLd = parseJsonLdJobs(html, source, response.url || url);
+    const candidateDiagnostics = inspectAnchorCandidates(html, source, response.url || url);
+    const selectorMatches = selectorMatchSummary(html, source);
     const javascriptRendered = looksJavascriptRendered(html);
     const botProtection = looksBotProtected(html, response.status);
     let reason = "";
-    if (!response.ok) reason = `URL ktheu HTTP ${response.status}.`;
+    if (botProtection) reason = `Faqja duket me Cloudflare/bot protection ose CAPTCHA${response.ok ? "" : `; HTTP ${response.status}`}.`;
+    else if (!response.ok) reason = `URL ktheu HTTP ${response.status}.`;
     else if (!html.trim()) reason = "HTML bosh.";
-    else if (botProtection) reason = "Faqja duket me Cloudflare/bot protection ose CAPTCHA.";
     else if (javascriptRendered) reason = "Faqja duket JavaScript-rendered; HTML publik nuk përmban kartat e njoftimeve.";
     else if (!anchors.length && !jsonLd.length) reason = "HTML u lexua, por nuk u kapën linke njoftimesh me selectorët/patterns aktualë.";
     else reason = `U gjetën ${anchors.length} linke dhe ${jsonLd.length} JSON-LD, por mund të kenë dështuar në validim.`;
@@ -504,10 +574,17 @@ async function inspectHtmlSource(source = {}) {
       http_status: response.status,
       html_size: html.length,
       selectors_tried: selectorsTried,
+      selector_matches: selectorMatches,
       javascript_rendered: javascriptRendered,
       bot_protection: botProtection,
+      all_links_found: candidateDiagnostics.all_links_found,
+      candidate_job_links_found: candidateDiagnostics.candidate_job_links_found,
+      accepted_job_links_found: candidateDiagnostics.accepted_job_links_found,
+      first_candidate_urls: candidateDiagnostics.first_candidate_urls,
+      first_accepted_urls: candidateDiagnostics.first_accepted_urls,
       anchors_found: anchors.length,
       json_ld_jobs_found: jsonLd.length,
+      html_preview: html.slice(0, 1000),
       reason,
     };
   } catch (error) {
