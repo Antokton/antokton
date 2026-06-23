@@ -144,6 +144,61 @@ test("auto-discover uses known Academic Positions jobs URL without placeholders"
   assert.equal(result.source.enabled, true);
 });
 
+test("auto-discover rejects redirected 404 job URLs", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => {
+    const href = String(url);
+    if (href === "https://badjobs.test") {
+      return {
+        ok: true,
+        status: 200,
+        url: href,
+        headers: { get: () => "text/html" },
+        text: async () => `<html><body><a href="/jobs">Jobs</a></body></html>`,
+      };
+    }
+    if (href === "https://badjobs.test/jobs") {
+      return {
+        ok: true,
+        status: 200,
+        url: "https://badjobs.test/404",
+        headers: { get: () => "text/html" },
+        text: async () => `<html><title>Page not found</title><body><a href="/jobs/driver">Driver job</a></body></html>`,
+      };
+    }
+    return {
+      ok: false,
+      status: 404,
+      url: href,
+      headers: { get: () => "text/html" },
+      text: async () => "not found",
+    };
+  };
+  try {
+    const result = await discoverSourceConfig({ url: "https://badjobs.test", name: "Bad Jobs" });
+    assert.equal(result.success, false);
+    assert.notEqual(result.source.jobs_url, "https://badjobs.test/404");
+    assert.match(result.reason, /404|not found|Nuk u gjet/i);
+    assert.equal(result.diagnostics.html.some((row) => row.finalUrl === "https://badjobs.test/404" && row.ok === false), true);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("auto-discover uses KosovaJob homepage instead of redirected 404", async () => {
+  const result = await discoverSourceConfig({ url: "https://kosovajob.com", name: "KosovaJob" });
+  assert.equal(result.success, true);
+  assert.equal(result.source.source_url, "https://kosovajob.com/");
+  assert.equal(result.source.jobs_url, "https://kosovajob.com/");
+  assert.equal(result.source.base_url, "https://kosovajob.com");
+  assert.equal(result.source.language, "sq");
+  assert.equal(result.source.country_filter, "Kosovë");
+  assert.equal(result.source.category_filter, "pune");
+  assert.equal(result.source.rss_url, "");
+  assert.equal(result.source.api_endpoint, "");
+  assert.match(result.source.profession_filter, /vende pune/);
+});
+
 test("auto-discover configures Bundesagentur as API source", async () => {
   const result = await discoverSourceConfig({ url: "https://www.arbeitsagentur.de", name: "Bundesagentur für Arbeit" });
   assert.equal(result.success, true);
@@ -303,6 +358,45 @@ test("custom provider imports public HTML listing links", async () => {
     });
     assert.equal(rows.length, 1);
     assert.equal(rows[0].source_url, "https://example.test/jobs/cleaner-1");
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("custom provider extracts KosovaJob card fields", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => ({
+    ok: true,
+    status: 200,
+    url: String(url),
+    async text() {
+      if (String(url).includes("/kosovajob-llc/")) {
+        return `<html><body><main><h1>Administrator/e i/e Zyrës</h1><p>Aplikim online.</p></main></body></html>`;
+      }
+      return `<html><body>
+        <div class="jobListCnts">
+          <a href="https://kosovajob.com/kosovajob-llc/administratore-ie-zyres">
+            <div class="jobListCntsInner">
+              <div class="jobListTitle" date="2026-06-30 23:55:00">Administrator/e i/e Zyrës</div>
+              <div class="jobListCity">Prishtinë</div>
+            </div>
+          </a>
+        </div>
+        <a href="https://kosovajob.com/404">404</a>
+      </body></html>`;
+    }
+  });
+  try {
+    const source = applyKnownSourceConfig({ name: "KosovaJob", source_url: "https://kosovajob.com" });
+    const rows = await customSourceProvider.fetchItems({ source, maxItems: 5 });
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].source_url, "https://kosovajob.com/kosovajob-llc/administratore-ie-zyres");
+    assert.equal(rows[0].original_title, "Administrator/e i/e Zyrës");
+    assert.equal(rows[0].original_company, "Kosovajob Llc");
+    assert.equal(rows[0].original_location, "Prishtinë");
+    assert.equal(rows[0].original_city, "Prishtinë");
+    assert.equal(rows[0].published_at, "2026-06-30 23:55:00");
+    assert.equal(rows[0].original_id, rows[0].source_url);
   } finally {
     global.fetch = originalFetch;
   }

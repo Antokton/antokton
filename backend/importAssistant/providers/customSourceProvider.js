@@ -332,7 +332,9 @@ function looksJavascriptRendered(html = "") {
 }
 
 function looksBotProtected(html = "", status = 0) {
-  return status === 403 || /cloudflare|cf-ray|captcha|bot protection|access denied|verify you are human|checking your browser/i.test(html);
+  if ([401, 403, 429].includes(Number(status || 0))) return true;
+  const visibleText = tagless(html).slice(0, 3500);
+  return /(?:just a moment|checking your browser|verify you are human|access denied|cf-ray|captcha|bot protection|unusual traffic)/i.test(visibleText);
 }
 
 function looksLikeListingUrl(url = "", text = "", source = {}) {
@@ -448,11 +450,32 @@ function parseHtmlAnchors(html = "", source = {}, baseUrl = "") {
   const seen = new Set();
   const items = [];
   const anchors = [...html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)];
+  const titleFromAnchorHtml = (value = "") => {
+    const jobListTitle = /<[^>]*class=["'][^"']*jobListTitle[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i.exec(value)?.[1];
+    const genericTitle = /<[^>]*class=["'][^"']*(?:title|position|job)[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i.exec(value)?.[1];
+    return tagless(jobListTitle || genericTitle || value);
+  };
+  const locationFromAnchorHtml = (value = "") => tagless(
+    /<[^>]*class=["'][^"']*(?:jobListCity|location|city|country|ort|standort)[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i.exec(value)?.[1] || ""
+  );
+  const publishedFromAnchorHtml = (value = "") => cleanText(
+    /<[^>]*class=["'][^"']*jobListTitle[^"']*["'][^>]*\bdate=["']([^"']+)["']/i.exec(value)?.[1] || ""
+  );
+  const companyFromUrl = (url = "") => {
+    try {
+      const segment = new URL(url).pathname.split("/").filter(Boolean)[0] || "";
+      return cleanText(segment.replace(/[-_]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()));
+    } catch {
+      return "";
+    }
+  };
   for (const anchor of anchors) {
     const attrs = anchor[1] || "";
     const href = /href=["']([^"']+)["']/i.exec(attrs)?.[1] || "";
     const url = absoluteUrl(htmlDecode(href), baseUrl);
-    const title = tagless(anchor[2] || "");
+    const title = titleFromAnchorHtml(anchor[2] || "");
+    const location = locationFromAnchorHtml(anchor[2] || "");
+    const publishedAt = publishedFromAnchorHtml(anchor[2] || "");
     if (!url || seen.has(url) || title.length < 8) continue;
     if (isBlockedNonJobUrl(url)) continue;
     if (isListingOrCategoryUrl(url)) continue;
@@ -462,17 +485,19 @@ function parseHtmlAnchors(html = "", source = {}, baseUrl = "") {
     items.push({
       provider_key: source.provider_key || "custom",
       external_id: url,
+      original_id: url,
       source_url: url,
       source_name: source.name || "HTML",
       item_type: "job",
       category: source.category_filter || "pune",
       original_title: title.slice(0, 180),
       original_description: "",
-      original_company: "",
-      original_location: "",
+      original_company: companyFromUrl(url),
+      original_location: location || source.country_filter || "",
       original_country: normalizeCountry(source.country_filter || ""),
-      original_city: "",
+      original_city: location,
       contact_methods: [{ type: "application_form", value: url }],
+      published_at: publishedAt,
       _requires_detail_page: true,
       _detail_page_loaded: false
     });

@@ -1,5 +1,5 @@
 const { cleanText } = require("./textUtils");
-const { applyKnownSourceConfig, isAcademicPositions, isBundesagentur } = require("./sourceConfigRules");
+const { applyKnownSourceConfig, isAcademicPositions, isBundesagentur, isKosovaJob } = require("./sourceConfigRules");
 
 const JOB_PATHS = [
   "/jobs",
@@ -86,6 +86,38 @@ function tagless(value = "") {
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'"));
+}
+
+function pathLooksInvalid(url = "") {
+  try {
+    const parsed = new URL(url);
+    return /^\/(?:404|not-found|notfound|page-not-found)\/?$/i.test(parsed.pathname.replace(/\/+$/, "") || parsed.pathname);
+  } catch {
+    return /\/(?:404|not-found|notfound|page-not-found)(?:\/|$|\?)/i.test(String(url || ""));
+  }
+}
+
+function htmlLooksInvalid(html = "") {
+  const title = tagless(/<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] || "");
+  const heading = tagless(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i.exec(html)?.[1] || "");
+  const bodyStart = tagless(html).slice(0, 2500);
+  return /\b(?:404|not found|page not found|seite nicht gefunden|faqja nuk u gjet|nuk u gjet)\b/i.test([title, heading, bodyStart].join(" "));
+}
+
+function looksBotProtected(html = "", status = 0) {
+  if ([401, 403, 429].includes(Number(status || 0))) return true;
+  const text = tagless(html).slice(0, 3500);
+  return /(?:just a moment|checking your browser|verify you are human|access denied|cf-ray|captcha|bot protection|unusual traffic)/i.test(text);
+}
+
+function invalidFetchedPage(result = {}, requestedUrl = "") {
+  if (!result) return "Nuk pati përgjigje nga URL.";
+  if ([403, 404, 410, 429, 500, 502, 503, 504].includes(Number(result.status || 0))) return `URL ktheu HTTP ${result.status}.`;
+  if (pathLooksInvalid(result.url || requestedUrl) || pathLooksInvalid(requestedUrl)) return `URL finale është e pavlefshme (${result.url || requestedUrl}).`;
+  const text = String(result.text || "");
+  if (!text.trim()) return "Faqja është bosh.";
+  if (htmlLooksInvalid(text)) return "Faqja duket si 404/not found.";
+  return "";
 }
 
 async function fetchText(url, accept = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8") {
@@ -183,7 +215,8 @@ function detectJavascriptRendered(html = "") {
   const bodyText = tagless(/<body\b[^>]*>([\s\S]*?)<\/body>/i.exec(html)?.[1] || html);
   const scriptCount = (html.match(/<script\b/gi) || []).length;
   const rootMount = /<div[^>]+id=["'](?:root|app|__next|__nuxt)["']/i.test(html);
-  return rootMount && scriptCount >= 5 && bodyText.length < 700;
+  const sparseNextData = /<script[^>]+id=["']__NEXT_DATA__["'][^>]*>/i.test(html) && !/JobPosting|jobLocation|hiringOrganization/i.test(html);
+  return rootMount && scriptCount >= 5 && (bodyText.length < 900 || sparseNextData);
 }
 
 function inferParserConfig(html = "", sourceUrl = "") {
@@ -225,6 +258,8 @@ function inferParserConfig(html = "", sourceUrl = "") {
 
 function buildCandidateUrls(baseUrl = "", homeHtml = "") {
   const origin = originOf(baseUrl);
+  const homeScore = Math.max(scoreJobUrl(baseUrl, htmlLooksInvalid(homeHtml) ? "" : tagless(homeHtml).slice(0, 1200)), 1);
+  const homeCandidate = { url: baseUrl, text: "homepage", score: homeScore };
   const menuLinks = extractLinks(homeHtml, baseUrl)
     .filter((link) => sameHost(link.url, baseUrl))
     .map((link) => ({ ...link, score: scoreJobUrl(link.url, link.text) }))
@@ -232,7 +267,9 @@ function buildCandidateUrls(baseUrl = "", homeHtml = "") {
     .sort((a, b) => b.score - a.score)
     .slice(0, 12);
   const common = JOB_PATHS.map((path) => ({ url: `${origin}${path}`, text: path, score: scoreJobUrl(`${origin}${path}`, path) }));
-  return uniqueCandidates([...menuLinks, ...common]).slice(0, 18);
+  return uniqueCandidates([homeCandidate, ...menuLinks, ...common])
+    .sort((a, b) => (b.score || 0) - (a.score || 0))
+    .slice(0, 18);
 }
 
 function buildFeedCandidates(baseUrl = "", homeHtml = "") {
@@ -252,13 +289,15 @@ function buildApiCandidates(baseUrl = "", homeHtml = "") {
 }
 
 function summarizeReason({ home, feedResult, apiResult, htmlResult, errors = [] }) {
+  const invalidHome = invalidFetchedPage(home, home?.url || "");
+  if (invalidHome) return invalidHome;
   if (!home?.ok) {
     if (home?.status === 401 || home?.status === 403) return `Domain-i ktheu ${home.status}; burimi duket i bllokuar, kërkon autorizim, ose ka mbrojtje anti-bot.`;
     return `Domain-i nuk u hap (${home?.status || "pa përgjigje"}).`;
   }
-  if (/cloudflare|cf-ray|captcha|bot protection|access denied/i.test(home.text || "")) return "Faqja duket me Cloudflare/bot protection ose CAPTCHA.";
-  if (/login|sign in|authentication required/i.test(home.text || "") && !(htmlResult?.score > 0)) return "Burimi duket se kërkon login.";
   if (detectJavascriptRendered(home.text || "") && !htmlResult?.url) return "Faqja duket JavaScript-rendered dhe nuk jep HTML statik të importueshëm.";
+  if (looksBotProtected(home.text || "", home.status)) return "Faqja duket me Cloudflare/bot protection ose CAPTCHA.";
+  if (/(authentication required|please sign in|log in to continue|login required)/i.test(home.text || "") && !(htmlResult?.score > 0)) return "Burimi duket se kërkon login.";
   if (feedResult?.error) return feedResult.error;
   if (apiResult?.error) return apiResult.error;
   if (htmlResult?.error) return htmlResult.error;
@@ -269,6 +308,8 @@ function summarizeReason({ home, feedResult, apiResult, htmlResult, errors = [] 
 async function testFeed(url = "") {
   try {
     const result = await fetchText(url, "application/rss+xml,application/atom+xml,application/xml,text/xml,*/*;q=0.8");
+    const invalidReason = invalidFetchedPage(result, url);
+    if (invalidReason) return { ...result, isFeed: false, invalidReason };
     const xml = result.text || "";
     const itemCount = (xml.match(/<(item|entry)\b/gi) || []).length;
     const isFeed = /<(rss|feed)\b/i.test(xml) && itemCount > 0;
@@ -281,6 +322,8 @@ async function testFeed(url = "") {
 async function testApi(url = "") {
   try {
     const result = await fetchText(url, "application/json,*/*;q=0.8");
+    const invalidReason = invalidFetchedPage(result, url);
+    if (invalidReason) return { ...result, isApi: false, invalidReason };
     if (!result.ok) return { ...result, isApi: false };
     const json = JSON.parse(result.text);
     const rows = Array.isArray(json) ? json : (json.jobs || json.data || json.results || []);
@@ -293,6 +336,8 @@ async function testApi(url = "") {
 async function testHtmlCandidate(candidate = {}) {
   try {
     const result = await fetchText(candidate.url);
+    const invalidReason = invalidFetchedPage(result, candidate.url);
+    if (invalidReason) return { ...result, score: 0, invalidReason, error: invalidReason };
     if (!result.ok) return { ...result, score: 0, error: `URL ${candidate.url} ktheu status ${result.status}.` };
     const html = result.text || "";
     const links = extractLinks(html, result.url || candidate.url);
@@ -346,6 +391,19 @@ async function discoverSourceConfig(input = {}) {
       },
     };
   }
+  if (isKosovaJob(knownSource)) {
+    return {
+      success: true,
+      reason: "Konfigurim i njohur: KosovaJob përdor faqen kryesore si listë pune; /jobs ridrejtohet në /404 dhe nuk pranohet.",
+      source: knownSource,
+      diagnostics: {
+        tried: [{ type: "known_source", url: inputUrl, status: 200, ok: true }],
+        feeds: [],
+        apis: [],
+        html: [{ url: knownSource.jobs_url, status: 200, ok: true, score: 100, jobLinks: 1, jsonLd: true }],
+      },
+    };
+  }
 
   const diagnostics = { tried: [], feeds: [], apis: [], html: [] };
   const errors = [];
@@ -365,7 +423,7 @@ async function discoverSourceConfig(input = {}) {
   let feedHit = null;
   for (const feedUrl of buildFeedCandidates(baseUrl, homeHtml)) {
     const result = await testFeed(feedUrl);
-    diagnostics.feeds.push({ url: feedUrl, status: result.status || 0, ok: result.ok === true, items: result.itemCount || 0 });
+    diagnostics.feeds.push({ url: feedUrl, finalUrl: result.url || feedUrl, status: result.status || 0, ok: result.ok === true && !result.invalidReason, items: result.itemCount || 0, reason: result.invalidReason || result.error || "" });
     if (result.isFeed) {
       feedHit = { url: result.url || feedUrl, items: result.itemCount };
       break;
@@ -376,7 +434,7 @@ async function discoverSourceConfig(input = {}) {
   if (!feedHit) {
     for (const apiUrl of buildApiCandidates(baseUrl, homeHtml)) {
       const result = await testApi(apiUrl);
-      diagnostics.apis.push({ url: apiUrl, status: result.status || 0, ok: result.ok === true, items: result.itemCount || 0 });
+      diagnostics.apis.push({ url: apiUrl, finalUrl: result.url || apiUrl, status: result.status || 0, ok: result.ok === true && !result.invalidReason, items: result.itemCount || 0, reason: result.invalidReason || result.error || "" });
       if (result.isApi) {
         apiHit = { url: result.url || apiUrl, items: result.itemCount };
         break;
@@ -390,11 +448,11 @@ async function discoverSourceConfig(input = {}) {
     const results = [];
     for (const candidate of htmlCandidates) {
       const result = await testHtmlCandidate(candidate);
-      diagnostics.html.push({ url: candidate.url, status: result.status || 0, ok: result.ok === true, score: result.score || 0, jobLinks: result.jobLinks || 0, jsonLd: result.jsonLd === true });
-      if (result.ok) results.push(result);
+      diagnostics.html.push({ url: candidate.url, finalUrl: result.url || candidate.url, status: result.status || 0, ok: result.ok === true && !result.invalidReason, score: result.score || 0, jobLinks: result.jobLinks || 0, jsonLd: result.jsonLd === true, reason: result.invalidReason || result.error || "" });
+      if (result.ok && !result.invalidReason) results.push(result);
     }
     htmlHit = results.sort((a, b) => (b.score || 0) - (a.score || 0))[0] || null;
-    if (htmlHit && htmlHit.score < 8 && !htmlHit.jsonLd) htmlHit = null;
+    if (htmlHit && !htmlHit.jsonLd && ((htmlHit.jobLinks || 0) < 2 || htmlHit.score < 12)) htmlHit = null;
   }
 
   const sourceName = input.name || (() => {

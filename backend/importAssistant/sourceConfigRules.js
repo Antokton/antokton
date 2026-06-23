@@ -33,6 +33,17 @@ function isBundesagentur(source = {}) {
   return text.includes("arbeitsagentur") || text.includes("bundesagentur");
 }
 
+function isKosovaJob(source = {}) {
+  const text = [
+    source.name,
+    source.source_url,
+    source.base_url,
+    source.jobs_url,
+    source.category_url,
+  ].filter(Boolean).join(" ").toLowerCase();
+  return text.includes("kosovajob") || text.includes("kosova job");
+}
+
 function parserConfig(source = {}) {
   if (!source.parser_config) return {};
   if (typeof source.parser_config === "string") {
@@ -123,7 +134,51 @@ function applyKnownSourceConfig(source = {}) {
       notes: next.notes || "Konfigurim i njohur: përdor API-në publike të Bundesagentur me header X-API-Key dhe endpoint-in /pc/v4/jobs.",
     };
   }
+  if (isKosovaJob(next)) {
+    const baseUrl = "https://kosovajob.com";
+    const jobsUrl = "https://kosovajob.com/";
+    next = {
+      ...next,
+      name: next.name || "KosovaJob",
+      source_url: jobsUrl,
+      base_url: baseUrl,
+      jobs_url: jobsUrl,
+      api_endpoint: "",
+      rss_url: "",
+      category_url: "",
+      provider_key: "custom",
+      source_type: "html",
+      crawl_method: "html",
+      parser_type: "html",
+      import_mode: next.import_mode || "automatic",
+      automation_level: next.automation_level || "full_auto",
+      source_group: next.source_group || "albanian_source",
+      trust_level: next.trust_level || "needs_review",
+      language: next.language || "sq",
+      country_filter: next.country_filter || "Kosovë",
+      profession_filter: next.profession_filter || "pune, job, vende pune",
+      category_filter: next.category_filter || "pune",
+      login_required: false,
+      enabled: true,
+      is_active: true,
+      original_source_required: true,
+      parser_config: {
+        item_url_patterns: "job,pune,puna,vende-pune,vend-pune,konkurs,pozite,position",
+        json_ld_jobs: true,
+        title_selector: "h1,h2,h3,a,[class*='title'],[class*='position'],[class*='job']",
+        link_selector: "a[href]",
+        company_selector: "[class*='company'],[class*='employer'],[class*='organization']",
+        location_selector: "[class*='location'],[class*='city'],[class*='country']",
+        date_selector: "time,[class*='date'],[class*='deadline'],[class*='posted']",
+        summary_selector: "p,[class*='summary'],[class*='description'],[class*='excerpt']",
+        requires_detail_page: true,
+        known_source: "kosovajob",
+        ...parserConfig(next),
+      },
+      notes: next.notes || "Konfigurim i njohur: KosovaJob publikon listën e punëve në faqen kryesore; mos përdor /jobs sepse ridrejtohet në /404.",
+    };
+  }
   return next;
 }
 
-module.exports = { applyKnownSourceConfig, cleanPlaceholderUrls, isPlaceholderUrl, isAcademicPositions, isBundesagentur };
+module.exports = { applyKnownSourceConfig, cleanPlaceholderUrls, isPlaceholderUrl, isAcademicPositions, isBundesagentur, isKosovaJob };

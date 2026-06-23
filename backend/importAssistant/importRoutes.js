@@ -3,7 +3,47 @@ const { translateContactMessage } = require("./translateImportedItem");
 const { buildExpiryFields } = require("./expiry");
 const { normalizeSourceType, technicalDefaultsForSource } = require("./seedSources");
 const { discoverSourceConfig } = require("./discoverSourceConfig");
-const { applyKnownSourceConfig } = require("./sourceConfigRules");
+const { applyKnownSourceConfig, isPlaceholderUrl } = require("./sourceConfigRules");
+
+function urlPathLooksInvalid(value = "") {
+  try {
+    const parsed = new URL(String(value || ""));
+    return /^\/(?:404|not-found|notfound|page-not-found)\/?$/i.test(parsed.pathname.replace(/\/+$/, "") || parsed.pathname);
+  } catch {
+    return /\/(?:404|not-found|notfound|page-not-found)(?:\/|$|\?)/i.test(String(value || ""));
+  }
+}
+
+function isUsableConfiguredUrl(value = "") {
+  const url = String(value || "").trim();
+  if (!url || isPlaceholderUrl(url) || urlPathLooksInvalid(url)) return false;
+  try {
+    const parsed = new URL(url);
+    return /^https?:$/i.test(parsed.protocol) && Boolean(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function validateAutomaticSourcePayload(source = {}) {
+  const errors = [];
+  const automatic = ["automatic", "mixed"].includes(String(source.import_mode || "").toLowerCase())
+    || ["full_auto", "semi_auto"].includes(String(source.automation_level || "").toLowerCase());
+  if (!String(source.name || "").trim()) errors.push("source name");
+  if (!automatic) return errors;
+  if (!isUsableConfiguredUrl(source.base_url)) errors.push("base_url i vlefshëm");
+  if (!String(source.source_type || "").trim()) errors.push("source_type");
+  if (!String(source.crawl_method || "").trim()) errors.push("crawl_method");
+  if (Number(source.crawl_frequency_minutes || 0) <= 0) errors.push("frequency");
+  const crawlMethod = String(source.crawl_method || source.parser_type || source.source_type || "").toLowerCase();
+  if (crawlMethod === "api" && !isUsableConfiguredUrl(source.api_endpoint)) errors.push("API endpoint i vlefshëm");
+  else if (crawlMethod === "rss" && !isUsableConfiguredUrl(source.rss_url)) errors.push("RSS endpoint i vlefshëm");
+  else if (crawlMethod === "html" && !isUsableConfiguredUrl(source.jobs_url)) errors.push("Jobs URL i vlefshëm");
+  else if (!["api", "rss", "html"].includes(crawlMethod) && !isUsableConfiguredUrl(source.api_endpoint || source.rss_url || source.jobs_url)) {
+    errors.push("jobs_url/API/RSS endpoint i vlefshëm");
+  }
+  return errors;
+}
 
 function normalizeSourcePayload(body = {}) {
   body = applyKnownSourceConfig(body);
@@ -206,8 +246,13 @@ async function handleImportAssistantRoute(deps) {
 
   if (req.method === "POST" && action === "sources" && !tail[1]) {
     const body = await readPayload(req);
+    const payload = normalizeSourcePayload(body);
+    const validationErrors = validateAutomaticSourcePayload(payload);
+    if (validationErrors.length) {
+      return sendError(res, 400, `Burimi automatik nuk u ruajt. Mungon ose është e pavlefshme: ${validationErrors.join(", ")}.`);
+    }
     return send(res, 200, await store.createRecord("ImportedSource", {
-      ...normalizeSourcePayload(body),
+      ...payload,
       failure_count: 0
     }, userEmail));
   }
@@ -225,7 +270,12 @@ async function handleImportAssistantRoute(deps) {
     const body = await readPayload(req);
     const existing = (await store.allRecords("ImportedSource")).find((item) => item.id === id);
     if (!existing) return sendError(res, 404, "Source not found");
-    return send(res, 200, await store.updateRecord("ImportedSource", id, normalizeSourcePayload({ ...existing, ...body })));
+    const payload = normalizeSourcePayload({ ...existing, ...body });
+    const validationErrors = validateAutomaticSourcePayload(payload);
+    if (validationErrors.length) {
+      return sendError(res, 400, `Burimi automatik nuk u ruajt. Mungon ose është e pavlefshme: ${validationErrors.join(", ")}.`);
+    }
+    return send(res, 200, await store.updateRecord("ImportedSource", id, payload));
   }
 
   if (req.method === "GET" && action === "logs") {
