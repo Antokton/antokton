@@ -310,6 +310,7 @@ export default function ImportSources() {
     });
     return rows;
   }, [visibleSources, sortConfig]);
+  const editingSource = useMemo(() => sources.find((source) => source.id === editingId), [sources, editingId]);
 
   const allVisibleSelected = sortedSources.length > 0 && sortedSources.every((source) => selectedIds.includes(source.id));
   const selectedCount = selectedIds.length;
@@ -431,10 +432,10 @@ export default function ImportSources() {
   };
 
   const renderSelectField = (label, key, options, labels) => (
-    <label className="block text-[11px] text-white/55">
+    <label className="block text-[10px] text-white/55">
       {label}
       <Select value={String(editForm[key] ?? "")} onValueChange={(value) => updateEdit(key, value)}>
-        <SelectTrigger className="mt-1 h-9 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
+        <SelectTrigger className="mt-1 h-8 bg-white/5 border-white/10 text-xs text-white"><SelectValue /></SelectTrigger>
         <SelectContent className="bg-[#0b1020] border-white/10">
           {options.map((value) => <SelectItem key={value} value={String(value)} className="text-white">{labels?.[value] || value}</SelectItem>)}
         </SelectContent>
@@ -443,108 +444,105 @@ export default function ImportSources() {
   );
 
   const renderTextField = (label, key, placeholder = "") => (
-    <label className="block text-[11px] text-white/55">
+    <label className="block text-[10px] text-white/55">
       {label}
-      <Input value={editForm[key] || ""} onChange={(e) => updateEdit(key, e.target.value)} placeholder={placeholder} className="mt-1 h-9 bg-white/5 border-white/10 text-white" />
+      <Input value={editForm[key] || ""} onChange={(e) => updateEdit(key, e.target.value)} placeholder={placeholder} className="mt-1 h-8 bg-white/5 border-white/10 text-xs text-white" />
     </label>
   );
 
-  const renderTextareaField = (label, key, placeholder = "", rows = 3) => (
-    <label className="block text-[11px] text-white/55">
+  const renderTextareaField = (label, key, placeholder = "", rows = 2) => (
+    <label className="block text-[10px] text-white/55">
       {label}
       <textarea
         value={editForm[key] || ""}
         onChange={(e) => updateEdit(key, e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="mt-1 w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[#8ff0cf]/60"
+        className="mt-1 w-full rounded-md border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white outline-none focus:border-[#8ff0cf]/60"
       />
     </label>
   );
 
   const renderFullEditor = (source) => (
-    <tr className="border-t border-[#8ff0cf]/20 bg-[#8ff0cf]/[0.035]">
-      <td colSpan={columns.length + 2} className="p-4">
-        <div className="rounded-xl border border-[#8ff0cf]/20 bg-[#07101f] p-4 shadow-xl">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-bold text-white">Përpuno burimin: {source.name || "Burim"}</h3>
-              <p className="text-xs text-white/50">Këtu shfaqen të gjitha fushat teknike dhe redaktuese që ruhen për këtë burim.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => saveEdit(source)} disabled={busyId === source.id} className="rounded-lg border border-emerald-300/20 px-3 py-2 text-xs font-semibold text-emerald-200 hover:bg-emerald-300/10 disabled:opacity-50">
-                <Save className="inline w-3 h-3 mr-1" /> Ruaj
-              </button>
-              <button type="button" onClick={() => { setEditingId(""); setEditForm({}); }} className="rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10">
-                <X className="inline w-3 h-3 mr-1" /> Mbyll
-              </button>
-            </div>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {renderTextField("ID", "id")}
-            {renderTextField("Seed key", "seed_key")}
-            {renderTextField("Emri", "name", "Emri i burimit")}
-            {renderSelectField("Provider", "provider_key", PROVIDERS, PROVIDER_LABELS)}
-            {renderSelectField("Lloji i burimit", "source_type", SOURCE_TYPES, SOURCE_TYPE_LABELS)}
-            {renderSelectField("Mënyra e importit", "import_mode", IMPORT_MODES, IMPORT_MODE_LABELS)}
-            {renderSelectField("Metoda crawl", "crawl_method", ["api", "rss", "html", "manual", "custom"], PARSER_TYPE_LABELS)}
-            {renderSelectField("Automatizimi", "automation_level", AUTOMATION_LEVELS, AUTOMATION_LEVEL_LABELS)}
-            {renderSelectField("Grupi", "source_group", SOURCE_GROUPS, SOURCE_GROUP_LABELS)}
-            {renderSelectField("Parser", "parser_type", PARSER_TYPES, PARSER_TYPE_LABELS)}
-            {renderSelectField("Besueshmëria", "trust_level", TRUST_LEVELS, TRUST_LEVEL_LABELS)}
-            {renderSelectField("Frekuenca", "crawl_frequency_minutes", CRAWL_FREQUENCIES, CRAWL_FREQUENCY_MINUTE_LABELS)}
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {renderTextField("URL kryesore / source_url", "source_url", "https://...")}
-            {renderTextField("Base URL", "base_url", "https://...")}
-            {renderTextField("API endpoint", "api_endpoint", "https://.../api")}
-            {renderTextField("RSS URL", "rss_url", "https://.../feed.xml")}
-            {renderTextField("Jobs URL", "jobs_url", "https://.../jobs")}
-            {renderTextField("Category URL", "category_url", "https://.../category")}
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {renderTextField("Kategoria filter", "category_filter", "pune, pazar...")}
-            {renderTextField("Profesion / fjalë kyçe", "profession_filter", "shofer, pastrim...")}
-            {renderTextField("Vend/shtet filter", "country_filter", "Germany, Belgium...")}
-            {renderTextField("Fjalë përjashtuese", "excluded_keywords", "senior, manager...")}
-            {renderTextField("Country scope", "country_scope")}
-            {renderTextField("Region scope", "region_scope")}
-            {renderTextField("Gjuha", "language", "sq, de, en...")}
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {renderTextareaField("Shënime", "notes", "Çfarë duhet ditur për këtë burim...", 4)}
-            {renderTextareaField("Parser config JSON", "parser_config_json", "{\"selector\":\"...\"}", 8)}
-          </div>
-
-          <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4 text-xs text-white/70">
-            <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-3">
-              <input type="checkbox" checked={editForm.enabled !== false && editForm.is_active !== false} onChange={(e) => { updateEdit("enabled", e.target.checked); updateEdit("is_active", e.target.checked); }} />
-              Aktiv / përdoret në import
-            </label>
-            <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-3">
-              <input type="checkbox" checked={editForm.login_required === true} onChange={(e) => updateEdit("login_required", e.target.checked)} />
-              Kërkon login
-            </label>
-            <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-3">
-              <input type="checkbox" checked={editForm.moderation_required !== false} onChange={(e) => updateEdit("moderation_required", e.target.checked)} />
-              Kërkon miratim
-            </label>
-            <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-3">
-              <input type="checkbox" checked={editForm.original_source_required !== false} onChange={(e) => updateEdit("original_source_required", e.target.checked)} />
-              Kërkon burim origjinal
-            </label>
-          </div>
-
-          <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-3 text-[11px] text-white/45">
-            Fusha të sistemit: last_checked_at: {source.last_checked_at || "—"} · last_success_at: {source.last_success_at || "—"} · failure_count: {source.failure_count || 0} · last_error: {source.last_error || "—"}
-          </div>
+    <div className="mx-3 mb-3 rounded-xl border border-[#8ff0cf]/20 bg-[#07101f] p-3 shadow-xl">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-bold text-white">Përpuno: {source.name || "Burim"}</h3>
+          <p className="text-xs text-white/50">Panel kompakt me të gjitha fushat që ruhen për këtë burim.</p>
         </div>
-      </td>
-    </tr>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => saveEdit(source)} disabled={busyId === source.id} className="rounded-lg border border-emerald-300/20 px-3 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-300/10 disabled:opacity-50">
+            <Save className="inline w-3 h-3 mr-1" /> Ruaj
+          </button>
+          <button type="button" onClick={() => { setEditingId(""); setEditForm({}); }} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-white/80 hover:bg-white/10">
+            <X className="inline w-3 h-3 mr-1" /> Mbyll
+          </button>
+        </div>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {renderTextField("Emri", "name", "Emri i burimit")}
+        {renderSelectField("Provider", "provider_key", PROVIDERS, PROVIDER_LABELS)}
+        {renderSelectField("Lloji", "source_type", SOURCE_TYPES, SOURCE_TYPE_LABELS)}
+        {renderSelectField("Mënyra", "import_mode", IMPORT_MODES, IMPORT_MODE_LABELS)}
+        {renderSelectField("Metoda", "crawl_method", ["api", "rss", "html", "manual", "custom"], PARSER_TYPE_LABELS)}
+        {renderSelectField("Auto", "automation_level", AUTOMATION_LEVELS, AUTOMATION_LEVEL_LABELS)}
+        {renderSelectField("Grupi", "source_group", SOURCE_GROUPS, SOURCE_GROUP_LABELS)}
+        {renderSelectField("Parser", "parser_type", PARSER_TYPES, PARSER_TYPE_LABELS)}
+        {renderSelectField("Besueshmëria", "trust_level", TRUST_LEVELS, TRUST_LEVEL_LABELS)}
+        {renderSelectField("Frekuenca", "crawl_frequency_minutes", CRAWL_FREQUENCIES, CRAWL_FREQUENCY_MINUTE_LABELS)}
+      </div>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {renderTextField("Source URL", "source_url", "https://...")}
+        {renderTextField("Base URL", "base_url", "https://...")}
+        {renderTextField("API endpoint", "api_endpoint", "https://.../api")}
+        {renderTextField("RSS URL", "rss_url", "https://.../feed.xml")}
+        {renderTextField("Jobs URL", "jobs_url", "https://.../jobs")}
+        {renderTextField("Category URL", "category_url", "https://.../category")}
+      </div>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {renderTextField("Kategori", "category_filter", "pune, pazar...")}
+        {renderTextField("Fjalë kyçe", "profession_filter", "shofer, pastrim...")}
+        {renderTextField("Vend", "country_filter", "Germany, Belgium...")}
+        {renderTextField("Përjashto", "excluded_keywords", "senior, manager...")}
+        {renderTextField("Country scope", "country_scope")}
+        {renderTextField("Region scope", "region_scope")}
+        {renderTextField("Gjuha", "language", "sq, de, en...")}
+      </div>
+
+      <details className="mt-3 rounded-lg border border-white/10 bg-white/[0.025] p-2" open>
+        <summary className="cursor-pointer text-xs font-semibold text-white/75">Shënime dhe parser</summary>
+        <div className="mt-2 grid gap-2 md:grid-cols-2">
+          {renderTextareaField("Shënime", "notes", "Çfarë duhet ditur për këtë burim...", 2)}
+          {renderTextareaField("Parser config JSON", "parser_config_json", "{\"selector\":\"...\"}", 4)}
+        </div>
+      </details>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 text-xs text-white/70">
+        <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-2">
+          <input type="checkbox" checked={editForm.enabled !== false && editForm.is_active !== false} onChange={(e) => { updateEdit("enabled", e.target.checked); updateEdit("is_active", e.target.checked); }} />
+          Aktiv
+        </label>
+        <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-2">
+          <input type="checkbox" checked={editForm.login_required === true} onChange={(e) => updateEdit("login_required", e.target.checked)} />
+          Kërkon login
+        </label>
+        <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-2">
+          <input type="checkbox" checked={editForm.moderation_required !== false} onChange={(e) => updateEdit("moderation_required", e.target.checked)} />
+          Kërkon miratim
+        </label>
+        <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-2">
+          <input type="checkbox" checked={editForm.original_source_required !== false} onChange={(e) => updateEdit("original_source_required", e.target.checked)} />
+          Burim origjinal
+        </label>
+      </div>
+
+      <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-2 text-[10px] text-white/45">
+        ID: {source.id || "—"} · seed_key: {source.seed_key || "—"} · last_checked_at: {source.last_checked_at || "—"} · last_success_at: {source.last_success_at || "—"} · failure_count: {source.failure_count || 0} · last_error: {source.last_error || "—"}
+      </div>
+    </div>
   );
 
   if (isLoading) return <div className="py-10 text-center text-white/50">Duke ngarkuar burimet...</div>;
@@ -686,6 +684,7 @@ export default function ImportSources() {
             <button type="button" onClick={resetColumns} className="rounded border border-white/10 px-2 py-1 hover:bg-white/10">Rikthe kolonat</button>
           </div>
         </div>
+        {editingSource && renderFullEditor(editingSource)}
         <div className="overflow-x-auto">
           <table className="table-fixed text-[11px] leading-tight" style={{ width: columns.reduce((sum, column) => sum + columnWidth(column), 210) + 210 }}>
             <thead className="bg-white/5 text-white/45">
@@ -757,7 +756,6 @@ export default function ImportSources() {
                       </div>
                     </td>
                   </tr>
-                  {editingId === source.id && renderFullEditor(source)}
                 </React.Fragment>
               ))}
             </tbody>
