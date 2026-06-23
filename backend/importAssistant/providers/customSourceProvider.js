@@ -118,6 +118,8 @@ function mapGenericJobs(json, source = {}) {
   const config = parserConfig(source);
   const rows = Array.isArray(json)
     ? json
+    : Array.isArray(json.stellenangebote)
+      ? json.stellenangebote
     : Array.isArray(json.jobs)
       ? json.jobs
       : Array.isArray(json.data)
@@ -126,37 +128,67 @@ function mapGenericJobs(json, source = {}) {
           ? json.results
           : [];
   return rows.map((job) => {
-    const url = job.url || job.source_url || job.apply_url || job.link || "";
+    const url = job.url || job.source_url || job.apply_url || job.link || (job.refnr ? `https://www.arbeitsagentur.de/jobsuche/jobdetail/${encodeURIComponent(job.refnr)}` : "");
+    const location = typeof job.arbeitsort === "object" && job.arbeitsort
+      ? cleanText([job.arbeitsort.ort, job.arbeitsort.region, job.arbeitsort.land].filter(Boolean).join(", "))
+      : cleanText(job.location || job.candidate_required_location || "");
+    const country = typeof job.arbeitsort === "object" && job.arbeitsort ? job.arbeitsort.land : job.country;
+    const city = typeof job.arbeitsort === "object" && job.arbeitsort ? job.arbeitsort.ort : job.city;
+    const description = cleanText([
+      job.description || job.content || job.summary || "",
+      job.beruf ? `Beruf: ${job.beruf}` : "",
+      job.arbeitgeber ? `Arbeitgeber: ${job.arbeitgeber}` : "",
+      location ? `Ort: ${location}` : "",
+      job.aktuelleVeroeffentlichungsdatum ? `Veröffentlicht: ${job.aktuelleVeroeffentlichungsdatum}` : "",
+    ].filter(Boolean).join("\n"));
     return {
       provider_key: source.provider_key || "custom",
-      external_id: String(job.id || job.slug || job.external_id || url || job.title || ""),
+      external_id: String(job.id || job.slug || job.external_id || job.refnr || url || job.title || ""),
       source_url: url,
       source_name: source.name || "API",
       item_type: config.item_type || "job",
       category: source.category_filter || "pune",
-      original_title: job.title || job.position || job.name || "",
-      original_description: cleanText(job.description || job.content || job.summary || ""),
-      original_company: job.company || job.company_name || job.organization || "",
-      original_location: cleanText(job.location || job.candidate_required_location || ""),
-      original_country: normalizeCountry(job.country || ""),
-      original_city: cleanText(job.city || ""),
-      original_salary: cleanText(job.salary || ""),
-      contact_methods: job.apply_url ? [{ type: "application_form", value: job.apply_url }] : [],
+      original_title: job.title || job.titel || job.beruf || job.position || job.name || "",
+      original_description: description,
+      original_company: job.company || job.company_name || job.organization || job.arbeitgeber || "",
+      original_location: location,
+      original_country: normalizeCountry(country || ""),
+      original_city: cleanText(city || ""),
+      original_salary: cleanText(job.salary || job.verguetung || ""),
+      contact_methods: (job.apply_url || url) ? [{ type: "application_form", value: job.apply_url || url }] : [],
       tags: splitTags(job.tags || job.category),
-      published_at: job.date || job.created_at || job.publication_date || job.published_at || ""
+      published_at: job.date || job.created_at || job.publication_date || job.published_at || job.aktuelleVeroeffentlichungsdatum || ""
     };
   });
+}
+
+function buildBundesagenturUrl(source = {}, maxItems = 50) {
+  const config = parserConfig(source);
+  const endpoint = source.api_endpoint || getUrl(source);
+  const url = new URL(endpoint);
+  const query = cleanText(config.query || source.query || config.default_query || "fahrer");
+  const location = cleanText(config.country_filter || source.country_filter || config.default_location || "Deutschland");
+  url.searchParams.set("was", query);
+  if (location) url.searchParams.set("wo", location);
+  url.searchParams.set("angebotsart", String(config.angebotsart || 1));
+  url.searchParams.set("page", String(config.page || 1));
+  url.searchParams.set("size", String(Math.min(Number(config.page_size || maxItems || 10), 50)));
+  return url.toString();
 }
 
 async function fetchJsonApi({ maxItems = 50, source = {} } = {}) {
   const url = getUrl(source);
   if (!url) return [];
-  const response = await fetch(url, {
-    headers: { Accept: "application/json", "User-Agent": "AntoktonImportAssistant/1.0" }
+  const config = parserConfig(source);
+  const isBundesagentur = config.api_format === "bundesagentur" || /arbeitsagentur\.de\/jobboerse\/jobsuche-service/i.test(url);
+  const readUrl = isBundesagentur ? buildBundesagenturUrl(source, maxItems) : url;
+  const headers = { Accept: "application/json", "User-Agent": "AntoktonImportAssistant/1.0" };
+  if (isBundesagentur) headers[config.api_key_header || "X-API-Key"] = config.api_key || "jobboerse-jobsuche";
+  const response = await fetch(readUrl, {
+    headers
   });
   if (!response.ok) throw new Error(`API source returned ${response.status}`);
   const json = await response.json();
-  const config = parserConfig(source);
   const mapped = config.api_format === "remoteok" || /remoteok\.com/i.test(url)
     ? mapRemoteOk(Array.isArray(json) ? json : [], source)
     : mapGenericJobs(json, source);
@@ -317,6 +349,46 @@ function looksLikeListingUrl(url = "", text = "", source = {}) {
   return patterns.some((pattern) => haystack.includes(pattern));
 }
 
+function hasUsableHtmlParserConfig(config = {}) {
+  return Boolean(config.item_selector || config.item_url_patterns || config.json_ld_jobs);
+}
+
+function inferHtmlParserConfigFromHtml(html = "", source = {}, baseUrl = "") {
+  const candidateDiagnostics = inspectAnchorCandidates(html, {
+    ...source,
+    parser_config: {
+      item_url_patterns: "job,jobs,pune,puna,punesim,vende-pune,vend-pune,konkurs,karriere,career,careers,vacancy,vacancies,position,positions,stelle,stellenangebote,jobdetail,apply",
+      json_ld_jobs: true,
+    },
+  }, baseUrl);
+  const jsonLdJobs = parseJsonLdJobs(html, source, baseUrl);
+  const classCounts = new Map();
+  const blockPattern = /<([a-z0-9-]+)\b([^>]*(?:class|data-testid|data-test)[^>]*)>([\s\S]{0,2200}?(?:job|position|vacanc|career|pune|stelle|stellenangebot|apply)[\s\S]{0,2200}?)<\/\1>/gi;
+  for (const match of html.matchAll(blockPattern)) {
+    const className = /class\s*=\s*["']([^"']+)["']/i.exec(match[2] || "")?.[1] || "";
+    className.split(/\s+/).forEach((name) => {
+      if (/(job|position|vacanc|card|listing|result|posting|opportunity|stelle|angebot)/i.test(name)) {
+        classCounts.set(name, (classCounts.get(name) || 0) + 1);
+      }
+    });
+  }
+  const likelyClass = [...classCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+  if (!candidateDiagnostics.candidate_job_links_found && !jsonLdJobs.length && !likelyClass) return null;
+  return {
+    item_url_patterns: "job,jobs,pune,puna,punesim,vende-pune,vend-pune,konkurs,karriere,career,careers,vacancy,vacancies,position,positions,stelle,stellenangebote,jobdetail,apply",
+    json_ld_jobs: jsonLdJobs.length > 0,
+    item_selector: likelyClass ? `.${likelyClass}` : "",
+    title_selector: "h1,h2,h3,a,[class*='title'],[class*='position'],[class*='job'],[class*='stelle']",
+    link_selector: "a[href]",
+    company_selector: "[class*='company'],[class*='employer'],[class*='organization'],[class*='arbeitgeber']",
+    location_selector: "[class*='location'],[class*='city'],[class*='country'],[class*='ort'],[class*='standort']",
+    date_selector: "time,[class*='date'],[class*='posted'],[class*='datum']",
+    summary_selector: "p,[class*='summary'],[class*='description'],[class*='excerpt']",
+    requires_detail_page: true,
+    discovered_by: "runtime_auto_parser",
+  };
+}
+
 function missingParserConfigFailure(source = {}, url = "") {
   return [{
     provider_key: source.provider_key || "custom",
@@ -326,7 +398,7 @@ function missingParserConfigFailure(source = {}, url = "") {
     category: source.category_filter || "pune",
     original_title: source.name || "HTML source",
     original_description: "",
-    _import_rejection_status: "skipped_missing_parser_config",
+    _import_rejection_status: "needs_configuration",
     _import_rejection_reason: "HTML source missing clear parser configuration"
   }];
 }
@@ -480,17 +552,21 @@ async function fetchHtmlPage({ maxItems = 50, source = {} } = {}) {
   const url = getUrl(source);
   if (!url) return [];
   if (isBlockedNonJobUrl(url)) return nonJobPageFailure(source, url);
-  const config = parserConfig(source);
-  if (!config.item_selector && !config.item_url_patterns && !config.json_ld_jobs) {
-    return missingParserConfigFailure(source, url);
-  }
   const response = await fetch(url, {
     headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": "AntoktonImportAssistant/1.0" }
   });
   if (!response.ok) throw new Error(`HTML source returned ${response.status}`);
   const html = await response.text();
-  const jsonLd = parseJsonLdJobs(html, source, url);
-  const anchors = parseHtmlAnchors(html, source, url);
+  const config = parserConfig(source);
+  const inferredConfig = hasUsableHtmlParserConfig(config) ? null : inferHtmlParserConfigFromHtml(html, source, response.url || url);
+  if (!hasUsableHtmlParserConfig(config) && !inferredConfig) {
+    return missingParserConfigFailure(source, response.url || url);
+  }
+  const effectiveSource = inferredConfig
+    ? { ...source, parser_config: { ...config, ...inferredConfig } }
+    : source;
+  const jsonLd = parseJsonLdJobs(html, effectiveSource, response.url || url);
+  const anchors = parseHtmlAnchors(html, effectiveSource, response.url || url);
   const merged = [];
   const seen = new Set();
   for (const item of [...jsonLd, ...anchors]) {
@@ -542,24 +618,19 @@ async function inspectHtmlSource(source = {}) {
       reason: "URL është e bllokuar si faqe jo-njoftim ose faqe marketingu.",
     };
   }
-  if (!config.item_selector && !config.item_url_patterns && !config.json_ld_jobs) {
-    return {
-      url,
-      http_status: 0,
-      html_size: 0,
-      selectors_tried: selectorsTried,
-      reason: "Mungon parser_config: item_selector, item_url_patterns ose json_ld_jobs.",
-    };
-  }
   try {
     const response = await fetch(url, {
       headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": "AntoktonImportAssistant/1.0" }
     });
     const html = await response.text();
-    const anchors = parseHtmlAnchors(html, source, response.url || url);
-    const jsonLd = parseJsonLdJobs(html, source, response.url || url);
-    const candidateDiagnostics = inspectAnchorCandidates(html, source, response.url || url);
-    const selectorMatches = selectorMatchSummary(html, source);
+    const inferredConfig = hasUsableHtmlParserConfig(config) ? null : inferHtmlParserConfigFromHtml(html, source, response.url || url);
+    const effectiveSource = inferredConfig
+      ? { ...source, parser_config: { ...config, ...inferredConfig } }
+      : source;
+    const anchors = parseHtmlAnchors(html, effectiveSource, response.url || url);
+    const jsonLd = parseJsonLdJobs(html, effectiveSource, response.url || url);
+    const candidateDiagnostics = inspectAnchorCandidates(html, effectiveSource, response.url || url);
+    const selectorMatches = selectorMatchSummary(html, effectiveSource);
     const javascriptRendered = looksJavascriptRendered(html);
     const botProtection = looksBotProtected(html, response.status);
     let reason = "";
@@ -567,6 +638,7 @@ async function inspectHtmlSource(source = {}) {
     else if (!response.ok) reason = `URL ktheu HTTP ${response.status}.`;
     else if (!html.trim()) reason = "HTML bosh.";
     else if (javascriptRendered) reason = "Faqja duket JavaScript-rendered; HTML publik nuk përmban kartat e njoftimeve.";
+    else if (!hasUsableHtmlParserConfig(config) && !inferredConfig) reason = "Mungon parser_config dhe auto-parser nuk gjeti kartë/link njoftimi të besueshëm. Shënohet si needs_configuration.";
     else if (!anchors.length && !jsonLd.length) reason = "HTML u lexua, por nuk u kapën linke njoftimesh me selectorët/patterns aktualë.";
     else reason = `U gjetën ${anchors.length} linke dhe ${jsonLd.length} JSON-LD, por mund të kenë dështuar në validim.`;
     return {
@@ -575,6 +647,8 @@ async function inspectHtmlSource(source = {}) {
       html_size: html.length,
       selectors_tried: selectorsTried,
       selector_matches: selectorMatches,
+      inferred_parser_config: inferredConfig,
+      configuration_status: !hasUsableHtmlParserConfig(config) && !inferredConfig ? "needs_configuration" : "configured",
       javascript_rendered: javascriptRendered,
       bot_protection: botProtection,
       all_links_found: candidateDiagnostics.all_links_found,

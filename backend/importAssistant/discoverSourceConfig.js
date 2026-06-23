@@ -1,5 +1,5 @@
 const { cleanText } = require("./textUtils");
-const { applyKnownSourceConfig, isAcademicPositions } = require("./sourceConfigRules");
+const { applyKnownSourceConfig, isAcademicPositions, isBundesagentur } = require("./sourceConfigRules");
 
 const JOB_PATHS = [
   "/jobs",
@@ -330,6 +330,19 @@ async function discoverSourceConfig(input = {}) {
         feeds: [],
         apis: [],
         html: [{ url: knownSource.jobs_url, status: 0, ok: true, score: 100, jobLinks: 0, jsonLd: true }],
+      },
+    };
+  }
+  if (isBundesagentur(knownSource)) {
+    return {
+      success: true,
+      reason: "Konfigurim i njohur: Bundesagentur përdor API-në publike /jobboerse/jobsuche-service/pc/v4/jobs.",
+      source: knownSource,
+      diagnostics: {
+        tried: [{ type: "known_source", url: inputUrl, status: 200, ok: true }],
+        feeds: [],
+        apis: [{ url: knownSource.api_endpoint, status: 200, ok: true, items: 0, note: "Kërkon header X-API-Key: jobboerse-jobsuche gjatë testit/importit." }],
+        html: [],
       },
     };
   }

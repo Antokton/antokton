@@ -709,6 +709,8 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
         quality_score: validation.quality_score || 0
       });
     }
+    const needsConfiguration = rawItems.length > 0
+      && rawItems.every((raw) => ["needs_configuration", "skipped_missing_parser_config"].includes(raw?._import_rejection_status));
     logRecord = {
       ...logRecord,
       finished_at: now(),
@@ -717,10 +719,10 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
       rejected_count: rejectedCount,
       queries_tried: [...queriesTried],
       countries_tried: [...countriesTried],
-      status: rawItems.length && !validCount ? "test_zero_valid_items" : "test_completed",
-      error_message: rawItems.length && !validCount ? "Items fetched but failed validation" : (rawItems.length ? "" : "Test returned zero items")
+      status: needsConfiguration ? "test_needs_configuration" : (rawItems.length && !validCount ? "test_zero_valid_items" : "test_completed"),
+      error_message: needsConfiguration ? "Source needs parser configuration" : (rawItems.length && !validCount ? "Items fetched but failed validation" : (rawItems.length ? "" : "Test returned zero items"))
     };
-    const htmlDiagnostics = rawItems.length === 0
+    const htmlDiagnostics = (rawItems.length === 0 || needsConfiguration)
       && providerKey === "custom"
       && String(source.parser_type || source.crawl_method || source.source_type || "").toLowerCase() === "html"
       && typeof provider.inspectHtmlSource === "function"
@@ -745,13 +747,17 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
       json_ld_jobs_found: htmlDiagnostics?.json_ld_jobs_found,
       html_preview: htmlDiagnostics?.html_preview,
       zero_reason: htmlDiagnostics?.reason,
+      configuration_status: needsConfiguration ? "needs_configuration" : htmlDiagnostics?.configuration_status,
+      inferred_parser_config: htmlDiagnostics?.inferred_parser_config,
       missing_fields: diagnoseSourceConfig(source, providerKey),
       queries_tried: [...queriesTried],
       countries_tried: [...countriesTried],
-      recommendation: htmlDiagnostics?.reason || sourceTestRecommendation(source, config, rawItems.length, validCount, rejectedCount)
+      recommendation: needsConfiguration
+        ? (htmlDiagnostics?.reason || "Burimi HTML kërkon konfigurim parser-i ose auto-discovery nuk gjeti kartat e njoftimeve.")
+        : (htmlDiagnostics?.reason || sourceTestRecommendation(source, config, rawItems.length, validCount, rejectedCount))
     };
     return {
-      success: true,
+      success: !needsConfiguration,
       dry_run: true,
       fetched_count: rawItems.length,
       valid_count: validCount,

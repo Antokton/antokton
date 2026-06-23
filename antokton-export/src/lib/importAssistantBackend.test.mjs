@@ -23,6 +23,7 @@ const customSourceProvider = require(path.join(root, "backend/importAssistant/pr
 const genericRssProvider = require(path.join(root, "backend/importAssistant/providers/genericRssProvider.js"));
 const { discoverSourceConfig } = require(path.join(root, "backend/importAssistant/discoverSourceConfig.js"));
 const { handleImportAssistantRoute } = require(path.join(root, "backend/importAssistant/importRoutes.js"));
+const { applyKnownSourceConfig } = require(path.join(root, "backend/importAssistant/sourceConfigRules.js"));
 
 test("generateAlbanianListingTitle creates natural Albanian title", () => {
   assert.equal(generateAlbanianListingTitle({ original_title: "Truck Driver CE wanted" }), "Kërkohet shofer CE");
@@ -141,6 +142,17 @@ test("auto-discover uses known Academic Positions jobs URL without placeholders"
   assert.equal(result.source.login_required, false);
   assert.equal(result.source.original_source_required, true);
   assert.equal(result.source.enabled, true);
+});
+
+test("auto-discover configures Bundesagentur as API source", async () => {
+  const result = await discoverSourceConfig({ url: "https://www.arbeitsagentur.de", name: "Bundesagentur für Arbeit" });
+  assert.equal(result.success, true);
+  assert.equal(result.source.provider_key, "custom");
+  assert.equal(result.source.source_type, "api");
+  assert.equal(result.source.parser_type, "api");
+  assert.equal(result.source.api_endpoint, "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs");
+  assert.equal(result.source.parser_config.api_format, "bundesagentur");
+  assert.equal(result.source.parser_config.api_key, "jobboerse-jobsuche");
 });
 
 test("import validation requires real title, URL, source and quality fields", () => {
@@ -291,6 +303,74 @@ test("custom provider imports public HTML listing links", async () => {
     });
     assert.equal(rows.length, 1);
     assert.equal(rows[0].source_url, "https://example.test/jobs/cleaner-1");
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("custom provider auto-infers parser config for HTML sources", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => ({
+    ok: true,
+    status: 200,
+    url: String(url),
+    async text() {
+      return `<html><body>
+        <article class="result-card"><a href="/careers/driver-1">Driver wanted in Hamburg</a></article>
+        <article class="result-card"><a href="/careers/cleaner-2">Cleaner wanted in Brussels</a></article>
+      </body></html>`;
+    }
+  });
+  try {
+    const rows = await customSourceProvider.fetchItems({
+      source: {
+        name: "No Config HTML",
+        parser_type: "html",
+        source_url: "https://example.test/careers",
+        category_filter: "pune"
+      },
+      maxItems: 10
+    });
+    assert.equal(rows.length, 2);
+    assert.equal(rows[0].source_url, "https://example.test/careers/driver-1");
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("custom provider imports Bundesagentur API jobs", async () => {
+  const originalFetch = global.fetch;
+  let requestedUrl = "";
+  let apiKey = "";
+  global.fetch = async (url, options = {}) => {
+    requestedUrl = String(url);
+    apiKey = options.headers?.["X-API-Key"] || "";
+    return {
+      ok: true,
+      status: 200,
+      async json() {
+        return {
+          stellenangebote: [{
+            titel: "Fahrer (m/w/d)",
+            beruf: "Fahrer/in",
+            refnr: "REF-1",
+            arbeitgeber: "Demo GmbH",
+            arbeitsort: { ort: "Berlin", region: "Berlin", land: "Deutschland" },
+            aktuelleVeroeffentlichungsdatum: "2026-06-23"
+          }]
+        };
+      }
+    };
+  };
+  try {
+    const source = applyKnownSourceConfig({ name: "Bundesagentur für Arbeit", source_url: "https://www.arbeitsagentur.de" });
+    const rows = await customSourceProvider.fetchItems({ source, maxItems: 5 });
+    assert.equal(apiKey, "jobboerse-jobsuche");
+    assert.match(requestedUrl, /was=fahrer/);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].original_title, "Fahrer (m/w/d)");
+    assert.equal(rows[0].source_url, "https://www.arbeitsagentur.de/jobsuche/jobdetail/REF-1");
+    assert.equal(rows[0].original_company, "Demo GmbH");
   } finally {
     global.fetch = originalFetch;
   }
