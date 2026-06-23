@@ -4,6 +4,10 @@ const { buildExpiryFields } = require("./expiry");
 const { normalizeSourceType, technicalDefaultsForSource } = require("./seedSources");
 
 function normalizeSourcePayload(body = {}) {
+  let parserConfig = body.parser_config || {};
+  if (typeof body.parser_config_json === "string" && body.parser_config_json.trim()) {
+    try { parserConfig = JSON.parse(body.parser_config_json); } catch { parserConfig = body.parser_config || {}; }
+  }
   const frequencyMinutes = Number(
     body.crawl_frequency_minutes ??
     (body.crawl_frequency_hours !== undefined ? Number(body.crawl_frequency_hours) * 60 : 360)
@@ -46,9 +50,10 @@ function normalizeSourcePayload(body = {}) {
     country_filter: body.country_filter || "",
     category_filter: body.category_filter || "",
     profession_filter: body.profession_filter || "",
+    excluded_keywords: body.excluded_keywords || "",
     source_group: sourceGroup,
     parser_type: body.parser_type || defaults.parser_type || crawlMethod || "manual",
-    parser_config: body.parser_config || {},
+    parser_config: parserConfig,
     trust_level: body.trust_level || defaults.trust_level || "needs_review",
     login_required: body.login_required === true,
     is_editable_by_admin: body.is_editable_by_admin !== false,

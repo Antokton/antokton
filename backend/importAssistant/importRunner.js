@@ -280,6 +280,42 @@ function providerMissingReason(providerKey = "") {
   return "Provider nuk është i konfiguruar; u kalua te burimet e tjera.";
 }
 
+function diagnoseSourceConfig(source = {}, providerKey = "") {
+  const config = parserConfig(source);
+  const missing = [];
+  const url = sourceUrl(source);
+  const crawlMethod = source.crawl_method || source.parser_type || source.source_type || "";
+  if (!source.name) missing.push("name");
+  if (!providerKey) missing.push("provider_key");
+  if (!source.source_type && !source.parser_type) missing.push("source_type/parser_type");
+  if (!source.import_mode) missing.push("import_mode");
+  if (!source.source_group) missing.push("source_group");
+  if (["custom", "generic_rss"].includes(providerKey) && !url && !source.api_endpoint && !source.rss_url && !source.jobs_url && !source.category_url) {
+    missing.push("source_url/base_url/api_endpoint/rss_url/jobs_url/category_url");
+  }
+  if ((crawlMethod === "rss" || providerKey === "generic_rss") && !source.rss_url && !url) missing.push("rss_url");
+  if (crawlMethod === "api" && !source.api_endpoint && !url) missing.push("api_endpoint");
+  if (crawlMethod === "html" && !source.jobs_url && !source.category_url && !url) missing.push("jobs_url/category_url/source_url");
+  if (providerKey === "adzuna") {
+    missing.push("ADZUNA_APP_ID/ADZUNA_APP_KEY në env nëse nuk janë vendosur");
+  }
+  if (providerKey === "jooble") missing.push("JOOBLE_API_KEY në env nëse nuk është vendosur");
+  if (providerKey === "eures") missing.push("EURES_API_KEY në env nëse nuk është vendosur");
+  const hasQuery = source.profession_filter || config.profession_filter || config.query || source.query;
+  if (supportsQueryExpansion(source) && !hasQuery) missing.push("profession_filter/query");
+  return [...new Set(missing)];
+}
+
+function sourceTestRecommendation(source = {}, runtimeConfig = {}, fetchedCount = 0, validCount = 0, rejectedCount = 0) {
+  const providerKey = source.provider_key || "custom";
+  const url = sourceUrl(source);
+  if (!providerIsConfigured(providerKey, runtimeConfig)) return providerMissingReason(providerKey);
+  if (!url && ["custom", "generic_rss"].includes(providerKey)) return "Vendos URL të lexueshme publike ose endpoint API/RSS para testit.";
+  if (fetchedCount === 0) return "Burimi nuk ktheu artikuj. Kontrollo URL/API/RSS, provider-in, query-n dhe vendin; nëse burimi kërkon login, importi publik nuk mund ta lexojë automatikisht.";
+  if (fetchedCount > 0 && validCount === 0 && rejectedCount > 0) return "Burimi ktheu artikuj, por nuk kaluan validimin. Hap shembujt dhe plotëso titull/URL/përshkrim/kontakt ose ul filtrat shumë të ngushtë.";
+  return "";
+}
+
 function runtimeSeedFallbackSources(config = {}) {
   return INITIAL_IMPORT_SOURCES
     .filter(isAutomaticRunnableSource)
@@ -610,17 +646,49 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
   };
   let logRecord = await store.createRecord("ImportLog", logBase, requestedBy);
   if (!providerIsConfigured(providerKey, config)) {
+    const diagnostics = {
+      provider: providerKey,
+      missing_fields: diagnoseSourceConfig(source, providerKey),
+      queries_tried: [],
+      countries_tried: [],
+      recommendation: providerMissingReason(providerKey)
+    };
     logRecord = await store.updateRecord("ImportLog", logRecord.id, {
       finished_at: now(),
       status: "test_skipped",
       skipped_count: 1,
       error_message: providerMissingReason(providerKey)
     });
-    return { success: true, dry_run: true, ...logRecord, samples: [] };
+    return { success: true, dry_run: true, ...logRecord, samples: [], diagnostics };
   }
   try {
-    const sourceForProvider = applyRuntimeOptions({ ...source, base_url: sourceUrl(source) }, {});
-    const rawItems = ensureArray(await provider.fetchItems({ source: sourceForProvider, config, maxItems }));
+    const attempts = buildAttemptPlan(source, {
+      profession_filter: source.profession_filter || parserConfig(source).profession_filter || "",
+      country_filter: source.country_filter || parserConfig(source).country_filter || "",
+      queries: splitList(source.profession_filter || parserConfig(source).profession_filter || ""),
+      countries: splitList(source.country_filter || parserConfig(source).country_filter || ""),
+    }, { selectedSourceRun: true }).slice(0, 8);
+    const queriesTried = new Set();
+    const countriesTried = new Set();
+    let rawItems = [];
+    for (const attempt of attempts.length ? attempts : [{ query: "", country: "" }]) {
+      if (attempt.query) queriesTried.add(attempt.query);
+      if (attempt.country) countriesTried.add(attempt.country);
+      const sourceForProvider = applyRuntimeOptions({
+        ...source,
+        base_url: sourceUrl(source),
+        parser_config: {
+          ...parserConfig(source),
+          query: attempt.query,
+          country_filter: attempt.country || source.country_filter || parserConfig(source).country_filter || "",
+        },
+      }, {
+        profession_filter: attempt.query || source.profession_filter || parserConfig(source).profession_filter || "",
+        country_filter: attempt.country || source.country_filter || parserConfig(source).country_filter || "",
+      });
+      rawItems = ensureArray(await provider.fetchItems({ source: sourceForProvider, config, maxItems }));
+      if (rawItems.length) break;
+    }
     const samples = [];
     let validCount = 0;
     let rejectedCount = 0;
@@ -642,9 +710,19 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
       fetched_count: rawItems.length,
       valid_count: validCount,
       rejected_count: rejectedCount,
+      queries_tried: [...queriesTried],
+      countries_tried: [...countriesTried],
       status: rawItems.length && !validCount ? "test_zero_valid_items" : "test_completed",
-      error_message: rawItems.length && !validCount ? "Items fetched but failed validation" : ""
+      error_message: rawItems.length && !validCount ? "Items fetched but failed validation" : (rawItems.length ? "" : "Test returned zero items")
     });
+    const diagnostics = {
+      provider: providerKey,
+      source_url: sourceUrl(source),
+      missing_fields: diagnoseSourceConfig(source, providerKey),
+      queries_tried: [...queriesTried],
+      countries_tried: [...countriesTried],
+      recommendation: sourceTestRecommendation(source, config, rawItems.length, validCount, rejectedCount)
+    };
     return {
       success: true,
       dry_run: true,
@@ -654,6 +732,7 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
       created_count: 0,
       duplicate_count: 0,
       samples,
+      diagnostics,
       log: logRecord
     };
   } catch (error) {
@@ -673,6 +752,14 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
       duplicate_count: 0,
       error_count: 1,
       message: error.message || "Source test failed",
+      diagnostics: {
+        provider: providerKey,
+        source_url: sourceUrl(source),
+        missing_fields: diagnoseSourceConfig(source, providerKey),
+        queries_tried: [],
+        countries_tried: [],
+        recommendation: error.message || "Source test failed"
+      },
       log: logRecord
     };
   }
