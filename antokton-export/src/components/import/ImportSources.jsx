@@ -3,7 +3,7 @@ import { base44 } from "@/api/antoktonClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Trash2, Save, Play, Pencil, X } from "lucide-react";
+import { Loader2, Plus, Trash2, Save, Play, Pencil, X, Wand2 } from "lucide-react";
 import { CATEGORIES, PROVIDER_LABELS, SOURCE_GROUP_LABELS, PARSER_TYPE_LABELS, TRUST_LEVEL_LABELS, SOURCE_TYPE_LABELS, IMPORT_MODE_LABELS, CRAWL_FREQUENCY_MINUTE_LABELS, AUTOMATION_LEVEL_LABELS } from "./importConstants";
 
 const PROVIDERS = Object.keys(PROVIDER_LABELS);
@@ -243,6 +243,63 @@ export default function ImportSources() {
     await updateSource(source, payload);
     setEditingId("");
     setEditForm({});
+  };
+
+  const applyDiscoveredSource = (current = {}, discovered = {}) => {
+    const parserConfig = discovered.parser_config || current.parser_config || {};
+    return {
+      ...current,
+      ...discovered,
+      name: current.name || discovered.name || "",
+      category_filter: current.category_filter || discovered.category_filter || "pune",
+      country_filter: current.country_filter || discovered.country_filter || "",
+      profession_filter: current.profession_filter || discovered.profession_filter || "",
+      excluded_keywords: current.excluded_keywords || discovered.excluded_keywords || "",
+      parser_config: parserConfig,
+      parser_config_json: stringifyConfig(parserConfig),
+    };
+  };
+
+  const discoverSourceForForm = async (target = "edit") => {
+    const isDraft = target === "draft";
+    const current = isDraft ? draft : editForm;
+    const url = current.source_url || current.base_url || current.jobs_url || current.rss_url || current.api_endpoint || "";
+    if (!url.trim()) return alert("Vendos së pari domain-in ose URL-në kryesore, p.sh. https://academicpositions.com");
+    const busyKey = isDraft ? "discover-draft" : `discover-${editingId || "edit"}`;
+    setBusyId(busyKey);
+    try {
+      const result = await base44.importAssistant.discoverSource({
+        url,
+        name: current.name,
+        source_group: current.source_group,
+        category_filter: current.category_filter,
+        country_filter: current.country_filter,
+        profession_filter: current.profession_filter,
+      });
+      if (result?.success && result?.source) {
+        if (isDraft) {
+          setDraft((form) => applyDiscoveredSource(form, result.source));
+        } else {
+          setEditForm((form) => applyDiscoveredSource(form, result.source));
+        }
+      }
+      const diagnostics = result?.diagnostics || {};
+      const feedCount = Array.isArray(diagnostics.feeds) ? diagnostics.feeds.length : 0;
+      const apiCount = Array.isArray(diagnostics.apis) ? diagnostics.apis.length : 0;
+      const htmlCount = Array.isArray(diagnostics.html) ? diagnostics.html.length : 0;
+      const selected = result?.source
+        ? [
+            result.source.rss_url ? `RSS: ${result.source.rss_url}` : "",
+            result.source.api_endpoint ? `API: ${result.source.api_endpoint}` : "",
+            result.source.jobs_url ? `Jobs: ${result.source.jobs_url}` : "",
+          ].filter(Boolean).join("\n")
+        : "";
+      alert(`${result?.success ? "Zbulimi u krye." : "Zbulimi nuk gjeti burim funksional."}\n${result?.reason || ""}${selected ? `\n${selected}` : ""}\nU provuan: ${feedCount} RSS, ${apiCount} API, ${htmlCount} HTML.`);
+    } catch (error) {
+      alert(error?.message || "Auto-discover dështoi.");
+    } finally {
+      setBusyId("");
+    }
   };
 
   const testSource = async (source) => {
@@ -494,7 +551,18 @@ export default function ImportSources() {
       </div>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {renderTextField("Source URL", "source_url", "https://...")}
+        <div className="sm:col-span-2 lg:col-span-1">
+          {renderTextField("Source URL / domain", "source_url", "https://academicpositions.com")}
+          <button
+            type="button"
+            onClick={() => discoverSourceForForm("edit")}
+            disabled={busyId === `discover-${editingId || "edit"}`}
+            className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[#8ff0cf]/30 px-2 py-1.5 text-xs font-semibold text-[#8ff0cf] hover:bg-[#8ff0cf]/10 disabled:opacity-50"
+          >
+            {busyId === `discover-${editingId || "edit"}` ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+            Zbulo automatikisht
+          </button>
+        </div>
         {renderTextField("Base URL", "base_url", "https://...")}
         {renderTextField("API endpoint", "api_endpoint", "https://.../api")}
         {renderTextField("RSS URL", "rss_url", "https://.../feed.xml")}
@@ -553,7 +621,19 @@ export default function ImportSources() {
         <h2 className="text-white font-bold mb-3">Shto burim</h2>
         <div className="grid gap-2 md:grid-cols-3">
           <Input value={draft.name} onChange={(e) => updateDraft("name", e.target.value)} placeholder="Emri i burimit" className="bg-white/5 border-white/10 text-white" />
-          <Input value={draft.source_url} onChange={(e) => { updateDraft("source_url", e.target.value); updateDraft("base_url", e.target.value); }} placeholder="URL kryesore/API/RSS" className="bg-white/5 border-white/10 text-white" />
+          <div className="flex gap-2">
+            <Input value={draft.source_url} onChange={(e) => { updateDraft("source_url", e.target.value); updateDraft("base_url", e.target.value); }} placeholder="Domain, p.sh. https://academicpositions.com" className="bg-white/5 border-white/10 text-white" />
+            <button
+              type="button"
+              onClick={() => discoverSourceForForm("draft")}
+              disabled={busyId === "discover-draft"}
+              className="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-[#8ff0cf]/30 px-3 py-2 text-xs font-semibold text-[#8ff0cf] hover:bg-[#8ff0cf]/10 disabled:opacity-50"
+              title="Gjej automatikisht Jobs/RSS/API/parser nga domain-i"
+            >
+              {busyId === "discover-draft" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+              Zbulo
+            </button>
+          </div>
           <Select value={draft.source_type} onValueChange={updateDraftSourceType}>
             <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Lloji i burimit" /></SelectTrigger>
             <SelectContent className="bg-[#0b1020] border-white/10">

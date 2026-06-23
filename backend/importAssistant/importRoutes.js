@@ -2,6 +2,7 @@ const { runImport, testImportSource, ensureDefaultSettings, ensureDefaultSources
 const { translateContactMessage } = require("./translateImportedItem");
 const { buildExpiryFields } = require("./expiry");
 const { normalizeSourceType, technicalDefaultsForSource } = require("./seedSources");
+const { discoverSourceConfig } = require("./discoverSourceConfig");
 
 function normalizeSourcePayload(body = {}) {
   let parserConfig = body.parser_config || {};
@@ -189,6 +190,11 @@ async function handleImportAssistantRoute(deps) {
       }
     });
     return send(res, 200, result);
+  }
+
+  if (req.method === "POST" && action === "discover-source") {
+    const body = await readPayload(req);
+    return send(res, 200, await discoverSourceConfig(body));
   }
 
   if (req.method === "GET" && action === "sources") {

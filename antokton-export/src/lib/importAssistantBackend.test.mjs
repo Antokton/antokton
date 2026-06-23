@@ -21,6 +21,7 @@ const { validateImportedItem } = require(path.join(root, "backend/importAssistan
 const arbeitnowProvider = require(path.join(root, "backend/importAssistant/providers/arbeitnowProvider.js"));
 const customSourceProvider = require(path.join(root, "backend/importAssistant/providers/customSourceProvider.js"));
 const genericRssProvider = require(path.join(root, "backend/importAssistant/providers/genericRssProvider.js"));
+const { discoverSourceConfig } = require(path.join(root, "backend/importAssistant/discoverSourceConfig.js"));
 
 test("generateAlbanianListingTitle creates natural Albanian title", () => {
   assert.equal(generateAlbanianListingTitle({ original_title: "Truck Driver CE wanted" }), "Kërkohet shofer CE");
@@ -80,6 +81,51 @@ test("import validation rejects corporate pages and placeholder URLs", () => {
     contact_methods: [{ type: "application_form", value: "https://www.arbeitnow.com/jobs/companies/demo-gmbh/warehouse-operative-berlin-123456" }]
   }, {}, { id: "source-1", name: "Arbeitnow", import_mode: "automatic" });
   assert.equal(arbeitnowJob.valid, true);
+});
+
+test("auto-discover source config turns a domain into a usable HTML jobs source", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => {
+    const href = String(url);
+    if (href === "https://example.test") {
+      return {
+        ok: true,
+        status: 200,
+        url: href,
+        headers: { get: () => "text/html" },
+        text: async () => `<html><body><nav><a href="/find-jobs">Find jobs</a></nav></body></html>`,
+      };
+    }
+    if (href === "https://example.test/find-jobs") {
+      return {
+        ok: true,
+        status: 200,
+        url: href,
+        headers: { get: () => "text/html" },
+        text: async () => `<html><body>
+          <article class="job-card"><a href="/jobs/cleaner-1">Cleaner wanted in Brussels</a><span class="company">Demo</span><span class="location">Brussels</span></article>
+          <article class="job-card"><a href="/jobs/driver-2">Driver wanted in Berlin</a><span class="company">Demo</span><span class="location">Berlin</span></article>
+        </body></html>`,
+      };
+    }
+    return {
+      ok: false,
+      status: 404,
+      url: href,
+      headers: { get: () => "text/html" },
+      text: async () => "not found",
+    };
+  };
+  try {
+    const result = await discoverSourceConfig({ url: "example.test", name: "Example" });
+    assert.equal(result.success, true);
+    assert.equal(result.source.jobs_url, "https://example.test/find-jobs");
+    assert.equal(result.source.parser_type, "html");
+    assert.equal(result.source.parser_config.item_selector, ".job-card");
+    assert.match(result.source.parser_config.item_url_patterns, /job/);
+  } finally {
+    global.fetch = originalFetch;
+  }
 });
 
 test("import validation requires real title, URL, source and quality fields", () => {

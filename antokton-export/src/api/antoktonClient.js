@@ -297,6 +297,9 @@ export const antoktonApi = {
     run(payload = {}) {
       return request('/api/admin/import-assistant/run', { method: 'POST', body: payload });
     },
+    discoverSource(payload = {}) {
+      return request('/api/admin/import-assistant/discover-source', { method: 'POST', body: payload });
+    },
     settings() {
       return request('/api/admin/import-assistant/settings');
     },
