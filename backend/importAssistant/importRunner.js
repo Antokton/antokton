@@ -647,7 +647,7 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
     status: "test_running",
     error_message: ""
   };
-  let logRecord = await store.createRecord("ImportLog", logBase, requestedBy);
+  let logRecord = { id: "", created_date: startedAt, ...logBase };
   if (!providerIsConfigured(providerKey, config)) {
     const diagnostics = {
       provider: providerKey,
@@ -656,12 +656,13 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
       countries_tried: [],
       recommendation: providerMissingReason(providerKey)
     };
-    logRecord = await store.updateRecord("ImportLog", logRecord.id, {
+    logRecord = {
+      ...logRecord,
       finished_at: now(),
       status: "test_skipped",
       skipped_count: 1,
       error_message: providerMissingReason(providerKey)
-    });
+    };
     return { success: true, dry_run: true, ...logRecord, samples: [], diagnostics };
   }
   try {
@@ -708,7 +709,8 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
         quality_score: validation.quality_score || 0
       });
     }
-    logRecord = await store.updateRecord("ImportLog", logRecord.id, {
+    logRecord = {
+      ...logRecord,
       finished_at: now(),
       fetched_count: rawItems.length,
       valid_count: validCount,
@@ -717,7 +719,7 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
       countries_tried: [...countriesTried],
       status: rawItems.length && !validCount ? "test_zero_valid_items" : "test_completed",
       error_message: rawItems.length && !validCount ? "Items fetched but failed validation" : (rawItems.length ? "" : "Test returned zero items")
-    });
+    };
     const htmlDiagnostics = rawItems.length === 0
       && providerKey === "custom"
       && String(source.parser_type || source.crawl_method || source.source_type || "").toLowerCase() === "html"
@@ -766,12 +768,13 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
       && typeof provider.inspectHtmlSource === "function"
         ? await provider.inspectHtmlSource(source)
         : null;
-    logRecord = await store.updateRecord("ImportLog", logRecord.id, {
+    logRecord = {
+      ...logRecord,
       finished_at: now(),
       status: "test_error",
       error_count: 1,
       error_message: htmlDiagnostics?.reason || error.message || "Source test failed"
-    });
+    };
     return {
       success: false,
       dry_run: true,

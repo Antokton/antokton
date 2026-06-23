@@ -22,6 +22,7 @@ const arbeitnowProvider = require(path.join(root, "backend/importAssistant/provi
 const customSourceProvider = require(path.join(root, "backend/importAssistant/providers/customSourceProvider.js"));
 const genericRssProvider = require(path.join(root, "backend/importAssistant/providers/genericRssProvider.js"));
 const { discoverSourceConfig } = require(path.join(root, "backend/importAssistant/discoverSourceConfig.js"));
+const { handleImportAssistantRoute } = require(path.join(root, "backend/importAssistant/importRoutes.js"));
 
 test("generateAlbanianListingTitle creates natural Albanian title", () => {
   assert.equal(generateAlbanianListingTitle({ original_title: "Truck Driver CE wanted" }), "Kërkohet shofer CE");
@@ -398,6 +399,79 @@ test("source test is a dry run and does not create imported posts or failures", 
     assert.equal(records.ImportedPost.length, 0);
     assert.equal(records.ImportFailure.length, 0);
     assert.equal(records.ImportedSource.length, 1);
+    assert.equal(records.ImportLog.length, 0);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("source test route is read-only and does not create sources when zero results", async () => {
+  const records = {
+    ImportedSource: [{
+      id: "html-zero",
+      name: "Zero Jobs",
+      provider_key: "custom",
+      source_type: "html",
+      import_mode: "automatic",
+      crawl_method: "html",
+      parser_type: "html",
+      enabled: true,
+      source_url: "https://example.test/jobs",
+      jobs_url: "https://example.test/jobs",
+      category_filter: "pune",
+      parser_config: { item_url_patterns: "jobs", json_ld_jobs: true }
+    }],
+    ImportAssistantSettings: [],
+    ImportedPost: [],
+    Job: [],
+    ImportLog: [],
+    ImportFailure: []
+  };
+  let readPayloadCalls = 0;
+  const store = {
+    async allRecords(entity) { return records[entity] || []; },
+    async createRecord(entity, data) {
+      const row = { id: `${entity}-${records[entity].length + 1}`, created_date: new Date().toISOString(), ...data };
+      records[entity].push(row);
+      return row;
+    },
+    async updateRecord(entity, id, patch) {
+      const row = records[entity].find((item) => item.id === id);
+      if (row) Object.assign(row, patch);
+      return row;
+    },
+    async deleteRecord() { return true; }
+  };
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    url: "https://example.test/jobs",
+    async text() { return "<html><body><main>No job links here</main></body></html>"; }
+  });
+  try {
+    const beforeSources = records.ImportedSource.length;
+    const beforeLogs = records.ImportLog.length;
+    const result = await handleImportAssistantRoute({
+      req: { method: "POST" },
+      res: {},
+      segments: ["api", "import-assistant", "v1", "sources", "html-zero", "test"],
+      send: (_res, status, body) => ({ status, body }),
+      sendError: (_res, status, message) => ({ status, body: { error: message } }),
+      readPayload: async () => { readPayloadCalls += 1; return {}; },
+      requesterHasRole: async () => true,
+      getRequestUserEmail: async () => "admin@test",
+      store,
+      config: {}
+    });
+    assert.equal(result.status, 200);
+    assert.equal(result.body.dry_run, true);
+    assert.equal(result.body.fetched_count, 0);
+    assert.equal(records.ImportedSource.length, beforeSources);
+    assert.equal(records.ImportLog.length, beforeLogs);
+    assert.equal(records.ImportedPost.length, 0);
+    assert.equal(records.ImportFailure.length, 0);
+    assert.equal(readPayloadCalls, 0);
   } finally {
     global.fetch = originalFetch;
   }

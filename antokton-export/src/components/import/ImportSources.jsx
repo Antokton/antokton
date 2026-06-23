@@ -349,10 +349,6 @@ export default function ImportSources() {
       ].filter(Boolean).join("\n");
       const recommendation = diagnostics.recommendation ? `\nRekomandim: ${diagnostics.recommendation}` : "";
       alert(`Testi përfundoi (pa krijuar postime): ${result.fetched_count || 0} të marra, ${result.valid_count || 0} të vlefshme, ${result.rejected_count || 0} refuzime.${tried ? `\n${tried}` : ""}${missing}${recommendation}${samples}`);
-      await Promise.all([
-        refresh(),
-        qc.invalidateQueries({ queryKey: ["importAssistant", "logs"] }),
-      ]);
     } finally {
       setBusyId("");
     }

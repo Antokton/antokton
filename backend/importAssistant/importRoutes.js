@@ -204,7 +204,7 @@ async function handleImportAssistantRoute(deps) {
     return send(res, 200, (await store.allRecords("ImportedSource")).map(applyKnownSourceConfig));
   }
 
-  if (req.method === "POST" && action === "sources") {
+  if (req.method === "POST" && action === "sources" && !tail[1]) {
     const body = await readPayload(req);
     return send(res, 200, await store.createRecord("ImportedSource", {
       ...normalizeSourcePayload(body),
