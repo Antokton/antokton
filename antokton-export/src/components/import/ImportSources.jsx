@@ -3,7 +3,7 @@ import { base44 } from "@/api/antoktonClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Trash2, Save, Play, Pencil, X, Wand2 } from "lucide-react";
+import { Loader2, Plus, Trash2, Save, Play, Pencil, X, Wand2, Power } from "lucide-react";
 import { CATEGORIES, PROVIDER_LABELS, SOURCE_GROUP_LABELS, PARSER_TYPE_LABELS, TRUST_LEVEL_LABELS, SOURCE_TYPE_LABELS, IMPORT_MODE_LABELS, CRAWL_FREQUENCY_MINUTE_LABELS, AUTOMATION_LEVEL_LABELS } from "./importConstants";
 
 const PROVIDERS = Object.keys(PROVIDER_LABELS);
@@ -229,6 +229,8 @@ export default function ImportSources() {
     try {
       await base44.importAssistant.updateSource(source.id, patch);
       refresh();
+    } catch (error) {
+      alert(error?.message || "Veprimi nuk u krye.");
     } finally {
       setBusyId("");
     }
@@ -462,20 +464,43 @@ export default function ImportSources() {
       await Promise.all(selectedSources.map((source) => base44.importAssistant.updateSource(source.id, { enabled, is_active: enabled })));
       setSelectedIds([]);
       refresh();
+    } catch (error) {
+      alert(error?.message || "Burimet e zgjedhura nuk u përditësuan.");
     } finally {
       setBusyId("");
     }
   };
 
   const bulkDelete = async () => {
-    const selectedSources = sources.filter((source) => selectedIds.includes(source.id) && source.is_editable_by_admin !== false);
-    if (!selectedSources.length) return alert("Burimet e zgjedhura nuk mund të fshihen ose nuk ka zgjedhje.");
+    const selectedSources = sources.filter((source) => selectedIds.includes(source.id));
+    if (!selectedSources.length) return alert("Nuk ka burime të zgjedhura.");
     if (!confirm(`Të fshihen ${selectedSources.length} burime të zgjedhura?`)) return;
     setBusyId("bulk");
     try {
       await Promise.all(selectedSources.map((source) => base44.importAssistant.deleteSource(source.id)));
       setSelectedIds([]);
       refresh();
+    } catch (error) {
+      alert(error?.message || "Burimet e zgjedhura nuk u fshinë.");
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const deleteSource = async (source) => {
+    if (!source?.id) return alert("Mungon ID e burimit.");
+    if (!confirm(`Ta fshij burimin "${source.name || "pa emër"}"?`)) return;
+    setBusyId(source.id);
+    try {
+      await base44.importAssistant.deleteSource(source.id);
+      if (editingId === source.id) {
+        setEditingId("");
+        setEditForm({});
+      }
+      setSelectedIds((current) => current.filter((id) => id !== source.id));
+      refresh();
+    } catch (error) {
+      alert(error?.message || "Burimi nuk u fshi.");
     } finally {
       setBusyId("");
     }
@@ -515,10 +540,10 @@ export default function ImportSources() {
   };
 
   const renderSelectField = (label, key, options, labels) => (
-    <label className="block text-[10px] text-white/55">
+    <label className="block min-w-0 text-[10px] text-white/55">
       {label}
       <Select value={String(editForm[key] ?? "")} onValueChange={(value) => updateEdit(key, value)}>
-        <SelectTrigger className="mt-1 h-8 bg-white/5 border-white/10 text-xs text-white"><SelectValue /></SelectTrigger>
+        <SelectTrigger className="mt-1 h-8 w-full min-w-0 bg-white/5 border-white/10 text-xs text-white"><SelectValue /></SelectTrigger>
         <SelectContent className="bg-[#0b1020] border-white/10">
           {options.map((value) => <SelectItem key={value} value={String(value)} className="text-white">{labels?.[value] || value}</SelectItem>)}
         </SelectContent>
@@ -527,9 +552,9 @@ export default function ImportSources() {
   );
 
   const renderTextField = (label, key, placeholder = "") => (
-    <label className="block text-[10px] text-white/55">
+    <label className="block min-w-0 text-[10px] text-white/55">
       {label}
-      <Input value={editForm[key] || ""} onChange={(e) => updateEdit(key, e.target.value)} placeholder={placeholder} className="mt-1 h-8 bg-white/5 border-white/10 text-xs text-white" />
+      <Input value={editForm[key] || ""} onChange={(e) => updateEdit(key, e.target.value)} placeholder={placeholder} className="mt-1 h-8 w-full min-w-0 bg-white/5 border-white/10 text-xs text-white" />
     </label>
   );
 
@@ -547,7 +572,7 @@ export default function ImportSources() {
   );
 
   const renderFullEditor = (source) => (
-    <div className="mx-3 mb-3 rounded-xl border border-[#8ff0cf]/20 bg-[#07101f] p-3 shadow-xl">
+    <div className="sticky left-0 m-2 w-[calc(100vw-2rem)] max-w-[1120px] min-w-[320px] overflow-hidden rounded-xl border border-[#8ff0cf]/20 bg-[#07101f] p-3 shadow-xl">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 className="text-sm font-bold text-white">Përpuno: {source.name || "Burim"}</h3>
@@ -563,7 +588,7 @@ export default function ImportSources() {
         </div>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(130px,180px))]">
         {renderTextField("Emri", "name", "Emri i burimit")}
         {renderSelectField("Provider", "provider_key", PROVIDERS, PROVIDER_LABELS)}
         {renderSelectField("Lloji", "source_type", SOURCE_TYPES, SOURCE_TYPE_LABELS)}
@@ -576,14 +601,14 @@ export default function ImportSources() {
         {renderSelectField("Frekuenca", "crawl_frequency_minutes", CRAWL_FREQUENCIES, CRAWL_FREQUENCY_MINUTE_LABELS)}
       </div>
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="sm:col-span-2 lg:col-span-1">
+      <div className="mt-3 grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(170px,260px))]">
+        <div className="min-w-0">
           {renderTextField("Source URL / domain", "source_url", "https://academicpositions.com")}
           <button
             type="button"
             onClick={() => discoverSourceForForm("edit")}
             disabled={busyId === `discover-${editingId || "edit"}`}
-            className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[#8ff0cf]/30 px-2 py-1.5 text-xs font-semibold text-[#8ff0cf] hover:bg-[#8ff0cf]/10 disabled:opacity-50"
+            className="mt-1 inline-flex w-full max-w-[260px] items-center justify-center gap-2 rounded-md border border-[#8ff0cf]/30 px-2 py-1.5 text-xs font-semibold text-[#8ff0cf] hover:bg-[#8ff0cf]/10 disabled:opacity-50"
           >
             {busyId === `discover-${editingId || "edit"}` ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
             Zbulo automatikisht
@@ -596,7 +621,7 @@ export default function ImportSources() {
         {renderTextField("Category URL", "category_url", "https://.../category")}
       </div>
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-3 grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(130px,180px))]">
         {renderTextField("Kategori", "category_filter", "pune, pazar...")}
         {renderTextField("Fjalë kyçe", "profession_filter", "shofer, pastrim...")}
         {renderTextField("Vend", "country_filter", "Germany, Belgium...")}
@@ -608,13 +633,13 @@ export default function ImportSources() {
 
       <details className="mt-3 rounded-lg border border-white/10 bg-white/[0.025] p-2" open>
         <summary className="cursor-pointer text-xs font-semibold text-white/75">Shënime dhe parser</summary>
-        <div className="mt-2 grid gap-2 md:grid-cols-2">
+        <div className="mt-2 grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(220px,420px))]">
           {renderTextareaField("Shënime", "notes", "Çfarë duhet ditur për këtë burim...", 2)}
           {renderTextareaField("Parser config JSON", "parser_config_json", "{\"selector\":\"...\"}", 4)}
         </div>
       </details>
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 text-xs text-white/70">
+      <div className="mt-3 grid gap-2 text-xs text-white/70 [grid-template-columns:repeat(auto-fit,minmax(140px,180px))]">
         <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-2">
           <input type="checkbox" checked={editForm.enabled !== false && editForm.is_active !== false} onChange={(e) => { updateEdit("enabled", e.target.checked); updateEdit("is_active", e.target.checked); }} />
           Aktiv
@@ -863,16 +888,14 @@ export default function ImportSources() {
                           {editingId === source.id ? <X className="inline w-3 h-3 mr-1" /> : <Pencil className="inline w-3 h-3 mr-1" />} {editingId === source.id ? "Mbyll" : "Përpuno"}
                         </button>
                         <button type="button" onClick={() => updateSource(source, { enabled: !sourceIsActive(source), is_active: !sourceIsActive(source) })} disabled={busyId === source.id} className="rounded border border-white/10 px-2 py-1 hover:bg-white/10 disabled:opacity-50">
-                          <Save className="inline w-3 h-3 mr-1" /> {sourceIsActive(source) ? "Fike" : "Ndize"}
+                          <Power className="inline w-3 h-3 mr-1" /> {sourceIsActive(source) ? "Fike" : "Ndize"}
                         </button>
                         <button type="button" onClick={() => testSource(source)} disabled={busyId === source.id || !source.id} className="rounded border border-[#8ff0cf]/20 px-2 py-1 text-[#8ff0cf] hover:bg-[#8ff0cf]/10 disabled:opacity-40">
                           {busyId === source.id ? <Loader2 className="inline w-3 h-3 mr-1 animate-spin" /> : <Play className="inline w-3 h-3 mr-1" />} Test
                         </button>
-                        {source.is_editable_by_admin !== false && (
-                          <button type="button" onClick={async () => { if (confirm("Ta fshij këtë burim?")) { await base44.importAssistant.deleteSource(source.id); refresh(); } }} className="rounded border border-red-400/20 px-2 py-1 text-red-300 hover:bg-red-400/10">
-                            <Trash2 className="inline w-3 h-3 mr-1" /> Fshi
-                          </button>
-                        )}
+                        <button type="button" onClick={() => deleteSource(source)} disabled={busyId === source.id || !source.id} className="rounded border border-red-400/20 px-2 py-1 text-red-300 hover:bg-red-400/10 disabled:opacity-40">
+                          <Trash2 className="inline w-3 h-3 mr-1" /> Fshi
+                        </button>
                       </div>
                     </td>
                   </tr>
