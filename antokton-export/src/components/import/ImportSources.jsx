@@ -121,6 +121,7 @@ const normalizeSourceForm = (form = {}) => {
 export default function ImportSources() {
   const qc = useQueryClient();
   const [draft, setDraft] = useState(emptySource);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState("");
   const [editForm, setEditForm] = useState({});
   const [busyId, setBusyId] = useState("");
@@ -219,6 +220,7 @@ export default function ImportSources() {
       return;
     }
     setDraft(emptySource);
+    setShowAddForm(false);
     refresh();
   };
 
@@ -642,86 +644,101 @@ export default function ImportSources() {
   return (
     <div className="space-y-4">
       <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-        <h2 className="text-white font-bold mb-3">Shto burim</h2>
-        <div className="grid gap-2 md:grid-cols-3">
-          <Input value={draft.name} onChange={(e) => updateDraft("name", e.target.value)} placeholder="Emri i burimit" className="bg-white/5 border-white/10 text-white" />
-          <div className="flex gap-2">
-            <Input value={draft.source_url} onChange={(e) => { updateDraft("source_url", e.target.value); updateDraft("base_url", e.target.value); }} placeholder="Domain, p.sh. https://academicpositions.com" className="bg-white/5 border-white/10 text-white" />
-            <button
-              type="button"
-              onClick={() => discoverSourceForForm("draft")}
-              disabled={busyId === "discover-draft"}
-              className="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-[#8ff0cf]/30 px-3 py-2 text-xs font-semibold text-[#8ff0cf] hover:bg-[#8ff0cf]/10 disabled:opacity-50"
-              title="Gjej automatikisht Jobs/RSS/API/parser nga domain-i"
-            >
-              {busyId === "discover-draft" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-              Zbulo
-            </button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-white font-bold">Burime importi</h2>
+            <p className="text-xs text-white/50">Forma e shtimit hapet vetëm kur do të regjistrosh një burim të ri.</p>
           </div>
-          <Select value={draft.source_type} onValueChange={updateDraftSourceType}>
-            <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Lloji i burimit" /></SelectTrigger>
-            <SelectContent className="bg-[#0b1020] border-white/10">
-              {SOURCE_TYPES.map((value) => <SelectItem key={value} value={value} className="text-white">{SOURCE_TYPE_LABELS[value]}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={draft.import_mode} onValueChange={(v) => updateDraft("import_mode", v)}>
-            <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Mënyra e importit" /></SelectTrigger>
-            <SelectContent className="bg-[#0b1020] border-white/10">
-              {IMPORT_MODES.map((value) => <SelectItem key={value} value={value} className="text-white">{IMPORT_MODE_LABELS[value]}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={draft.automation_level} onValueChange={(v) => updateDraft("automation_level", v)}>
-            <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Automatizimi" /></SelectTrigger>
-            <SelectContent className="bg-[#0b1020] border-white/10">
-              {AUTOMATION_LEVELS.map((value) => <SelectItem key={value} value={value} className="text-white">{AUTOMATION_LEVEL_LABELS[value]}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={draft.provider_key} onValueChange={(v) => updateDraft("provider_key", v)}>
-            <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
-            <SelectContent className="bg-[#0b1020] border-white/10">
-              {PROVIDERS.map((value) => <SelectItem key={value} value={value} className="text-white">{PROVIDER_LABELS[value]}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={draft.source_group} onValueChange={(v) => updateDraft("source_group", v)}>
-            <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
-            <SelectContent className="bg-[#0b1020] border-white/10">
-              {SOURCE_GROUPS.map((value) => <SelectItem key={value} value={value} className="text-white">{SOURCE_GROUP_LABELS[value]}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={draft.trust_level} onValueChange={(v) => updateDraft("trust_level", v)}>
-            <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
-            <SelectContent className="bg-[#0b1020] border-white/10">
-              {TRUST_LEVELS.map((value) => <SelectItem key={value} value={value} className="text-white">{TRUST_LEVEL_LABELS[value]}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={draft.parser_type} onValueChange={(v) => updateDraft("parser_type", v)}>
-            <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Parser" /></SelectTrigger>
-            <SelectContent className="bg-[#0b1020] border-white/10">
-              {PARSER_TYPES.map((value) => <SelectItem key={value} value={value} className="text-white">{PARSER_TYPE_LABELS[value]}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={String(draft.crawl_frequency_minutes ?? 360)} onValueChange={(v) => updateDraft("crawl_frequency_minutes", Number(v))}>
-            <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Frekuenca" /></SelectTrigger>
-            <SelectContent className="bg-[#0b1020] border-white/10">
-              {CRAWL_FREQUENCIES.map((value) => <SelectItem key={value} value={value} className="text-white">{CRAWL_FREQUENCY_MINUTE_LABELS[value]}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={draft.category_filter || "all"} onValueChange={(v) => updateDraft("category_filter", v === "all" ? "" : v)}>
-            <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Kategoria" /></SelectTrigger>
-            <SelectContent className="bg-[#0b1020] border-white/10">
-              <SelectItem value="all" className="text-white">Çdo kategori</SelectItem>
-              {CATEGORIES.map((category) => <SelectItem key={category.value} value={category.value} className="text-white">{category.label}</SelectItem>)}
-              <SelectItem value="job" className="text-white">Punë/API job</SelectItem>
-            </SelectContent>
-          </Select>
-          <Input value={draft.profession_filter} onChange={(e) => updateDraft("profession_filter", e.target.value)} placeholder="Profesion/fjalë kyçe" className="bg-white/5 border-white/10 text-white" />
-          <Input value={draft.country_filter} onChange={(e) => updateDraft("country_filter", e.target.value)} placeholder="Vend/shtet filter" className="bg-white/5 border-white/10 text-white" />
-          <Input value={draft.jobs_url} onChange={(e) => updateDraft("jobs_url", e.target.value)} placeholder="Jobs URL (opsional)" className="bg-white/5 border-white/10 text-white" />
-          <Input value={draft.category_url} onChange={(e) => updateDraft("category_url", e.target.value)} placeholder="Category URL (opsional)" className="bg-white/5 border-white/10 text-white" />
-          <Input value={draft.language} onChange={(e) => updateDraft("language", e.target.value)} placeholder="Gjuha p.sh. sq/de/en" className="bg-white/5 border-white/10 text-white" />
-          <Input value={draft.notes} onChange={(e) => updateDraft("notes", e.target.value)} placeholder="Shënime për burimin" className="bg-white/5 border-white/10 text-white md:col-span-2" />
-          <button type="button" onClick={createSource} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#8ff0cf] px-3 py-2 text-sm font-semibold text-[#06111f]"><Plus className="w-4 h-4" /> Shto burim</button>
+          <button
+            type="button"
+            onClick={() => setShowAddForm((value) => !value)}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#8ff0cf]/30 px-3 py-2 text-sm font-semibold text-[#8ff0cf] hover:bg-[#8ff0cf]/10"
+          >
+            {showAddForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {showAddForm ? "Mbyll shtimin" : "Shto burim"}
+          </button>
         </div>
+        {showAddForm && (
+          <div className="mt-4 grid gap-2 md:grid-cols-3">
+            <Input value={draft.name} onChange={(e) => updateDraft("name", e.target.value)} placeholder="Emri i burimit" className="bg-white/5 border-white/10 text-white" />
+            <div className="flex gap-2">
+              <Input value={draft.source_url} onChange={(e) => { updateDraft("source_url", e.target.value); updateDraft("base_url", e.target.value); }} placeholder="Domain, p.sh. https://academicpositions.com" className="bg-white/5 border-white/10 text-white" />
+              <button
+                type="button"
+                onClick={() => discoverSourceForForm("draft")}
+                disabled={busyId === "discover-draft"}
+                className="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-[#8ff0cf]/30 px-3 py-2 text-xs font-semibold text-[#8ff0cf] hover:bg-[#8ff0cf]/10 disabled:opacity-50"
+                title="Gjej automatikisht Jobs/RSS/API/parser nga domain-i"
+              >
+                {busyId === "discover-draft" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                Zbulo
+              </button>
+            </div>
+            <Select value={draft.source_type} onValueChange={updateDraftSourceType}>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Lloji i burimit" /></SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10">
+                {SOURCE_TYPES.map((value) => <SelectItem key={value} value={value} className="text-white">{SOURCE_TYPE_LABELS[value]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={draft.import_mode} onValueChange={(v) => updateDraft("import_mode", v)}>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Mënyra e importit" /></SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10">
+                {IMPORT_MODES.map((value) => <SelectItem key={value} value={value} className="text-white">{IMPORT_MODE_LABELS[value]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={draft.automation_level} onValueChange={(v) => updateDraft("automation_level", v)}>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Automatizimi" /></SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10">
+                {AUTOMATION_LEVELS.map((value) => <SelectItem key={value} value={value} className="text-white">{AUTOMATION_LEVEL_LABELS[value]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={draft.provider_key} onValueChange={(v) => updateDraft("provider_key", v)}>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10">
+                {PROVIDERS.map((value) => <SelectItem key={value} value={value} className="text-white">{PROVIDER_LABELS[value]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={draft.source_group} onValueChange={(v) => updateDraft("source_group", v)}>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10">
+                {SOURCE_GROUPS.map((value) => <SelectItem key={value} value={value} className="text-white">{SOURCE_GROUP_LABELS[value]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={draft.trust_level} onValueChange={(v) => updateDraft("trust_level", v)}>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10">
+                {TRUST_LEVELS.map((value) => <SelectItem key={value} value={value} className="text-white">{TRUST_LEVEL_LABELS[value]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={draft.parser_type} onValueChange={(v) => updateDraft("parser_type", v)}>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Parser" /></SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10">
+                {PARSER_TYPES.map((value) => <SelectItem key={value} value={value} className="text-white">{PARSER_TYPE_LABELS[value]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={String(draft.crawl_frequency_minutes ?? 360)} onValueChange={(v) => updateDraft("crawl_frequency_minutes", Number(v))}>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Frekuenca" /></SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10">
+                {CRAWL_FREQUENCIES.map((value) => <SelectItem key={value} value={value} className="text-white">{CRAWL_FREQUENCY_MINUTE_LABELS[value]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={draft.category_filter || "all"} onValueChange={(v) => updateDraft("category_filter", v === "all" ? "" : v)}>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Kategoria" /></SelectTrigger>
+              <SelectContent className="bg-[#0b1020] border-white/10">
+                <SelectItem value="all" className="text-white">Çdo kategori</SelectItem>
+                {CATEGORIES.map((category) => <SelectItem key={category.value} value={category.value} className="text-white">{category.label}</SelectItem>)}
+                <SelectItem value="job" className="text-white">Punë/API job</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input value={draft.profession_filter} onChange={(e) => updateDraft("profession_filter", e.target.value)} placeholder="Profesion/fjalë kyçe" className="bg-white/5 border-white/10 text-white" />
+            <Input value={draft.country_filter} onChange={(e) => updateDraft("country_filter", e.target.value)} placeholder="Vend/shtet filter" className="bg-white/5 border-white/10 text-white" />
+            <Input value={draft.jobs_url} onChange={(e) => updateDraft("jobs_url", e.target.value)} placeholder="Jobs URL (opsional)" className="bg-white/5 border-white/10 text-white" />
+            <Input value={draft.category_url} onChange={(e) => updateDraft("category_url", e.target.value)} placeholder="Category URL (opsional)" className="bg-white/5 border-white/10 text-white" />
+            <Input value={draft.language} onChange={(e) => updateDraft("language", e.target.value)} placeholder="Gjuha p.sh. sq/de/en" className="bg-white/5 border-white/10 text-white" />
+            <Input value={draft.notes} onChange={(e) => updateDraft("notes", e.target.value)} placeholder="Shënime për burimin" className="bg-white/5 border-white/10 text-white md:col-span-2" />
+            <button type="button" onClick={createSource} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#8ff0cf] px-3 py-2 text-sm font-semibold text-[#06111f]"><Plus className="w-4 h-4" /> Shto burim</button>
+          </div>
+        )}
       </section>
 
       <section className="rounded-xl border border-white/10">
@@ -788,7 +805,6 @@ export default function ImportSources() {
             <button type="button" onClick={resetColumns} className="rounded border border-white/10 px-2 py-1 hover:bg-white/10">Rikthe kolonat</button>
           </div>
         </div>
-        {editingSource && renderFullEditor(editingSource)}
         <div className="overflow-x-auto">
           <table className="table-fixed text-[11px] leading-tight" style={{ width: columns.reduce((sum, column) => sum + columnWidth(column), 210) + 210 }}>
             <thead className="bg-white/5 text-white/45">
@@ -860,6 +876,13 @@ export default function ImportSources() {
                       </div>
                     </td>
                   </tr>
+                  {editingId === source.id && editingSource && (
+                    <tr className="border-t border-[#8ff0cf]/20 bg-[#07101f]/60">
+                      <td colSpan={columns.length + 2} className="p-0">
+                        {renderFullEditor(editingSource)}
+                      </td>
+                    </tr>
+                  )}
                 </React.Fragment>
               ))}
             </tbody>
