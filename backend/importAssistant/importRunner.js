@@ -783,7 +783,7 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
       status: needsConfiguration ? "test_needs_configuration" : (rawItems.length && !validCount ? "test_zero_valid_items" : "test_completed"),
       error_message: needsConfiguration ? "Source needs parser configuration" : (rawItems.length && !validCount ? "Items fetched but failed validation" : (rawItems.length ? "" : "Test returned zero items"))
     };
-    const htmlDiagnostics = (rawItems.length === 0 || needsConfiguration)
+    const htmlDiagnostics = (rawItems.length === 0 || needsConfiguration || (rawItems.length > 0 && validCount === 0))
       && providerKey === "custom"
       && String(source.parser_type || source.crawl_method || source.source_type || "").toLowerCase() === "html"
       && typeof provider.inspectHtmlSource === "function"
@@ -802,8 +802,11 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
       all_links_found: htmlDiagnostics?.all_links_found,
       candidate_job_links_found: htmlDiagnostics?.candidate_job_links_found,
       accepted_job_links_found: htmlDiagnostics?.accepted_job_links_found,
+      rejected_navigation_or_category_links: htmlDiagnostics?.rejected_navigation_or_category_links,
+      rejected_link_reasons: htmlDiagnostics?.rejected_link_reasons,
       first_candidate_urls: htmlDiagnostics?.first_candidate_urls,
       first_accepted_urls: htmlDiagnostics?.first_accepted_urls,
+      first_rejected_urls: htmlDiagnostics?.first_rejected_urls,
       anchors_found: htmlDiagnostics?.anchors_found,
       json_ld_jobs_found: htmlDiagnostics?.json_ld_jobs_found,
       html_preview: htmlDiagnostics?.html_preview,
@@ -865,8 +868,11 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
         all_links_found: htmlDiagnostics?.all_links_found,
         candidate_job_links_found: htmlDiagnostics?.candidate_job_links_found,
         accepted_job_links_found: htmlDiagnostics?.accepted_job_links_found,
+        rejected_navigation_or_category_links: htmlDiagnostics?.rejected_navigation_or_category_links,
+        rejected_link_reasons: htmlDiagnostics?.rejected_link_reasons,
         first_candidate_urls: htmlDiagnostics?.first_candidate_urls,
         first_accepted_urls: htmlDiagnostics?.first_accepted_urls,
+        first_rejected_urls: htmlDiagnostics?.first_rejected_urls,
         anchors_found: htmlDiagnostics?.anchors_found,
         json_ld_jobs_found: htmlDiagnostics?.json_ld_jobs_found,
         html_preview: htmlDiagnostics?.html_preview,

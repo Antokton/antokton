@@ -348,6 +348,12 @@ export default function ImportSources() {
       const acceptedUrls = Array.isArray(diagnostics.first_accepted_urls) && diagnostics.first_accepted_urls.length
         ? `First accepted URLs:\n${diagnostics.first_accepted_urls.map((url) => `- ${url}`).join("\n")}`
         : "";
+      const rejectedUrls = Array.isArray(diagnostics.first_rejected_urls) && diagnostics.first_rejected_urls.length
+        ? `First rejected navigation/category URLs:\n${diagnostics.first_rejected_urls.map((url) => `- ${url}`).join("\n")}`
+        : "";
+      const rejectedReasons = diagnostics.rejected_link_reasons && Object.keys(diagnostics.rejected_link_reasons).length
+        ? `Rejected link reasons: ${JSON.stringify(diagnostics.rejected_link_reasons)}`
+        : "";
       const htmlPreview = diagnostics.html_preview
         ? `First 1000 HTML chars:\n${String(diagnostics.html_preview).slice(0, 1000)}`
         : "";
@@ -361,12 +367,15 @@ export default function ImportSources() {
         diagnostics.all_links_found !== undefined ? `Number of links found: ${diagnostics.all_links_found}` : "",
         diagnostics.candidate_job_links_found !== undefined ? `Candidate job links: ${diagnostics.candidate_job_links_found}` : "",
         diagnostics.accepted_job_links_found !== undefined ? `Accepted job links: ${diagnostics.accepted_job_links_found}` : "",
+        diagnostics.rejected_navigation_or_category_links !== undefined ? `Rejected navigation/category links: ${diagnostics.rejected_navigation_or_category_links}` : "",
+        rejectedReasons,
         selectorMatches,
         diagnostics.anchors_found !== undefined ? `Linke të kapura: ${diagnostics.anchors_found}` : "",
         diagnostics.json_ld_jobs_found !== undefined ? `JSON-LD jobs: ${diagnostics.json_ld_jobs_found}` : "",
         diagnostics.selectors_tried ? `Selectorë/patterns: ${JSON.stringify(diagnostics.selectors_tried)}` : "",
         candidateUrls,
         acceptedUrls,
+        rejectedUrls,
         htmlPreview,
         diagnostics.zero_reason ? `Arsye teknike: ${diagnostics.zero_reason}` : "",
         Array.isArray(diagnostics.queries_tried) && diagnostics.queries_tried.length ? `Queries: ${diagnostics.queries_tried.join(", ")}` : "",

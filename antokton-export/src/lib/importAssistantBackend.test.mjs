@@ -143,6 +143,11 @@ test("auto-discover uses known Academic Positions jobs URL without placeholders"
   assert.equal(result.source.login_required, false);
   assert.equal(result.source.original_source_required, true);
   assert.equal(result.source.enabled, true);
+  assert.equal(result.source.parser_config.known_source, "academicpositions");
+  assert.equal(result.source.parser_config.link_selector, "a[href*='/ad/']");
+  assert.equal(result.source.parser_config.item_url_patterns, "/ad/");
+  assert.notEqual(result.source.parser_config.link_selector, "a[href]");
+  assert.doesNotMatch(result.source.parser_config.item_url_patterns, /find-jobs/);
 });
 
 test("auto-discover rejects redirected 404 job URLs", async () => {
@@ -389,6 +394,83 @@ test("custom provider imports public HTML listing links", async () => {
     });
     assert.equal(rows.length, 1);
     assert.equal(rows[0].source_url, "https://example.test/jobs/cleaner-1");
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("custom provider filters Academic Positions navigation and imports only real ad links", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => ({
+    ok: true,
+    status: 200,
+    url: String(url),
+    async text() {
+      if (String(url).includes("/ad/ku-leuven/2026/postdoctoral-researcher-ai/123456")) {
+        return `<html><body><main><h1>Postdoctoral Researcher in AI</h1><p>KU Leuven is hiring a postdoctoral researcher in artificial intelligence with strong research skills, clear application instructions, location details and a published academic role description for qualified candidates.</p><p>Location: Leuven, Belgium</p></main></body></html>`;
+      }
+      return `<html><body>
+        <nav>
+          <a href="https://academicpositions.co.uk/find-jobs">Find jobs</a>
+          <a href="https://academicpositions.de/find-jobs">Job finden</a>
+          <a href="https://academicpositions.nl/find-jobs">Vacatures zoeken</a>
+          <a href="/find-jobs">Find jobs</a>
+          <a href="/jobs/field/machine-learning">257 Machine Learning jobs</a>
+          <a href="/jobs/position/post-doc">Postdoc jobs</a>
+        </nav>
+        <section class="jobs-list">
+          <a href="/ad/ku-leuven/2026/postdoctoral-researcher-ai/123456">
+            <h2>Postdoctoral Researcher in AI</h2>
+            <span class="company">KU Leuven</span>
+            <span class="location">Leuven, Belgium</span>
+          </a>
+        </section>
+      </body></html>`;
+    }
+  });
+  try {
+    const source = applyKnownSourceConfig({ name: "Academic Positions", source_url: "https://academicpositions.com" });
+    const rows = await customSourceProvider.fetchItems({ source, maxItems: 10 });
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].source_url, "https://academicpositions.com/ad/ku-leuven/2026/postdoctoral-researcher-ai/123456");
+    assert.equal(rows[0].original_title, "Postdoctoral Researcher in AI");
+
+    const diagnostics = await customSourceProvider.inspectHtmlSource(source);
+    assert.equal(diagnostics.candidate_job_links_found, 7);
+    assert.equal(diagnostics.accepted_job_links_found, 1);
+    assert.equal(diagnostics.rejected_navigation_or_category_links, 6);
+    assert.deepEqual(diagnostics.first_accepted_urls, ["https://academicpositions.com/ad/ku-leuven/2026/postdoctoral-researcher-ai/123456"]);
+    assert.equal(diagnostics.rejected_link_reasons.language_domain, 3);
+    assert.equal(diagnostics.rejected_link_reasons.navigation, 1);
+    assert.equal(diagnostics.rejected_link_reasons.category, 2);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("custom provider reports Academic Positions pages with only navigation links", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => ({
+    ok: true,
+    status: 200,
+    url: String(url),
+    async text() {
+      return `<html><body>
+        <a href="https://academicpositions.co.uk/find-jobs">Find jobs</a>
+        <a href="https://academicpositions.de/find-jobs">Job finden</a>
+        <a href="/jobs/field/machine-learning">257 Machine Learning jobs</a>
+        <a href="/jobs/country/belgium">Belgium jobs</a>
+      </body></html>`;
+    }
+  });
+  try {
+    const source = applyKnownSourceConfig({ name: "Academic Positions", source_url: "https://academicpositions.com" });
+    const rows = await customSourceProvider.fetchItems({ source, maxItems: 10 });
+    assert.equal(rows.length, 0);
+    const diagnostics = await customSourceProvider.inspectHtmlSource(source);
+    assert.equal(diagnostics.candidate_job_links_found, 4);
+    assert.equal(diagnostics.accepted_job_links_found, 0);
+    assert.match(diagnostics.reason, /vetëm linke navigimi\/kategori/i);
   } finally {
     global.fetch = originalFetch;
   }

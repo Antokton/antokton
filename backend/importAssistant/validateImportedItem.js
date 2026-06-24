@@ -24,7 +24,10 @@ const NON_JOB_PATH_KEYWORDS = [
 
 const LISTING_PATH_PATTERNS = [
   /^\/(?:jobs?|pune|remote-jobs|category|categories|search|results|njoftime\/biznes-pune\/pune)\/?$/i,
-  /\/(?:category|categories|search|results|job-type|job-category|tags?)\/?$/i
+  /^\/find-jobs\/?$/i,
+  /^\/jobs\/(?:field|position|country|region|city|type|category|categories|tag|tags|search|results)(?:\/|$)/i,
+  /\/(?:category|categories|search|results|job-type|job-category|tags?|fields?)\/?$/i,
+  /\/(?:category|categories|search|results|job-type|job-category|tags?|fields?)\//i
 ];
 
 const ARTIFICIAL_TITLE_PATTERNS = [

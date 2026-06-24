@@ -368,7 +368,52 @@ function looksBotProtected(html = "", status = 0) {
   return /(?:just a moment|checking your browser|verify you are human|access denied|cf-ray|captcha|bot protection|unusual traffic)/i.test(visibleText);
 }
 
+function isAcademicPositionsSource(source = {}) {
+  const config = parserConfig(source);
+  const text = [
+    config.known_source,
+    source.name,
+    source.source_url,
+    source.base_url,
+    source.jobs_url,
+  ].filter(Boolean).join(" ").toLowerCase();
+  return text.includes("academicpositions") || text.includes("academic positions");
+}
+
+function isAcademicPositionsHost(hostname = "") {
+  return /(?:^|\.)academicpositions\.(?:com|co\.uk|de|nl|at|ch|be|fr|se|dk|no|fi)$/i.test(String(hostname || ""));
+}
+
+function academicPositionsUrlInfo(url = "", title = "") {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    const path = parsed.pathname.replace(/\/+$/, "") || "/";
+    const lowerPath = path.toLowerCase();
+    const lowerTitle = cleanText(title).toLowerCase();
+    const related = isAcademicPositionsHost(host);
+    const realJob = /(?:^|\.)academicpositions\.com$/i.test(host)
+      && /^\/ad\/[^/]+\/(?:19|20)\d{2}\/[^/]+\/[^/]+$/i.test(path);
+    let reason = "";
+    if (!related) reason = "not_academicpositions";
+    else if (realJob) reason = "";
+    else if (!/(?:^|\.)academicpositions\.com$/i.test(host)) reason = "language_domain";
+    else if (lowerPath === "/" || lowerPath === "/find-jobs" || lowerPath === "/jobs") reason = "navigation";
+    else if (/^\/jobs\/(?:field|position|country|region|city|employer|company|companies|type|category|categories|tag|tags|search|results)(?:\/|$)/i.test(path)) reason = "category";
+    else if (/^\/(?:career-advice|employer-branding|recruit|pricing|contact|about|login|register)(?:\/|$)/i.test(path)) reason = "navigation";
+    else if (/^\d+\s+.+\s+jobs$/i.test(cleanText(title))) reason = "category_title";
+    else if (/^(find jobs|job finden|vacatures zoeken|buscar empleo|trouver un emploi)$/i.test(lowerTitle)) reason = "language_navigation_title";
+    else reason = "not_real_job_url";
+    return { related, realJob, reason, host, path };
+  } catch {
+    return { related: false, realJob: false, reason: "invalid_url", host: "", path: "" };
+  }
+}
+
 function looksLikeListingUrl(url = "", text = "", source = {}) {
+  if (isAcademicPositionsSource(source)) {
+    return academicPositionsUrlInfo(url, text).realJob;
+  }
   const config = parserConfig(source);
   const patterns = splitKeywords(config.item_url_patterns || "job,jobs,pune,puna,punesim,vende-pune,vend-pune,konkurs,karriere,career,careers,vacancy,vacancies,position,listing,njoftim,njoftime");
   let path = "";
@@ -471,7 +516,9 @@ function isNavigationTitle(title = "") {
 function isCategoryPath(url = "") {
   try {
     const path = new URL(url).pathname.toLowerCase();
-    return /\/(?:job-type|job-category|category|categories|tag|tags|page)\//.test(path);
+    return /\/(?:job-type|job-category|category|categories|tag|tags|page)\//.test(path)
+      || /^\/jobs\/(?:field|position|country|region|city|type|category|categories|tag|tags|search|results)(?:\/|$)/i.test(path)
+      || /^\/find-jobs\/?$/i.test(path);
   } catch {
     return false;
   }
@@ -508,6 +555,7 @@ function parseHtmlAnchors(html = "", source = {}, baseUrl = "") {
     const location = locationFromAnchorHtml(anchor[2] || "");
     const publishedAt = publishedFromAnchorHtml(anchor[2] || "");
     if (!url || seen.has(url) || title.length < 8) continue;
+    if (isAcademicPositionsSource(source) && !academicPositionsUrlInfo(url, title).realJob) continue;
     if (hasScriptOrTemplateText(`${title} ${anchor[2] || ""}`)) continue;
     if (isBlockedNonJobUrl(url)) continue;
     if (isListingOrCategoryUrl(url)) continue;
@@ -581,18 +629,40 @@ function inspectAnchorCandidates(html = "", source = {}, baseUrl = "") {
   const anchors = [...html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)];
   const candidateUrls = [];
   const acceptedUrls = [];
+  const rejectedUrls = [];
+  const rejectionReasons = {};
   const seenCandidates = new Set();
+  const academicPositions = isAcademicPositionsSource(source);
   for (const anchor of anchors) {
     const attrs = anchor[1] || "";
     const href = /href=["']([^"']+)["']/i.exec(attrs)?.[1] || "";
     const url = absoluteUrl(htmlDecode(href), baseUrl);
     const title = tagless(anchor[2] || "");
     if (!url || seenCandidates.has(url)) continue;
-    if (looksLikeListingUrl(url, title, source)) {
+    const apInfo = academicPositions ? academicPositionsUrlInfo(url, title) : null;
+    const isCandidate = academicPositions ? apInfo.related : looksLikeListingUrl(url, title, source);
+    if (isCandidate) {
       seenCandidates.add(url);
       candidateUrls.push(url);
-      if (!isBlockedNonJobUrl(url) && !isListingOrCategoryUrl(url) && !sameListingIndex(url, baseUrl) && !isNavigationTitle(title) && !isCategoryPath(url)) {
+      const accepted = academicPositions
+        ? apInfo.realJob
+        : !isBlockedNonJobUrl(url) && !isListingOrCategoryUrl(url) && !sameListingIndex(url, baseUrl) && !isNavigationTitle(title) && !isCategoryPath(url);
+      if (accepted) {
         acceptedUrls.push(url);
+      } else {
+        const reason = academicPositions
+          ? apInfo.reason
+          : isBlockedNonJobUrl(url)
+            ? "blocked_non_job_url"
+            : isListingOrCategoryUrl(url) || isCategoryPath(url)
+              ? "navigation_or_category"
+              : sameListingIndex(url, baseUrl)
+                ? "listing_index"
+                : isNavigationTitle(title)
+                  ? "navigation_title"
+                  : "not_accepted";
+        rejectedUrls.push(`${cleanText(title).slice(0, 80) || url} -> ${url}`);
+        rejectionReasons[reason] = (rejectionReasons[reason] || 0) + 1;
       }
     }
   }
@@ -600,8 +670,11 @@ function inspectAnchorCandidates(html = "", source = {}, baseUrl = "") {
     all_links_found: anchors.length,
     candidate_job_links_found: candidateUrls.length,
     accepted_job_links_found: acceptedUrls.length,
+    rejected_navigation_or_category_links: rejectedUrls.length,
+    rejected_link_reasons: rejectionReasons,
     first_candidate_urls: candidateUrls.slice(0, 10),
     first_accepted_urls: acceptedUrls.slice(0, 10),
+    first_rejected_urls: rejectedUrls.slice(0, 10),
   };
 }
 
@@ -629,6 +702,7 @@ async function fetchHtmlPage({ maxItems = 50, source = {} } = {}) {
   for (const item of [...jsonLd, ...anchors]) {
     const key = item.source_url || item.external_id || item.original_title;
     if (!key || seen.has(key)) continue;
+    if (isAcademicPositionsSource(effectiveSource) && !academicPositionsUrlInfo(item.source_url, item.original_title).realJob) continue;
     if (isBlockedNonJobUrl(item.source_url)) continue;
     seen.add(key);
     merged.push({
@@ -696,6 +770,7 @@ async function inspectHtmlSource(source = {}) {
     else if (!html.trim()) reason = "HTML bosh.";
     else if (javascriptRendered) reason = "Faqja duket JavaScript-rendered; HTML publik nuk përmban kartat e njoftimeve.";
     else if (!hasUsableHtmlParserConfig(config) && !inferredConfig) reason = "Mungon parser_config dhe auto-parser nuk gjeti kartë/link njoftimi të besueshëm. Shënohet si needs_configuration.";
+    else if (candidateDiagnostics.candidate_job_links_found > 0 && candidateDiagnostics.accepted_job_links_found === 0) reason = "U gjetën vetëm linke navigimi/kategori; nuk u gjetën job listings reale.";
     else if (!anchors.length && !jsonLd.length) reason = "HTML u lexua, por nuk u kapën linke njoftimesh me selectorët/patterns aktualë.";
     else reason = `U gjetën ${anchors.length} linke dhe ${jsonLd.length} JSON-LD, por mund të kenë dështuar në validim.`;
     return {
@@ -711,8 +786,11 @@ async function inspectHtmlSource(source = {}) {
       all_links_found: candidateDiagnostics.all_links_found,
       candidate_job_links_found: candidateDiagnostics.candidate_job_links_found,
       accepted_job_links_found: candidateDiagnostics.accepted_job_links_found,
+      rejected_navigation_or_category_links: candidateDiagnostics.rejected_navigation_or_category_links,
+      rejected_link_reasons: candidateDiagnostics.rejected_link_reasons,
       first_candidate_urls: candidateDiagnostics.first_candidate_urls,
       first_accepted_urls: candidateDiagnostics.first_accepted_urls,
+      first_rejected_urls: candidateDiagnostics.first_rejected_urls,
       anchors_found: anchors.length,
       json_ld_jobs_found: jsonLd.length,
       html_preview: html.slice(0, 1000),

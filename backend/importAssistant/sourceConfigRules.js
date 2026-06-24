@@ -56,6 +56,22 @@ function parserConfig(source = {}) {
   return typeof source.parser_config === "object" ? source.parser_config : {};
 }
 
+function preserveNonSelectorParserConfig(config = {}) {
+  const blocked = new Set([
+    "item_url_patterns",
+    "item_selector",
+    "title_selector",
+    "link_selector",
+    "company_selector",
+    "location_selector",
+    "date_selector",
+    "summary_selector",
+    "requires_detail_page",
+    "known_source"
+  ]);
+  return Object.fromEntries(Object.entries(config).filter(([key]) => !blocked.has(key)));
+}
+
 function sourceEnabledValue(source = {}) {
   if (source.enabled !== undefined) {
     return source.enabled === true || source.enabled === "true" || source.enabled === 1 || source.enabled === "1";
@@ -71,6 +87,7 @@ function applyKnownSourceConfig(source = {}) {
   if (isAcademicPositions(next)) {
     const baseUrl = "https://academicpositions.com";
     const jobsUrl = "https://academicpositions.com/find-jobs";
+    const safeExistingConfig = preserveNonSelectorParserConfig(parserConfig(next));
     next = {
       ...next,
       name: next.name || "Academic Positions",
@@ -91,17 +108,18 @@ function applyKnownSourceConfig(source = {}) {
       is_active: sourceEnabledValue(next),
       original_source_required: true,
       parser_config: {
-        item_url_patterns: "find-jobs,job,jobs,position,positions,vacancy,vacancies,apply",
+        ...safeExistingConfig,
+        item_url_patterns: "/ad/",
         json_ld_jobs: true,
-        title_selector: "h1,h2,h3,a,[class*='title'],[class*='position'],[class*='job']",
-        link_selector: "a[href]",
+        item_selector: "a[href*='/ad/']",
+        title_selector: "h1,h2,h3,[class*='title'],[class*='position'],[class*='job']",
+        link_selector: "a[href*='/ad/']",
         company_selector: "[class*='company'],[class*='employer'],[class*='organization']",
         location_selector: "[class*='location'],[class*='city'],[class*='country']",
         date_selector: "time,[class*='date'],[class*='posted']",
         summary_selector: "p,[class*='summary'],[class*='description'],[class*='excerpt']",
         requires_detail_page: true,
         known_source: "academicpositions",
-        ...parserConfig(next),
       },
       notes: next.notes || "Konfigurim i njohur: përdor /find-jobs si Jobs URL. Nëse testi del 0, shiko diagnozën HTTP/HTML sepse faqja mund të bllokojë bot/fetch.",
     };
