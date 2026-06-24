@@ -24,7 +24,7 @@ const customSourceProvider = require(path.join(root, "backend/importAssistant/pr
 const genericRssProvider = require(path.join(root, "backend/importAssistant/providers/genericRssProvider.js"));
 const { discoverSourceConfig } = require(path.join(root, "backend/importAssistant/discoverSourceConfig.js"));
 const { handleImportAssistantRoute } = require(path.join(root, "backend/importAssistant/importRoutes.js"));
-const { applyKnownSourceConfig } = require(path.join(root, "backend/importAssistant/sourceConfigRules.js"));
+const { applyKnownSourceConfig, ADZUNA_DOMAINS } = require(path.join(root, "backend/importAssistant/sourceConfigRules.js"));
 
 test("generateAlbanianListingTitle creates natural Albanian title", () => {
   assert.equal(generateAlbanianListingTitle({ original_title: "Truck Driver CE wanted" }), "Kërkohet shofer CE");
@@ -214,6 +214,85 @@ test("auto-discover configures Bundesagentur as API source", async () => {
   assert.equal(result.source.api_endpoint, "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs");
   assert.equal(result.source.parser_config.api_format, "bundesagentur");
   assert.equal(result.source.parser_config.api_key, "jobboerse-jobsuche");
+});
+
+test("auto-discover configures Adzuna domains as country API sources", async () => {
+  const result = await discoverSourceConfig({ url: "https://www.adzuna.de/browse", name: "Adzuna" });
+  assert.equal(result.success, true);
+  assert.equal(result.source.name, "Adzuna Germany");
+  assert.equal(result.source.provider_key, "adzuna");
+  assert.equal(result.source.source_type, "api");
+  assert.equal(result.source.crawl_method, "api");
+  assert.equal(result.source.parser_type, "api");
+  assert.equal(result.source.source_url, "https://www.adzuna.de");
+  assert.equal(result.source.base_url, "https://www.adzuna.de");
+  assert.equal(result.source.jobs_url, "");
+  assert.equal(result.source.rss_url, "");
+  assert.equal(result.source.category_url, "");
+  assert.equal(result.source.api_endpoint, "https://api.adzuna.com/v1/api/jobs/de/search/1");
+  assert.equal(result.source.parser_config.country_code, "de");
+  assert.match(result.reason, /API zyrtare/);
+});
+
+test("default sources replace obsolete Adzuna sources with country API seeds", async () => {
+  const records = {
+    ImportedSource: [
+      {
+        id: "old-adzuna-com",
+        name: "Adzuna",
+        provider_key: "adzuna",
+        source_url: "https://www.adzuna.com",
+        base_url: "https://www.adzuna.com",
+        source_type: "api",
+      },
+      {
+        id: "old-adzuna-de",
+        name: "Adzuna Germany old",
+        provider_key: "custom",
+        source_url: "https://www.adzuna.de/browse",
+        base_url: "https://www.adzuna.de",
+        source_type: "html",
+      },
+    ],
+    ImportAssistantSettings: [],
+    ImportedPost: [],
+    Job: [],
+    ImportLog: [],
+    ImportFailure: [],
+  };
+  const store = {
+    async allRecords(entity) { return records[entity] || []; },
+    async createRecord(entity, data) {
+      const row = { id: data.seed_key || `${entity}-${records[entity].length + 1}`, created_date: new Date().toISOString(), ...data };
+      records[entity].push(row);
+      return row;
+    },
+    async updateRecord(entity, id, patch) {
+      const row = records[entity].find((item) => item.id === id);
+      Object.assign(row, patch);
+      return row;
+    },
+    async deleteRecord(entity, id) {
+      const index = records[entity].findIndex((item) => item.id === id);
+      if (index < 0) return false;
+      records[entity].splice(index, 1);
+      return true;
+    },
+  };
+
+  const sources = await ensureDefaultSources(store);
+  assert.equal(sources.some((source) => source.id === "old-adzuna-com"), false);
+  assert.equal(sources.some((source) => source.id === "old-adzuna-de"), false);
+  const adzunaSources = records.ImportedSource.filter((source) => String(source.seed_key || "").startsWith("adzuna-"));
+  assert.equal(adzunaSources.length, Object.keys(ADZUNA_DOMAINS).length);
+  assert.equal(adzunaSources.some((source) => source.source_url.includes("adzuna.com") || source.source_url.includes("/browse")), false);
+  const germany = adzunaSources.find((source) => source.seed_key === "adzuna-de-api");
+  assert.equal(germany.name, "Adzuna Germany");
+  assert.equal(germany.provider_key, "adzuna");
+  assert.equal(germany.api_endpoint, "https://api.adzuna.com/v1/api/jobs/de/search/1");
+  assert.equal(germany.jobs_url, "");
+  assert.equal(germany.enabled, false);
+  assert.equal(germany.parser_config.country_code, "de");
 });
 
 test("known source config preserves disabled state", () => {

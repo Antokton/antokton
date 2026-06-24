@@ -44,6 +44,57 @@ function isKosovaJob(source = {}) {
   return text.includes("kosovajob") || text.includes("kosova job");
 }
 
+const ADZUNA_DOMAINS = {
+  "adzuna.be": { countryCode: "be", country: "Belgium", language: "nl/fr", name: "Adzuna Belgium" },
+  "adzuna.de": { countryCode: "de", country: "Germany", language: "de", name: "Adzuna Germany" },
+  "adzuna.it": { countryCode: "it", country: "Italy", language: "it", name: "Adzuna Italy" },
+  "adzuna.fr": { countryCode: "fr", country: "France", language: "fr", name: "Adzuna France" },
+  "adzuna.uk": { countryCode: "gb", country: "United Kingdom", language: "en", name: "Adzuna UK" },
+  "adzuna.at": { countryCode: "at", country: "Austria", language: "de", name: "Adzuna Austria" },
+  "adzuna.nl": { countryCode: "nl", country: "Netherlands", language: "nl", name: "Adzuna Netherlands" },
+  "adzuna.ch": { countryCode: "ch", country: "Switzerland", language: "de/fr/it", name: "Adzuna Switzerland" },
+  "adzuna.es": { countryCode: "es", country: "Spain", language: "es", name: "Adzuna Spain" },
+};
+
+function adzunaDomainFromSource(source = {}) {
+  const values = [
+    source.source_url,
+    source.base_url,
+    source.jobs_url,
+    source.api_endpoint,
+    source.name,
+  ].filter(Boolean);
+  for (const value of values) {
+    const text = String(value || "").toLowerCase();
+    for (const domain of Object.keys(ADZUNA_DOMAINS)) {
+      if (text.includes(domain)) return domain;
+    }
+  }
+  return "";
+}
+
+function adzunaConfigForDomain(domain = "") {
+  const key = String(domain || "").toLowerCase().replace(/^www\./, "");
+  return ADZUNA_DOMAINS[key] || null;
+}
+
+function adzunaDisplayName(currentName = "", cfg = {}) {
+  const name = String(currentName || "").trim();
+  return !name || /^adzuna$/i.test(name) ? cfg.name : name;
+}
+
+function isAdzuna(source = {}) {
+  const text = [
+    source.name,
+    source.provider_key,
+    source.source_url,
+    source.base_url,
+    source.jobs_url,
+    source.api_endpoint,
+  ].filter(Boolean).join(" ").toLowerCase();
+  return text.includes("adzuna") || Boolean(adzunaDomainFromSource(source));
+}
+
 function parserConfig(source = {}) {
   if (!source.parser_config) return {};
   if (typeof source.parser_config === "string") {
@@ -84,6 +135,47 @@ function sourceEnabledValue(source = {}) {
 
 function applyKnownSourceConfig(source = {}) {
   let next = cleanPlaceholderUrls(source);
+  if (isAdzuna(next)) {
+    const domain = adzunaDomainFromSource(next) || "adzuna.de";
+    const cfg = adzunaConfigForDomain(domain) || ADZUNA_DOMAINS["adzuna.de"];
+    const baseUrl = `https://www.${domain}`;
+    const apiEndpoint = `https://api.adzuna.com/v1/api/jobs/${cfg.countryCode}/search/1`;
+    next = {
+      ...next,
+      name: adzunaDisplayName(next.name, cfg),
+      source_url: baseUrl,
+      base_url: baseUrl,
+      jobs_url: "",
+      api_endpoint: apiEndpoint,
+      rss_url: "",
+      category_url: "",
+      provider_key: "adzuna",
+      source_type: "api",
+      crawl_method: "api",
+      parser_type: "api",
+      import_mode: next.import_mode || "automatic",
+      automation_level: next.automation_level || "full_auto",
+      source_group: next.source_group || "global_provider",
+      trust_level: next.trust_level || "trusted",
+      language: next.language || cfg.language,
+      country_filter: next.country_filter || cfg.country,
+      category_filter: next.category_filter || "pune",
+      profession_filter: next.profession_filter || "shofer, pastrim, depo, magazin, ndertim, ndërtim, mekanik, elektrik, hidraulik, kuzhinier, siguri, bujqesi, fabrike",
+      excluded_keywords: next.excluded_keywords || "senior, manager, director, professor, teacher, research, phd, software, developer, data scientist, consultant",
+      login_required: false,
+      enabled: sourceEnabledValue(next),
+      is_active: sourceEnabledValue(next),
+      original_source_required: true,
+      parser_config: {
+        ...parserConfig(next),
+        api_format: "adzuna",
+        country_code: cfg.countryCode,
+        country_filter: cfg.country,
+        source_domain: domain,
+      },
+      notes: next.notes || `Konfigurim i njohur: Adzuna ${cfg.country} përdor API zyrtare me ADZUNA_APP_ID/ADZUNA_APP_KEY; nuk përdoret HTML/RSS ose /browse.`,
+    };
+  }
   if (isAcademicPositions(next)) {
     const baseUrl = "https://academicpositions.com";
     const jobsUrl = "https://academicpositions.com/find-jobs";
@@ -209,4 +301,14 @@ function applyKnownSourceConfig(source = {}) {
   return next;
 }
 
-module.exports = { applyKnownSourceConfig, cleanPlaceholderUrls, isPlaceholderUrl, isAcademicPositions, isBundesagentur, isKosovaJob };
+module.exports = {
+  applyKnownSourceConfig,
+  cleanPlaceholderUrls,
+  isPlaceholderUrl,
+  isAcademicPositions,
+  isBundesagentur,
+  isKosovaJob,
+  isAdzuna,
+  adzunaConfigForDomain,
+  ADZUNA_DOMAINS,
+};

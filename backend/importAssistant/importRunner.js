@@ -3,7 +3,7 @@ const { normalizeImportedItem } = require("./normalizeImportedItem");
 const { isDuplicateImportedItem } = require("./deduplicateImportedItem");
 const { INITIAL_IMPORT_SOURCES, technicalDefaultsForSource } = require("./seedSources");
 const { validateImportedItem, isBlockedNonJobUrl } = require("./validateImportedItem");
-const { applyKnownSourceConfig } = require("./sourceConfigRules");
+const { applyKnownSourceConfig, isAdzuna } = require("./sourceConfigRules");
 
 const providers = {
   arbeitnow: require("./providers/arbeitnowProvider"),
@@ -98,6 +98,30 @@ function getFrequencyMinutes(source = {}) {
   return Number(source.crawl_frequency_hours ?? 6) * 60;
 }
 
+function sameJsonValue(a, b) {
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+}
+
+function obsoleteAdzunaSource(source = {}) {
+  const seedKey = String(source.seed_key || "").toLowerCase();
+  if (/^adzuna-[a-z]{2}-api$/.test(seedKey)) return false;
+  const text = [
+    source.name,
+    source.provider_key,
+    source.source_url,
+    source.base_url,
+    source.jobs_url,
+    source.api_endpoint,
+    source.rss_url,
+  ].filter(Boolean).join(" ").toLowerCase();
+  return text.includes("adzuna.com") || text.includes("adzuna.de");
+}
+
+async function deleteImportedSource(store, id) {
+  if (!id || typeof store.deleteRecord !== "function") return false;
+  return store.deleteRecord("ImportedSource", id);
+}
+
 async function ensureDefaultSettings(store, config) {
   const existing = (await store.allRecords("ImportAssistantSettings"))[0];
   const defaults = {
@@ -121,6 +145,12 @@ async function ensureDefaultSettings(store, config) {
 
 async function ensureDefaultSources(store) {
   const existing = [...await store.allRecords("ImportedSource")];
+  for (const source of [...existing]) {
+    if (!obsoleteAdzunaSource(source)) continue;
+    await deleteImportedSource(store, source.id);
+    const index = existing.findIndex((item) => item.id === source.id);
+    if (index >= 0) existing.splice(index, 1);
+  }
   const seenSeedKeys = new Set(existing.map((source) => source.seed_key).filter(Boolean));
   const seenUrls = new Set(existing.map((source) => source.source_url || source.base_url).filter(Boolean));
   for (const initial of INITIAL_IMPORT_SOURCES) {
@@ -136,8 +166,39 @@ async function ensureDefaultSources(store) {
     if (created.source_url || created.base_url) seenUrls.add(created.source_url || created.base_url);
   }
   for (const source of existing) {
-    const defaults = technicalDefaultsForSource(source);
+    const known = applyKnownSourceConfig(source);
+    const defaults = technicalDefaultsForSource(known);
     const patch = {};
+    if (isAdzuna(source)) {
+      for (const field of [
+        "name",
+        "provider_key",
+        "source_type",
+        "import_mode",
+        "crawl_method",
+        "automation_level",
+        "parser_type",
+        "source_group",
+        "trust_level",
+        "source_url",
+        "base_url",
+        "api_endpoint",
+        "rss_url",
+        "jobs_url",
+        "category_url",
+        "category_filter",
+        "profession_filter",
+        "excluded_keywords",
+        "country_filter",
+        "language",
+        "login_required",
+        "original_source_required",
+        "parser_config",
+        "notes",
+      ]) {
+        if (!sameJsonValue(source[field], known[field])) patch[field] = known[field];
+      }
+    }
     for (const field of [
       "provider_key",
       "source_type",

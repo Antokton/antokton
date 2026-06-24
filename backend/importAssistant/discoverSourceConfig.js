@@ -1,5 +1,5 @@
 const { cleanText } = require("./textUtils");
-const { applyKnownSourceConfig, isAcademicPositions, isBundesagentur, isKosovaJob } = require("./sourceConfigRules");
+const { applyKnownSourceConfig, isAcademicPositions, isBundesagentur, isKosovaJob, isAdzuna } = require("./sourceConfigRules");
 
 const JOB_PATHS = [
   "/jobs",
@@ -365,6 +365,19 @@ async function discoverSourceConfig(input = {}) {
     profession_filter: input.profession_filter || "",
     source_group: input.source_group || "community",
   });
+  if (isAdzuna(knownSource)) {
+    return {
+      success: true,
+      reason: "Konfigurim i njohur: Adzuna përdor API zyrtare sipas shtetit; nuk përdoret /browse, HTML ose RSS.",
+      source: knownSource,
+      diagnostics: {
+        tried: [{ type: "known_source", url: inputUrl, status: 200, ok: true }],
+        feeds: [],
+        apis: [{ url: knownSource.api_endpoint, status: 0, ok: true, items: 0, note: "Kërkon ADZUNA_APP_ID dhe ADZUNA_APP_KEY gjatë testit/importit." }],
+        html: [],
+      },
+    };
+  }
   if (isAcademicPositions(knownSource)) {
     return {
       success: true,

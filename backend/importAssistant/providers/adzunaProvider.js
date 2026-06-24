@@ -41,7 +41,8 @@ function countryCode(value = "") {
 
 async function fetchItems({ config = {}, source = {}, maxItems = 50 } = {}) {
   if (!config.ADZUNA_APP_ID || !config.ADZUNA_APP_KEY) return [];
-  const country = countryCode(source.parser_config?.country_filter || source.country_filter || "Germany");
+  const configuredCountryCode = String(source.parser_config?.country_code || "").trim().toLowerCase();
+  const country = configuredCountryCode || countryCode(source.parser_config?.country_filter || source.country_filter || "Germany");
   const query = source.parser_config?.query || source.profession_filter || "";
   const url = new URL(`https://api.adzuna.com/v1/api/jobs/${country}/search/1`);
   url.searchParams.set("app_id", config.ADZUNA_APP_ID);
@@ -55,7 +56,7 @@ async function fetchItems({ config = {}, source = {}, maxItems = 50 } = {}) {
     provider_key: "adzuna",
     external_id: String(job.id || job.redirect_url || ""),
     source_url: job.redirect_url,
-    source_name: "Adzuna",
+    source_name: source.name || "Adzuna",
     item_type: "job",
     category: "pune",
     original_title: job.title,

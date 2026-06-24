@@ -148,6 +148,47 @@ const SOURCE_TYPE_DEFAULTS = {
   },
 };
 
+const { ADZUNA_DOMAINS } = require("./sourceConfigRules");
+
+function adzunaSeedSources() {
+  return Object.entries(ADZUNA_DOMAINS).map(([domain, cfg]) => {
+    const baseUrl = `https://www.${domain}`;
+    return {
+      seed_key: `adzuna-${cfg.countryCode}-api`,
+      name: cfg.name,
+      provider_key: "adzuna",
+      source_type: "api",
+      import_mode: "automatic",
+      crawl_method: "api",
+      automation_level: "full_auto",
+      parser_type: "api",
+      source_group: "global_provider",
+      trust_level: "trusted",
+      source_url: baseUrl,
+      base_url: baseUrl,
+      api_endpoint: `https://api.adzuna.com/v1/api/jobs/${cfg.countryCode}/search/1`,
+      rss_url: "",
+      jobs_url: "",
+      category_url: "",
+      category_filter: "pune",
+      profession_filter: "shofer, pastrim, depo, magazin, ndertim, ndërtim, mekanik, elektrik, hidraulik, kuzhinier, siguri, bujqesi, fabrike",
+      excluded_keywords: "senior, manager, director, professor, teacher, research, phd, software, developer, data scientist, consultant",
+      country_filter: cfg.country,
+      language: cfg.language,
+      parser_config: {
+        api_format: "adzuna",
+        country_code: cfg.countryCode,
+        country_filter: cfg.country,
+        source_domain: domain,
+      },
+      enabled: false,
+      is_active: false,
+      crawl_frequency_minutes: 360,
+      notes: `Adzuna ${cfg.country} përdor API zyrtare. Aktivizoje vetëm pasi Render të ketë ADZUNA_APP_ID dhe ADZUNA_APP_KEY.`,
+    };
+  });
+}
+
 function normalizeSourceType(type = "") {
   const value = String(type || "").trim().toLowerCase();
   const compact = value.replace(/[\s_-]+/g, "");
@@ -316,6 +357,7 @@ const INITIAL_IMPORT_SOURCES = [
     crawl_frequency_minutes: 360,
     notes: "RSS publik; përdoret si fallback kur burimet e tjera sjellin dublikata."
   },
+  ...adzunaSeedSources(),
   {
     seed_key: "punajuaj-html",
     name: "PunaJuaj",
