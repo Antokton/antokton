@@ -43,6 +43,8 @@ const labelOf = (items, value, fallback = "—") => items.find((item) => item.va
 const sourceLabel = (post) => PROVIDER_LABELS[post.provider_key] || labelOf(SOURCES, post.source, post.source_name || post.source || post.provider_key || "—");
 const statusLabel = (status) => STATUS_LABELS[status] || status || "Në pritje";
 const normalizedText = (value) => String(value || "").toLowerCase();
+const SCRIPT_OR_TEMPLATE_TEXT = /\b(?:window\.dataLayer|function\s+gtag|gtag\s*\(|dataLayer\.push|__NEXT_DATA__|webpackJsonp|type\s*:\s*["']application_form["']|define\s+actual\s+values\s+based\s+on\s+your\s+own\s+requirements)\b/i;
+const NON_JOB_SOURCE_URL = /\/(?:employer-branding|employer|recruit|recruiters|employers|for-employers|pricing|advertise|corporate|about|contact|blog|academy|solutions|demo|customers)(?:\/|$)/i;
 const HIDDEN_IMPORT_STATUSES = new Set([
   "duplicate",
   "rejected_low_quality_import",
@@ -51,7 +53,22 @@ const HIDDEN_IMPORT_STATUSES = new Set([
   "rejected_missing_title",
   "rejected_placeholder_url",
   "skipped_missing_parser_config",
+  "archived_invalid_import",
 ]);
+
+const looksInvalidImportedPost = (post = {}) => {
+  const text = [
+    post.original_title,
+    post.title,
+    post.original_text,
+    post.edited_text,
+    post.description,
+    post.contact_url,
+    post.contact_info,
+  ].filter(Boolean).join(" ");
+  const url = post.original_url || post.source_url || post.import_source_url || post.original_post_url || "";
+  return SCRIPT_OR_TEMPLATE_TEXT.test(text) || NON_JOB_SOURCE_URL.test(url);
+};
 
 function FilterSelect({ value, onValueChange, label, children, width = "w-40" }) {
   return (
@@ -74,6 +91,8 @@ export default function ImportTable({ user, onEdit }) {
   const [bulkBusy, setBulkBusy] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState("50");
   const [sort, setSort] = useState({ key: "date", direction: "desc" });
   const [columnOrder, setColumnOrder] = useState([
     "text", "author", "category", "country", "region", "city", "listing_type", "source", "score", "status", "imported_by", "date",
@@ -84,7 +103,7 @@ export default function ImportTable({ user, onEdit }) {
 
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ["importedPosts"],
-    queryFn: () => base44.entities.ImportedPost.list("-created_date", 200),
+    queryFn: () => base44.entities.ImportedPost.list("-created_date", 1000),
   });
 
   const { data: publishedJobs = [] } = useQuery({
@@ -141,6 +160,7 @@ export default function ImportTable({ user, onEdit }) {
   const filtered = React.useMemo(() => {
     const rows = posts.filter(p => {
       if (HIDDEN_IMPORT_STATUSES.has(p.status)) return false;
+      if (looksInvalidImportedPost(p)) return false;
       if (filters.status !== "all" && p.status !== filters.status) return false;
       if (filters.category !== "all" && p.category !== filters.category) return false;
       if (filters.listing_type !== "all" && p.listing_type !== filters.listing_type) return false;
@@ -165,8 +185,18 @@ export default function ImportTable({ user, onEdit }) {
     });
   }, [posts, filters, sort, columnByKey]);
 
+  React.useEffect(() => {
+    setPage(1);
+  }, [filters, sort, pageSize]);
+
+  const pageSizeNumber = pageSize === "all" ? filtered.length || 1 : Number(pageSize || 50);
+  const totalPages = pageSize === "all" ? 1 : Math.max(1, Math.ceil(filtered.length / pageSizeNumber));
+  const safePage = Math.min(page, totalPages);
+  const pageStart = pageSize === "all" ? 0 : (safePage - 1) * pageSizeNumber;
+  const paginated = pageSize === "all" ? filtered : filtered.slice(pageStart, pageStart + pageSizeNumber);
+
   const selectedPosts = filtered.filter((post) => selectedIds.has(post.id));
-  const allVisibleSelected = filtered.length > 0 && filtered.every((post) => selectedIds.has(post.id));
+  const allVisibleSelected = paginated.length > 0 && paginated.every((post) => selectedIds.has(post.id));
 
   const refreshImported = async () => {
     await Promise.all([
@@ -263,7 +293,7 @@ export default function ImportTable({ user, onEdit }) {
   const toggleAllVisible = (checked) => {
     setSelectedIds((current) => {
       const next = new Set(current);
-      filtered.forEach((post) => checked ? next.add(post.id) : next.delete(post.id));
+      paginated.forEach((post) => checked ? next.add(post.id) : next.delete(post.id));
       return next;
     });
   };
@@ -405,6 +435,17 @@ export default function ImportTable({ user, onEdit }) {
             </div>
           </div>
         </details>
+        <Select value={pageSize} onValueChange={setPageSize}>
+          <SelectTrigger className="w-36 bg-white/5 border-white/10 text-white h-8 text-xs" style={{ background: "rgba(255,255,255,0.05)", color: "#fff" }}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="bg-[#0b1020] border-white/10">
+            <SelectItem value="20" className="text-white">20 për faqe</SelectItem>
+            <SelectItem value="50" className="text-white">50 për faqe</SelectItem>
+            <SelectItem value="100" className="text-white">100 për faqe</SelectItem>
+            <SelectItem value="all" className="text-white">Të gjitha</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {selectedPosts.length > 0 && (
@@ -451,7 +492,7 @@ export default function ImportTable({ user, onEdit }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(post => {
+              {paginated.map(post => {
                 const reallyPublished = isPublishedInJobs(post, publishedJobLinks);
                 const needsPublish = !reallyPublished;
                 const selected = selectedId === post.id;
@@ -497,7 +538,34 @@ export default function ImportTable({ user, onEdit }) {
           </table>
         </div>
       )}
-      <p className="text-white/30 text-xs text-right">{filtered.length} postime</p>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-white/40">
+        <p>
+          {filtered.length === 0
+            ? "0 postime"
+            : `Duke shfaqur ${pageStart + 1}-${Math.min(pageStart + paginated.length, filtered.length)} nga ${filtered.length} postime`}
+        </p>
+        {pageSize !== "all" && totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              disabled={safePage <= 1}
+              className="rounded-md border border-white/10 px-2 py-1 text-white/70 hover:bg-white/10 disabled:opacity-35"
+            >
+              Mbrapa
+            </button>
+            <span>Faqja {safePage} / {totalPages}</span>
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              disabled={safePage >= totalPages}
+              className="rounded-md border border-white/10 px-2 py-1 text-white/70 hover:bg-white/10 disabled:opacity-35"
+            >
+              Para
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -18,8 +18,8 @@ function summarize(item = {}) {
   const looksAlbanian = /(?:\bpun[eë]\b|\bk[eë]rkohet\b|\bofrohet\b|\bpag[aë]\b|\bqytet\b|\bkontakt\b)/i.test(description);
   if (description && (language === "sq" || looksAlbanian)) {
     parts.push(description.slice(0, 300));
-  } else if (description && description.length > 120) {
-    parts.push(description.slice(0, 300));
+  } else if (description) {
+    parts.push("Përshkrimi origjinal ruhet për verifikim nga stafi para publikimit.");
   }
   return cleanText(parts.join(" ")).slice(0, 600);
 }

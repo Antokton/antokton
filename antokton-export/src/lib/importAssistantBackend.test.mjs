@@ -18,6 +18,7 @@ const { technicalDefaultsForSource } = require(path.join(root, "backend/importAs
 const { cleanupInvalidImportedPosts } = require(path.join(root, "backend/importAssistant/cleanupInvalidImports.js"));
 const { buildExpiryFields, parseImportedExpiry, getAutomaticExpiryDays } = require(path.join(root, "backend/importAssistant/expiry.js"));
 const { validateImportedItem } = require(path.join(root, "backend/importAssistant/validateImportedItem.js"));
+const { translateImportedItem } = require(path.join(root, "backend/importAssistant/translateImportedItem.js"));
 const arbeitnowProvider = require(path.join(root, "backend/importAssistant/providers/arbeitnowProvider.js"));
 const customSourceProvider = require(path.join(root, "backend/importAssistant/providers/customSourceProvider.js"));
 const genericRssProvider = require(path.join(root, "backend/importAssistant/providers/genericRssProvider.js"));
@@ -745,6 +746,47 @@ test("validator rejects listing URLs and broken mojibake text", () => {
   }, {}, { id: "src", name: "Remote OK", import_mode: "automatic" });
   assert.equal(mojibake.valid, false);
   assert.equal(mojibake.status, "rejected_bad_encoding");
+});
+
+test("validator rejects script/template text and employer branding pages", () => {
+  const source = { id: "src", name: "Academic Positions", import_mode: "automatic" };
+  const scriptJunk = validateImportedItem({
+    source_id: "src",
+    source_name: "Academic Positions",
+    original_title: "Employer Branding",
+    original_url: "https://recruit.academicpositions.com/employer-branding",
+    source_url: "https://recruit.academicpositions.com/employer-branding",
+    original_description: "Company: Employer Branding // Define dataLayer and the gtag function. window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);}",
+    contact_methods: [{ type: "application_form", value: "{\"type\":\"application_form\",\"value\":\"https://recruit.academicpositions.com/employer-branding\"}" }]
+  }, {}, source);
+  assert.equal(scriptJunk.valid, false);
+  assert.match(scriptJunk.reason, /script\/template|corporate\/marketing/i);
+
+  const corporatePage = validateImportedItem({
+    source_id: "src",
+    source_name: "Academic Positions",
+    original_title: "Employer Branding",
+    original_url: "https://recruit.academicpositions.com/employer-branding",
+    source_url: "https://recruit.academicpositions.com/employer-branding",
+    original_description: "A marketing page for employers and recruitment branding services.",
+    original_company: "Academic Positions",
+    original_location: "Europe"
+  }, {}, source);
+  assert.equal(corporatePage.valid, false);
+  assert.equal(corporatePage.status, "rejected_non_job_page");
+});
+
+test("translation placeholder keeps generated summary Albanian for foreign imports", async () => {
+  const translated = await translateImportedItem({
+    item_type: "job",
+    category: "pune",
+    profession: "shofer",
+    country: "Gjermani",
+    original_company: "Demo GmbH",
+    original_description: "We are looking for a truck driver with immediate start and an English job description that should not be copied as the Albanian display text."
+  });
+  assert.match(translated.shqip_summary, /Kërkohet shofer në Gjermani/);
+  assert.doesNotMatch(translated.shqip_summary, /We are looking/i);
 });
 
 test("cleanup archives invalid imported posts without deleting them", async () => {

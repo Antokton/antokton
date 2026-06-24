@@ -2,8 +2,12 @@ const { cleanText, canonicalUrl } = require("./textUtils");
 
 const NON_JOB_PATH_KEYWORDS = [
   "/corporate",
+  "/employer-branding",
+  "/employer",
+  "/recruit",
   "/recruiters",
   "/employers",
+  "/for-employers",
   "/pricing",
   "/about",
   "/contact",
@@ -38,6 +42,24 @@ const BAD_ENCODING_PATTERNS = [
   /(?:Ã|Â|Ð|Ø).*(?:Ã|Â|Ð|Ø)/
 ];
 
+const SCRIPT_OR_TEMPLATE_PATTERNS = [
+  /\bwindow\.dataLayer\b/i,
+  /\bfunction\s+gtag\b/i,
+  /\bgtag\s*\(/i,
+  /\bdataLayer\.push\b/i,
+  /\bdefine\s+actual\s+values\s+based\s+on\s+your\s+own\s+requirements\b/i,
+  /\btype\s*:\s*["']application_form["']\s*,\s*value\s*:/i,
+  /\b__NEXT_DATA__\b/i,
+  /\bwebpackJsonp\b/i,
+  /\bgoogle\s+tag\s+manager\b/i,
+  /<script\b/i,
+  /<\/script>/i,
+  /\bvar\s+[a-z0-9_$]+\s*=/i,
+  /\bconst\s+[a-z0-9_$]+\s*=/i,
+  /\blet\s+[a-z0-9_$]+\s*=/i,
+  /\{["']type["']\s*:\s*["']application_form["']/i
+];
+
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -63,8 +85,10 @@ function isBlockedNonJobUrl(value = "") {
   if (!url) return false;
   try {
     const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
     const path = parsed.pathname.toLowerCase();
     if (/^\/jobs?\/companies\//.test(path)) return false;
+    if (/^recruit\./.test(hostname)) return true;
     return NON_JOB_PATH_KEYWORDS.some((keyword) => path.includes(keyword));
   } catch {
     const lower = url.toLowerCase();
@@ -132,6 +156,20 @@ function hasBadEncoding(value = "") {
   if (suspiciousHits > 0) return true;
   const weirdCount = (text.match(/[^\x09\x0a\x0d\x20-\x7e\u00a0-\u024f\u0370-\u03ff\u0400-\u04ff]/g) || []).length;
   return weirdCount >= 3 && weirdCount / Math.max(text.length, 1) > 0.02;
+}
+
+function hasScriptOrTemplateText(value = "") {
+  const text = String(value || "");
+  if (!cleanText(text)) return false;
+  if (SCRIPT_OR_TEMPLATE_PATTERNS.some((pattern) => pattern.test(text))) return true;
+  const punctuationDensity = (text.match(/[{}()[\];=]/g) || []).length / Math.max(text.length, 1);
+  return text.length > 120 && punctuationDensity > 0.12 && /\b(?:function|window|return|const|let|var|dataLayer|application_form)\b/i.test(text);
+}
+
+function hasInvalidContactMethod(value = "") {
+  const text = String(value || "");
+  if (!cleanText(text)) return false;
+  return hasScriptOrTemplateText(text) || /^\s*\{[\s\S]*\}\s*$/.test(text);
 }
 
 function calculateImportQualityScore(item = {}, raw = {}, source = {}) {
@@ -211,6 +249,32 @@ function validateImportedItem(item = {}, raw = {}, source = {}) {
   }
 
   const originalTitle = raw.original_title || raw.title || item.original_title || "";
+  const scriptText = [
+    originalTitle,
+    item.original_description,
+    item.description,
+    item.shqip_summary,
+    raw.original_description,
+    raw.description,
+    raw.content,
+    item.contact_url,
+    item.apply_url,
+    item.original_contact,
+    raw.original_contact,
+    raw.contact
+  ].filter(Boolean).join(" ");
+  const scriptContact = asArray(item.contact_methods)
+    .map((method) => method?.value)
+    .find(hasInvalidContactMethod);
+  if (hasScriptOrTemplateText(scriptText) || scriptContact) {
+    return {
+      valid: false,
+      status: "rejected_low_quality_import",
+      reason: "Imported item contains script/template text instead of a real listing",
+      quality_score: 0
+    };
+  }
+
   if (!hasRealTitle(originalTitle)) {
     return {
       valid: false,
@@ -308,6 +372,7 @@ module.exports = {
   calculateImportQualityScore,
   hasBadEncoding,
   hasRealTitle,
+  hasScriptOrTemplateText,
   isBlockedNonJobUrl,
   isListingOrCategoryUrl,
   isPlaceholderUrl,

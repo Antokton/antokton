@@ -1,6 +1,6 @@
 const genericRssProvider = require("./genericRssProvider");
 const { cleanText } = require("../textUtils");
-const { isBlockedNonJobUrl, isListingOrCategoryUrl } = require("../validateImportedItem");
+const { hasScriptOrTemplateText, isBlockedNonJobUrl, isListingOrCategoryUrl } = require("../validateImportedItem");
 
 function parserConfig(source = {}) {
   if (!source.parser_config) return {};
@@ -433,7 +433,7 @@ function sameListingIndex(url = "", baseUrl = "") {
 
 function isNavigationTitle(title = "") {
   const value = cleanText(title).toLowerCase();
-  return /^(ballina|home|navigation|menu|login|ky[cç]u|regjistrohu|about|rreth|kontakt|kryefaqja|clear all|post a job|publiko konkurs|shpall konkurs|shto njoftim|akademi pune)$/.test(value)
+  return /^(ballina|home|navigation|menu|login|ky[cç]u|regjistrohu|about|rreth|kontakt|kryefaqja|clear all|post a job|publiko konkurs|shpall konkurs|shto njoftim|akademi pune|employer branding|pricing|advertise)$/.test(value)
     || /^(full time|part time|internship|remote|shites\/e|kategori|category)$/.test(value);
 }
 
@@ -477,6 +477,7 @@ function parseHtmlAnchors(html = "", source = {}, baseUrl = "") {
     const location = locationFromAnchorHtml(anchor[2] || "");
     const publishedAt = publishedFromAnchorHtml(anchor[2] || "");
     if (!url || seen.has(url) || title.length < 8) continue;
+    if (hasScriptOrTemplateText(`${title} ${anchor[2] || ""}`)) continue;
     if (isBlockedNonJobUrl(url)) continue;
     if (isListingOrCategoryUrl(url)) continue;
     if (sameListingIndex(url, baseUrl) || isNavigationTitle(title) || isCategoryPath(url)) continue;
