@@ -48,6 +48,11 @@ const normalizeRunResult = (result = {}) => result?.data && typeof result.data =
 const logTime = (log = {}) => new Date(log.started_at || log.created_date || 0).getTime();
 const summarizeLogs = (logs = [], sinceMs = 0) => {
   const runLogs = logs.filter((log) => logTime(log) >= sinceMs - 1000);
+  const failureNotes = [...new Set(runLogs.flatMap((log) => [
+    log.error_message,
+    log.note,
+    log.status && !["success", "partial_success", "running"].includes(log.status) ? log.status : ""
+  ]).filter(Boolean))];
   return {
     imported_count: runLogs.reduce((sum, log) => sum + numberValue(log.imported_count ?? log.created_count), 0),
     created_count: runLogs.reduce((sum, log) => sum + numberValue(log.created_count ?? log.imported_count), 0),
@@ -60,6 +65,20 @@ const summarizeLogs = (logs = [], sinceMs = 0) => {
       providers_tried: [...new Set(runLogs.map((log) => log.provider_key).filter(Boolean))],
       queries_tried: [...new Set(runLogs.flatMap((log) => asList(log.queries_tried)))],
       countries_tried: [...new Set(runLogs.flatMap((log) => asList(log.countries_tried)))],
+      failure_notes: failureNotes,
+      source_statuses: runLogs.slice(0, 8).map((log) => ({
+        provider_key: log.provider_key || "",
+        source_id: log.source_id || "",
+        status: log.status || "",
+        fetched_count: numberValue(log.fetched_count),
+        valid_count: numberValue(log.valid_count),
+        created_count: numberValue(log.created_count ?? log.imported_count),
+        rejected_count: numberValue(log.rejected_count),
+        skipped_count: numberValue(log.skipped_count),
+        reason: log.error_message || "",
+      })),
+      zero_reason: failureNotes[0] || "",
+      reason: failureNotes[0] || "",
     },
     logs: runLogs,
   };
@@ -193,13 +212,21 @@ export default function ImportAssistantSettings() {
       });
       const result = mergeRunSummary(rawResult, summarizeLogs(freshLogs, runStartedAt));
       const summary = result.fallback_summary || {};
+      const sourceList = summary.source_names?.length ? summary.source_names : summary.providers_tried;
+      const statusLines = (summary.source_statuses || []).slice(0, 5).map((item) => {
+        const label = item.source_name || item.provider_key || item.source_id || "burim";
+        const counts = `marrë ${item.fetched_count || 0}, vlefshme ${item.valid_count || 0}, reja ${item.created_count || 0}`;
+        return `- ${label}: ${item.status || "pa status"} (${counts})${item.reason ? ` — ${item.reason}` : ""}`;
+      });
       alert([
         `Importimi përfundoi: ${result.imported_count || result.created_count || 0} të reja, ${result.duplicate_count || 0} dublikata, ${result.rejected_count || 0} refuzime, ${result.skipped_count || 0} skipped.`,
         `Të marra: ${result.fetched_count || 0}; të vlefshme: ${result.valid_count || 0}.`,
-        `Provider-at: ${(summary.providers_tried || []).join(", ") || "—"}`,
+        `Burimet/provider-at: ${(sourceList || []).slice(0, 8).join(", ") || "—"}`,
         `Queries: ${(summary.queries_tried || []).slice(0, 8).join(", ") || "—"}`,
         `Vendet: ${(summary.countries_tried || []).slice(0, 8).join(", ") || "—"}`,
-        summary.reason || ""
+        summary.zero_reason || summary.reason ? `Arsye: ${summary.zero_reason || summary.reason}` : "",
+        (summary.failure_notes || []).length ? `Shënime: ${(summary.failure_notes || []).slice(0, 3).join(" | ")}` : "",
+        statusLines.length ? `Detaje:\n${statusLines.join("\n")}` : ""
       ].filter(Boolean).join("\n"));
     } catch (error) {
       alert(error?.message || "Importimi dështoi.");

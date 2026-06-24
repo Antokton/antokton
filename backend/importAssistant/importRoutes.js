@@ -45,6 +45,11 @@ function validateAutomaticSourcePayload(source = {}) {
   return errors;
 }
 
+function isStatusOnlySourcePatch(body = {}) {
+  const keys = Object.keys(body || {});
+  return keys.length > 0 && keys.every((key) => ["enabled", "is_active"].includes(key));
+}
+
 function normalizeSourcePayload(body = {}) {
   body = applyKnownSourceConfig(body);
   let parserConfig = body.parser_config || {};
@@ -272,7 +277,7 @@ async function handleImportAssistantRoute(deps) {
     if (!existing) return sendError(res, 404, "Source not found");
     const payload = normalizeSourcePayload({ ...existing, ...body });
     const validationErrors = validateAutomaticSourcePayload(payload);
-    if (validationErrors.length) {
+    if (validationErrors.length && !isStatusOnlySourcePatch(body)) {
       return sendError(res, 400, `Burimi automatik nuk u ruajt. Mungon ose është e pavlefshme: ${validationErrors.join(", ")}.`);
     }
     return send(res, 200, await store.updateRecord("ImportedSource", id, payload));

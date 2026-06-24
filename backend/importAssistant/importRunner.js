@@ -318,6 +318,48 @@ function sourceTestRecommendation(source = {}, runtimeConfig = {}, fetchedCount 
   return "";
 }
 
+function summarizeImportLogs(logs = [], sources = [], { createdCount = 0, minNewItems = 0 } = {}) {
+  const sourceById = new Map(sources.map((source) => [source.id, source]));
+  const sourceNames = uniqueStrings(logs.map((log) => sourceById.get(log.source_id)?.name || log.provider_key));
+  const failureNotes = uniqueStrings(logs.flatMap((log) => [
+    log.error_message,
+    log.note,
+    log.status && !["success", "partial_success", "running"].includes(log.status) ? log.status : ""
+  ]));
+  const sourceStatuses = logs.slice(0, 12).map((log) => ({
+    source_id: log.source_id || "",
+    source_name: sourceById.get(log.source_id)?.name || log.provider_key || "-",
+    provider_key: log.provider_key || "",
+    status: log.status || "",
+    fetched_count: Number(log.fetched_count || 0),
+    valid_count: Number(log.valid_count || 0),
+    created_count: Number(log.created_count || log.imported_count || 0),
+    rejected_count: Number(log.rejected_count || 0),
+    skipped_count: Number(log.skipped_count || 0),
+    error_count: Number(log.error_count || 0),
+    reason: log.error_message || ""
+  }));
+  let zeroReason = "";
+  if (createdCount === 0) {
+    if (!logs.length) zeroReason = "Nuk u ekzekutua asnjë burim importi.";
+    else if (failureNotes.length) zeroReason = failureNotes[0];
+    else zeroReason = "Burimet u provuan, por nuk kthyen njoftime të vlefshme për filtrat aktualë.";
+  } else if (minNewItems && createdCount < minNewItems) {
+    zeroReason = `U krijuan ${createdCount} të reja nga minimumi ${minNewItems}; u shteruan burimet/provat e disponueshme.`;
+  }
+  return {
+    providers_tried: uniqueStrings(logs.map((log) => log.provider_key)),
+    source_names: sourceNames,
+    queries_tried: uniqueStrings(logs.flatMap((log) => ensureArray(log.queries_tried))),
+    countries_tried: uniqueStrings(logs.flatMap((log) => ensureArray(log.countries_tried))),
+    failure_notes: failureNotes,
+    source_statuses: sourceStatuses,
+    min_new_items_per_run: minNewItems,
+    zero_reason: zeroReason,
+    reason: zeroReason
+  };
+}
+
 function runtimeSeedFallbackSources(config = {}) {
   return INITIAL_IMPORT_SOURCES
     .filter(isAutomaticRunnableSource)
@@ -918,11 +960,9 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
         error_count: 0,
         target_new_count: minNewItems,
         fallback_summary: {
-          providers_tried: [],
-          queries_tried: [],
-          countries_tried: [],
-          min_new_items_per_run: minNewItems,
-          reason: logRecord.error_message
+          ...summarizeImportLogs(logs, sources, { createdCount: 0, minNewItems }),
+          reason: logRecord.error_message,
+          zero_reason: logRecord.error_message
         },
         logs,
         items: []
@@ -1077,6 +1117,7 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
       }
     }
 
+    const runSummary = summarizeImportLogs(logs, sources, { createdCount: createdItems.length, minNewItems });
     return {
       success: true,
       status: createdItems.length === 0 && rejectedTotal > 0 && validTotal === 0
@@ -1094,13 +1135,10 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
       error_count: errorTotal,
       target_new_count: minNewItems,
       fallback_summary: {
-        providers_tried: uniqueStrings(logs.map((log) => log.provider_key)),
-        queries_tried: uniqueStrings(logs.flatMap((log) => ensureArray(log.queries_tried))),
-        countries_tried: uniqueStrings(logs.flatMap((log) => ensureArray(log.countries_tried))),
-        min_new_items_per_run: minNewItems,
-        reason: createdItems.length >= minNewItems
+        ...runSummary,
+        reason: runSummary.reason || (createdItems.length >= minNewItems
           ? ""
-          : `U krijuan ${createdItems.length} të reja nga minimumi ${minNewItems}; u shteruan burimet/provat e disponueshme.`
+          : `U krijuan ${createdItems.length} të reja nga minimumi ${minNewItems}; u shteruan burimet/provat e disponueshme.`)
       },
       logs,
       items: createdItems

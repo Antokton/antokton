@@ -663,6 +663,61 @@ test("source test route is read-only and does not create sources when zero resul
   }
 });
 
+test("source status toggle bypasses automatic configuration validation", async () => {
+  const records = {
+    ImportedSource: [{
+      id: "broken-auto-source",
+      name: "Broken Auto Source",
+      provider_key: "custom",
+      source_type: "html",
+      import_mode: "automatic",
+      crawl_method: "html",
+      parser_type: "html",
+      automation_level: "full_auto",
+      enabled: true,
+      is_active: true,
+      source_url: "",
+      base_url: "",
+      jobs_url: "",
+      crawl_frequency_minutes: 360,
+    }],
+    ImportAssistantSettings: [],
+    ImportedPost: [],
+    Job: [],
+    ImportLog: [],
+    ImportFailure: []
+  };
+  const store = {
+    async allRecords(entity) { return records[entity] || []; },
+    async createRecord(entity, data) {
+      const row = { id: `${entity}-${records[entity].length + 1}`, created_date: new Date().toISOString(), ...data };
+      records[entity].push(row);
+      return row;
+    },
+    async updateRecord(entity, id, patch) {
+      const row = records[entity].find((item) => item.id === id);
+      if (row) Object.assign(row, patch);
+      return row;
+    },
+    async deleteRecord() { return true; }
+  };
+  const result = await handleImportAssistantRoute({
+    req: { method: "PUT" },
+    res: {},
+    segments: ["api", "import-assistant", "v1", "sources", "broken-auto-source"],
+    send: (_res, status, body) => ({ status, body }),
+    sendError: (_res, status, message) => ({ status, body: { error: message } }),
+    readPayload: async () => ({ enabled: false, is_active: false }),
+    requesterHasRole: async () => true,
+    getRequestUserEmail: async () => "admin@test",
+    store,
+    config: {}
+  });
+  assert.equal(result.status, 200);
+  assert.equal(records.ImportedSource[0].enabled, false);
+  assert.equal(records.ImportedSource[0].is_active, false);
+});
+
 test("validator rejects listing URLs and broken mojibake text", () => {
   const source = { id: "src", name: "MerrJep.al Punë", import_mode: "automatic" };
   const listing = validateImportedItem({

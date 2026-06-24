@@ -457,15 +457,22 @@ export default function ImportSources() {
   };
 
   const bulkSetEnabled = async (enabled) => {
-    const selectedSources = sources.filter((source) => selectedIds.includes(source.id));
-    if (!selectedSources.length) return;
+    const selectedSources = sources.filter((source) => selectedIds.includes(source.id) && sourceIsActive(source) !== enabled);
+    if (!selectedSources.length) {
+      alert(enabled ? "Burimet e zgjedhura janë tashmë të ndezura." : "Burimet e zgjedhura janë tashmë të fikura.");
+      return;
+    }
     setBusyId("bulk");
     try {
-      await Promise.all(selectedSources.map((source) => base44.importAssistant.updateSource(source.id, { enabled, is_active: enabled })));
-      setSelectedIds([]);
+      const results = await Promise.allSettled(selectedSources.map((source) => base44.importAssistant.updateSource(source.id, { enabled, is_active: enabled })));
+      const failedIds = selectedSources
+        .filter((_, index) => results[index].status === "rejected")
+        .map((source) => source.id);
+      setSelectedIds(failedIds);
       refresh();
-    } catch (error) {
-      alert(error?.message || "Burimet e zgjedhura nuk u përditësuan.");
+      if (failedIds.length) {
+        alert(`${selectedSources.length - failedIds.length} burime u ${enabled ? "ndezën" : "fikën"}, ${failedIds.length} dështuan. Burimet që dështuan mbetën të selektuara.`);
+      }
     } finally {
       setBusyId("");
     }
