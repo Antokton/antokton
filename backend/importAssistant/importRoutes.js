@@ -233,7 +233,8 @@ async function handleImportAssistantRoute(deps) {
         min_quality_score: body.minQualityScore || body.min_quality_score,
         min_relevance_score: body.min_relevance_score,
         max_risk_score: body.max_risk_score,
-        manual_run: true
+        manual_run: true,
+        strict_source: body.strict_source === true || body.strictSource === true
       }
     });
     return send(res, 200, result);

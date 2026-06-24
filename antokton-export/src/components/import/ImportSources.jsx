@@ -3,7 +3,7 @@ import { base44 } from "@/api/antoktonClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Trash2, Save, Play, Pencil, X, Wand2, Power } from "lucide-react";
+import { Loader2, Plus, Trash2, Save, Play, Pencil, X, Wand2, Power, Download } from "lucide-react";
 import { CATEGORIES, PROVIDER_LABELS, SOURCE_GROUP_LABELS, PARSER_TYPE_LABELS, TRUST_LEVEL_LABELS, SOURCE_TYPE_LABELS, IMPORT_MODE_LABELS, CRAWL_FREQUENCY_MINUTE_LABELS, AUTOMATION_LEVEL_LABELS } from "./importConstants";
 
 const PROVIDERS = Object.keys(PROVIDER_LABELS);
@@ -39,6 +39,20 @@ const sourceIsActive = (source = {}) => {
   const value = source.enabled ?? source.is_active;
   return !(value === false || value === 0 || value === "0" || value === "false");
 };
+const numberValue = (value) => Number(value || 0);
+const asList = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      return value.split(",").map((item) => item.trim()).filter(Boolean);
+    }
+  }
+  return [];
+};
+const normalizeRunResult = (result = {}) => result?.data && typeof result.data === "object" ? result.data : (result || {});
 
 const emptySource = {
   name: "",
@@ -353,6 +367,56 @@ export default function ImportSources() {
       ].filter(Boolean).join("\n");
       const recommendation = diagnostics.recommendation ? `\nRekomandim: ${diagnostics.recommendation}` : "";
       alert(`Testi përfundoi (pa krijuar postime): ${result.fetched_count || 0} të marra, ${result.valid_count || 0} të vlefshme, ${result.rejected_count || 0} refuzime.${tried ? `\n${tried}` : ""}${missing}${recommendation}${samples}`);
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const importSource = async (source) => {
+    if (!source?.id) return alert("Missing source_id");
+    const value = window.prompt(`Sa njoftime dëshiron të importosh nga "${source.name || "ky burim"}"?`, "10");
+    if (value === null) return;
+    const limit = Math.max(1, Math.min(1000, Number(value || 0)));
+    if (!Number.isFinite(limit) || limit <= 0) return alert("Vendos një numër të vlefshëm nga 1 deri në 1000.");
+    const busyKey = `import-${source.id}`;
+    setBusyId(busyKey);
+    try {
+      const response = await base44.importAssistant.run({
+        allActiveSources: false,
+        source_id: source.id,
+        sourceId: source.id,
+        strict_source: true,
+        maxResults: limit,
+        max_items: limit,
+        min_new_items_per_run: 0,
+        min_relevance_score: 0,
+        max_risk_score: 100,
+      });
+      const result = normalizeRunResult(response);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["importedPosts"] }),
+        qc.invalidateQueries({ queryKey: ["importAssistant", "logs"] }),
+        qc.invalidateQueries({ queryKey: ["importAssistant", "failures"] }),
+        qc.invalidateQueries({ queryKey: ["importAssistant", "sources"] }),
+      ]);
+      const summary = result.fallback_summary || {};
+      const statusLines = (summary.source_statuses || []).slice(0, 4).map((item) => {
+        const label = item.source_name || item.provider_key || item.source_id || "burim";
+        return `- ${label}: ${item.status || "pa status"} (marrë ${numberValue(item.fetched_count)}, vlefshme ${numberValue(item.valid_count)}, reja ${numberValue(item.created_count)})${item.reason ? ` — ${item.reason}` : ""}`;
+      });
+      alert([
+        `Importi nga burimi "${source.name || source.id}" përfundoi.`,
+        `Limit: ${limit}`,
+        `Të reja: ${result.imported_count || result.created_count || 0}; dublikata: ${result.duplicate_count || 0}; refuzime: ${result.rejected_count || 0}; skipped: ${result.skipped_count || 0}.`,
+        `Të marra: ${result.fetched_count || 0}; të vlefshme: ${result.valid_count || 0}.`,
+        (summary.queries_tried || []).length ? `Queries: ${asList(summary.queries_tried).slice(0, 6).join(", ")}` : "",
+        (summary.countries_tried || []).length ? `Vendet: ${asList(summary.countries_tried).slice(0, 6).join(", ")}` : "",
+        summary.zero_reason || summary.reason ? `Arsye: ${summary.zero_reason || summary.reason}` : "",
+        (summary.failure_notes || []).length ? `Shënime: ${(summary.failure_notes || []).slice(0, 3).join(" | ")}` : "",
+        statusLines.length ? `Detaje:\n${statusLines.join("\n")}` : "",
+      ].filter(Boolean).join("\n"));
+    } catch (error) {
+      alert(error?.message || "Importi nga burimi dështoi.");
     } finally {
       setBusyId("");
     }
@@ -838,7 +902,7 @@ export default function ImportSources() {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="table-fixed text-[11px] leading-tight" style={{ width: columns.reduce((sum, column) => sum + columnWidth(column), 210) + 210 }}>
+          <table className="table-fixed text-[11px] leading-tight" style={{ width: columns.reduce((sum, column) => sum + columnWidth(column), 250) + 250 }}>
             <thead className="bg-white/5 text-white/45">
               <tr>
                 <th className="sticky left-0 z-20 w-[34px] bg-[#111827] p-2 text-left">
@@ -872,7 +936,7 @@ export default function ImportSources() {
                     />
                   </th>
                 ))}
-                <th className="sticky right-0 z-20 w-[176px] bg-[#111827] p-2 text-left">Veprime</th>
+                <th className="sticky right-0 z-20 w-[216px] bg-[#111827] p-2 text-left">Veprime</th>
               </tr>
             </thead>
             <tbody>
@@ -890,7 +954,7 @@ export default function ImportSources() {
                       </td>
                     ))}
                     <td className="sticky right-0 z-10 bg-[#090f1f] p-1.5 align-top shadow-[-12px_0_18px_rgba(0,0,0,0.22)]">
-                      <div className="flex max-w-[170px] flex-wrap gap-1">
+                      <div className="flex max-w-[210px] flex-wrap gap-1">
                         <button type="button" onClick={() => editingId === source.id ? setEditingId("") : startEdit(source)} className="rounded border border-white/10 px-2 py-1 hover:bg-white/10">
                           {editingId === source.id ? <X className="inline w-3 h-3 mr-1" /> : <Pencil className="inline w-3 h-3 mr-1" />} {editingId === source.id ? "Mbyll" : "Përpuno"}
                         </button>
@@ -899,6 +963,9 @@ export default function ImportSources() {
                         </button>
                         <button type="button" onClick={() => testSource(source)} disabled={busyId === source.id || !source.id} className="rounded border border-[#8ff0cf]/20 px-2 py-1 text-[#8ff0cf] hover:bg-[#8ff0cf]/10 disabled:opacity-40">
                           {busyId === source.id ? <Loader2 className="inline w-3 h-3 mr-1 animate-spin" /> : <Play className="inline w-3 h-3 mr-1" />} Test
+                        </button>
+                        <button type="button" onClick={() => importSource(source)} disabled={busyId === `import-${source.id}` || !source.id || !sourceIsActive(source)} className="rounded border border-sky-300/20 px-2 py-1 text-sky-200 hover:bg-sky-300/10 disabled:opacity-40" title={sourceIsActive(source) ? "Importo vetëm nga ky burim" : "Ndize burimin para importit"}>
+                          {busyId === `import-${source.id}` ? <Loader2 className="inline w-3 h-3 mr-1 animate-spin" /> : <Download className="inline w-3 h-3 mr-1" />} Importo
                         </button>
                         <button type="button" onClick={() => deleteSource(source)} disabled={busyId === source.id || !source.id} className="rounded border border-red-400/20 px-2 py-1 text-red-300 hover:bg-red-400/10 disabled:opacity-40">
                           <Trash2 className="inline w-3 h-3 mr-1" /> Fshi
