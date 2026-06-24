@@ -260,6 +260,24 @@ test("import validation requires real title, URL, source and quality fields", ()
   assert.ok(pendingQuality.quality_score >= 50);
 });
 
+test("import validation reports detail page failure reasons", () => {
+  const validation = validateImportedItem({
+    source_id: "source-1",
+    source_name: "Academic Positions",
+    original_title: "Research position",
+    original_url: "https://academicpositions.com/job/demo",
+    source_url: "https://academicpositions.com/job/demo"
+  }, {
+    _requires_detail_page: true,
+    _detail_page_loaded: false,
+    _detail_page_status: 403,
+    _detail_page_reason: "Faqja e detajit ktheu HTTP 403."
+  }, { id: "source-1", name: "Academic Positions", import_mode: "automatic" });
+  assert.equal(validation.valid, false);
+  assert.equal(validation.status, "rejected_low_quality_import");
+  assert.match(validation.reason, /403/);
+});
+
 test("normalization preserves full imported address separately from country", async () => {
   const item = await normalizeImportedItem({
     provider_key: "test",
@@ -534,6 +552,8 @@ test("runImport stores corporate JobTeaser page as import failure instead of pos
   assert.equal(records.ImportedPost.length, 0);
   assert.equal(records.ImportFailure[0].status, "rejected_non_job_page");
   assert.equal(records.ImportLog[0].status, "imported_zero_valid_items");
+  assert.equal(result.rejection_samples.length, 1);
+  assert.match(result.rejection_samples[0].reason, /corporate|marketing/i);
 });
 
 test("source test is a dry run and does not create imported posts or failures", async () => {

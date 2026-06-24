@@ -481,6 +481,22 @@ function duplicateHash(item = {}) {
   return crypto.createHash("sha256").update(input || crypto.randomUUID()).digest("hex");
 }
 
+function rejectionSample({ raw = {}, normalized = {}, validation = {}, source = {}, providerKey = "" } = {}) {
+  return {
+    source_id: normalized.source_id || source.id || "",
+    source_name: normalized.source_name || raw.source_name || source.name || providerKey || "",
+    provider: providerKey || source.provider_key || raw.provider_key || "",
+    title: normalized.original_title || raw.original_title || raw.title || "",
+    original_url: normalized.original_url || normalized.source_url || raw.original_url || raw.source_url || raw.url || "",
+    status: validation.status || "rejected_low_quality_import",
+    reason: validation.reason || raw._import_rejection_reason || "Imported item failed validation",
+    quality_score: Number(validation.quality_score || 0),
+    detail_status: raw._detail_page_status || "",
+    detail_url: raw._detail_page_url || raw.source_url || "",
+    detail_reason: raw._detail_page_reason || ""
+  };
+}
+
 async function createImportFailure({ raw, source, providerKey, store, requestedBy, normalized, validation }) {
   const payload = {
     source_id: normalized?.source_id || source?.id || "",
@@ -509,7 +525,7 @@ async function processRawImportedItem({ raw, source, providerKey, store, request
   const validation = validateImportedItem(normalized, raw, source);
   if (!validation.valid) {
     await createImportFailure({ raw, source, providerKey, store, requestedBy, normalized, validation });
-    return { created: false, duplicate: false, skipped: false, rejected: true, imported: null, validation };
+    return { created: false, duplicate: false, skipped: false, rejected: true, imported: null, validation, rejection_sample: rejectionSample({ raw, normalized, validation, source, providerKey }) };
   }
   if (!passesRuntimeThresholds(normalized, options)) {
     const runtimeValidation = {
@@ -518,7 +534,7 @@ async function processRawImportedItem({ raw, source, providerKey, store, request
       reason: "Imported item did not pass runtime relevance/risk filters"
     };
     await createImportFailure({ raw, source, providerKey, store, requestedBy, normalized, validation: runtimeValidation });
-    return { created: false, duplicate: false, skipped: false, rejected: true, imported: null, validation: runtimeValidation };
+    return { created: false, duplicate: false, skipped: false, rejected: true, imported: null, validation: runtimeValidation, rejection_sample: rejectionSample({ raw, normalized, validation: runtimeValidation, source, providerKey }) };
   }
   const duplicate = isDuplicateImportedItem(
     normalized,
@@ -748,7 +764,10 @@ async function testImportSource({ store, config, sourceId = "", maxItems = 5, re
         original_url: normalized.original_url || raw.original_url || raw.source_url || "",
         status: validation.valid ? "valid" : validation.status,
         reason: validation.reason || "",
-        quality_score: validation.quality_score || 0
+        quality_score: validation.quality_score || 0,
+        detail_status: raw._detail_page_status || "",
+        detail_url: raw._detail_page_url || raw.source_url || "",
+        detail_reason: raw._detail_page_reason || ""
       });
     }
     const needsConfiguration = rawItems.length > 0
@@ -876,6 +895,7 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
   let rejectedTotal = 0;
   let validTotal = 0;
   let errorTotal = 0;
+  const rejectionSamples = [];
 
   try {
     const settings = await ensureDefaultSettings(store, config);
@@ -1009,6 +1029,7 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
         let rejectedCount = 0;
         let validCount = 0;
         let fetchedCount = 0;
+        const sourceRejectionSamples = [];
         const queriesTried = new Set();
         const countriesTried = new Set();
         const attempts = buildAttemptPlan(source, options, { selectedSourceRun });
@@ -1065,6 +1086,12 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
             if (processed.rejected) {
               rejectedCount += 1;
               rejectedTotal += 1;
+              if (processed.rejection_sample && sourceRejectionSamples.length < 5) {
+                sourceRejectionSamples.push(processed.rejection_sample);
+              }
+              if (processed.rejection_sample && rejectionSamples.length < 10) {
+                rejectionSamples.push(processed.rejection_sample);
+              }
             }
           }
         }
@@ -1095,9 +1122,12 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
                 ? "imported_zero_valid_items"
                 : (duplicateCount > 0 ? "duplicate_only" : "no_results"),
           error_message: fetchedCount > 0 && rejectedCount > 0 && validCount === 0
-            ? "Items fetched but failed quality validation"
+            ? `Items fetched but failed quality validation${sourceRejectionSamples[0]?.reason ? `: ${sourceRejectionSamples[0].reason}` : ""}`
             : (createdCount === 0 && minNewItems ? `Nuk u arrit minimumi ${minNewItems}; u provuan ${queriesTried.size || 1} query dhe ${countriesTried.size || 1} vende për këtë burim.` : "")
         });
+        if (sourceRejectionSamples.length) {
+          logRecord.rejection_samples = sourceRejectionSamples;
+        }
         logs.push(logRecord);
       } catch (error) {
         errorTotal += 1;
@@ -1136,11 +1166,13 @@ async function runImport({ store, config, sourceId = "", maxItems, requestedBy =
       target_new_count: minNewItems,
       fallback_summary: {
         ...runSummary,
+        rejection_samples: rejectionSamples,
         reason: runSummary.reason || (createdItems.length >= minNewItems
           ? ""
           : `U krijuan ${createdItems.length} të reja nga minimumi ${minNewItems}; u shteruan burimet/provat e disponueshme.`)
       },
       logs,
+      rejection_samples: rejectionSamples,
       items: createdItems
     };
   } finally {

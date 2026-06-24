@@ -45,6 +45,13 @@ const asList = (value) => {
 };
 const numberValue = (value) => Number(value || 0);
 const normalizeRunResult = (result = {}) => result?.data && typeof result.data === "object" ? result.data : (result || {});
+const formatRejectionSamples = (samples = []) => asList(samples).slice(0, 5).map((sample, index) => {
+  const reason = sample.reason || sample.detail_reason || sample.status || "pa arsye";
+  const detail = sample.detail_status ? ` HTTP detail ${sample.detail_status}` : "";
+  const url = sample.original_url || sample.detail_url || "";
+  const title = sample.title || sample.source_name || `Shembull ${index + 1}`;
+  return `- ${title}${url ? ` (${url})` : ""}: ${reason}${detail}`;
+});
 const logTime = (log = {}) => new Date(log.started_at || log.created_date || 0).getTime();
 const summarizeLogs = (logs = [], sinceMs = 0) => {
   const runLogs = logs.filter((log) => logTime(log) >= sinceMs - 1000);
@@ -213,6 +220,7 @@ export default function ImportAssistantSettings() {
       const result = mergeRunSummary(rawResult, summarizeLogs(freshLogs, runStartedAt));
       const summary = result.fallback_summary || {};
       const sourceList = summary.source_names?.length ? summary.source_names : summary.providers_tried;
+      const rejectionLines = formatRejectionSamples(result.rejection_samples || summary.rejection_samples);
       const statusLines = (summary.source_statuses || []).slice(0, 5).map((item) => {
         const label = item.source_name || item.provider_key || item.source_id || "burim";
         const counts = `marrë ${item.fetched_count || 0}, vlefshme ${item.valid_count || 0}, reja ${item.created_count || 0}`;
@@ -226,6 +234,7 @@ export default function ImportAssistantSettings() {
         `Vendet: ${(summary.countries_tried || []).slice(0, 8).join(", ") || "—"}`,
         summary.zero_reason || summary.reason ? `Arsye: ${summary.zero_reason || summary.reason}` : "",
         (summary.failure_notes || []).length ? `Shënime: ${(summary.failure_notes || []).slice(0, 3).join(" | ")}` : "",
+        rejectionLines.length ? `Shembuj refuzimi:\n${rejectionLines.join("\n")}` : "",
         statusLines.length ? `Detaje:\n${statusLines.join("\n")}` : ""
       ].filter(Boolean).join("\n"));
     } catch (error) {

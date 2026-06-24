@@ -53,6 +53,13 @@ const asList = (value) => {
   return [];
 };
 const normalizeRunResult = (result = {}) => result?.data && typeof result.data === "object" ? result.data : (result || {});
+const formatRejectionSamples = (samples = []) => asList(samples).slice(0, 5).map((sample, index) => {
+  const reason = sample.reason || sample.detail_reason || sample.status || "pa arsye";
+  const detail = sample.detail_status ? ` HTTP detail ${sample.detail_status}` : "";
+  const url = sample.original_url || sample.detail_url || "";
+  const title = sample.title || sample.source_name || `Shembull ${index + 1}`;
+  return `- ${title}${url ? ` (${url})` : ""}: ${reason}${detail}`;
+});
 
 const emptySource = {
   name: "",
@@ -400,6 +407,7 @@ export default function ImportSources() {
         qc.invalidateQueries({ queryKey: ["importAssistant", "sources"] }),
       ]);
       const summary = result.fallback_summary || {};
+      const rejectionLines = formatRejectionSamples(result.rejection_samples || summary.rejection_samples);
       const statusLines = (summary.source_statuses || []).slice(0, 4).map((item) => {
         const label = item.source_name || item.provider_key || item.source_id || "burim";
         return `- ${label}: ${item.status || "pa status"} (marrë ${numberValue(item.fetched_count)}, vlefshme ${numberValue(item.valid_count)}, reja ${numberValue(item.created_count)})${item.reason ? ` — ${item.reason}` : ""}`;
@@ -413,6 +421,7 @@ export default function ImportSources() {
         (summary.countries_tried || []).length ? `Vendet: ${asList(summary.countries_tried).slice(0, 6).join(", ")}` : "",
         summary.zero_reason || summary.reason ? `Arsye: ${summary.zero_reason || summary.reason}` : "",
         (summary.failure_notes || []).length ? `Shënime: ${(summary.failure_notes || []).slice(0, 3).join(" | ")}` : "",
+        rejectionLines.length ? `Shembuj refuzimi:\n${rejectionLines.join("\n")}` : "",
         statusLines.length ? `Detaje:\n${statusLines.join("\n")}` : "",
       ].filter(Boolean).join("\n"));
     } catch (error) {

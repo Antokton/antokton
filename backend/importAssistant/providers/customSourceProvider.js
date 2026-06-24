@@ -294,8 +294,34 @@ async function enrichItemFromDetailPage(item = {}, source = {}) {
     const response = await fetch(item.source_url, {
       headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": "AntoktonImportAssistant/1.0" }
     });
-    if (!response.ok) return { ...item, _detail_page_loaded: false };
+    if (!response.ok) {
+      return {
+        ...item,
+        _detail_page_loaded: false,
+        _detail_page_status: response.status,
+        _detail_page_url: response.url || item.source_url,
+        _detail_page_reason: `Faqja e detajit ktheu HTTP ${response.status}.`
+      };
+    }
     const html = await response.text();
+    if (looksBotProtected(html, response.status)) {
+      return {
+        ...item,
+        _detail_page_loaded: false,
+        _detail_page_status: response.status,
+        _detail_page_url: response.url || item.source_url,
+        _detail_page_reason: "Faqja e detajit duket e bllokuar nga bot protection/CAPTCHA."
+      };
+    }
+    if (looksJavascriptRendered(html)) {
+      return {
+        ...item,
+        _detail_page_loaded: false,
+        _detail_page_status: response.status,
+        _detail_page_url: response.url || item.source_url,
+        _detail_page_reason: "Faqja e detajit duket JavaScript-rendered; HTML statik nuk kishte detajet e njoftimit."
+      };
+    }
     const title = htmlHeading(html) || htmlTitle(html) || item.original_title;
     const description = bodyText(html) || htmlDescription(html) || item.original_description;
     const email = extractEmail(description);
@@ -316,8 +342,13 @@ async function enrichItemFromDetailPage(item = {}, source = {}) {
       original_country: normalizeCountry(item.original_country || source.country_filter || ""),
       contact_methods: contactMethods
     };
-  } catch {
-    return { ...item, _detail_page_loaded: false };
+  } catch (error) {
+    return {
+      ...item,
+      _detail_page_loaded: false,
+      _detail_page_url: item.source_url,
+      _detail_page_reason: error?.message || "Faqja e detajit nuk u hap dot."
+    };
   }
 }
 

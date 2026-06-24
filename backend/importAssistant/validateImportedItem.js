@@ -222,10 +222,13 @@ function validateImportedItem(item = {}, raw = {}, source = {}) {
   }
 
   if (raw?._requires_detail_page && raw?._detail_page_loaded !== true) {
+    const detailReason = raw?._detail_page_reason
+      || (raw?._detail_page_status ? `Individual detail page returned HTTP ${raw._detail_page_status}` : "")
+      || "Individual detail page could not be opened or parsed";
     return {
       valid: false,
       status: "rejected_low_quality_import",
-      reason: "Individual detail page could not be opened or parsed",
+      reason: detailReason,
       quality_score: 0
     };
   }
