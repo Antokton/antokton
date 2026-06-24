@@ -210,6 +210,18 @@ test("auto-discover configures Bundesagentur as API source", async () => {
   assert.equal(result.source.parser_config.api_key, "jobboerse-jobsuche");
 });
 
+test("known source config preserves disabled state", () => {
+  for (const source of [
+    { name: "Academic Positions", source_url: "https://academicpositions.com", enabled: false, is_active: false },
+    { name: "Bundesagentur für Arbeit", source_url: "https://www.arbeitsagentur.de", enabled: false, is_active: false },
+    { name: "KosovaJob", source_url: "https://kosovajob.com", enabled: false, is_active: false },
+  ]) {
+    const normalized = applyKnownSourceConfig(source);
+    assert.equal(normalized.enabled, false, `${source.name} should stay disabled`);
+    assert.equal(normalized.is_active, false, `${source.name} should stay inactive`);
+  }
+});
+
 test("import validation requires real title, URL, source and quality fields", () => {
   const source = { id: "source-1", name: "Arbeitnow", import_mode: "automatic" };
   const invalid = validateImportedItem({

@@ -56,6 +56,16 @@ function parserConfig(source = {}) {
   return typeof source.parser_config === "object" ? source.parser_config : {};
 }
 
+function sourceEnabledValue(source = {}) {
+  if (source.enabled !== undefined) {
+    return source.enabled === true || source.enabled === "true" || source.enabled === 1 || source.enabled === "1";
+  }
+  if (source.is_active !== undefined) {
+    return !(source.is_active === false || source.is_active === "false" || source.is_active === 0 || source.is_active === "0");
+  }
+  return true;
+}
+
 function applyKnownSourceConfig(source = {}) {
   let next = cleanPlaceholderUrls(source);
   if (isAcademicPositions(next)) {
@@ -77,8 +87,8 @@ function applyKnownSourceConfig(source = {}) {
       import_mode: next.import_mode || "automatic",
       automation_level: next.automation_level || "full_auto",
       login_required: false,
-      enabled: true,
-      is_active: true,
+      enabled: sourceEnabledValue(next),
+      is_active: sourceEnabledValue(next),
       original_source_required: true,
       parser_config: {
         item_url_patterns: "find-jobs,job,jobs,position,positions,vacancy,vacancies,apply",
@@ -118,8 +128,8 @@ function applyKnownSourceConfig(source = {}) {
       source_group: next.source_group || "global_provider",
       trust_level: next.trust_level || "trusted",
       login_required: false,
-      enabled: true,
-      is_active: true,
+      enabled: sourceEnabledValue(next),
+      is_active: sourceEnabledValue(next),
       original_source_required: true,
       parser_config: {
         api_format: "bundesagentur",
@@ -159,8 +169,8 @@ function applyKnownSourceConfig(source = {}) {
       profession_filter: next.profession_filter || "pune, job, vende pune",
       category_filter: next.category_filter || "pune",
       login_required: false,
-      enabled: true,
-      is_active: true,
+      enabled: sourceEnabledValue(next),
+      is_active: sourceEnabledValue(next),
       original_source_required: true,
       parser_config: {
         item_url_patterns: "job,pune,puna,vende-pune,vend-pune,konkurs,pozite,position",
