@@ -12,6 +12,48 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { createPageUrl } from "../utils";
 import { filterActivePosts, isExpiringSoon, isPostExpired } from "@/lib/expiry";
 
+const normalizeFilterText = (value = "") =>
+  String(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ë/g, "e")
+    .replace(/ç/g, "c")
+    .trim();
+
+const professionAliases = {
+  mekanik: ["mekanik", "mechanic", "mécanicien", "mecanico", "mechaniker", "mechatroniker", "auto mechanic"],
+  shofer: ["shofer", "driver", "chauffeur", "fahrer", "autista"],
+  elektricist: ["elektricist", "electrician", "elektriker", "elettricista"],
+  hidraulik: ["hidraulik", "plumber", "sanitär", "installateur"],
+  kuzhinier: ["kuzhinier", "cook", "chef", "koch", "cuoco"],
+  pastrim: ["pastrim", "pastrues", "cleaner", "reinigung", "nettoyage", "pulizie"],
+  magazinier: ["magazinier", "warehouse", "lager", "magazijn", "magasinier"],
+};
+
+const jobMatchesProfession = (job, selectedProfession) => {
+  const selected = normalizeFilterText(selectedProfession);
+  if (!selected || selected === "all") return true;
+
+  const terms = professionAliases[selected] || [selected];
+  const searchableText = [
+    job.profession,
+    job.title,
+    job.description,
+    job.required_skills,
+    job.skills,
+    job.category_filter,
+    job.profession_filter,
+    job.import_profession,
+    job.original_profession,
+  ]
+    .filter(Boolean)
+    .map(normalizeFilterText)
+    .join(" ");
+
+  return terms.some((term) => searchableText.includes(normalizeFilterText(term)));
+};
+
 export default function Feed({ fixedCategory = null }) {
   const urlParams = new URLSearchParams(window.location.search);
   const initialCategory = fixedCategory || urlParams.get("category") || "all";
@@ -178,7 +220,7 @@ export default function Feed({ fixedCategory = null }) {
     let filtered = allFeedItems.filter(job => {
       if (fixedCategory && job.category !== fixedCategory) return false;
       if (!fixedCategory && filters.category !== "all" && job.category !== filters.category) return false;
-      if (filters.profession !== "all" && job.profession !== filters.profession) return false;
+      if (filters.profession !== "all" && !jobMatchesProfession(job, filters.profession)) return false;
       if (canImportPosts && filters.expiry && filters.expiry !== "active") {
         if (filters.expiry === "soon" && !isExpiringSoon(job)) return false;
         if (filters.expiry === "expired" && !isPostExpired(job)) return false;

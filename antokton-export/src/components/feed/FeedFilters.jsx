@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -255,6 +255,114 @@ const propertyTransactions = [
   { value: "qera", label: "Qera" },
 ];
 
+const professionOptions = [
+  "3D Artist","Administrator","Agjent Shitjesh","Agjent Sigurimesh","Agjent Udhëtimesh",
+  "Agronom","Aktor","Amballazhues","Arkitekt","Arkivist","Artist","Asansorist",
+  "Asistent Ekzekutiv","Asistent Social","Auditor","Autor","Avokat",
+  "Babysitter","Bankier","Bartender","Berber","Biçiklist","Blegtori","Bojaxhi","Botuesi","Broker","Bujqësi",
+  "Concierge","Cyber Security",
+  "DJ","Dado","Data Analyst","Data Scientist","Dekorator","Dentist","Dërgestar","Developer","DevOps","Dizajner Grafik",
+  "Edukator","Editor Video","Ekonomist","Elektricist","Elektroauto Teknik","Event Planner",
+  "Farmacist","Fizioterapist","Florist","Fotograf","Fshesarakeq","Furrtari",
+  "Gazetar","Guide Turistik",
+  "Hekurpunues","Hidraulik","Hotel Manager","Housekeeper",
+  "IT Support","Ilustrator","Infermier","Instruktor","Instruktor Notimi","Instalues","Instalues Kamera","Instalues Satelitor","Interpret","Inxhinier",
+  "Kamarier","Kameraman","Konsulent Financiar","Konsulent HR","Kontabilist","Kontrollor Cilësie","Koordinator Projektesh","Kopshtar","Kosmetist","Kozmetolog","Kujdestar Moshe","Kuzhinier",
+  "Laborant","Librarist","Logjistikan",
+  "Magazinier","Marangoz","Marketing","Masazhist","Mekanik","Menaxher","Mirëmbajtje","Mjek","Mizanxhi","Moderator","Motion Designer","Muzeal","Muzikant","Mësues",
+  "Ndërtim","Ndihmes Kuzhine","Noter",
+  "Operator Makine",
+  "Pastiçer","Pastrim","Pastrues Dritaresh","Përkthyes","Peshkatar","Pilot","Pjatalarës","Postier","Prezantues","Producent Muzikor","Programues","Psikolog","Punëtor Fabrike","Punëtor i Pakualifikuar",
+  "QA Tester",
+  "Radiolog","Recepsionist","Redaktor","Regjisor","Rekrutues","Restaurator","Roje/Siguri","Rrobaqepës","Rrjetist",
+  "Saldator","Scenograf","Sekretar","Shofer","Shitës","Shtypshkronjës","Sistem Administrator","Skenarist","Sound Engineer","Spa Therapist",
+  "Teknik Alarmi","Teknik HVAC","Teknik Kompjuterik","Teknik Solar","Teknik Telefonie","Teknik Veterinar","Teknik Zëri","Teknik Ftohje","Teknik Drite","Terapeut","Trajner Personal",
+  "UI/UX Designer","Ushqim dhe Pije",
+  "Veteriner","Videograf",
+  "Web Designer","Wedding Planner",
+  "Xhamaxhi","Xhelatier",
+].sort((a, b) => a.localeCompare(b, "sq"));
+
+const normalizeProfessionText = (value = "") =>
+  String(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ë/g, "e")
+    .replace(/ç/g, "c")
+    .trim();
+
+function ProfessionAutocomplete({ value, onChange }) {
+  const [focused, setFocused] = useState(false);
+  const currentValue = value === "all" ? "" : value || "";
+
+  const suggestions = useMemo(() => {
+    const query = normalizeProfessionText(currentValue);
+    const matches = query
+      ? professionOptions.filter((profession) =>
+          normalizeProfessionText(profession).includes(query)
+        )
+      : professionOptions;
+
+    return matches.slice(0, 12);
+  }, [currentValue]);
+
+  const chooseProfession = (profession) => {
+    onChange(profession || "all");
+    setFocused(false);
+  };
+
+  return (
+    <div className="relative">
+      <Input
+        type="search"
+        value={currentValue}
+        onChange={(event) => onChange(event.target.value || "all")}
+        onFocus={() => setFocused(true)}
+        onBlur={() => window.setTimeout(() => setFocused(false), 120)}
+        placeholder="Shkruaj profesionin..."
+        autoComplete="off"
+        className="border-white/10 h-8 text-xs text-white placeholder:text-white/60 pr-8"
+        style={{ background: "rgba(255, 255, 255, 0.08)" }}
+      />
+      {currentValue && (
+        <button
+          type="button"
+          aria-label="Pastro profesionin"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => chooseProfession("all")}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
+        >
+          ×
+        </button>
+      )}
+      {focused && suggestions.length > 0 && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-lg border border-white/10 bg-slate-950 shadow-2xl">
+          <button
+            type="button"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => chooseProfession("all")}
+            className="block w-full px-3 py-2 text-left text-xs text-white hover:bg-white/10"
+          >
+            Të gjithë profesionet
+          </button>
+          {suggestions.map((profession) => (
+            <button
+              key={profession}
+              type="button"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => chooseProfession(profession)}
+              className="block w-full px-3 py-2 text-left text-xs text-white hover:bg-white/10"
+            >
+              {profession}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function FeedFilters({ filters, setFilters }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -348,43 +456,10 @@ export default function FeedFilters({ filters, setFilters }) {
         )}
 
         {filters.category === "pune" && (
-          <Select value={filters.profession || "all"} onValueChange={(v) => setFilters({ ...filters, profession: v })}>
-            <SelectTrigger className="border-white/10 h-8 text-xs text-white" style={{ background: 'rgba(255, 255, 255, 0.08)' }}>
-              <SelectValue placeholder="Profesioni" />
-            </SelectTrigger>
-            <SelectContent className="max-h-60">
-              <SelectItem value="all">Të gjithë profesionet</SelectItem>
-              {[
-                "3D Artist","Administrator","Agjent Shitjesh","Agjent Sigurimesh","Agjent Udhëtimesh",
-                "Agronom","Aktor","Amballazhues","Arkitekt","Arkivist","Artist","Asansorist",
-                "Asistent Ekzekutiv","Asistent Social","Auditor","Autor","Avokat",
-                "Babysitter","Bankier","Bartender","Berber","Biçiklist","Blegtori","Bojaxhi","Botuesi","Broker","Bujqësi",
-                "Concierge","Cyber Security",
-                "DJ","Dado","Data Analyst","Data Scientist","Dekorator","Dentist","Dërgestar","Developer","DevOps","Dizajner Grafik",
-                "Edukator","Editor Video","Ekonomist","Elektricist","Elektroauto Teknik","Event Planner",
-                "Farmacist","Fizioterapist","Florist","Fotograf","Fshesarakeq","Furrtari",
-                "Gazetar","Guide Turistik",
-                "Hekurpunues","Hidraulik","Hotel Manager","Housekeeper",
-                "IT Support","Ilustrator","Infermier","Instruktor","Instruktor Notimi","Instalues","Instalues Kamera","Instalues Satelitor","Interpret","Inxhinier",
-                "Kamarier","Kameraman","Konsulent Financiar","Konsulent HR","Kontabilist","Kontrollor Cilësie","Koordinator Projektesh","Kopshtar","Kosmetist","Kozmetolog","Kujdestar Moshe","Kuzhinier",
-                "Laborant","Librarist","Logjistikan",
-                "Magazinier","Marangoz","Marketing","Masazhist","Mekanik","Menaxher","Mirëmbajtje","Mjek","Mizanxhi","Moderator","Motion Designer","Muzeal","Muzikant","Mësues",
-                "Ndërtim","Ndihmes Kuzhine","Noter",
-                "Operator Makine",
-                "Pastiçer","Pastrim","Pastrues Dritaresh","Përkthyes","Peshkatar","Pilot","Pjatalarës","Postier","Prezantues","Producent Muzikor","Programues","Psikolog","Punëtor Fabrike","Punëtor i Pakualifikuar",
-                "QA Tester",
-                "Radiolog","Recepsionist","Redaktor","Regjisor","Rekrutues","Restaurator","Roje/Siguri","Rrobaqepës","Rrjetist",
-                "Saldator","Scenograf","Sekretar","Shofer","Shitës","Shtypshkronjës","Sistem Administrator","Skenarist","Sound Engineer","Spa Therapist",
-                "Teknik Alarmi","Teknik HVAC","Teknik Kompjuterik","Teknik Solar","Teknik Telefonie","Teknik Veterinar","Teknik Zëri","Teknik Ftohje","Teknik Drite","Terapeut","Trajner Personal",
-                "UI/UX Designer","Ushqim dhe Pije",
-                "Veteriner","Videograf",
-                "Web Designer","Wedding Planner",
-                "Xhamaxhi","Xhelatier",
-              ].sort().map(p => (
-                <SelectItem key={p} value={p}>{p}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ProfessionAutocomplete
+            value={filters.profession || "all"}
+            onChange={(profession) => setFilters({ ...filters, profession })}
+          />
         )}
 
         <Select value={filters.country || "all"} onValueChange={(v) => setFilters({ ...filters, country: v, region: "", city: "", subregion: "" })}>
