@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "com.antokton.app",
       "sha256_cert_fingerprints": [
-        "0E:36:5A:67:42:BD:2A:5D:C9:7E:AF:69:BF:3A:C1:A5:47:AA:58:E6:D0:21:32:A3:38:78:54:12:D1:B8:93:98"
+        "0E:36:5A:67:42:BD:2A:5D:C9:7E:AF:69:BF:3A:C1:A5:47:AA:58:E6:D0:21:32:A3:38:78:54:12:D1:B8:93:98",
+        "A0:FA:98:A2:2B:89:AD:73:81:5D:9D:C6:CE:9E:B9:8B:B8:4C:DE:E7:22:0C:73:1D:FE:E3:1C:AF:BF:B6:79:9F"
       ]
     }
   }

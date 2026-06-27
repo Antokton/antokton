@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "./utils";
 import { base44 } from "@/api/antoktonClient";
-import { Menu, X, Home, Briefcase, PlusCircle, Shield, LogIn, LogOut, User, ChevronDown, ChevronUp, Users, Search, Calendar, Building2, MessageCircle, ArrowUp, GraduationCap, Wrench, Radio, Plane, Tv, Heart, ShoppingBag, Train, Bus, Truck, Car, Ship, Package, MonitorPlay } from "lucide-react";
+import { Menu, X, Home, Briefcase, PlusCircle, Shield, LogIn, LogOut, User, ChevronDown, ChevronUp, Users, Search, Calendar, Building2, MessageCircle, ArrowUp, GraduationCap, Wrench, Radio, Plane, Tv, Heart, ShoppingBag, Train, Bus, Truck, Car, Ship, Package, MonitorPlay, Download } from "lucide-react";
 import ChatButton from "./components/ChatButton";
 import NotificationBell from "./components/NotificationBell";
 import ChatNotificationSystem from "./components/notifications/ChatNotificationSystem";
 import MobileBottomNav from "./components/mobile/MobileBottomNav";
 import MobileHeader from "./components/mobile/MobileHeader";
+import PwaInstallPrompt from "./components/PwaInstallPrompt";
 import { MobileNavProvider } from "./components/mobile/MobileNavContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -299,6 +300,10 @@ export default function Layout({ children, currentPageName }) {
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const requestAppInstall = () => {
+    window.dispatchEvent(new Event("antokton:install-app"));
   };
 
   const splitNavClass = (active) => `rounded-lg text-xs font-medium transition-all duration-200 flex items-center overflow-hidden whitespace-nowrap ${
@@ -861,6 +866,12 @@ export default function Layout({ children, currentPageName }) {
                           <MessageCircle className="w-4 h-4" /> Mesazhet
                         </Link>
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={requestAppInstall}
+                        className="flex cursor-pointer items-center gap-2 text-white/80 hover:text-white"
+                      >
+                        <Download className="w-4 h-4" /> Shkarko app
+                      </DropdownMenuItem>
                       {(user?.user_type === 'employer' || user?.user_type === 'recruiter') && (
                         <DropdownMenuItem asChild>
                           <Link to={createPageUrl("EmployerDashboard")} className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white">
@@ -1209,6 +1220,16 @@ export default function Layout({ children, currentPageName }) {
 
               {/* User Menu */}
               <div className="px-4 pt-1.5 pb-3 border-t border-white/10 mt-0 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    window.setTimeout(requestAppInstall, 80);
+                  }}
+                  className="mb-2 flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[#9bffd6] hover:bg-white/5"
+                >
+                  <Download className="w-3.5 h-3.5" /><span className="text-sm font-medium">Shkarko app</span>
+                </button>
                 {isAuth ? (
                   <button onClick={() => { base44.auth.logout(); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-red-400 hover:bg-white/5 w-full">
                     <LogOut className="w-3.5 h-3.5" /><span className="text-sm font-medium">{t('dil', language)}</span>
@@ -1270,6 +1291,8 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav currentPageName={currentPageName} />
+
+      <PwaInstallPrompt />
 
       {/* Chat Button */}
       <ChatButton />
