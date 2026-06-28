@@ -488,7 +488,7 @@ export default function EventDetail() {
                 <div
                   data-swipe-back-ignore
                   className="flex max-w-full gap-1 overflow-x-auto pb-1 sm:w-auto sm:justify-end"
-                  style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+                  style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}
                 >
                   <Button
                     size="sm"
@@ -580,7 +580,7 @@ export default function EventDetail() {
                 <div
                   data-swipe-back-ignore
                   className="flex max-w-full gap-2 overflow-x-auto pb-1 mb-4"
-                  style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+                  style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}
                 >
                   <button
                     onClick={() => setActiveTab("details")}

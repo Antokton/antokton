@@ -322,8 +322,8 @@ function ProfessionAutocomplete({ value, onChange }) {
         onBlur={() => window.setTimeout(() => setFocused(false), 120)}
         placeholder="Shkruaj profesionin..."
         autoComplete="off"
-        className="border-white/10 h-8 text-xs text-white placeholder:text-white/60 pr-8"
-        style={{ background: "rgba(255, 255, 255, 0.08)" }}
+        className="border-[#8ab4ff]/35 h-8 text-xs font-semibold text-white placeholder:text-white/70 pr-8 shadow-[0_0_0_1px_rgba(138,180,255,0.08)]"
+        style={{ background: "rgba(15, 23, 42, 0.98)", color: "#ffffff" }}
       />
       {currentValue && (
         <button
@@ -337,12 +337,12 @@ function ProfessionAutocomplete({ value, onChange }) {
         </button>
       )}
       {focused && suggestions.length > 0 && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-lg border border-white/10 bg-slate-950 shadow-2xl">
+        <div className="absolute left-0 right-0 top-full z-[80] mt-1 max-h-56 overflow-y-auto rounded-lg border border-[#8ab4ff]/35 bg-[#101827] shadow-2xl" style={{ backgroundColor: "#101827", opacity: 1, color: "#ffffff", boxShadow: "0 18px 45px rgba(0,0,0,0.75)" }}>
           <button
             type="button"
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => chooseProfession("all")}
-            className="block w-full px-3 py-2 text-left text-xs text-white hover:bg-white/10"
+            className="block w-full px-3 py-2 text-left text-xs font-semibold text-white hover:bg-[#8ab4ff]/18 focus:bg-[#8ab4ff]/18"
           >
             Të gjithë profesionet
           </button>
@@ -352,7 +352,7 @@ function ProfessionAutocomplete({ value, onChange }) {
               type="button"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => chooseProfession(profession)}
-              className="block w-full px-3 py-2 text-left text-xs text-white hover:bg-white/10"
+              className="block w-full px-3 py-2 text-left text-xs font-semibold text-white hover:bg-[#8ab4ff]/18 focus:bg-[#8ab4ff]/18"
             >
               {profession}
             </button>

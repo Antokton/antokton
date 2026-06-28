@@ -1340,9 +1340,9 @@ export default function PostDetail() {
               <div
                 data-swipe-back-ignore
                 className="mt-5 max-w-full space-y-2"
-                style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+                style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
               >
-                <button type="button" onClick={() => setPhotoViewerIndex(mainIndex)} className="block w-full overflow-hidden rounded-xl border border-white/10 bg-white/5 text-left">
+                <button type="button" onClick={() => setPhotoViewerIndex(mainIndex)} className="block w-full overflow-hidden rounded-xl border border-white/10 bg-white/5 text-left" style={{ touchAction: "pan-y" }}>
                   <ImageFocusPreview
                     src={mainImage}
                     alt="Foto kryesore"
@@ -1352,7 +1352,7 @@ export default function PostDetail() {
                   />
                 </button>
                 {imgs.length > 1 && (
-                  <div className="flex gap-2 overflow-x-auto pb-1">
+                  <div className="flex gap-2 overflow-x-auto pb-1" style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x pan-y" }}>
                     {imgs.map((imgUrl, i) => {
                       const focus = getImageFocus(job.image_focus_json, imgUrl);
                       return (

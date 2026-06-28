@@ -1035,7 +1035,7 @@ export default function Pazar() {
         <div className="flex-1 min-w-0">
           {/* Mobile categories scroll */}
           <div className="md:hidden flex gap-2 overflow-x-auto px-4 py-3 [&::-webkit-scrollbar]:hidden border-b border-white/8"
-            style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}>
+            style={{ touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch' }}>
             {CATEGORIES.map(cat => (
               <button key={cat.key} onClick={() => selectCategory(cat.key)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all
@@ -1047,7 +1047,7 @@ export default function Pazar() {
           </div>
           {activeCategoryData?.subcategories?.length > 0 && (
             <div className="md:hidden flex gap-2 overflow-x-auto px-4 pb-3 [&::-webkit-scrollbar]:hidden border-b border-white/8"
-              style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}>
+              style={{ touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch' }}>
               {activeCategoryData.subcategories.map((sub) => (
                 <button
                   key={sub.value}
