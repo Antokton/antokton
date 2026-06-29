@@ -338,9 +338,9 @@ function ProfessionAutocomplete({ value, onChange }) {
       )}
       {focused && suggestions.length > 0 && (
         <div
-          className="absolute left-0 right-0 top-full z-[120] mt-1 max-h-60 overflow-y-auto rounded-md border border-white/10 bg-[#0f172a] p-1 text-white shadow-xl"
+          className="absolute left-0 right-0 top-full z-[200] mt-1 max-h-60 overflow-y-auto rounded-md border border-white/15 bg-[#0b1120] p-1 text-base text-white shadow-2xl"
           style={{
-            backgroundColor: "#0f172a",
+            backgroundColor: "#0b1120",
             backgroundImage: "none",
             backdropFilter: "none",
             WebkitBackdropFilter: "none",
@@ -352,7 +352,7 @@ function ProfessionAutocomplete({ value, onChange }) {
             type="button"
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => chooseProfession("all")}
-            className="block w-full rounded-sm px-2 py-1.5 text-left text-xs font-normal text-white hover:bg-white/10 focus:bg-white/10"
+            className="block w-full rounded-sm px-3 py-2.5 text-left text-base font-medium text-white hover:bg-white/10 focus:bg-white/10"
           >
             Të gjithë profesionet
           </button>
@@ -362,7 +362,7 @@ function ProfessionAutocomplete({ value, onChange }) {
               type="button"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => chooseProfession(profession)}
-              className="block w-full rounded-sm px-2 py-1.5 text-left text-xs font-normal text-white hover:bg-white/10 focus:bg-white/10"
+              className="block w-full rounded-sm px-3 py-2.5 text-left text-base font-normal text-white hover:bg-white/10 focus:bg-white/10"
             >
               {profession}
             </button>
