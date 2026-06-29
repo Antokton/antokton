@@ -313,7 +313,7 @@ function ProfessionAutocomplete({ value, onChange }) {
   };
 
   return (
-    <div className="relative isolate">
+    <div className={`relative ${focused ? "z-[300]" : "z-10"}`}>
       <Input
         type="search"
         value={currentValue}
