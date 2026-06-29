@@ -76,6 +76,41 @@ body {
   }
 }
 
+.antokton-profession-input {
+  font-size: 0.75rem !important;
+  line-height: 1rem !important;
+  font-weight: 400 !important;
+}
+
+.antokton-profession-input::placeholder {
+  font-size: 0.75rem !important;
+  line-height: 1rem !important;
+}
+
+.antokton-profession-menu {
+  background: #0b1020 !important;
+  background-color: #0b1020 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  font-size: 0.75rem !important;
+  line-height: 1rem !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.antokton-profession-menu button {
+  background: #0b1020 !important;
+  color: #ffffff !important;
+  font-size: 0.75rem !important;
+  line-height: 1rem !important;
+}
+
+.antokton-profession-menu button:hover,
+.antokton-profession-menu button:focus {
+  background: #1f2937 !important;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

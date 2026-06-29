@@ -322,7 +322,7 @@ function ProfessionAutocomplete({ value, onChange }) {
         onBlur={() => window.setTimeout(() => setFocused(false), 120)}
         placeholder="Shkruaj profesionin..."
         autoComplete="off"
-        className="h-8 border-white/10 bg-white/10 pr-8 text-xs font-normal text-white placeholder:text-white/70"
+        className="antokton-profession-input h-8 border-white/10 bg-white/10 pr-8 text-xs font-normal text-white placeholder:text-white/70"
         style={{ background: "rgba(255, 255, 255, 0.08)" }}
       />
       {currentValue && (
@@ -338,10 +338,10 @@ function ProfessionAutocomplete({ value, onChange }) {
       )}
       {focused && suggestions.length > 0 && (
         <div
-          className="absolute left-0 right-0 top-full z-[200] mt-1 max-h-60 overflow-y-auto rounded-md border border-white/15 bg-[#070b16] p-1 text-sm leading-5 text-white shadow-2xl"
+          className="antokton-profession-menu absolute left-0 right-0 top-full z-[200] mt-1 max-h-60 overflow-y-auto rounded-md border border-white/15 bg-[#0b1020] p-1 text-xs leading-4 text-white shadow-2xl"
           style={{
-            background: "#070b16",
-            backgroundColor: "#070b16",
+            background: "#0b1020",
+            backgroundColor: "#0b1020",
             backgroundImage: "none",
             backdropFilter: "none",
             WebkitBackdropFilter: "none",
@@ -354,7 +354,7 @@ function ProfessionAutocomplete({ value, onChange }) {
             type="button"
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => chooseProfession("all")}
-            className="block w-full rounded-sm bg-[#101827] px-3 py-2 text-left text-sm font-medium leading-5 text-white hover:!bg-[#1f2937] focus:!bg-[#1f2937]"
+            className="block w-full rounded-sm bg-[#0b1020] px-3 py-1.5 text-left text-xs font-medium leading-4 text-white hover:!bg-[#1f2937] focus:!bg-[#1f2937]"
           >
             Të gjithë profesionet
           </button>
@@ -364,7 +364,7 @@ function ProfessionAutocomplete({ value, onChange }) {
               type="button"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => chooseProfession(profession)}
-              className="mt-0.5 block w-full rounded-sm bg-[#101827] px-3 py-2 text-left text-sm font-normal leading-5 text-white hover:!bg-[#1f2937] focus:!bg-[#1f2937]"
+              className="mt-0.5 block w-full rounded-sm bg-[#0b1020] px-3 py-1.5 text-left text-xs font-normal leading-4 text-white hover:!bg-[#1f2937] focus:!bg-[#1f2937]"
             >
               {profession}
             </button>
