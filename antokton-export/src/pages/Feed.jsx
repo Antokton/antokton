@@ -395,7 +395,7 @@ export default function Feed({ fixedCategory = null }) {
         )}
       </div>
 
-      <div className="mb-2">
+      <div className="relative z-40 mb-2">
         <FeedFilters filters={filters} setFilters={updateFilters} />
 
         {/* Row: Sort + Save Search */}
@@ -490,7 +490,7 @@ export default function Feed({ fixedCategory = null }) {
           )}
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="relative z-0 space-y-2">
           <AnimatePresence>
             {filteredJobs.map((job, i) => (
               <motion.div
