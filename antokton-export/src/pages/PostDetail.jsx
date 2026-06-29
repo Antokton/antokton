@@ -190,6 +190,8 @@ export default function PostDetail() {
   const [photoViewerIndex, setPhotoViewerIndex] = useState(-1);
   const [showReactionDetails, setShowReactionDetails] = useState(false);
   const viewTrackedRef = React.useRef(null);
+  const galleryTapRef = React.useRef(null);
+  const gallerySuppressClickRef = React.useRef(false);
 
   const queryClient = useQueryClient();
   const canSeePrivateImportFields = user?.role === "admin" || user?.role === "moderator";
@@ -198,6 +200,39 @@ export default function PostDetail() {
     const cleanUrl = `${window.location.pathname}?id=${encodeURIComponent(jobId)}${rawBackTo ? `&from=${encodeURIComponent(rawBackTo)}` : ""}`;
     window.history.replaceState(null, "", cleanUrl);
     setIsEditing(false);
+  };
+
+  const startGalleryTap = (event) => {
+    const touch = event.touches?.[0];
+    if (!touch) return;
+    galleryTapRef.current = { x: touch.clientX, y: touch.clientY, moved: false };
+  };
+
+  const updateGalleryTap = (event) => {
+    const touch = event.touches?.[0];
+    const start = galleryTapRef.current;
+    if (!touch || !start) return;
+    if (Math.abs(touch.clientY - start.y) > 8 || Math.abs(touch.clientX - start.x) > 8) {
+      start.moved = true;
+    }
+  };
+
+  const finishGalleryTouch = (index) => {
+    const wasDrag = galleryTapRef.current?.moved;
+    galleryTapRef.current = null;
+    if (wasDrag) {
+      gallerySuppressClickRef.current = true;
+      window.setTimeout(() => {
+        gallerySuppressClickRef.current = false;
+      }, 180);
+      return;
+    }
+    setPhotoViewerIndex(index);
+  };
+
+  const openGalleryPhoto = (index) => {
+    if (gallerySuppressClickRef.current) return;
+    setPhotoViewerIndex(index);
   };
 
   useEffect(() => {
@@ -1340,9 +1375,25 @@ export default function PostDetail() {
               <div
                 data-swipe-back-ignore
                 className="mt-5 max-w-full space-y-2"
-                style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+                style={{ WebkitOverflowScrolling: 'touch', touchAction: 'auto' }}
               >
-                <button type="button" onClick={() => setPhotoViewerIndex(mainIndex)} className="block w-full overflow-hidden rounded-xl border border-white/10 bg-white/5 text-left" style={{ touchAction: "pan-y" }}>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openGalleryPhoto(mainIndex)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setPhotoViewerIndex(mainIndex);
+                    }
+                  }}
+                  onTouchStart={startGalleryTap}
+                  onTouchMove={updateGalleryTap}
+                  onTouchEnd={() => finishGalleryTouch(mainIndex)}
+                  onTouchCancel={() => { galleryTapRef.current = null; }}
+                  className="block w-full overflow-hidden rounded-xl border border-white/10 bg-white/5 text-left"
+                  style={{ touchAction: "auto" }}
+                >
                   <ImageFocusPreview
                     src={mainImage}
                     alt="Foto kryesore"
@@ -1350,13 +1401,23 @@ export default function PostDetail() {
                     className="h-[min(70vw,520px)] min-h-[220px] w-full hover:opacity-95 transition-opacity cursor-pointer"
                     onError={e => e.currentTarget.style.display = 'none'}
                   />
-                </button>
+                </div>
                 {imgs.length > 1 && (
-                  <div className="flex gap-2 overflow-x-auto pb-1" style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x pan-y" }}>
+                  <div className="flex gap-2 overflow-x-auto pb-1" style={{ WebkitOverflowScrolling: "touch", touchAction: "auto" }}>
                     {imgs.map((imgUrl, i) => {
                       const focus = getImageFocus(job.image_focus_json, imgUrl);
                       return (
-                        <button key={i} type="button" onClick={() => setPhotoViewerIndex(i)} className={`shrink-0 overflow-hidden rounded-lg border ${i === mainIndex ? "border-[#9bffd6]" : "border-white/10"} bg-white/5`}>
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => openGalleryPhoto(i)}
+                          onTouchStart={startGalleryTap}
+                          onTouchMove={updateGalleryTap}
+                          onTouchEnd={() => finishGalleryTouch(i)}
+                          onTouchCancel={() => { galleryTapRef.current = null; }}
+                          className={`shrink-0 overflow-hidden rounded-lg border ${i === mainIndex ? "border-[#9bffd6]" : "border-white/10"} bg-white/5`}
+                          style={{ touchAction: "auto" }}
+                        >
                           <ImageFocusPreview
                             src={imgUrl}
                             alt={`foto ${i + 1}`}
