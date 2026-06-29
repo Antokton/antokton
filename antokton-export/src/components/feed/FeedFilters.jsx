@@ -322,14 +322,8 @@ function ProfessionAutocomplete({ value, onChange }) {
         onBlur={() => window.setTimeout(() => setFocused(false), 120)}
         placeholder="Shkruaj profesionin..."
         autoComplete="off"
-        className="h-9 border-[#8ab4ff]/50 bg-[#101827] pr-8 text-[16px] font-semibold text-white shadow-[0_0_0_1px_rgba(138,180,255,0.12)] placeholder:text-white/85 sm:text-sm"
-        style={{
-          backgroundColor: "#101827",
-          color: "#ffffff",
-          WebkitTextFillColor: "#ffffff",
-          opacity: 1,
-          textShadow: "0 1px 2px rgba(0,0,0,0.75)"
-        }}
+        className="h-8 border-white/10 bg-white/10 pr-8 text-xs font-normal text-white placeholder:text-white/70"
+        style={{ background: "rgba(255, 255, 255, 0.08)" }}
       />
       {currentValue && (
         <button
@@ -344,23 +338,21 @@ function ProfessionAutocomplete({ value, onChange }) {
       )}
       {focused && suggestions.length > 0 && (
         <div
-          className="absolute left-0 right-0 top-full z-[120] mt-1 max-h-56 overflow-y-auto rounded-lg border border-[#8ab4ff]/45 bg-[#101827] shadow-2xl"
+          className="absolute left-0 right-0 top-full z-[120] mt-1 max-h-60 overflow-y-auto rounded-md border border-white/10 bg-[#0f172a] p-1 text-white shadow-xl"
           style={{
-            backgroundColor: "#101827",
+            backgroundColor: "#0f172a",
             backgroundImage: "none",
             backdropFilter: "none",
             WebkitBackdropFilter: "none",
             opacity: 1,
-            color: "#ffffff",
-            boxShadow: "0 22px 60px rgba(0,0,0,0.95), 0 0 0 1px rgba(138,180,255,0.18)"
+            color: "#ffffff"
           }}
         >
           <button
             type="button"
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => chooseProfession("all")}
-            className="block w-full px-3 py-2 text-left text-[15px] font-semibold text-white hover:bg-[#8ab4ff]/22 focus:bg-[#8ab4ff]/22"
-            style={{ color: "#ffffff", WebkitTextFillColor: "#ffffff", textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}
+            className="block w-full rounded-sm px-2 py-1.5 text-left text-xs font-normal text-white hover:bg-white/10 focus:bg-white/10"
           >
             Të gjithë profesionet
           </button>
@@ -370,8 +362,7 @@ function ProfessionAutocomplete({ value, onChange }) {
               type="button"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => chooseProfession(profession)}
-              className="block w-full px-3 py-2 text-left text-[15px] font-semibold text-white hover:bg-[#8ab4ff]/22 focus:bg-[#8ab4ff]/22"
-              style={{ color: "#ffffff", WebkitTextFillColor: "#ffffff", textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}
+              className="block w-full rounded-sm px-2 py-1.5 text-left text-xs font-normal text-white hover:bg-white/10 focus:bg-white/10"
             >
               {profession}
             </button>
