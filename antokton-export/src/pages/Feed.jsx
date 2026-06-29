@@ -399,7 +399,7 @@ export default function Feed({ fixedCategory = null }) {
         <FeedFilters filters={filters} setFilters={updateFilters} />
 
         {/* Row: Sort + Save Search */}
-        <div className="flex gap-2 items-center flex-wrap">
+        <div className="relative z-0 flex gap-2 items-center flex-wrap">
           <Select value={filters.sortBy} onValueChange={(val) => updateFilters({...filters, sortBy: val})}>
             <SelectTrigger className="h-8 w-48 bg-white/10 border-white/20 text-white text-xs">
               <SelectValue />

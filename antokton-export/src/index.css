@@ -102,6 +102,7 @@ body {
   line-height: 1rem !important;
   opacity: 1 !important;
   isolation: isolate !important;
+  width: max(100%, 14rem) !important;
   z-index: 9999 !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -114,6 +115,9 @@ body {
   background: transparent !important;
   background-color: transparent !important;
   border: 0 !important;
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  border-radius: 0 !important;
   box-shadow: none !important;
   color: #ffffff !important;
   font-size: 0.75rem !important;
@@ -123,6 +127,17 @@ body {
 .antokton-profession-menu button:hover,
 .antokton-profession-menu button:focus {
   background: #1f2937 !important;
+}
+
+.antokton-profession-clear {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  min-width: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  padding: 0 !important;
 }
 
 @layer base {

@@ -322,12 +322,23 @@ function ProfessionAutocomplete({ value, onChange }) {
         onBlur={() => window.setTimeout(() => setFocused(false), 120)}
         placeholder="Shkruaj profesionin..."
         autoComplete="off"
-        className="antokton-profession-input h-8 border-white/10 bg-white/10 text-xs font-normal text-white placeholder:text-white/70"
+        className="antokton-profession-input h-8 border-white/10 bg-white/10 pr-7 text-xs font-normal text-white placeholder:text-white/70"
         style={{ background: "rgba(255, 255, 255, 0.08)" }}
       />
+      {currentValue && (
+        <button
+          type="button"
+          aria-label="Pastro profesionin"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => chooseProfession("all")}
+          className="antokton-profession-clear absolute right-2 top-1/2 -translate-y-1/2 text-sm leading-none text-white/55 hover:text-white"
+        >
+          ×
+        </button>
+      )}
       {focused && suggestions.length > 0 && (
         <div
-          className="antokton-profession-menu absolute left-0 right-0 top-full z-[9999] mt-1 max-h-60 overflow-y-auto rounded-md border border-white/15 bg-[#111827] py-1 text-xs leading-4 text-white shadow-2xl"
+          className="antokton-profession-menu absolute left-0 top-full z-[9999] mt-1 max-h-60 overflow-y-auto rounded-md border border-white/15 bg-[#111827] py-1 text-xs leading-4 text-white shadow-2xl"
           style={{
             zIndex: 9999,
             background: "#111827",
@@ -369,7 +380,7 @@ export default function FeedFilters({ filters, setFilters }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   return (
-    <div className="rounded-xl border border-white/10 p-2 mb-3" style={{
+    <div className="relative z-[1000] rounded-xl border border-white/10 p-2 mb-3" style={{
       background: 'rgba(255, 255, 255, 0.05)',
       backdropFilter: 'blur(12px)'
     }}>
