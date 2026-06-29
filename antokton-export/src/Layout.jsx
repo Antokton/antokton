@@ -304,7 +304,7 @@ export default function Layout({ children, currentPageName }) {
 
   const requestAppInstall = () => {
     if (typeof navigator !== "undefined" && /android/i.test(navigator.userAgent || "")) {
-      window.location.href = "/downloads/antokton-android.apk";
+      window.location.href = "/downloads/Antokton-1.1.apk";
       return;
     }
     window.dispatchEvent(new Event("antokton:install-app"));

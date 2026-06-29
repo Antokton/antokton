@@ -3,7 +3,7 @@ import { Download, Smartphone, X } from "lucide-react";
 
 const DISMISSED_KEY = "antoktonInstallPromptDismissedAt";
 const REMIND_AFTER_MS = 24 * 60 * 60 * 1000;
-const ANDROID_APK_URL = "/downloads/antokton-android.apk";
+const ANDROID_APK_URL = "/downloads/Antokton-1.1.apk";
 
 function isStandaloneMode() {
   if (typeof window === "undefined") return false;
