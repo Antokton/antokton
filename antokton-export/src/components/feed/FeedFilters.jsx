@@ -304,7 +304,7 @@ function ProfessionAutocomplete({ value, onChange }) {
         )
       : professionOptions;
 
-    return matches.slice(0, 12);
+    return matches;
   }, [currentValue]);
 
   const chooseProfession = (profession) => {
@@ -340,21 +340,21 @@ function ProfessionAutocomplete({ value, onChange }) {
         <div
           className="antokton-profession-menu absolute left-0 right-0 top-full z-[200] mt-1 max-h-60 overflow-y-auto rounded-md border border-white/15 bg-[#0b1020] p-1 text-xs leading-4 text-white shadow-2xl"
           style={{
-            background: "#0b1020",
-            backgroundColor: "#0b1020",
+            background: "#111827",
+            backgroundColor: "#111827",
             backgroundImage: "none",
             backdropFilter: "none",
             WebkitBackdropFilter: "none",
             opacity: 1,
             color: "#ffffff",
-            boxShadow: "0 18px 45px rgba(0, 0, 0, 0.78)"
+            boxShadow: "0 18px 45px rgba(0, 0, 0, 0.78), inset 0 0 0 9999px #111827"
           }}
         >
           <button
             type="button"
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => chooseProfession("all")}
-            className="block w-full rounded-sm bg-[#0b1020] px-3 py-1.5 text-left text-xs font-medium leading-4 text-white hover:!bg-[#1f2937] focus:!bg-[#1f2937]"
+            className="block w-full rounded-sm bg-[#111827] px-3 py-1.5 text-left text-xs font-medium leading-4 text-white hover:!bg-[#1f2937] focus:!bg-[#1f2937]"
           >
             Të gjithë profesionet
           </button>
@@ -364,7 +364,8 @@ function ProfessionAutocomplete({ value, onChange }) {
               type="button"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => chooseProfession(profession)}
-              className="mt-0.5 block w-full rounded-sm bg-[#0b1020] px-3 py-1.5 text-left text-xs font-normal leading-4 text-white hover:!bg-[#1f2937] focus:!bg-[#1f2937]"
+              className="mt-0.5 block w-full rounded-sm bg-[#111827] px-3 py-1.5 text-left text-xs font-normal leading-4 text-white hover:!bg-[#1f2937] focus:!bg-[#1f2937]"
+              style={{ backgroundColor: "#111827" }}
             >
               {profession}
             </button>
