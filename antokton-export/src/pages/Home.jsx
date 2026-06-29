@@ -270,7 +270,8 @@ function LandingBanner({ theme: themeProp, notifHeight, showBanner, onDismissBan
   const textTopDesktop = getHomeConfigNumber(siteConfigMap, 'home_text_top_desktop');
   const buttonsBottomDesktop = getHomeConfigNumber(siteConfigMap, showBanner ? 'home_buttons_banner_bottom_desktop' : 'home_buttons_bottom_desktop');
   const mobileLogoOffset = getHomeConfigNumber(siteConfigMap, 'home_logo_top_mobile');
-  const mobileButtonsBottom = getHomeConfigNumber(siteConfigMap, showBanner ? 'home_buttons_banner_bottom_mobile' : 'home_buttons_bottom_mobile');
+  const rawMobileButtonsBottom = getHomeConfigNumber(siteConfigMap, showBanner ? 'home_buttons_banner_bottom_mobile' : 'home_buttons_bottom_mobile');
+  const mobileButtonsBottom = showBanner ? Math.max(rawMobileButtonsBottom, 12) : rawMobileButtonsBottom;
 
   React.useEffect(() => {
     const handleResize = () => {
