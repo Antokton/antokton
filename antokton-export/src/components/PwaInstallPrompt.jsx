@@ -3,6 +3,7 @@ import { Download, Smartphone, X } from "lucide-react";
 
 const DISMISSED_KEY = "antoktonInstallPromptDismissedAt";
 const REMIND_AFTER_MS = 24 * 60 * 60 * 1000;
+const ANDROID_APK_URL = "/downloads/antokton-android.apk";
 
 function isStandaloneMode() {
   if (typeof window === "undefined") return false;
@@ -31,6 +32,10 @@ export default function PwaInstallPrompt() {
   const isAppleDevice = useMemo(() => {
     if (typeof navigator === "undefined") return false;
     return /iphone|ipad|ipod/i.test(navigator.userAgent || "");
+  }, []);
+  const isAndroidDevice = useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    return /android/i.test(navigator.userAgent || "");
   }, []);
 
   useEffect(() => {
@@ -77,6 +82,12 @@ export default function PwaInstallPrompt() {
 
   const install = async () => {
     if (!installEvent) {
+      if (isAndroidDevice) {
+        window.location.href = ANDROID_APK_URL;
+        setVisible(false);
+        localStorage.setItem(DISMISSED_KEY, String(Date.now()));
+        return;
+      }
       setInstallUnavailable(true);
       setVisible(true);
       return;
@@ -112,11 +123,13 @@ export default function PwaInstallPrompt() {
               ? "Instaloje si aplikacion që të hapet pa shirit browser-i dhe me hyrje më të shpejtë."
               : isAppleDevice
                 ? "Në iPhone: Share -> Add to Home Screen. Në Android përdor menunë e browser-it ose provo përsëri pak më vonë."
-                : "Nëse butoni i instalimit nuk shfaqet ende, përdor menunë e browser-it: Install app / Add to Home screen."}
+                : isAndroidDevice
+                  ? "Nëse instalimi automatik nuk shfaqet, butoni shkarkon APK-në zyrtare të Antokton."
+                  : "Nëse butoni i instalimit nuk shfaqet ende, përdor menunë e browser-it: Install app / Add to Home screen."}
           </p>
           {installUnavailable && (
             <p className="mt-2 rounded-lg border border-yellow-400/20 bg-yellow-400/10 px-2 py-1 text-[11px] text-yellow-100">
-              Prompt-i automatik nuk është i disponueshëm tani. Opsioni mbetet në menu si “Shkarko app”.
+              Prompt-i automatik nuk është i disponueshëm tani. Në Android mund të shkarkosh APK-në, ndërsa në iPhone përdor Add to Home Screen.
             </p>
           )}
           <div className="mt-3 flex items-center gap-2">

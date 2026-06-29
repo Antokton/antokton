@@ -303,6 +303,10 @@ export default function Layout({ children, currentPageName }) {
   };
 
   const requestAppInstall = () => {
+    if (typeof navigator !== "undefined" && /android/i.test(navigator.userAgent || "")) {
+      window.location.href = "/downloads/antokton-android.apk";
+      return;
+    }
     window.dispatchEvent(new Event("antokton:install-app"));
   };
 
